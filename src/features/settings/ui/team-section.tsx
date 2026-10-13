@@ -94,7 +94,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
         />
         <p className="text-muted-foreground self-end text-xs">{roleDescriptions[role]}</p>
         <div className="flex items-center justify-end gap-3 sm:col-span-2">
-          {message ? <p role="status" className="text-muted-foreground text-sm">{message}</p> : null}
+          {message ? <output className="text-muted-foreground text-sm">{message}</output> : null}
           <Button isDisabled={busy || email.trim() === ''} onPress={() => void invite()}>
             Invitar
           </Button>

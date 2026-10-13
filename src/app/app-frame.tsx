@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   AppShell,
   AppShellContent,
@@ -12,7 +13,7 @@ import {
   AppShellMobileHeader,
   AppShellSidebar,
 } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { can, roleLabels, useSession, useSignOut, type Permission } from '@/features/auth'
@@ -75,6 +76,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const { tenant } = useTenantData()
   const session = useSession()
   const signOut = useSignOut()
+  const navigate = useNavigate()
+  const userName = session?.demo ? tenant.name : session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
@@ -118,20 +121,34 @@ export function AppFrame({ children }: { children: ReactNode }) {
               className="h-auto w-full justify-start gap-3 px-3 py-2"
             >
               <Avatar>
-                <AvatarFallback>{initials(tenant.name)}</AvatarFallback>
+                <AvatarFallback>{initials(userName)}</AvatarFallback>
               </Avatar>
               <span className="min-w-0 text-left leading-tight">
-                <span className="block truncate text-sm font-medium">{tenant.name}</span>
+                <span className="block truncate text-sm font-medium">{userName}</span>
                 <span className="text-muted-foreground block truncate text-xs font-normal">
-                  {tenant.email}
+                  {session?.demo ? tenant.email : session?.role ? roleLabels[session.role] : ''}
                 </span>
               </span>
             </Button>
             <DropdownMenuContent placement="top start">
               <DropdownMenuLabel>
-                {session?.demo ? 'Modo demo' : `${session?.email ?? ''} · ${session?.role ? roleLabels[session.role] : ''}`}
+                {session?.demo ? 'Modo demo' : (session?.email ?? '')}
               </DropdownMenuLabel>
-              {session?.demo ? null : <DropdownMenuItem onAction={() => void signOut()}>Cerrar sesión</DropdownMenuItem>}
+              <DropdownMenuSeparator />
+              {canSeeSettings ? (
+                <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
+                  Ajustes y equipo
+                </DropdownMenuItem>
+              ) : null}
+              {session?.demo ? null : (
+                <>
+                  <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
+                    Cambiar contraseña
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onAction={() => void signOut()}>Cerrar sesión</DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenuTrigger>
         </div>
