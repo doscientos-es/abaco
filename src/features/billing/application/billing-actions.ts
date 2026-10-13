@@ -60,6 +60,21 @@ export const subscriptionQuery = (tenantId: string) =>
     },
   })
 
+/** People in the company today: the only thing that decides which plan is needed. */
+export const memberCountQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['member-count', tenantId],
+    staleTime: 60_000,
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await createBrowserSupabaseClient()
+        .from('memberships')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+      if (error) throw new Error('No se pudo contar el equipo.')
+      return count ?? 0
+    },
+  })
+
 type RedsysForm = { url: string; signatureVersion: string; merchantParameters: string; signature: string }
 
 export type BillingResult = { ok: true; form?: RedsysForm } | { ok: false; message: string }

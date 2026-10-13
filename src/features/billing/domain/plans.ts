@@ -21,7 +21,7 @@ export type PlanInfo = {
 
 export const TRIAL_DAYS = 14
 /** Personas permitidas durante la prueba. */
-export const TRIAL_MEMBERS = 5
+export const TRIAL_MEMBERS = 15
 
 export const planCatalog: readonly PlanInfo[] = [
   { id: 'solo', name: 'Autónomo', members: 1, monthly: 15, yearly: 150, audience: 'Trabajas tú solo.' },
@@ -43,6 +43,11 @@ export function planInfo(plan: Plan): PlanInfo | null {
 
 export function memberLimit(plan: Plan): number {
   return planInfo(plan)?.members ?? TRIAL_MEMBERS
+}
+
+/** Plan más pequeño que admite a `members` personas (null si ninguno llega). */
+export function smallestPlanFor(members: number): PlanInfo | null {
+  return planCatalog.find((p) => p.members >= members) ?? null
 }
 
 /** Precio por mes al pagar por año. */

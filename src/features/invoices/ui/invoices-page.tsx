@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
@@ -36,9 +36,11 @@ const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 
 
 export function InvoicesPage() {
   const { invoices, clients, tenant, estimates } = useTenantData()
+  const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
   const [clientId, setClientId] = useState('all')
-  const [query, setQuery] = useState('')
+  const initialQuery = useSearch({ strict: false }).q
+  const [query, setQuery] = useState(typeof initialQuery === 'string' ? initialQuery : '')
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
   const estimateOf = (id: string) => estimates.find((e) => e.id === id)
@@ -66,9 +68,23 @@ export function InvoicesPage() {
     setQuery('')
   }
 
+  function openInvoice(invoiceId: string) {
+    void navigate({ to: '/facturas/$invoiceId', params: { invoiceId } })
+  }
+
+  /** Opens the invoice and the browser's print dialog, where "Guardar como PDF" downloads it. */
+  function downloadInvoice(invoiceId: string) {
+    void navigate({ to: '/facturas/$invoiceId', params: { invoiceId } }).then(() =>
+      setTimeout(() => window.print(), 150),
+    )
+  }
+
   function actions(invoice: Invoice) {
     return (
-      <div className="flex items-center justify-end gap-1.5">
+      <div className="flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <Button size="sm" variant="outline" onPress={() => downloadInvoice(invoice.id)}>
+          Descargar
+        </Button>
         <Button size="sm" variant="outline" onPress={() => send(invoice)}>
           Enviar
         </Button>
@@ -211,7 +227,13 @@ export function InvoicesPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-muted-foreground text-xs">{invoice.number}</p>
-                      <p className="font-medium">{invoice.concept}</p>
+                      <Link
+                        to="/facturas/$invoiceId"
+                        params={{ invoiceId: invoice.id }}
+                        className="font-medium underline-offset-4 hover:underline"
+                      >
+                        {invoice.concept}
+                      </Link>
                     </div>
                     <Badge variant={variant}>{label}</Badge>
                   </div>
@@ -253,15 +275,27 @@ export function InvoicesPage() {
               {pager.pageItems.map((invoice) => {
                 const { label, variant } = statusConfig[invoice.status]
                 return (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">{invoice.number}</TableCell>
+                  <TableRow
+                    key={invoice.id}
+                    className="cursor-pointer"
+                    onClick={() => openInvoice(invoice.id)}
+                  >
+                    <TableCell className="whitespace-nowrap">
+                      <Link
+                        to="/facturas/$invoiceId"
+                        params={{ invoiceId: invoice.id }}
+                        className="text-muted-foreground underline-offset-4 hover:underline"
+                      >
+                        {invoice.number}
+                      </Link>
+                    </TableCell>
                     <TableCell className="max-w-64 truncate font-medium">{invoice.concept}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Link to="/clientes" className="underline-offset-4 hover:underline">
                         {clientName(invoice.clientId)}
                       </Link>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Link
                         to="/presupuestos/$estimateId"
                         params={{ estimateId: invoice.estimateId }}

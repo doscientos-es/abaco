@@ -51,7 +51,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Finanzas',
     items: [
-      { to: '/facturas', label: 'Facturas', icon: navIcons.ledger },
+      { to: '/facturas', label: 'Facturas', icon: navIcons.invoices },
       { to: '/contabilidad', label: 'Contabilidad', icon: navIcons.ledger },
     ],
   },

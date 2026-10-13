@@ -202,3 +202,23 @@ h3 {
     min-height: 2.75rem;
   }
 }
+
+/* Print: show only the document (invoice or estimate), not the app chrome. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .invoice-document,
+  .invoice-document *,
+  .estimate-document,
+  .estimate-document * {
+    visibility: visible;
+  }
+  .invoice-document,
+  .estimate-document {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+  }
+}

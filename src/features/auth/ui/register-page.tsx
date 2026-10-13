@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
+import { formatEuros, planCatalog, TRIAL_DAYS } from '@/features/billing/domain/plans'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
 
@@ -61,6 +62,14 @@ export function RegisterPage() {
       description="Empieza gratis con tu empresa. Después podrás invitar a tu equipo."
       footer={toLogin}
     >
+      <div className="bg-accent text-accent-foreground mb-4 rounded-lg px-4 py-3 text-sm">
+        <p className="font-medium">{TRIAL_DAYS} días gratis con el plan Empresa completo</p>
+        <p className="mt-1 text-xs">
+          Sin tarjeta. Al acabar, eliges el plan que encaje con tu equipo:{' '}
+          {planCatalog.map((p) => `${p.name} ${formatEuros(p.monthly)}/mes`).join(' · ')} (sin IVA, y 2 meses gratis
+          pagando al año). Si no eliges, tus datos siguen ahí en solo lectura.
+        </p>
+      </div>
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         <TextField label="Tu nombre" placeholder="Nombre y apellidos" value={fullName} onChange={setFullName} />
         <TextField

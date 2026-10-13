@@ -1,4 +1,5 @@
 import { Button, Input } from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
 
 import type { MilestoneAmount } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
@@ -55,7 +56,8 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
         <div className="space-y-3">
           {amounts.map((m) => {
             const registered = ledger.some((l) => l.estimateId === estimate.id && l.milestoneId === m.id)
-            const invoiced = invoices.some((i) => i.estimateId === estimate.id && i.milestoneId === m.id)
+            const invoice = invoices.find((i) => i.estimateId === estimate.id && i.milestoneId === m.id)
+            const invoiced = invoice !== undefined
             return (
               <div key={m.id} className="border-border bg-card overflow-hidden rounded-lg border">
                 <div className="grid gap-3 p-4 sm:grid-cols-[1fr_6rem_9rem]">
@@ -100,14 +102,24 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                     {registered ? 'Cobrado' : invoiced ? 'Facturado, pendiente de cobro' : 'Sin facturar'}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      isDisabled={invoiced || m.amountCents <= 0}
-                      onPress={() => generateInvoice(estimate, m)}
-                    >
-                      {invoiced ? 'Facturado' : 'Generar factura'}
-                    </Button>
+                    {invoice ? (
+                      <Link
+                        to="/facturas"
+                        search={{ q: invoice.number }}
+                        className="border-border hover:bg-accent inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium"
+                      >
+                        Ver y enviar {invoice.number}
+                      </Link>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        isDisabled={m.amountCents <= 0}
+                        onPress={() => generateInvoice(estimate, m)}
+                      >
+                        Generar factura
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

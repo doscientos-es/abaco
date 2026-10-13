@@ -1,4 +1,4 @@
-import { Button } from '@doscientos/ui'
+import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -6,6 +6,7 @@ import {
   cancelPlan,
   changePlan,
   resumePlan,
+  memberCountQuery,
   startCheckout,
   submitToRedsys,
   subscriptionQuery,
@@ -18,6 +19,8 @@ import {
   perMonthWhenYearly,
   planCatalog,
   planInfo,
+  smallestPlanFor,
+  TRIAL_DAYS,
   type Interval,
   type PlanInfo,
 } from '../domain/plans'
@@ -57,6 +60,10 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
   }
 
   const subscribed = subscription && ['active', 'past_due'].includes(subscription.status)
+  const members = useQuery(memberCountQuery(tenantId)).data ?? 1
+  const needed = smallestPlanFor(members)
+  const onTrial = subscription?.status === 'trialing'
+  const recommended = onTrial ? needed?.id : undefined
 
   return (
     <section className="border-border bg-card rounded-xl border">
@@ -68,18 +75,33 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
       </div>
 
       <div className="space-y-5 p-5">
-        <div className="flex items-center gap-2" role="group" aria-label="Periodo de pago">
-          {(['year', 'month'] as const).map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={interval === value ? 'default' : 'outline'}
-              onPress={() => setInterval(value)}
-            >
-              {value === 'year' ? 'Anual · 2 meses gratis' : 'Mensual'}
-            </Button>
-          ))}
-        </div>
+        {onTrial ? (
+          <div className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
+            <p className="font-medium">
+              {subscription.canWrite
+                ? `Estás probando el plan Empresa completo durante ${TRIAL_DAYS} días, gratis.`
+                : 'Tu prueba gratuita ha terminado.'}
+            </p>
+            <p className="mt-1 text-xs">
+              {needed
+                ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name} (${formatEuros(needed.monthly)} al mes). `
+                : `Ahora sois ${members} personas, más de las que admite cualquier plan. `}
+              Si prefieres uno más pequeño, quita el acceso a las personas que sobren en Equipo.
+            </p>
+          </div>
+        ) : null}
+
+        <Tabs selectedKey={interval} onSelectionChange={(key) => setInterval(key as Interval)}>
+          <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
+            <TabsTrigger id="year" className="flex-1 sm:flex-none">
+              Anual
+              <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">2 meses gratis</span>
+            </TabsTrigger>
+            <TabsTrigger id="month" className="flex-1 sm:flex-none">
+              Mensual
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <div className="grid gap-4 sm:grid-cols-3">
           {planCatalog.map((plan) => (
@@ -87,6 +109,7 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
               key={plan.id}
               plan={plan}
               interval={interval}
+              recommended={recommended === plan.id}
               current={subscribed === true && subscription?.plan === plan.id}
               busy={busy === plan.id}
               onChoose={() =>
@@ -131,13 +154,21 @@ function PlanCard(props: {
   plan: PlanInfo
   interval: Interval
   current: boolean
+  recommended: boolean
   busy: boolean
   onChoose: () => void
 }) {
-  const { plan, interval, current, busy, onChoose } = props
+  const { plan, interval, current, recommended, busy, onChoose } = props
   const price = interval === 'year' ? perMonthWhenYearly(plan) : plan.monthly
   return (
-    <div className={`flex flex-col gap-3 rounded-lg border p-4 ${current ? 'border-primary' : 'border-border'}`}>
+    <div
+      className={`flex flex-col gap-3 rounded-lg border p-4 ${current || recommended ? 'border-primary ring-primary/20 ring-2' : 'border-border'}`}
+    >
+      {recommended ? (
+        <span className="bg-primary text-primary-foreground w-fit rounded-full px-2 py-0.5 text-[11px] font-medium">
+          Te encaja
+        </span>
+      ) : null}
       <div>
         <h3 className="text-sm font-semibold">{plan.name}</h3>
         <p className="text-muted-foreground text-xs">{plan.audience}</p>
