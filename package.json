@@ -1,0 +1,50 @@
+{
+  "name": "@doscientos-es/presupuestos",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm typecheck && vite build",
+    "preview": "vite preview",
+    "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
+    "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
+    "lint": "oxlint",
+    "structure:check": "doscientos-structure --root src --tanstack-router",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "quality": "pnpm format:check && pnpm lint && pnpm structure:check && pnpm typecheck && pnpm test",
+    "quality:quick": "pnpm format:check && pnpm lint",
+    "hooks:install": "node .githooks/install.mjs"
+  },
+  "dependencies": {
+    "@doscientos/ui": "^0.1.43",
+    "@supabase/supabase-js": "^2.112.4",
+    "@tanstack/react-query": "^5.101.1",
+    "@tanstack/react-router": "^1.170.18",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@doscientos/configs": "^0.1.9",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.35",
+    "@types/node": "^22.16.5",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^5.2.0",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.75.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22.18.0",
+    "pnpm": ">=9.15.2"
+  },
+  "packageManager": "pnpm@9.15.2"
+}

@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+@import '@doscientos/ui/styles.css';
+
+/* Premium theme: indigo brand on a cool neutral surface. The UI library reads these tokens. */
+:root {
+  --radius: 0.375rem;
+  --canvas: #f0f0f0;
+  --background: #f7f7f7;
+  --foreground: #1d1d1d;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --primary: #0051c3;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1f1;
+  --secondary-foreground: #1d1d1d;
+  --muted: #f3f3f3;
+  --muted-foreground: #6b6b6b;
+  --accent: #e8f0fc;
+  --accent-foreground: #003d92;
+  --destructive: #dc2626;
+  --success: #15803d;
+  --warning: #b45309;
+  --info: #0369a1;
+  --border: #e5e5e5;
+  --border-strong: #d0d0d0;
+  --ring: #3b82f6;
+  --sidebar: #ffffff;
+  --surface-subtle: #fafafa;
+
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--background);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+}
+
+::selection {
+  background: rgb(0 81 195 / 18%);
+}
+
+/* Tailwind v4 borders default to currentColor (black). Make the subtle token the default. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}
+
+/* Empty states: quiet dashed frame on the card surface. */
+[data-slot='data-view-state'] {
+  min-height: 14rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 2.5rem 1.5rem;
+}
+
+[data-slot='data-view-state-title'] {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+[data-slot='data-view-state-description'] {
+  max-width: 28rem;
+}
+
+/* Flat, dense surfaces: hairline borders instead of shadows, tables framed like cards. */
+[data-slot='card'] {
+  border-radius: var(--radius);
+  box-shadow: none;
+  border-color: var(--border);
+}
+
+[data-slot='table-container'] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+[data-slot='table-head'] {
+  height: 2.5rem;
+  background: var(--surface-subtle);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-slot='table-cell'] {
+  padding-block: 0.625rem;
+}
+
+[data-slot='table-row']:last-child {
+  border-bottom: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Mobile: 16px fields stop iOS from zooming on focus; bigger tap targets on touch screens. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  [data-slot='button'] {
+    min-height: 2.75rem;
+  }
+}
