@@ -1,0 +1,13 @@
+# Configuración de Supabase. `project_id` es el nombre local; se enlaza al proyecto real con `supabase link`.
+project_id = "propuestas"
+
+# Estas funciones las llaman Redsys y el cron, no un usuario con sesión:
+# se protegen con la firma de Redsys y con CRON_SECRET respectivamente.
+[functions.redsys-webhook]
+verify_jwt = false
+
+[functions.billing-renew]
+verify_jwt = false
+
+[functions.auth-email]
+verify_jwt = false
