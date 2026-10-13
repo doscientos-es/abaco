@@ -7,12 +7,14 @@ import {
 } from '@doscientos/ui'
 import { useState, type ReactNode } from 'react'
 
+import { can, useSession } from '@/features/auth'
 import type { Tenant } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
 
 import { patchTenant } from '../application/settings-actions'
+import { TeamSection } from './team-section'
 
 type Form = {
   name: string
@@ -65,6 +67,7 @@ function percent(value: string, fallback: number) {
 
 export function SettingsPage() {
   const { tenant } = useTenantData()
+  const session = useSession()
   const [form, setForm] = useState<Form>(() => toForm(tenant))
   const [saved, setSaved] = useState(false)
   const set = (key: keyof Form) => (value: string) => {
@@ -202,6 +205,10 @@ export function SettingsPage() {
           onChange={set('defaultDepositPercent')}
         />
       </Section>
+
+      {session?.tenantId && !session.demo && can(session.role, 'team:manage') ? (
+        <TeamSection tenantId={session.tenantId} />
+      ) : null}
 
       <div className="flex items-center justify-end gap-3">
         {saved ? <p className="text-muted-foreground text-sm">Cambios guardados</p> : null}
