@@ -107,6 +107,7 @@ export function updateState(mutator: (draft: AppState) => AppState): void {
       emit()
     })
     .catch(async (error: unknown) => {
+      // oxlint-disable-next-line no-console -- no error UI yet; this is the only trace of a failed save
       console.error('No se pudo guardar el cambio; se recargan los datos.', error)
       state = await repository.load()
       emit()

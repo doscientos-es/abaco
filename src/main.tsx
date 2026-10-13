@@ -7,6 +7,8 @@ import { queryClient, router } from '@/app/router'
 
 import { sessionQuery } from '@/features/auth'
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/shared/lib/supabase/client'
+import { resetStore, setRepository } from '@/shared/store/store'
+import { createSupabaseRepository } from '@/shared/store/supabase-repository'
 
 import './styles.css'
 

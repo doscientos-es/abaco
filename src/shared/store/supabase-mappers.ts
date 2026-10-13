@@ -26,7 +26,10 @@ export type EstimateRow = Row & {
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 const num = (value: unknown): number => Number(value ?? 0)
-const optional = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined)
+/** Optional model fields are omitted (not undefined) when the column is null or empty. */
+function present<K extends string>(key: K, value: unknown): { [P in K]?: string } {
+  return typeof value === 'string' && value ? ({ [key]: value } as { [P in K]?: string }) : {}
+}
 
 export function tenantFromRow(row: Row): Tenant {
   return {
@@ -38,12 +41,12 @@ export function tenantFromRow(row: Row): Tenant {
     defaultVatRate: num(row.default_vat_rate),
     defaultDepositPercent: num(row.default_deposit_percent),
     nextEstimateNumber: num(row.next_estimate_number),
-    ...(optional(row.legal_name) && { legalName: optional(row.legal_name) }),
-    ...(optional(row.address) && { address: optional(row.address) }),
-    ...(optional(row.postal_code) && { postalCode: optional(row.postal_code) }),
-    ...(optional(row.city) && { city: optional(row.city) }),
-    ...(optional(row.website) && { website: optional(row.website) }),
-    ...(optional(row.iban) && { iban: optional(row.iban) }),
+    ...present('legalName', row.legal_name),
+    ...present('address', row.address),
+    ...present('postalCode', row.postal_code),
+    ...present('city', row.city),
+    ...present('website', row.website),
+    ...present('iban', row.iban),
   }
 }
 
@@ -144,7 +147,7 @@ export function estimateFromRow(row: EstimateRow): Estimate {
         id: str(m.id),
         label: str(m.label),
         percent: num(m.percent),
-        ...(optional(m.description) && { description: optional(m.description) }),
+        ...present('description', m.description),
       }),
     ),
   }
