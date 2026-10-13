@@ -9,7 +9,9 @@ import { useState, type ReactNode } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
+import doscientosLogo from '@/assets/logo.svg'
 import type { Tenant } from '@/shared/domain/types'
+import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
@@ -221,6 +223,27 @@ export function SettingsPage() {
           Guardar cambios
         </Button>
       </div>
+
+      <section className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border px-5 py-4">
+        <div className="flex items-center gap-4">
+          <span className="bg-background border-border flex h-10 w-12 shrink-0 items-center justify-center rounded-lg border shadow-sm">
+            <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+          </span>
+          <div className="leading-tight">
+            <h2 className="text-sm font-semibold">Acerca de {brand.name}</h2>
+            <p className="text-muted-foreground text-xs">{brand.tagline}</p>
+          </div>
+        </div>
+        <a
+          href={brand.makerUrl}
+          target="_blank"
+          rel="noopener"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs transition-colors"
+        >
+          Un producto de
+          <img src={doscientosLogo} alt={brand.maker} className="h-3 w-auto" />
+        </a>
+      </section>
     </div>
   )
 }

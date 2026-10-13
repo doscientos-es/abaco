@@ -1,6 +1,6 @@
 export type EmailKind = 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email' | 'reauthentication'
 
-const brand = { name: 'Ábaco', maker: 'Doscientos' }
+const brand = { name: 'Ábaco', maker: 'Doscientos', makerUrl: 'https://doscientos.es' }
 
 type Template = { subject: string; title: string; intro: string; cta: string; outro: string }
 
@@ -62,20 +62,44 @@ const escapeHtml = (value: string) =>
 export function renderEmail(kind: EmailKind, link: string, code: string) {
   const t = templates[kind] ?? templates.email
   const safeLink = escapeHtml(link)
+  // Email clients block SVG, so the logo is a PNG served from the app's public folder.
+  const appUrl = (Deno.env.get('APP_URL') ?? 'https://abaco.doscientos.es').replace(/\/$/, '')
+  const logoUrl = `${appUrl}/doscientos-logo.png`
+  const markUrl = `${appUrl}/abaco-mark.png`
+  const font = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
   const action =
     kind === 'reauthentication'
-      ? `<p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:24px 0">${escapeHtml(code)}</p>`
-      : `<p style="margin:24px 0"><a href="${safeLink}" style="background:#111827;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">${t.cta}</a></p>
-         <p style="color:#6b7280;font-size:12px">Si el botón no funciona, copia este enlace en el navegador:<br><span style="word-break:break-all">${safeLink}</span></p>`
-  const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f3f4f6;font-family:system-ui,sans-serif;color:#111827">
-  <div style="max-width:480px;margin:32px auto;background:#fff;border-radius:12px;padding:32px">
-    <h1 style="font-size:20px;margin:0 0 12px">${t.title}</h1>
-    <p style="line-height:1.5;margin:0">${t.intro}</p>
-    ${action}
-    <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:24px 0 0">${t.outro}</p>
-    <hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0 12px">
-    <p style="color:#6b7280;font-size:12px;margin:0"><strong style="color:#111827">${brand.name}</strong> · un producto de ${brand.maker}</p>
-  </div></body></html>`
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto"><tr><td style="background:#f1fbe8;border:1px solid #bdff7b;border-radius:12px;padding:16px 28px;font-size:32px;font-weight:700;letter-spacing:8px;color:#2a4227;font-family:${font}">${escapeHtml(code)}</td></tr></table>`
+      : `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px"><tr><td style="background:#2a4227;border-radius:10px"><a href="${safeLink}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;font-family:${font}">${t.cta} &rarr;</a></td></tr></table>
+         <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:20px 0 0">¿No funciona el botón? Copia este enlace en tu navegador:<br><a href="${safeLink}" style="color:#2a4227;word-break:break-all">${safeLink}</a></p>`
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><title>${t.title}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:${font};color:#0f172a">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${t.intro}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:32px 16px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
+      <tr><td align="center" style="padding:0 0 20px">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding-right:12px"><img src="${markUrl}" width="44" height="44" alt="" style="display:block;border:0;border-radius:11px"></td>
+          <td style="font-size:24px;font-weight:700;letter-spacing:-0.5px;color:#0f172a;font-family:${font}">${brand.name}</td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
+        <div style="height:4px;background:#2a4227;font-size:0;line-height:0">&nbsp;</div>
+        <div style="padding:36px 36px 32px">
+          <h1 style="font-size:24px;line-height:1.3;margin:0 0 12px;color:#0f172a;font-weight:700">${t.title}</h1>
+          <p style="font-size:16px;line-height:1.6;margin:0;color:#334155">${t.intro}</p>
+          ${action}
+          <hr style="border:0;border-top:1px solid #e2e8f0;margin:28px 0 16px">
+          <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0">${t.outro}</p>
+        </div>
+      </td></tr>
+      <tr><td align="center" style="padding:20px 16px 0;color:#94a3b8;font-size:12px;line-height:1.6">
+        <strong style="color:#64748b">${brand.name}</strong> · un producto de<br>
+        <a href="${brand.makerUrl}" style="text-decoration:none"><img src="${logoUrl}" width="103" height="16" alt="${brand.maker}" style="display:inline-block;margin:6px 0 10px;border:0;height:16px;width:103px"></a><br>Presupuestos claros, trabajo cerrado.
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`
   const text = `${t.title}\n\n${t.intro}\n\n${kind === 'reauthentication' ? code : link}\n\n${t.outro}\n\n${brand.name} · un producto de ${brand.maker}`
   return { subject: t.subject, html, text }
 }

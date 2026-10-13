@@ -147,7 +147,13 @@ export function LedgerPage() {
           title="En qué gastas"
           description={month ? 'Gastos del mes elegido.' : 'Gastos por categoría.'}
         >
-          <Donut data={expenseByCategory} centerLabel="Gastos" empty="Aún no hay gastos" />
+          <Donut
+            data={expenseByCategory}
+            centerLabel="Gastos"
+            empty="Aún no hay gastos"
+            emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
+            emptyIcon={fieldIcons.euro}
+          />
         </ChartCard>
       </div>
 

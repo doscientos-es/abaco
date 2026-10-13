@@ -16,7 +16,7 @@ import { formatEuros } from '@/shared/domain/money'
 import { monthlySeries } from '@/shared/domain/stats'
 import type { EstimateStatus } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
-import { ChartCard, Donut, MonthlyBars, type ChartTone } from '@/shared/ui/charts'
+import { ChartCard, Donut, EmptyHint, MonthlyBars, type ChartTone } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
@@ -99,10 +99,25 @@ export function DashboardPage() {
           title="Ingresos y gastos"
           description="Últimos 6 meses. Pasa el ratón por un mes para ver el detalle."
         >
-          <MonthlyBars data={months} />
+          <MonthlyBars
+            data={months}
+            emptyIcon={fieldIcons.bank}
+            emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
+          />
         </ChartCard>
         <ChartCard className="lg:col-span-2" title="Presupuestos por estado" description="Importe total de cada grupo.">
-          <Donut data={byStatus} centerLabel="Total" empty="Aún no hay presupuestos" />
+          <Donut
+            data={byStatus}
+            centerLabel="Total"
+            empty="Aún no hay presupuestos"
+            emptyDescription="Crea el primero y verás cuánto hay en borrador, enviado, aceptado o rechazado."
+            emptyIcon={fieldIcons.file}
+            emptyAction={
+              <Link to="/presupuestos" className="text-primary underline-offset-4 hover:underline">
+                Ir a presupuestos →
+              </Link>
+            }
+          />
         </ChartCard>
       </div>
 
@@ -137,7 +152,17 @@ export function DashboardPage() {
             </Link>
           ))}
           {estimates.length === 0 ? (
-            <p className="text-muted-foreground px-6 py-8 text-center text-sm">Aún no hay presupuestos.</p>
+            <EmptyHint
+              className="py-12"
+              icon={fieldIcons.file}
+              title="Todavía no has creado presupuestos"
+              description="Tus cinco últimos presupuestos aparecerán aquí, con su importe y estado."
+              action={
+                <Link to="/presupuestos" className="text-primary underline-offset-4 hover:underline">
+                  Crear el primero →
+                </Link>
+              }
+            />
           ) : null}
         </CardContent>
       </Card>

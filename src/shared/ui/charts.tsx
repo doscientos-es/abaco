@@ -36,6 +36,34 @@ export function ChartCard({
   )
 }
 
+/** Quiet empty state for charts and lists: soft icon, one line of what it is, one line of what to do. */
+export function EmptyHint({
+  icon,
+  title,
+  description,
+  action,
+  className = '',
+}: {
+  icon?: ReactNode
+  title: string
+  description?: string | undefined
+  action?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex flex-col items-center gap-1.5 px-4 py-8 text-center ${className}`}>
+      {icon ? (
+        <span className="bg-accent text-primary ring-primary/10 mb-1 flex size-10 items-center justify-center rounded-full ring-1 [&>svg]:size-5">
+          {icon}
+        </span>
+      ) : null}
+      <p className="text-sm font-medium">{title}</p>
+      {description ? <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">{description}</p> : null}
+      {action ? <div className="mt-2 text-sm font-medium">{action}</div> : null}
+    </div>
+  )
+}
+
 export type BarDatum = { label: string; income: number; expense: number }
 
 /** Income vs expense columns per month. Hover or focus a month to see the exact amounts. */
@@ -43,11 +71,18 @@ export function MonthlyBars({
   data,
   incomeLabel = 'Ingresos',
   expenseLabel = 'Gastos',
+  emptyIcon,
+  emptyTitle = 'Sin movimientos todavía',
+  emptyDescription = 'Aquí verás cómo evolucionan tus ingresos y gastos mes a mes.',
 }: {
   data: BarDatum[]
   incomeLabel?: string
   expenseLabel?: string
+  emptyIcon?: ReactNode
+  emptyTitle?: string
+  emptyDescription?: string
 }) {
+  const isEmpty = data.every((d) => d.income === 0 && d.expense === 0)
   const max = Math.max(1, ...data.flatMap((d) => [d.income, d.expense]))
   const pct = (value: number) => `${Math.max(value > 0 ? 3 : 0, (value / max) * 100)}%`
   return (
@@ -60,23 +95,37 @@ export function MonthlyBars({
             style={{ bottom: `${line * 33.3}%` }}
           />
         ))}
+        {isEmpty ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <EmptyHint
+              icon={emptyIcon}
+              title={emptyTitle}
+              description={emptyDescription}
+              className="bg-card/80 rounded-xl py-4 backdrop-blur-[2px]"
+            />
+          </div>
+        ) : null}
         {data.map((d) => (
           <button
             key={d.label}
             type="button"
+            tabIndex={isEmpty ? -1 : 0}
+            aria-hidden={isEmpty || undefined}
             aria-label={`${d.label}: ${incomeLabel} ${formatEuros(d.income)}, ${expenseLabel} ${formatEuros(d.expense)}`}
             className="group focus-visible:ring-ring relative flex h-full flex-1 items-end justify-center gap-1 rounded-md outline-none focus-visible:ring-2"
           >
             <span className="bg-success/80 group-hover:bg-success block w-full max-w-6 rounded-t transition-all" style={{ height: pct(d.income) }} />
             <span className="bg-destructive/70 group-hover:bg-destructive block w-full max-w-6 rounded-t transition-all" style={{ height: pct(d.expense) }} />
-            <span
-              aria-hidden="true"
-              className="bg-popover text-popover-foreground border-border pointer-events-none absolute bottom-full z-10 mb-1 hidden w-max rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-md group-hover:block group-focus-visible:block"
-            >
-              <span className="block font-medium capitalize">{d.label}</span>
-              <span className="text-success block tabular-nums">{incomeLabel}: {formatEuros(d.income)}</span>
-              <span className="text-destructive block tabular-nums">{expenseLabel}: {formatEuros(d.expense)}</span>
-            </span>
+            {isEmpty ? null : (
+              <span
+                aria-hidden="true"
+                className="bg-popover text-popover-foreground border-border pointer-events-none absolute bottom-full z-10 mb-1 hidden w-max rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-md group-hover:block group-focus-visible:block"
+              >
+                <span className="block font-medium capitalize">{d.label}</span>
+                <span className="text-success block tabular-nums">{incomeLabel}: {formatEuros(d.income)}</span>
+                <span className="text-destructive block tabular-nums">{expenseLabel}: {formatEuros(d.expense)}</span>
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -85,10 +134,12 @@ export function MonthlyBars({
           <span key={d.label} className="text-muted-foreground flex-1 text-center text-xs capitalize">{d.label}</span>
         ))}
       </div>
-      <div className="text-muted-foreground mt-3 flex gap-4 text-xs">
-        <span className="flex items-center gap-1.5"><i className="bg-success size-2 rounded-full" />{incomeLabel}</span>
-        <span className="flex items-center gap-1.5"><i className="bg-destructive size-2 rounded-full" />{expenseLabel}</span>
-      </div>
+      {isEmpty ? null : (
+        <div className="text-muted-foreground mt-3 flex gap-4 text-xs">
+          <span className="flex items-center gap-1.5"><i className="bg-success size-2 rounded-full" />{incomeLabel}</span>
+          <span className="flex items-center gap-1.5"><i className="bg-destructive size-2 rounded-full" />{expenseLabel}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -101,16 +152,26 @@ export function Donut({
   format = formatEuros,
   centerLabel = 'Total',
   empty = 'Sin datos todavía',
+  emptyDescription,
+  emptyIcon,
+  emptyAction,
 }: {
   data: DonutDatum[]
   format?: (value: number) => string
   centerLabel?: string
   empty?: string
+  emptyDescription?: string
+  emptyIcon?: ReactNode
+  emptyAction?: ReactNode
 }) {
   const [active, setActive] = useState<number | null>(null)
   const items = data.filter((d) => d.value > 0)
   const total = items.reduce((sum, d) => sum + d.value, 0)
-  if (total === 0) return <p className="text-muted-foreground py-10 text-center text-sm">{empty}</p>
+  if (total === 0) {
+    return (
+      <EmptyHint icon={emptyIcon} title={empty} description={emptyDescription} action={emptyAction} />
+    )
+  }
   const shown = active === null ? null : items[active]
   const slices = items.map((d, index) => {
     const before = items.slice(0, index).reduce((sum, item) => sum + item.value, 0)

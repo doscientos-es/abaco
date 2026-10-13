@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@doscientos/ui": "^0.1.43",
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.101.1",
     "@tanstack/react-router": "^1.170.18",

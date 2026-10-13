@@ -103,13 +103,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <AppShell className="flex h-svh flex-col overflow-hidden md:flex-row">
       <AppShellSidebar className="hidden h-full w-64 shrink-0 flex-col md:flex">
-        <div className="flex shrink-0 flex-col gap-4 px-5 py-6">
-          <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
-            <span className="block truncate text-sm font-semibold tracking-tight">
-              {tenant.name}
+        <div className="shrink-0 px-3 pt-4 pb-3">
+          <Link
+            to="/"
+            aria-label="Ir al resumen"
+            className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
+          >
+            <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
+              <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
             </span>
-            <span className="text-muted-foreground block text-xs">
-              {brand.name} · {brand.byline.toLowerCase()}
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold tracking-tight">{tenant.name}</span>
+              <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
             </span>
           </Link>
         </div>
