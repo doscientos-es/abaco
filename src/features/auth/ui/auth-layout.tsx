@@ -8,7 +8,7 @@ export function AuthLayout({
   footer,
 }: {
   title: string
-  description?: string
+  description?: string | undefined
   children: ReactNode
   footer?: ReactNode
 }) {
