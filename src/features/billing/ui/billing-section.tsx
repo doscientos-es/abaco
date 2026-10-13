@@ -1,8 +1,17 @@
 import { Button } from '@doscientos/ui'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { openPortal, startCheckout, subscriptionQuery, type Subscription } from '../application/billing-actions'
+import {
+  cancelPlan,
+  changePlan,
+  resumePlan,
+  startCheckout,
+  submitToRedsys,
+  subscriptionQuery,
+  type BillingResult,
+  type Subscription,
+} from '../application/billing-actions'
 import {
   formatEuros,
   includedInEveryPlan,
@@ -23,7 +32,7 @@ function currentLine(sub: Subscription): string {
   }
   if (sub.status === 'trialing') return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'canceled') return 'Sin plan activo. Tus datos están a salvo, solo en lectura.'
-  if (sub.status === 'past_due') return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Actualiza la tarjeta.`
+  if (sub.status === 'past_due') return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Vuelve a elegir un plan para pagar con tarjeta.`
   if (sub.cancelAtPeriodEnd) return `Plan ${plan?.name ?? ''}: se cancela el ${until}. Hasta entonces sigue todo igual.`
   return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
 }
@@ -35,15 +44,16 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  async function go(key: string, action: () => ReturnType<typeof openPortal>) {
+  const queryClient = useQueryClient()
+
+  async function go(key: string, action: () => Promise<BillingResult>) {
     setBusy(key)
     setError('')
     const result = await action()
-    if (result.ok) window.location.assign(result.url)
-    else {
-      setError(result.message)
-      setBusy(null)
-    }
+    if (result.ok && result.form) return submitToRedsys(result.form)
+    if (result.ok) await queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
+    else setError(result.message)
+    setBusy(null)
   }
 
   const subscribed = subscription && ['active', 'past_due'].includes(subscription.status)
@@ -80,7 +90,11 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
               current={subscribed === true && subscription?.plan === plan.id}
               busy={busy === plan.id}
               onChoose={() =>
-                void go(plan.id, () => (subscribed ? openPortal(tenantId) : startCheckout(tenantId, plan.id, interval)))
+                void go(plan.id, () =>
+                  subscription?.status === 'active'
+                    ? changePlan(tenantId, plan.id, interval)
+                    : startCheckout(tenantId, plan.id, interval),
+                )
               }
             />
           ))}
@@ -92,14 +106,19 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
           ))}
         </ul>
         <p className="text-muted-foreground text-xs">
-          Precios sin IVA. Sin permanencia: cancelas cuando quieras y sigues hasta el final del periodo pagado.
+          Precios sin IVA (se añade el 21 %). Pago con tarjeta, renovación automática. Sin permanencia: cancelas
+          cuando quieras y sigues hasta el final del periodo pagado. Un cambio de plan se aplica en la próxima renovación.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           {error ? <output className="text-destructive text-sm">{error}</output> : <span />}
-          {subscription?.status !== 'trialing' || subscribed ? (
-            <Button variant="outline" isDisabled={busy !== null} onPress={() => void go('portal', () => openPortal(tenantId))}>
-              Gestionar pago y facturas
+          {subscription?.status === 'active' ? (
+            <Button
+              variant="outline"
+              isDisabled={busy !== null}
+              onPress={() => void go('cancel', () => (subscription.cancelAtPeriodEnd ? resumePlan(tenantId) : cancelPlan(tenantId)))}
+            >
+              {subscription.cancelAtPeriodEnd ? 'Mantener mi plan' : 'Cancelar al final del periodo'}
             </Button>
           ) : null}
         </div>

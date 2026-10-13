@@ -1,15 +1,14 @@
 /**
- * Pagos con Stripe. Solo el propietario de la empresa puede usarla.
+ * Pagos con Redsys. Solo el propietario de la empresa puede usarla.
  *
- * Body: { action: 'checkout', tenantId, plan: 'solo' | 'team' | 'business', interval: 'month' | 'year' }
- *    o: { action: 'portal', tenantId }
- * Responde { url } para redirigir al navegador a Stripe.
- *
- * Los precios se buscan por su lookup_key en Stripe: `solo_month`, `solo_year`, `team_month`, ...
- * Secretos: STRIPE_SECRET_KEY, APP_URL.
+ * Body: { action: 'checkout', tenantId, plan, interval }  -> { form } (el navegador lo envía a Redsys)
+ *    o: { action: 'change', tenantId, plan, interval }    -> cambio de plan en la próxima renovación
+ *    o: { action: 'cancel' | 'resume', tenantId }         -> cancelar / retomar al final del periodo
+ * Secretos: REDSYS_*, APP_URL.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import Stripe from 'npm:stripe@17'
+
+import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
 
 const plans = ['solo', 'team', 'business']
 const intervals = ['month', 'year']
@@ -33,13 +32,12 @@ Deno.serve(async (request) => {
   const url = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
   const appUrl = Deno.env.get('APP_URL')
+  const config = readRedsysConfig()
   const authorization = request.headers.get('Authorization')
-  if (!url || !anonKey || !serviceKey || !stripeKey || !appUrl) return reply(500, { error: 'Función sin configurar' })
+  if (!url || !anonKey || !serviceKey || !appUrl || !config) return reply(500, { error: 'Función sin configurar' })
   if (!authorization) return reply(401, { error: 'Inicia sesión' })
 
-  // Identidad real, tomada del token.
   const asCaller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } })
   const { data: caller } = await asCaller.auth.getUser()
   if (!caller.user) return reply(401, { error: 'Sesión no válida' })
@@ -48,7 +46,6 @@ Deno.serve(async (request) => {
   const tenantId = typeof input?.tenantId === 'string' ? input.tenantId : ''
   if (!uuidPattern.test(tenantId)) return reply(400, { error: 'Datos no válidos' })
 
-  // Solo el propietario gestiona el pago.
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { data: mine } = await admin
     .from('memberships')
@@ -58,57 +55,43 @@ Deno.serve(async (request) => {
     .maybeSingle()
   if (mine?.role !== 'owner') return reply(403, { error: 'Solo el propietario puede gestionar el plan' })
 
-  const { data: tenant } = await admin
-    .from('tenants')
-    .select('name, stripe_customer_id, stripe_subscription_id, subscription_status')
-    .eq('id', tenantId)
-    .single()
+  const { data: tenant } = await admin.from('tenants').select('subscription_status').eq('id', tenantId).single()
   if (!tenant) return reply(404, { error: 'Empresa no encontrada' })
+  const subscribed = ['active', 'past_due'].includes(tenant.subscription_status)
 
-  const stripe = new Stripe(stripeKey)
-  const returnUrl = `${appUrl}/ajustes`
-
-  // Cliente de Stripe: se crea una vez por empresa.
-  let customer = tenant.stripe_customer_id
-  if (!customer) {
-    const created = await stripe.customers.create({
-      name: tenant.name,
-      email: caller.user.email ?? undefined,
-      metadata: { tenant_id: tenantId },
-    })
-    customer = created.id
-    await admin.from('tenants').update({ stripe_customer_id: customer }).eq('id', tenantId)
+  if (input?.action === 'cancel' || input?.action === 'resume') {
+    if (tenant.subscription_status !== 'active') return reply(400, { error: 'No hay suscripción activa' })
+    await admin.from('tenants').update({ cancel_at_period_end: input.action === 'cancel' }).eq('id', tenantId)
+    return reply(200, { ok: true })
   }
 
-  if (input?.action === 'portal') {
-    const portal = await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })
-    return reply(200, { url: portal.url })
-  }
+  const plan = String(input?.plan)
+  const interval = String(input?.interval)
+  if (input?.action !== 'checkout' && input?.action !== 'change') return reply(400, { error: 'Acción no válida' })
+  if (!plans.includes(plan) || !intervals.includes(interval)) return reply(400, { error: 'Plan no válido' })
 
-  if (input?.action === 'checkout') {
-    const plan = String(input.plan)
-    const interval = String(input.interval)
-    if (!plans.includes(plan) || !intervals.includes(interval)) return reply(400, { error: 'Plan no válido' })
-    // Con una suscripción viva, los cambios de plan van por el portal (evita cobrar dos veces).
-    if (tenant.stripe_subscription_id && ['active', 'past_due'].includes(tenant.subscription_status)) {
-      const portal = await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })
-      return reply(200, { url: portal.url })
-    }
-    const prices = await stripe.prices.list({ lookup_keys: [`${plan}_${interval}`], active: true, limit: 1 })
-    const price = prices.data[0]
-    if (!price) return reply(500, { error: 'Precio sin configurar en Stripe' })
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer,
-      line_items: [{ price: price.id, quantity: 1 }],
-      success_url: `${returnUrl}?pago=ok`,
-      cancel_url: `${returnUrl}?pago=cancelado`,
-      allow_promotion_codes: true,
-      client_reference_id: tenantId,
-      subscription_data: { metadata: { tenant_id: tenantId, plan, interval } },
-    })
-    return reply(200, { url: session.url })
+  if (input.action === 'change') {
+    if (tenant.subscription_status !== 'active') return reply(400, { error: 'No hay suscripción activa' })
+    await admin.from('tenants').update({ next_plan: plan, next_interval: interval }).eq('id', tenantId)
+    return reply(200, { ok: true })
   }
+  // Con suscripción activa se usa 'change': un primer pago nuevo cobraría dos veces.
+  if (tenant.subscription_status === 'active') return reply(400, { error: 'Ya tienes un plan activo' })
 
-  return reply(400, { error: 'Acción no válida' })
+  const { data: amount } = await admin.rpc('plan_charge_cents', { p_plan: plan, p_interval: interval })
+  if (typeof amount !== 'number') return reply(500, { error: 'Precio sin configurar' })
+
+  const order = newMerchantOrder()
+  const { error } = await admin.from('billing_payments').insert({
+    tenant_id: tenantId, merchant_order: order, kind: 'first', plan, period: interval, amount_cents: amount,
+  })
+  if (error) return reply(500, { error: 'No se pudo preparar el pago' })
+
+  const form = firstPaymentForm({
+    config, order, amountCents: amount,
+    notifyUrl: `${url}/functions/v1/redsys-webhook`,
+    okUrl: `${appUrl}/ajustes?pago=ok`,
+    koUrl: `${appUrl}/ajustes?pago=cancelado`,
+  })
+  return reply(200, { form, subscribed })
 })

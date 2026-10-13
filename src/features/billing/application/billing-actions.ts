@@ -60,17 +60,45 @@ export const subscriptionQuery = (tenantId: string) =>
     },
   })
 
-export type BillingResult = { ok: true; url: string } | { ok: false; message: string }
+type RedsysForm = { url: string; signatureVersion: string; merchantParameters: string; signature: string }
+
+export type BillingResult = { ok: true; form?: RedsysForm } | { ok: false; message: string }
 
 async function call(body: Record<string, unknown>): Promise<BillingResult> {
-  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{ url?: string }>('billing', { body })
-  if (error || !data?.url) return { ok: false, message: 'No se pudo abrir el pago. Inténtalo de nuevo.' }
-  return { ok: true, url: data.url }
+  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{ form?: RedsysForm }>('billing', { body })
+  if (error) return { ok: false, message: 'No se pudo completar la operación. Inténtalo de nuevo.' }
+  return data?.form ? { ok: true, form: data.form } : { ok: true }
 }
 
-/** Stripe Checkout for a new subscription. */
+/** Sends the browser to Redsys' hosted card page (the card never touches our servers). */
+export function submitToRedsys(form: RedsysForm) {
+  const element = document.createElement('form')
+  element.method = 'POST'
+  element.action = form.url
+  const fields = {
+    Ds_SignatureVersion: form.signatureVersion,
+    Ds_MerchantParameters: form.merchantParameters,
+    Ds_Signature: form.signature,
+  }
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    element.append(input)
+  }
+  document.body.append(element)
+  element.submit()
+}
+
+/** First payment: Redsys asks for the card and keeps a reference for the next charges. */
 export const startCheckout = (tenantId: string, plan: PaidPlan, interval: Interval) =>
   call({ action: 'checkout', tenantId, plan, interval })
 
-/** Stripe customer portal: change plan, update card, download receipts, cancel. */
-export const openPortal = (tenantId: string) => call({ action: 'portal', tenantId })
+/** Plan change for an active subscription: applied on the next renewal. */
+export const changePlan = (tenantId: string, plan: PaidPlan, interval: Interval) =>
+  call({ action: 'change', tenantId, plan, interval })
+
+/** Cancel (or resume) at the end of the paid period. */
+export const cancelPlan = (tenantId: string) => call({ action: 'cancel', tenantId })
+export const resumePlan = (tenantId: string) => call({ action: 'resume', tenantId })
