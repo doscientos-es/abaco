@@ -60,6 +60,16 @@ Deno.serve(async (request) => {
   if (!mine || !['owner', 'admin'].includes(mine.role)) return reply(403, { error: 'No tienes permiso para invitar' })
   if (role === 'admin' && mine.role !== 'owner') return reply(403, { error: 'Solo el propietario puede nombrar administradores' })
 
+  // 3b. Plan: antes de enviar ningún correo, comprobar que caben más personas.
+  const [{ data: tenant }, { count: members }] = await Promise.all([
+    admin.from('tenants').select('plan').eq('id', tenantId).maybeSingle(),
+    admin.from('memberships').select('user_id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+  ])
+  const { data: limit } = await admin.rpc('plan_member_limit', { p_plan: tenant?.plan ?? 'trial' })
+  if (typeof limit === 'number' && (members ?? 0) >= limit) {
+    return reply(409, { error: 'plan_limit' })
+  }
+
   // 4. Invitar (o reutilizar la cuenta si ya existe).
   const invite = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: Deno.env.get('APP_URL') ?? '',
@@ -77,6 +87,7 @@ Deno.serve(async (request) => {
   const { error } = await admin
     .from('memberships')
     .upsert({ tenant_id: tenantId, user_id: userId, role, invited_by: caller.user.id }, { onConflict: 'tenant_id,user_id', ignoreDuplicates: true })
+  if (error?.code === 'P0403') return reply(409, { error: 'plan_limit' })
   if (error) return reply(500, { error: 'No se pudo añadir a la persona al equipo' })
 
   return reply(200, { status })

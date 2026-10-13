@@ -25,6 +25,7 @@ import {
   useSignOut,
   type Permission,
 } from '@/features/auth'
+import { PlanBanner } from '@/features/billing'
 import { useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
@@ -201,6 +202,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             </Button>
           )}
         </AppShellMobileHeader>
+        <PlanBanner />
         <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">{children}</AppShellContent>
       </AppShellMain>
 

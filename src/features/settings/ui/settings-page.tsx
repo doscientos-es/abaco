@@ -8,6 +8,7 @@ import {
 import { useState, type ReactNode } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { BillingSection } from '@/features/billing'
 import type { Tenant } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
@@ -208,6 +209,10 @@ export function SettingsPage() {
 
       {session?.tenantId && !session.demo && can(session.role, 'team:manage') ? (
         <TeamSection tenantId={session.tenantId} />
+      ) : null}
+
+      {session?.tenantId && !session.demo && session.role === 'owner' ? (
+        <BillingSection tenantId={session.tenantId} />
       ) : null}
 
       <div className="flex items-center justify-end gap-3">
