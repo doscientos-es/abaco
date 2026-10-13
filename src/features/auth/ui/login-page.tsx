@@ -2,6 +2,7 @@ import { Button } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
+import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
 
@@ -34,7 +35,15 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
     <AuthLayout
       title="Entrar"
       description="Accede con tu correo y contraseña."
-      footer={<span>¿No tienes cuenta? Pide una invitación a quien administra tu empresa.</span>}
+      footer={
+        <span>
+          ¿Aún no tienes cuenta?{' '}
+          <Link to="/registro" className="hover:text-foreground underline">
+            Crea la de tu empresa
+          </Link>
+          . Si tu empresa ya usa {brand.name}, pide una invitación.
+        </span>
+      }
     >
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         <TextField

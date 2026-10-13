@@ -27,6 +27,19 @@ export const newPasswordSchema = z
     message: 'Las dos contraseñas no coinciden.',
   })
 
+const passwordSchema = z
+  .string()
+  .min(10, 'La contraseña necesita al menos 10 caracteres.')
+  .regex(/[A-Za-z]/, 'Añade al menos una letra.')
+  .regex(/\d/, 'Añade al menos un número.')
+
+export const signupSchema = z.object({
+  fullName: z.string().trim().min(2, 'Escribe tu nombre.').max(120, 'El nombre es demasiado largo.'),
+  companyName: z.string().trim().min(1, 'Escribe el nombre de tu empresa.').max(120, 'El nombre de la empresa es demasiado largo.'),
+  email: emailSchema,
+  password: passwordSchema,
+})
+
 /** First validation message, ready to show under a form. */
 export function firstError(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Revisa los datos.'

@@ -19,6 +19,7 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
+import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
 
@@ -72,6 +73,11 @@ const RecuperarRoute = RecuperarRouteImport.update({
   path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
   id: '/presupuestos/',
   path: '/presupuestos/',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/facturas': typeof FacturasRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/facturas': typeof FacturasRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos': typeof PresupuestosIndexRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/facturas': typeof FacturasRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/facturas'
     | '/nueva-contrasena'
     | '/recuperar'
+    | '/registro'
     | '/presupuestos/$estimateId'
     | '/presupuestos/'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/facturas'
     | '/nueva-contrasena'
     | '/recuperar'
+    | '/registro'
     | '/presupuestos/$estimateId'
     | '/presupuestos'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/facturas'
     | '/nueva-contrasena'
     | '/recuperar'
+    | '/registro'
     | '/presupuestos/$estimateId'
     | '/presupuestos/'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   FacturasRoute: typeof FacturasRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   RecuperarRoute: typeof RecuperarRoute
+  RegistroRoute: typeof RegistroRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
 }
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/presupuestos/': {
       id: '/presupuestos/'
       path: '/presupuestos'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   FacturasRoute: FacturasRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   RecuperarRoute: RecuperarRoute,
+  RegistroRoute: RegistroRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
 }

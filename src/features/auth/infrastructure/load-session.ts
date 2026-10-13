@@ -1,7 +1,7 @@
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/shared/lib/supabase/client'
 
 import { isRole, type Role } from '../domain/permissions'
-import { getPreferredCompanyId } from './active-company'
+import { getPreferredCompanyId, setPreferredCompanyId } from './active-company'
 
 export type Company = { id: string; name: string; role: Role }
 
@@ -35,6 +35,42 @@ const demoSession: AuthSession = {
   demo: true,
 }
 
+/** One row per company the user belongs to; the role can differ in each one. */
+async function fetchCompanies(userId: string): Promise<Company[]> {
+  const { data: memberships } = await createBrowserSupabaseClient()
+    .from('memberships')
+    .select('tenant_id, role, tenants(name)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  const companies: Company[] = []
+  for (const row of (memberships ?? []) as unknown as MembershipRow[]) {
+    if (!isRole(row.role)) continue
+    const tenant = Array.isArray(row.tenants) ? row.tenants[0] : row.tenants
+    companies.push({ id: row.tenant_id, name: tenant?.name ?? 'Empresa', role: row.role })
+  }
+  return companies
+}
+
+/** Shared by concurrent session loads so the company is only created once. */
+let pendingCompany: Promise<boolean> | null = null
+
+/** Creates the company named at signup, then clears the name so it is never created twice. */
+function createPendingCompany(name: unknown): Promise<boolean> {
+  if (typeof name !== 'string' || !name.trim()) return Promise.resolve(false)
+  pendingCompany ??= (async () => {
+    const supabase = createBrowserSupabaseClient()
+    const { data, error } = await supabase.rpc('create_company', { p_name: name })
+    if (error || typeof data !== 'string') return false
+    setPreferredCompanyId(data)
+    await supabase.auth.updateUser({ data: { company_name: null } })
+    return true
+  })().finally(() => {
+    pendingCompany = null
+  })
+  return pendingCompany
+}
+
+
 /** Current session plus the user's role. Returns null when nobody is signed in. */
 export async function loadSession(): Promise<AuthSession | null> {
   if (!isSupabaseConfigured()) return demoSession
@@ -44,17 +80,10 @@ export async function loadSession(): Promise<AuthSession | null> {
   const user = data.session?.user
   if (!user) return null
 
-  // One row per company the user belongs to; the role can differ in each one.
-  const { data: memberships } = await supabase
-    .from('memberships')
-    .select('tenant_id, role, tenants(name)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-  const companies: Company[] = []
-  for (const row of (memberships ?? []) as unknown as MembershipRow[]) {
-    if (!isRole(row.role)) continue
-    const tenant = Array.isArray(row.tenants) ? row.tenants[0] : row.tenants
-    companies.push({ id: row.tenant_id, name: tenant?.name ?? 'Empresa', role: row.role })
+  let companies = await fetchCompanies(user.id)
+  // A person who just signed up and confirmed their email gets the company they named at signup.
+  if (companies.length === 0 && (await createPendingCompany(user.user_metadata?.company_name))) {
+    companies = await fetchCompanies(user.id)
   }
   // The last company used wins; otherwise the oldest membership.
   const preferred = getPreferredCompanyId()

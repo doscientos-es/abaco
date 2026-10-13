@@ -7,9 +7,9 @@ import { hydrateStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
 /** Screens reachable without being signed in. */
-const publicPaths = ['/entrar', '/recuperar', '/confirmar']
+const publicPaths = ['/entrar', '/registro', '/recuperar', '/confirmar']
 /** Signed-in users have no reason to see these. */
-const guestOnlyPaths = ['/entrar', '/recuperar']
+const guestOnlyPaths = ['/entrar', '/registro', '/recuperar']
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ context, location }) => {

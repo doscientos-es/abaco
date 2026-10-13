@@ -1,0 +1,95 @@
+import { Button } from '@doscientos/ui'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { useState, type FormEvent } from 'react'
+
+import { fieldIcons } from '@/shared/ui/field-icons'
+import { TextField } from '@/shared/ui/form'
+
+import { sessionQuery, signUp } from '../application/auth-actions'
+import { firstError, passwordRules, signupSchema } from '../domain/credentials'
+import { AuthLayout, FormError } from './auth-layout'
+
+const toLogin = (
+  <Link to="/entrar" className="hover:text-foreground underline">
+    Volver a entrar
+  </Link>
+)
+
+/** Self-service signup: creates the account and, once confirmed, the company. */
+export function RegisterPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [fullName, setFullName] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sentTo, setSentTo] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const parsed = signupSchema.safeParse({ fullName, companyName, email, password })
+    if (!parsed.success) return setError(firstError(parsed.error))
+    setBusy(true)
+    setError(null)
+    const result = await signUp(parsed.data)
+    setBusy(false)
+    if (!result.ok) return setError(result.message)
+    if (result.needsConfirmation) return setSentTo(parsed.data.email)
+    // Email confirmation is off: there is already a session, so go straight in.
+    await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+    await navigate({ to: '/', replace: true })
+  }
+
+  if (sentTo) {
+    return (
+      <AuthLayout
+        title="Revisa tu correo"
+        description={`Te hemos enviado un enlace a ${sentTo}. Púlsalo para confirmar tu cuenta y crear tu empresa.`}
+        footer={toLogin}
+      >
+        {null}
+      </AuthLayout>
+    )
+  }
+
+  return (
+    <AuthLayout
+      title="Crea tu cuenta"
+      description="Empieza gratis con tu empresa. Después podrás invitar a tu equipo."
+      footer={toLogin}
+    >
+      <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+        <TextField label="Tu nombre" placeholder="Nombre y apellidos" value={fullName} onChange={setFullName} />
+        <TextField
+          label="Nombre de la empresa"
+          placeholder="Ej. Reformas García"
+          value={companyName}
+          onChange={setCompanyName}
+        />
+        <TextField
+          label="Correo"
+          type="email"
+          placeholder="nombre@empresa.es"
+          icon={fieldIcons.mail}
+          value={email}
+          onChange={setEmail}
+        />
+        <TextField
+          label="Contraseña"
+          type="password"
+          placeholder="Elige una contraseña"
+          helper={passwordRules}
+          value={password}
+          onChange={setPassword}
+        />
+        <FormError message={error} />
+        <Button type="submit" className="w-full" isDisabled={busy}>
+          {busy ? 'Creando cuenta…' : 'Crear cuenta'}
+        </Button>
+      </form>
+    </AuthLayout>
+  )
+}
