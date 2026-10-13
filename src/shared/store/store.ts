@@ -58,14 +58,17 @@ const listeners = new Set<() => void>()
 /** Chooses the data source. Call before `hydrateStore`; clears any loaded data. */
 export function setRepository(next: TenantRepository): void {
   repository = next
-  resetStore()
-}
-
-/** Forgets loaded data (sign-out or source change). The next `hydrateStore` loads again. */
-export function resetStore(): void {
   state = undefined
   hydration = undefined
-  emit()
+}
+
+/**
+ * Marks the data as outdated (sign-out, new company). The next `hydrateStore` loads again and
+ * replaces it. The old data stays only until then: screens still mounted must not lose it mid-render,
+ * and the root route does not show them without a session.
+ */
+export function resetStore(): void {
+  hydration = undefined
 }
 
 /** Loads data once. Routes await this in `beforeLoad` so components can read the store synchronously. */
@@ -81,6 +84,13 @@ export function hydrateStore(): Promise<void> {
       throw error
     })
   return hydration
+}
+
+/** Points the app at one of the loaded companies. Not saved: it is a view choice, not data. */
+export function setActiveTenantId(id: string): void {
+  if (!state || state.activeTenantId === id || !state.tenants[id]) return
+  state = { ...state, activeTenantId: id }
+  emit()
 }
 
 function current(): AppState {

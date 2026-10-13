@@ -14,9 +14,17 @@ import {
   AppShellSidebar,
 } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
-import { can, roleLabels, useSession, useSignOut, type Permission } from '@/features/auth'
+import {
+  can,
+  CompanyDialog,
+  roleLabels,
+  useCompanyActions,
+  useSession,
+  useSignOut,
+  type Permission,
+} from '@/features/auth'
 import { useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
@@ -77,6 +85,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const session = useSession()
   const signOut = useSignOut()
   const navigate = useNavigate()
+  const { switchTo } = useCompanyActions()
+  const [creatingCompany, setCreatingCompany] = useState(false)
   const userName = session?.demo ? tenant.name : session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
     const needed = navPermission[item.to]
@@ -135,6 +145,27 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 {session?.demo ? 'Modo demo' : (session?.email ?? '')}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {session?.demo
+                ? null
+                : (
+                  <>
+                    {(session?.companies ?? []).map((company) => (
+                      <DropdownMenuItem
+                        key={company.id}
+                        onAction={() => {
+                          if (company.id !== session?.tenantId) void switchTo(company.id)
+                        }}
+                      >
+                        {company.id === session?.tenantId ? '✓ ' : ''}
+                        {company.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem onAction={() => setCreatingCompany(true)}>
+                      Nueva empresa…
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
               {canSeeSettings ? (
                 <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
                   Ajustes y equipo
@@ -191,6 +222,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </nav>
+      <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
     </AppShell>
   )
 }
