@@ -1,3 +1,4 @@
+import { IconContext } from '@phosphor-icons/react'
 import { useState, type ReactNode } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
@@ -53,9 +54,11 @@ export function EmptyHint({
   return (
     <div className={`flex flex-col items-center gap-1.5 px-4 py-8 text-center ${className}`}>
       {icon ? (
-        <span className="bg-accent text-primary ring-primary/10 mb-1 flex size-10 items-center justify-center rounded-full ring-1 [&>svg]:size-5">
-          {icon}
-        </span>
+        <IconContext.Provider value={{ weight: 'duotone' }}>
+          <span className="text-primary mb-1 flex size-10 items-center justify-center [&>svg]:size-8">
+            {icon}
+          </span>
+        </IconContext.Provider>
       ) : null}
       <p className="text-sm font-medium">{title}</p>
       {description ? <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">{description}</p> : null}
