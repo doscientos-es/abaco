@@ -1,5 +1,7 @@
 export type EmailKind = 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email' | 'reauthentication'
 
+const brand = { name: 'Ábaco', maker: 'Doscientos' }
+
 type Template = { subject: string; title: string; intro: string; cta: string; outro: string }
 
 const templates: Record<EmailKind, Template> = {
@@ -11,9 +13,9 @@ const templates: Record<EmailKind, Template> = {
     outro: 'Si no lo has pedido tú, ignora este correo: tu contraseña no cambiará. El enlace caduca en 1 hora.',
   },
   invite: {
-    subject: 'Te han invitado a Presupuestos',
-    title: 'Te han invitado',
-    intro: 'Te han dado acceso a la aplicación de presupuestos de tu empresa. Pulsa el botón para crear tu contraseña y entrar.',
+    subject: 'Te han invitado a Ábaco',
+    title: 'Te han invitado a Ábaco',
+    intro: 'Te han dado acceso a Ábaco, la aplicación de presupuestos de tu empresa. Pulsa el botón para crear tu contraseña y entrar.',
     cta: 'Aceptar invitación',
     outro: 'Si no esperabas esta invitación, puedes ignorar este correo.',
   },
@@ -71,7 +73,9 @@ export function renderEmail(kind: EmailKind, link: string, code: string) {
     <p style="line-height:1.5;margin:0">${t.intro}</p>
     ${action}
     <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:24px 0 0">${t.outro}</p>
+    <hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0 12px">
+    <p style="color:#6b7280;font-size:12px;margin:0"><strong style="color:#111827">${brand.name}</strong> · un producto de ${brand.maker}</p>
   </div></body></html>`
-  const text = `${t.title}\n\n${t.intro}\n\n${kind === 'reauthentication' ? code : link}\n\n${t.outro}`
+  const text = `${t.title}\n\n${t.intro}\n\n${kind === 'reauthentication' ? code : link}\n\n${t.outro}\n\n${brand.name} · un producto de ${brand.maker}`
   return { subject: t.subject, html, text }
 }

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { brand } from '@/shared/lib/brand'
+
 /** Centered card shared by every public auth screen. */
 export function AuthLayout({
   title,
@@ -15,7 +17,10 @@ export function AuthLayout({
   return (
     <main className="bg-muted/40 flex min-h-svh items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
-        <p className="text-center text-sm font-semibold tracking-tight">Presupuestos y obra</p>
+        <div className="text-center leading-tight">
+          <p className="text-xl font-semibold tracking-tight">{brand.name}</p>
+          <p className="text-muted-foreground text-xs">{brand.byline}</p>
+        </div>
         <section className="border-border bg-card space-y-5 rounded-lg border p-6 shadow-sm">
           <header className="space-y-1">
             <h1 className="text-lg font-semibold tracking-tight">{title}</h1>

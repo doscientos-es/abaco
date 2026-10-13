@@ -26,6 +26,7 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
+import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
@@ -107,7 +108,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
             <span className="block truncate text-sm font-semibold tracking-tight">
               {tenant.name}
             </span>
-            <span className="text-muted-foreground block text-xs">Presupuestos y obra</span>
+            <span className="text-muted-foreground block text-xs">
+              {brand.name} · {brand.byline.toLowerCase()}
+            </span>
           </Link>
         </div>
 
