@@ -39,7 +39,7 @@ export function InvoicesPage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
   const [clientId, setClientId] = useState('all')
-  const initialQuery = useSearch({ strict: false }).q
+  const initialQuery = useSearch({ from: '/facturas/' }).q
   const [query, setQuery] = useState(typeof initialQuery === 'string' ? initialQuery : '')
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'

@@ -16,6 +16,7 @@ import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
 import { Route as ContabilidadRouteImport } from './routes/contabilidad'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as FacturasRouteImport } from './routes/facturas'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
@@ -57,6 +58,11 @@ const ContabilidadRoute = ContabilidadRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FacturasRoute = FacturasRouteImport.update({
+  id: '/facturas',
+  path: '/facturas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/entrar': typeof EntrarRoute
+  '/facturas': typeof FacturasRouteWithChildren
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -136,6 +143,7 @@ export interface FileRoutesById {
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/entrar': typeof EntrarRoute
+  '/facturas': typeof FacturasRouteWithChildren
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -154,6 +162,7 @@ export interface FileRouteTypes {
     | '/confirmar'
     | '/contabilidad'
     | '/entrar'
+    | '/facturas'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/confirmar'
     | '/contabilidad'
     | '/entrar'
+    | '/facturas'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
@@ -203,6 +213,7 @@ export interface RootRouteChildren {
   ConfirmarRoute: typeof ConfirmarRoute
   ContabilidadRoute: typeof ContabilidadRoute
   EntrarRoute: typeof EntrarRoute
+  FacturasRoute: typeof FacturasRouteWithChildren
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
@@ -261,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/facturas': {
+      id: '/facturas'
+      path: '/facturas'
+      fullPath: '/facturas'
+      preLoaderRoute: typeof FacturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nueva-contrasena': {
       id: '/nueva-contrasena'
       path: '/nueva-contrasena'
@@ -313,6 +331,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface FacturasRouteChildren {
+  FacturasInvoiceIdRoute: typeof FacturasInvoiceIdRoute
+  FacturasIndexRoute: typeof FacturasIndexRoute
+}
+
+const FacturasRouteChildren: FacturasRouteChildren = {
+  FacturasInvoiceIdRoute: FacturasInvoiceIdRoute,
+  FacturasIndexRoute: FacturasIndexRoute,
+}
+
+const FacturasRouteWithChildren = FacturasRoute._addFileChildren(
+  FacturasRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AjustesRoute: AjustesRoute,
@@ -321,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfirmarRoute: ConfirmarRoute,
   ContabilidadRoute: ContabilidadRoute,
   EntrarRoute: EntrarRoute,
+  FacturasRoute: FacturasRouteWithChildren,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,
