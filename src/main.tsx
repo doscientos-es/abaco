@@ -5,7 +5,23 @@ import { createRoot } from 'react-dom/client'
 
 import { queryClient, router } from '@/app/router'
 
+import { sessionQuery } from '@/features/auth'
+import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/shared/lib/supabase/client'
+
 import './styles.css'
+
+// Keeps the cached session in sync (sign-out in another tab, token refresh, password change).
+if (isSupabaseConfigured()) {
+  createBrowserSupabaseClient().auth.onAuthStateChange((event) => {
+    if (event === 'INITIAL_SESSION') return
+    // Deferred: awaiting Supabase calls inside this callback can deadlock the auth client.
+    setTimeout(() => {
+      if (event === 'SIGNED_OUT') queryClient.clear()
+      else void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+      void router.invalidate()
+    }, 0)
+  })
+}
 
 const rootElement = document.getElementById('root')
 

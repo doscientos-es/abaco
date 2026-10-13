@@ -3,6 +3,7 @@ import {
   AvatarFallback,
   Button,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
   AppShell,
@@ -14,6 +15,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { can, roleLabels, useSession, useSignOut, type Permission } from '@/features/auth'
 import { useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
@@ -51,6 +53,13 @@ const navGroups: NavGroup[] = [
 /** Bottom bar on mobile; Ajustes lives in the mobile header instead to keep 6 columns. */
 const flatItems = navGroups.flatMap((group) => group.items).filter((item) => item.to !== '/ajustes')
 
+/** Pages each item needs; hidden from the menu when the role lacks it. RLS still enforces it. */
+const navPermission: Partial<Record<NavTo, Permission>> = {
+  '/facturas': 'invoices:read',
+  '/contabilidad': 'ledger:read',
+  '/ajustes': 'settings:write',
+}
+
 function initials(name: string) {
   return (
     name
@@ -64,6 +73,17 @@ function initials(name: string) {
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const { tenant } = useTenantData()
+  const session = useSession()
+  const signOut = useSignOut()
+  const allowed = (item: NavItem) => {
+    const needed = navPermission[item.to]
+    return !needed || can(session?.role, needed)
+  }
+  const groups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter(allowed) }))
+    .filter((group) => group.items.length > 0)
+  const bottomItems = flatItems.filter(allowed)
+  const canSeeSettings = can(session?.role, 'settings:write')
 
   return (
     <AppShell className="flex h-svh flex-col overflow-hidden md:flex-row">
@@ -78,7 +98,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Principal" className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-1">
-          {navGroups.map((group) => (
+          {groups.map((group) => (
             <div key={group.label} className="space-y-1">
               <p className="text-muted-foreground/80 px-3 pb-1 text-[11px] font-medium tracking-wider uppercase">
                 {group.label}
@@ -109,8 +129,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
             </Button>
             <DropdownMenuContent placement="top start">
               <DropdownMenuLabel>
-                {tenant.taxId} · {tenant.phone}
+                {session?.demo ? 'Modo demo' : `${session?.email ?? ''} · ${session?.role ? roleLabels[session.role] : ''}`}
               </DropdownMenuLabel>
+              {session?.demo ? null : <DropdownMenuItem onAction={() => void signOut()}>Cerrar sesión</DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenuTrigger>
         </div>
@@ -121,18 +142,26 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
             <span className="block truncate text-sm font-semibold tracking-tight">{tenant.name}</span>
           </Link>
-          <Link to="/ajustes" aria-label="Ajustes" className="text-muted-foreground ml-auto">
-            {navIcons.settings}
-          </Link>
+          {canSeeSettings ? (
+            <Link to="/ajustes" aria-label="Ajustes" className="text-muted-foreground ml-auto">
+              {navIcons.settings}
+            </Link>
+          ) : null}
+          {session?.demo ? null : (
+            <Button variant="ghost" size="sm" className={canSeeSettings ? '' : 'ml-auto'} onPress={() => void signOut()}>
+              Salir
+            </Button>
+          )}
         </AppShellMobileHeader>
         <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">{children}</AppShellContent>
       </AppShellMain>
 
       <nav
         aria-label="Principal"
-        className="bg-sidebar border-border hidden shrink-0 grid-cols-6 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
+        style={{ gridTemplateColumns: `repeat(${bottomItems.length}, minmax(0, 1fr))` }}
+        className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
       >
-        {flatItems.map((item) => (
+        {bottomItems.map((item) => (
           <Link
             key={item.to}
             to={item.to}

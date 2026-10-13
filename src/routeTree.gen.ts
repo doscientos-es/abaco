@@ -13,8 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AjustesRouteImport } from './routes/ajustes'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as ConfirmarRouteImport } from './routes/confirmar'
 import { Route as ContabilidadRouteImport } from './routes/contabilidad'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
+import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
 
@@ -38,14 +42,34 @@ const ClientesRoute = ClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfirmarRoute = ConfirmarRouteImport.update({
+  id: '/confirmar',
+  path: '/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContabilidadRoute = ContabilidadRouteImport.update({
   id: '/contabilidad',
   path: '/contabilidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FacturasRoute = FacturasRouteImport.update({
   id: '/facturas',
   path: '/facturas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
+  id: '/nueva-contrasena',
+  path: '/nueva-contrasena',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
@@ -64,8 +88,12 @@ export interface FileRoutesByFullPath {
   '/ajustes': typeof AjustesRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
+  '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRoute
+  '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/recuperar': typeof RecuperarRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
@@ -74,8 +102,12 @@ export interface FileRoutesByTo {
   '/ajustes': typeof AjustesRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
+  '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRoute
+  '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/recuperar': typeof RecuperarRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos': typeof PresupuestosIndexRoute
 }
@@ -85,8 +117,12 @@ export interface FileRoutesById {
   '/ajustes': typeof AjustesRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
+  '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRoute
+  '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/recuperar': typeof RecuperarRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
@@ -97,8 +133,12 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/catalogo'
     | '/clientes'
+    | '/confirmar'
     | '/contabilidad'
+    | '/entrar'
     | '/facturas'
+    | '/nueva-contrasena'
+    | '/recuperar'
     | '/presupuestos/$estimateId'
     | '/presupuestos/'
   fileRoutesByTo: FileRoutesByTo
@@ -107,8 +147,12 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/catalogo'
     | '/clientes'
+    | '/confirmar'
     | '/contabilidad'
+    | '/entrar'
     | '/facturas'
+    | '/nueva-contrasena'
+    | '/recuperar'
     | '/presupuestos/$estimateId'
     | '/presupuestos'
   id:
@@ -117,8 +161,12 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/catalogo'
     | '/clientes'
+    | '/confirmar'
     | '/contabilidad'
+    | '/entrar'
     | '/facturas'
+    | '/nueva-contrasena'
+    | '/recuperar'
     | '/presupuestos/$estimateId'
     | '/presupuestos/'
   fileRoutesById: FileRoutesById
@@ -128,8 +176,12 @@ export interface RootRouteChildren {
   AjustesRoute: typeof AjustesRoute
   CatalogoRoute: typeof CatalogoRoute
   ClientesRoute: typeof ClientesRoute
+  ConfirmarRoute: typeof ConfirmarRoute
   ContabilidadRoute: typeof ContabilidadRoute
+  EntrarRoute: typeof EntrarRoute
   FacturasRoute: typeof FacturasRoute
+  NuevaContrasenaRoute: typeof NuevaContrasenaRoute
+  RecuperarRoute: typeof RecuperarRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
 }
@@ -164,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/confirmar': {
+      id: '/confirmar'
+      path: '/confirmar'
+      fullPath: '/confirmar'
+      preLoaderRoute: typeof ConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contabilidad': {
       id: '/contabilidad'
       path: '/contabilidad'
@@ -171,11 +230,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContabilidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/facturas': {
       id: '/facturas'
       path: '/facturas'
       fullPath: '/facturas'
       preLoaderRoute: typeof FacturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nueva-contrasena': {
+      id: '/nueva-contrasena'
+      path: '/nueva-contrasena'
+      fullPath: '/nueva-contrasena'
+      preLoaderRoute: typeof NuevaContrasenaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/presupuestos/': {
@@ -200,8 +280,12 @@ const rootRouteChildren: RootRouteChildren = {
   AjustesRoute: AjustesRoute,
   CatalogoRoute: CatalogoRoute,
   ClientesRoute: ClientesRoute,
+  ConfirmarRoute: ConfirmarRoute,
   ContabilidadRoute: ContabilidadRoute,
+  EntrarRoute: EntrarRoute,
   FacturasRoute: FacturasRoute,
+  NuevaContrasenaRoute: NuevaContrasenaRoute,
+  RecuperarRoute: RecuperarRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
 }
