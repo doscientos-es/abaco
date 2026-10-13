@@ -15,7 +15,7 @@ export function generateInvoice(estimate: Estimate, milestone: MilestoneAmount):
     const now = new Date()
     const due = new Date(now.getTime() + 15 * 86_400_000).toISOString().slice(0, 10)
     const invoice: Invoice = {
-      id: newId('inv'),
+      id: newId(),
       tenantId: data.tenant.id,
       number: formatInvoiceNumber(data.invoices.length + 1, now.getFullYear()),
       estimateId: estimate.id,
@@ -48,7 +48,7 @@ export function markInvoicePaid(id: string): void {
       (l) => l.estimateId === invoice.estimateId && l.milestoneId === invoice.milestoneId,
     )
     const entry: LedgerEntry = {
-      id: newId('led'),
+      id: newId(),
       tenantId: data.tenant.id,
       kind: 'income',
       date: today(),

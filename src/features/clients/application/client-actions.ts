@@ -5,7 +5,7 @@ export type ClientInput = Omit<Client, 'id' | 'tenantId'>
 
 /** Adds a client to the active company and returns its id. */
 export function createClient(input: ClientInput): string {
-  const id = newId('client')
+  const id = newId()
   updateTenantData((data) => ({
     ...data,
     clients: [{ id, tenantId: data.tenant.id, ...input }, ...data.clients],

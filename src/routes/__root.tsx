@@ -3,6 +3,7 @@ import { Outlet, createRootRouteWithContext, redirect, useRouterState } from '@t
 
 import { AppFrame } from '@/app/app-frame'
 import { NoCompanyPage, sessionQuery } from '@/features/auth'
+import { hydrateStore } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
 /** Screens reachable without being signed in. */
@@ -18,6 +19,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })
     }
     if (session && guestOnlyPaths.includes(path)) throw redirect({ to: '/', replace: true })
+    // Screens read the store synchronously, so the data must be loaded before they render.
+    if (session?.role && !publicPaths.includes(path)) await hydrateStore()
     return { session }
   },
   component: RootLayout,

@@ -35,7 +35,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
     setLines([
       ...estimate.lines,
       {
-        id: newId('line'),
+        id: newId(),
         catalogItemId: item.id,
         description: item.name,
         kind: item.kind,
@@ -50,7 +50,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
     setLines([
       ...estimate.lines,
       {
-        id: newId('line'),
+        id: newId(),
         catalogItemId: null,
         description,
         kind: 'other',

@@ -60,7 +60,7 @@ export function LedgerPage() {
     const amountCents = parseEuros(form.amount)
     if (!form.concept.trim() || amountCents <= 0) return
     const entry: LedgerEntry = {
-      id: newId('led'),
+      id: newId(),
       tenantId: tenant.id,
       kind: form.kind,
       date: form.date,

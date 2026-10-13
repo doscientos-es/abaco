@@ -87,7 +87,7 @@ export function CatalogPage() {
       if (editingId) {
         return { ...data, catalog: data.catalog.map((i) => (i.id === editingId ? { ...i, ...values } : i)) }
       }
-      const item: CatalogItem = { id: newId('item'), tenantId: tenant.id, ...values }
+      const item: CatalogItem = { id: newId(), tenantId: tenant.id, ...values }
       return { ...data, catalog: [item, ...data.catalog] }
     })
     reset()

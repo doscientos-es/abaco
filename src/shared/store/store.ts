@@ -4,12 +4,14 @@ import type { TenantData } from '../domain/types'
 import { seedTenant } from './seed'
 
 /**
- * Repository port. Today it is backed by localStorage; to move to Supabase,
- * implement this interface with queries filtered by tenant_id (RLS enforces it).
+ * Repository port. localStorage backs demo mode; the Supabase adapter
+ * (supabase-repository.ts) backs real sessions, filtered by RLS.
+ * `save` receives the previous and next state so adapters can write only the differences.
+ * It may return a fresh state when the server changed data (e.g. assigned document numbers).
  */
 export type TenantRepository = {
-  load(): AppState
-  save(state: AppState): void
+  load(): Promise<AppState>
+  save(previous: AppState, next: AppState): Promise<AppState | undefined>
 }
 
 export type AppState = {
@@ -33,30 +35,56 @@ export const localStorageRepository: TenantRepository = {
         const parsed = JSON.parse(raw) as AppState
         // Data saved before invoices existed has no `invoices` list.
         for (const data of Object.values(parsed.tenants)) data.invoices ??= []
-        return parsed
+        return Promise.resolve(parsed)
       }
     } catch {
       // Corrupted storage falls back to demo data.
     }
-    return initialState()
+    return Promise.resolve(initialState())
   },
-  save(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  save(_previous, next) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    return Promise.resolve(undefined)
   },
 }
 
 let repository: TenantRepository = localStorageRepository
 let state: AppState | undefined
+let hydration: Promise<void> | undefined
+/** Saves run one after another so the server sees changes in the order they were made. */
+let saveQueue: Promise<unknown> = Promise.resolve()
 const listeners = new Set<() => void>()
 
+/** Chooses the data source. Call before `hydrateStore`; clears any loaded data. */
 export function setRepository(next: TenantRepository): void {
   repository = next
+  resetStore()
+}
+
+/** Forgets loaded data (sign-out or source change). The next `hydrateStore` loads again. */
+export function resetStore(): void {
   state = undefined
+  hydration = undefined
   emit()
 }
 
+/** Loads data once. Routes await this in `beforeLoad` so components can read the store synchronously. */
+export function hydrateStore(): Promise<void> {
+  hydration ??= repository
+    .load()
+    .then((loaded) => {
+      state = loaded
+      emit()
+    })
+    .catch((error: unknown) => {
+      hydration = undefined
+      throw error
+    })
+  return hydration
+}
+
 function current(): AppState {
-  state ??= repository.load()
+  if (!state) throw new Error('Los datos todavía no se han cargado.')
   return state
 }
 
@@ -65,9 +93,24 @@ function emit() {
 }
 
 export function updateState(mutator: (draft: AppState) => AppState): void {
-  state = mutator(current())
-  repository.save(state)
+  const previous = current()
+  const next = mutator(previous)
+  if (next === previous) return
+  // Optimistic: the UI updates now; a failed save rolls back to what the source holds.
+  state = next
   emit()
+  saveQueue = saveQueue
+    .then(() => repository.save(previous, next))
+    .then((fresh) => {
+      if (!fresh) return
+      state = fresh
+      emit()
+    })
+    .catch(async (error: unknown) => {
+      console.error('No se pudo guardar el cambio; se recargan los datos.', error)
+      state = await repository.load()
+      emit()
+    })
 }
 
 export function updateTenantData(mutator: (data: TenantData) => TenantData): void {
@@ -99,6 +142,7 @@ export function useTenantData(): TenantData {
   return data
 }
 
-export function newId(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
+/** Ids are uuid so the same value works in localStorage and as a Postgres uuid primary key. */
+export function newId(): string {
+  return crypto.randomUUID()
 }

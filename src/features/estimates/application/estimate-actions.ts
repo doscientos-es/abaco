@@ -3,7 +3,7 @@ import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, updateTenantData } from '@/shared/store/store'
 
 export function createEstimate(clientId: string, title = 'Nueva reforma'): string {
-  const id = newId('est')
+  const id = newId()
   updateTenantData((data) => {
     const now = new Date()
     const validUntil = new Date(now.getTime() + 30 * 86_400_000).toISOString().slice(0, 10)
@@ -50,7 +50,7 @@ export function duplicateEstimate(id: string): string | null {
   updateTenantData((data) => {
     const source = data.estimates.find((e) => e.id === id)
     if (!source) return data
-    created = newId('est')
+    created = newId()
     const copy: Estimate = {
       ...source,
       id: created,
@@ -75,7 +75,7 @@ export function registerMilestonePayment(
 ): void {
   updateTenantData((data) => {
     const entry: LedgerEntry = {
-      id: newId('led'),
+      id: newId(),
       tenantId: data.tenant.id,
       kind: 'income',
       date: new Date().toISOString().slice(0, 10),

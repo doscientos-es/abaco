@@ -32,7 +32,7 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
 
   function add() {
     const remaining = Math.max(0, 100 - percentSum)
-    setMilestones([...estimate.milestones, { id: newId('ms'), label: '', description: '', percent: remaining }])
+    setMilestones([...estimate.milestones, { id: newId(), label: '', description: '', percent: remaining }])
   }
 
   function distributeEvenly() {
