@@ -1,3 +1,4 @@
+import { Toaster } from '@doscientos/ui'
 import type { QueryClient } from '@tanstack/react-query'
 import { Outlet, createRootRouteWithContext, redirect, useRouterState } from '@tanstack/react-router'
 
@@ -42,6 +43,7 @@ function RootLayout() {
   return (
     <AppFrame>
       <Outlet />
+      <Toaster />
     </AppFrame>
   )
 }

@@ -9,6 +9,7 @@ import {
   PageHeaderActions,
   PageHeaderHeading,
   PageHeaderTitle,
+  toast,
 } from '@doscientos/ui'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -21,7 +22,7 @@ import {
 } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
 import type { EstimateStatus } from '@/shared/domain/types'
-import { openEmail } from '@/shared/lib/email'
+import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { useTenantData } from '@/shared/store/store'
@@ -76,14 +77,14 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
     ].join('\n')
   }
 
-  function sendByEmail() {
+  async function sendByEmail() {
     if (!estimate) return
-    if (estimate.status === 'draft') patchEstimate(estimate.id, { status: 'sent' })
-    openEmail(
-      client?.email ?? '',
-      `Presupuesto ${estimate.number} · ${tenant.name}`,
-      buildMessage(),
-    )
+    if (!client?.email) {
+      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      return
+    }
+    const sent = await sendDocument('estimate', estimate.id)
+    if (sent && estimate.status === 'draft') patchEstimate(estimate.id, { status: 'sent' })
   }
 
   function sendByWhatsapp() {
@@ -115,7 +116,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
-          <Button onPress={sendByEmail}>Enviar por email</Button>
+          <Button onPress={() => void sendByEmail()}>Enviar por email</Button>
           <Button variant="outline" onPress={sendByWhatsapp}>
             Enviar por WhatsApp
           </Button>

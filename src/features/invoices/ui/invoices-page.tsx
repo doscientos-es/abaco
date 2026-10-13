@@ -1,6 +1,10 @@
 import {
   Badge,
   Button,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
@@ -12,13 +16,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  toast,
 } from '@doscientos/ui'
+import { DotsThree } from '@phosphor-icons/react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
-import { openEmail } from '@/shared/lib/email'
+import { sendDocument } from '@/shared/lib/send-document'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField } from '@/shared/ui/form'
@@ -81,26 +87,28 @@ export function InvoicesPage() {
 
   function actions(invoice: Invoice) {
     return (
-      <div className="flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-        <Button size="sm" variant="outline" onPress={() => downloadInvoice(invoice.id)}>
-          Descargar
-        </Button>
-        <Button size="sm" variant="outline" onPress={() => send(invoice)}>
-          Enviar
-        </Button>
+      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
         <Button size="sm" isDisabled={invoice.status === 'paid'} onPress={() => markInvoicePaid(invoice.id)}>
           {invoice.status === 'paid' ? 'Cobrada' : 'Cobrar'}
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-destructive"
-          aria-label={`Eliminar ${invoice.number}`}
-          isDisabled={invoice.status === 'paid'}
-          onPress={() => deleteInvoice(invoice.id)}
-        >
-          Eliminar
-        </Button>
+        <DropdownMenuTrigger>
+          <Button size="sm" variant="outline" aria-label={`Más acciones de ${invoice.number}`}>
+            <DotsThree weight="bold" className="size-4" />
+          </Button>
+          <DropdownMenuContent placement="bottom end">
+            <DropdownMenuItem onAction={() => openInvoice(invoice.id)}>Ver factura</DropdownMenuItem>
+            <DropdownMenuItem onAction={() => downloadInvoice(invoice.id)}>Descargar PDF</DropdownMenuItem>
+            <DropdownMenuItem onAction={() => void send(invoice)}>Enviar por email</DropdownMenuItem>
+            {invoice.status === 'paid' ? null : (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onAction={() => deleteInvoice(invoice.id)}>
+                  Eliminar
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenuTrigger>
       </div>
     )
   }
@@ -115,20 +123,14 @@ export function InvoicesPage() {
     )
   }
 
-  function send(invoice: Invoice) {
+  async function send(invoice: Invoice) {
     const client = clients.find((c) => c.id === invoice.clientId)
-    const subject = `Factura ${invoice.number} · ${tenant.name}`
-    const body = [
-      `Hola ${client?.name ?? ''},`,
-      '',
-      `Te enviamos la factura ${invoice.number} por «${invoice.concept}».`,
-      `Importe: ${formatEuros(invoice.totalCents)} (IVA incluido). Vencimiento: ${invoice.dueDate}.`,
-      '',
-      'Gracias por confiar en nosotros.',
-      tenant.name,
-    ].join('\n')
-    if (invoice.status === 'issued') setInvoiceStatus(invoice.id, 'sent')
-    openEmail(client?.email ?? '', subject, body)
+    if (!client?.email) {
+      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      return
+    }
+    const sent = await sendDocument('invoice', invoice.id)
+    if (sent && invoice.status === 'issued') setInvoiceStatus(invoice.id, 'sent')
   }
 
   return (

@@ -6,12 +6,13 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
+  toast,
 } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
-import { openEmail } from '@/shared/lib/email'
+import { sendDocument } from '@/shared/lib/send-document'
 import { useTenantData } from '@/shared/store/store'
 import { PageNotFound } from '@/shared/ui/page-states'
 
@@ -46,19 +47,13 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
   const today = new Date().toISOString().slice(0, 10)
   const overdue = invoice.status !== 'paid' && invoice.dueDate < today
 
-  function send(inv: Invoice) {
-    const subject = `Factura ${inv.number} · ${tenant.name}`
-    const body = [
-      `Hola ${client?.name ?? ''},`,
-      '',
-      `Te enviamos la factura ${inv.number} por «${inv.concept}».`,
-      `Importe: ${formatEuros(inv.totalCents)} (IVA incluido). Vencimiento: ${inv.dueDate}.`,
-      '',
-      'Gracias por confiar en nosotros.',
-      tenant.name,
-    ].join('\n')
-    if (inv.status === 'issued') setInvoiceStatus(inv.id, 'sent')
-    openEmail(client?.email ?? '', subject, body)
+  async function send(inv: Invoice) {
+    if (!client?.email) {
+      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      return
+    }
+    const sent = await sendDocument('invoice', inv.id)
+    if (sent && inv.status === 'issued') setInvoiceStatus(inv.id, 'sent')
   }
 
   return (
