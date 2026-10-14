@@ -69,7 +69,8 @@ describe('paymentsQuery', () => {
 
     request.abortSignal.mockResolvedValue({ data: [], error: null })
     await expect(client.fetchQuery(paymentsQuery('trial-company'))).resolves.toEqual([])
-    expect((request.abortSignal.mock.calls[1]?.[0] as AbortSignal).aborted).toBe(false)
+    const retrySignal = request.abortSignal.mock.calls[1]?.[0] as AbortSignal
+    expect(retrySignal.aborted).toBe(false)
   })
 
   it('does not turn a database failure into an empty history', async () => {
