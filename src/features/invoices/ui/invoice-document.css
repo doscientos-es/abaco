@@ -209,6 +209,13 @@
   white-space: nowrap;
 }
 
+.invoice-sheet .invoice-sheet-settled {
+  margin-top: 4mm;
+  color: var(--invoice-brand, #2a4227);
+  font-size: 8.5pt;
+  text-align: right;
+}
+
 .invoice-sheet-footer {
   margin-top: auto;
   padding-top: 10mm;

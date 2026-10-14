@@ -4,7 +4,8 @@ import { printDocument } from './print-document'
 
 function setup() {
   const clone = { className: 'invoice-document invoice-sheet' }
-  const element = { cloneNode: vi.fn(() => clone) } as unknown as HTMLElement
+  const cloneNode = vi.fn(() => clone)
+  const element = { cloneNode } as unknown as HTMLElement
   const afterPrint = new EventTarget()
   const print = vi.fn()
   const decode = vi.fn().mockResolvedValue(undefined)
@@ -22,10 +23,10 @@ function setup() {
     },
   }
   const page = {
-    createElement: vi.fn(() => frame), body: { append: vi.fn() }, querySelectorAll: vi.fn(() => []),
+    createElement: vi.fn(() => frame), body: { append: vi.fn() }, querySelectorAll: vi.fn<() => unknown[]>(() => []),
   }
   vi.stubGlobal('document', page)
-  return { clone, element, frame, frameDocument, page, print, decode, afterPrint }
+  return { clone, cloneNode, element, frame, frameDocument, page, print, decode, afterPrint }
 }
 
 describe('printDocument', () => {
@@ -37,11 +38,11 @@ describe('printDocument', () => {
   })
 
   it('prints only an exact clone of the document, not the application or preview scaling', async () => {
-    const { element, clone, frameDocument, print, decode } = setup()
+    const { element, clone, cloneNode, frameDocument, print, decode } = setup()
 
     await printDocument(element, 'Factura F-2026-002')
 
-    expect(element.cloneNode).toHaveBeenCalledWith(true)
+    expect(cloneNode).toHaveBeenCalledWith(true)
     expect(frameDocument.body.append).toHaveBeenCalledWith(clone)
     expect(frameDocument.body.className).toBe('invoice-print')
     expect(frameDocument.title).toBe('Factura F-2026-002')
@@ -69,6 +70,38 @@ describe('printDocument', () => {
     await expect(printDocument(element, 'Factura')).rejects.toThrow('Image failed')
     expect(print).not.toHaveBeenCalled()
     expect(frame.remove).toHaveBeenCalledOnce()
+  })
+
+  it('copies and waits for the original stylesheet rather than inventing a separate PDF design', async () => {
+    const { element, page, frameDocument, print } = setup()
+    const link = {
+      href: '', onload: undefined as (() => void) | undefined,
+      onerror: undefined as (() => void) | undefined,
+    }
+    const source = {
+      tagName: 'LINK', href: 'https://example.test/app.css', cloneNode: vi.fn(() => link),
+    }
+    page.querySelectorAll.mockReturnValue([source])
+
+    const task = printDocument(element, 'Factura')
+    expect(frameDocument.head.append).toHaveBeenCalledWith(link)
+    expect(link.href).toBe(source.href)
+    expect(print).not.toHaveBeenCalled()
+    link.onload?.()
+    await task
+    expect(print).toHaveBeenCalledOnce()
+  })
+
+  it('times out and removes the frame if document assets never finish loading', async () => {
+    const { element, frameDocument, frame, print } = setup()
+    frameDocument.fonts.ready = new Promise<void>(() => {})
+    const failure = expect(printDocument(element, 'Factura')).rejects.toThrow('demasiado')
+
+    await vi.advanceTimersByTimeAsync(15_000)
+    await failure
+
+    expect(frame.remove).toHaveBeenCalledOnce()
+    expect(print).not.toHaveBeenCalled()
   })
 
   it('cleans up the isolated print frame after printing', async () => {

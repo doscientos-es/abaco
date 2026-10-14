@@ -39,7 +39,7 @@ describe('InvoiceDocument', () => {
     expect(html).toContain('--invoice-brand:#8354c8')
     expect(html).toContain('src="https://example.test/logo.png"')
     for (const value of [tenant.name, tenant.legalName, tenant.taxId, tenant.address, tenant.city,
-      tenant.postalCode, tenant.email, tenant.phone, tenant.website, tenant.iban, tenant.documentFooter]) {
+    tenant.postalCode, tenant.email, tenant.phone, tenant.website, tenant.iban, tenant.documentFooter]) {
       expect(html).toContain(value)
     }
   })
@@ -48,7 +48,7 @@ describe('InvoiceDocument', () => {
     const html = render()
 
     for (const value of [client.name, client.taxId, client.address, client.email, invoice.number,
-      invoice.concept, '13/10/2026', '28/10/2026', 'P-2026-001', 'Transferencia bancaria']) {
+    invoice.concept, '13/10/2026', '28/10/2026', 'P-2026-001', 'Transferencia bancaria']) {
       expect(html).toContain(value)
     }
     expect(html).toContain('Indica F-2026-002 como concepto')
@@ -72,6 +72,14 @@ describe('InvoiceDocument', () => {
     expect(html).toContain('IVA 0%')
   })
 
+  it('marks paid invoices as settled without asking the client to pay again', () => {
+    const html = render(tenant, { ...invoice, status: 'paid', paidCents: invoice.totalCents })
+
+    expect(html).toContain('Factura cobrada · Sin importe pendiente.')
+    expect(html).not.toContain('como concepto de la transferencia')
+    expect(html).not.toContain('Fecha límite de pago:')
+  })
+
   it('uses a clean default when branding and optional company fields are absent', () => {
     const html = render({
       id: tenant.id, name: 'Empresa', taxId: '', email: '', phone: '',
@@ -89,7 +97,9 @@ describe('InvoiceDocument', () => {
     const document = <InvoiceDocument invoice={invoice} client={client} tenant={tenant} />
     const html = renderToStaticMarkup(<DocumentPreview>{document}</DocumentPreview>)
 
-    expect(html).toContain(renderToStaticMarkup(document))
+    const markup = renderToStaticMarkup(document)
+    // React 19 hoists image preload links outside the article in both renderings.
+    expect(html).toContain(markup.slice(markup.indexOf('<article')))
     expect(html).toContain('invoice-document invoice-sheet')
     expect(html).toContain('A4 · El mismo documento que guardarás en PDF')
     expect(html).not.toContain('sm:flex-row')

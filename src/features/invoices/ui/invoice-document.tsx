@@ -111,6 +111,9 @@ export function InvoiceDocument({
             <dd>{formatEuros(invoice.totalCents)}</dd>
           </div>
         </dl>
+        {invoice.status === 'paid' ? (
+          <p className="invoice-sheet-settled">Factura cobrada · Sin importe pendiente.</p>
+        ) : null}
       </section>
 
       <footer className="invoice-sheet-footer">
@@ -119,8 +122,12 @@ export function InvoiceDocument({
             <p className="invoice-sheet-label">Forma de pago</p>
             <h3>Transferencia bancaria</h3>
             <p className="invoice-sheet-iban">IBAN: {tenant.iban}</p>
-            <p>Indica {invoice.number} como concepto de la transferencia.</p>
-            <p>Fecha límite de pago: {dateLabel(invoice.dueDate)}.</p>
+            {invoice.status !== 'paid' ? (
+              <>
+                <p>Indica {invoice.number} como concepto de la transferencia.</p>
+                <p>Fecha límite de pago: {dateLabel(invoice.dueDate)}.</p>
+              </>
+            ) : null}
           </section>
         ) : null}
         {tenant.documentFooter ? <p className="invoice-sheet-legal">{tenant.documentFooter}</p> : null}
