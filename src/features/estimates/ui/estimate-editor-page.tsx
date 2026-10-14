@@ -17,7 +17,7 @@ import {
 } from '@doscientos/ui'
 import { Copy, DotsThree, Eye, Files, Trash, WhatsappLogo } from '@phosphor-icons/react'
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
@@ -50,11 +50,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [preview, setPreview] = useState(false)
   const [creatingClient, setCreatingClient] = useState(false)
   const estimate = estimates.find((e) => e.id === estimateId)
-  const [titleDraft, setTitleDraft] = useState(estimate?.title ?? '')
-
-  useEffect(() => {
-    setTitleDraft(estimate?.title ?? '')
-  }, [estimateId, estimate?.title])
+  const [titleEdit, setTitleEdit] = useState<{ estimateId: string; value: string } | null>(null)
 
   if (!estimate) {
     return (
@@ -68,6 +64,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   }
 
   const client = clients.find((c) => c.id === estimate.clientId)
+  const titleDraft = titleEdit?.estimateId === estimate.id ? titleEdit.value : estimate.title
   const totals = estimateTotals(estimate)
   const amounts = milestoneAmounts(estimate.milestones, totals.totalCents)
   const percentSum = milestonePercentSum(estimate.milestones)
@@ -213,14 +210,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             icon={fieldIcons.file}
             helper={`Obligatorio · máximo ${formLimits.estimateTitle} caracteres.`}
             value={titleDraft}
-            onChange={setTitleDraft}
+            onChange={(value) => setTitleEdit({ estimateId: estimate.id, value })}
             onBlur={() => {
               const title = titleDraft.trim()
+              setTitleEdit(null)
               if (title.length >= 1 && title.length <= formLimits.estimateTitle) {
                 patchEstimate(estimate.id, { title })
-                setTitleDraft(title)
-              } else {
-                setTitleDraft(estimate.title)
               }
             }}
           />
