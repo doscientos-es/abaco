@@ -40,7 +40,7 @@ function currentLine(sub: Subscription): string {
   return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
 }
 
-/** Plan and payment. Only rendered for the owner, never in demo mode. */
+/** Plan and payment. Only rendered for the owner. */
 export function BillingSection({ tenantId }: { tenantId: string }) {
   const subscription = useQuery(subscriptionQuery(tenantId)).data
   const [interval, setInterval] = useState<Interval>('year')

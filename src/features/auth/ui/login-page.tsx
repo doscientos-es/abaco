@@ -1,4 +1,5 @@
 import { Button } from '@doscientos/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
@@ -6,12 +7,13 @@ import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
 
-import { signIn } from '../application/auth-actions'
+import { sessionQuery, signIn } from '../application/auth-actions'
 import { firstError, loginSchema } from '../domain/credentials'
 import { AuthLayout, FormError } from './auth-layout'
 
 export function LoginPage({ redirect }: { redirect?: string | undefined }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +28,8 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
     const result = await signIn(parsed.data.email, parsed.data.password)
     setBusy(false)
     if (!result.ok) return setError(result.message)
+    // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
+    await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
     // Only same-site paths are honoured, so the link can't send people elsewhere.
     const target = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
     await navigate({ href: target })

@@ -1,7 +1,7 @@
-import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/shared/lib/supabase/client'
+import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import { isRole, type Role } from '../domain/permissions'
-import { getPreferredCompanyId, setPreferredCompanyId } from './active-company'
+import { activeCompanyField, getPreferredCompanyId } from './active-company'
 
 export type Company = { id: string; name: string; role: Role }
 
@@ -21,18 +21,6 @@ export type AuthSession = {
   role: Role | null
   /** Every company the user belongs to, to switch between them. */
   companies: Company[]
-  /** True when running without Supabase: no login, everything is local. */
-  demo: boolean
-}
-
-const demoSession: AuthSession = {
-  userId: 'demo-user',
-  email: 'demo@local',
-  fullName: 'Modo demo',
-  tenantId: null,
-  role: 'owner',
-  companies: [],
-  demo: true,
 }
 
 /** One row per company the user belongs to; the role can differ in each one. */
@@ -61,8 +49,7 @@ function createPendingCompany(name: unknown): Promise<boolean> {
     const supabase = createBrowserSupabaseClient()
     const { data, error } = await supabase.rpc('create_company', { p_name: name })
     if (error || typeof data !== 'string') return false
-    setPreferredCompanyId(data)
-    await supabase.auth.updateUser({ data: { company_name: null } })
+    await supabase.auth.updateUser({ data: { company_name: null, [activeCompanyField]: data } })
     return true
   })().finally(() => {
     pendingCompany = null
@@ -73,8 +60,6 @@ function createPendingCompany(name: unknown): Promise<boolean> {
 
 /** Current session plus the user's role. Returns null when nobody is signed in. */
 export async function loadSession(): Promise<AuthSession | null> {
-  if (!isSupabaseConfigured()) return demoSession
-
   const supabase = createBrowserSupabaseClient()
   const { data } = await supabase.auth.getSession()
   const user = data.session?.user
@@ -86,7 +71,7 @@ export async function loadSession(): Promise<AuthSession | null> {
     companies = await fetchCompanies(user.id)
   }
   // The last company used wins; otherwise the oldest membership.
-  const preferred = getPreferredCompanyId()
+  const preferred = getPreferredCompanyId(user)
   const active = companies.find((company) => company.id === preferred) ?? companies[0]
   const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : ''
 
@@ -97,6 +82,5 @@ export async function loadSession(): Promise<AuthSession | null> {
     tenantId: active?.id ?? null,
     role: active?.role ?? null,
     companies,
-    demo: false,
   }
 }

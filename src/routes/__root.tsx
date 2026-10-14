@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // Screens read the store synchronously, so the data must be loaded before they render.
     if (session?.role && !publicPaths.includes(path)) {
       await hydrateStore()
-      // Follows the company chosen in the session (demo sessions have none).
+      // Follows the company chosen in the session.
       if (session.tenantId) setActiveTenantId(session.tenantId)
     }
     return { session }

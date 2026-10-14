@@ -6,30 +6,28 @@ import { createRoot } from 'react-dom/client'
 import { queryClient, router } from '@/app/router'
 
 import { sessionQuery } from '@/features/auth'
-import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/shared/lib/supabase/client'
+import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { resetStore, setRepository } from '@/shared/store/store'
 import { createSupabaseRepository } from '@/shared/store/supabase-repository'
 
 import './styles.css'
 
 // Keeps the cached session in sync (sign-out in another tab, token refresh, password change).
-if (isSupabaseConfigured()) {
-  const supabase = createBrowserSupabaseClient()
-  // Real sessions read and write through Supabase; without it the app keeps its local demo data.
-  setRepository(createSupabaseRepository(supabase))
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'INITIAL_SESSION') return
-    // Deferred: awaiting Supabase calls inside this callback can deadlock the auth client.
-    setTimeout(() => {
-      if (event === 'SIGNED_OUT') {
-        queryClient.clear()
-        resetStore()
-      }
-      else void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
-      void router.invalidate()
-    }, 0)
-  })
-}
+const supabase = createBrowserSupabaseClient()
+// All data is read and written through Supabase.
+setRepository(createSupabaseRepository(supabase))
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'INITIAL_SESSION') return
+  // Deferred: awaiting Supabase calls inside this callback can deadlock the auth client.
+  setTimeout(() => {
+    if (event === 'SIGNED_OUT') {
+      queryClient.clear()
+      resetStore()
+    }
+    else void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+    void router.invalidate()
+  }, 0)
+})
 
 const rootElement = document.getElementById('root')
 

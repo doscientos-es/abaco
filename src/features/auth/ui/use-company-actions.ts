@@ -18,7 +18,7 @@ export function useCompanyActions() {
 
   return {
     async switchTo(id: string): Promise<void> {
-      chooseCompany(id)
+      await chooseCompany(id)
       await refresh()
     },
     async create(name: string): Promise<ActionResult> {

@@ -209,11 +209,11 @@ export function SettingsPage() {
         />
       </Section>
 
-      {session?.tenantId && !session.demo && can(session.role, 'team:manage') ? (
+      {session?.tenantId && can(session.role, 'team:manage') ? (
         <TeamSection tenantId={session.tenantId} />
       ) : null}
 
-      {session?.tenantId && !session.demo && session.role === 'owner' ? (
+      {session?.tenantId && session.role === 'owner' ? (
         <BillingSection tenantId={session.tenantId} />
       ) : null}
 

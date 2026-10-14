@@ -41,7 +41,7 @@ const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 
 }
 
 export function InvoicesPage() {
-  const { invoices, clients, tenant, estimates } = useTenantData()
+  const { invoices, clients, estimates } = useTenantData()
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
   const [clientId, setClientId] = useState('all')

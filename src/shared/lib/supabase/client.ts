@@ -2,13 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let browserClient: SupabaseClient | undefined
 
-/** Without Supabase variables the app runs in demo mode (local data, no login). */
-export function isSupabaseConfigured(): boolean {
-  return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
-}
-
 /**
- * Creates the browser client only when a real Supabase adapter needs it.
+ * Creates the browser client (one per page). Supabase is required: there is no offline or demo mode.
  * VITE_* values are public by design; data access is protected by RLS.
  */
 export function createBrowserSupabaseClient(): SupabaseClient {

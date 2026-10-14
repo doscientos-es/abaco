@@ -69,7 +69,7 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button onPress={() => window.print()}>Descargar PDF</Button>
-          <Button variant="outline" onPress={() => send(invoice)}>
+          <Button variant="outline" onPress={() => void send(invoice)}>
             Enviar
           </Button>
         </PageHeaderActions>

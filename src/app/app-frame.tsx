@@ -89,7 +89,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
-  const userName = session?.demo ? tenant.name : session?.fullName || session?.email || tenant.name
+  const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
@@ -99,6 +99,35 @@ export function AppFrame({ children }: { children: ReactNode }) {
     .filter((group) => group.items.length > 0)
   const bottomItems = flatItems.filter(allowed)
   const canSeeSettings = can(session?.role, 'settings:write')
+
+  /** Same menu in the sidebar footer (desktop) and the mobile header. */
+  const userMenu = (placement: 'top start' | 'bottom end') => (
+    <DropdownMenuContent placement={placement}>
+      <DropdownMenuLabel>{session?.email ?? ''}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {(session?.companies ?? []).map((company) => (
+        <DropdownMenuItem
+          key={company.id}
+          onAction={() => {
+            if (company.id !== session?.tenantId) void switchTo(company.id)
+          }}
+        >
+          {company.id === session?.tenantId ? '✓ ' : ''}
+          {company.name}
+        </DropdownMenuItem>
+      ))}
+      <DropdownMenuItem onAction={() => setCreatingCompany(true)}>Nueva empresa…</DropdownMenuItem>
+      <DropdownMenuSeparator />
+      {canSeeSettings ? (
+        <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>Ajustes y equipo</DropdownMenuItem>
+      ) : null}
+      <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
+        Cambiar contraseña
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onAction={() => void signOut()}>Cerrar sesión</DropdownMenuItem>
+    </DropdownMenuContent>
+  )
 
   return (
     <AppShell className="flex h-svh flex-col overflow-hidden md:flex-row">
@@ -145,51 +174,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
               <span className="min-w-0 text-left leading-tight">
                 <span className="block truncate text-sm font-medium">{userName}</span>
                 <span className="text-muted-foreground block truncate text-xs font-normal">
-                  {session?.demo ? tenant.email : session?.role ? roleLabels[session.role] : ''}
+                  {session?.role ? roleLabels[session.role] : ''}
                 </span>
               </span>
             </Button>
-            <DropdownMenuContent placement="top start">
-              <DropdownMenuLabel>
-                {session?.demo ? 'Modo demo' : (session?.email ?? '')}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {session?.demo
-                ? null
-                : (
-                  <>
-                    {(session?.companies ?? []).map((company) => (
-                      <DropdownMenuItem
-                        key={company.id}
-                        onAction={() => {
-                          if (company.id !== session?.tenantId) void switchTo(company.id)
-                        }}
-                      >
-                        {company.id === session?.tenantId ? '✓ ' : ''}
-                        {company.name}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuItem onAction={() => setCreatingCompany(true)}>
-                      Nueva empresa…
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-              {canSeeSettings ? (
-                <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
-                  Ajustes y equipo
-                </DropdownMenuItem>
-              ) : null}
-              {session?.demo ? null : (
-                <>
-                  <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
-                    Cambiar contraseña
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onAction={() => void signOut()}>Cerrar sesión</DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
+            {userMenu('top start')}
           </DropdownMenuTrigger>
         </div>
       </AppShellSidebar>
@@ -199,16 +188,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
             <span className="block truncate text-sm font-semibold tracking-tight">{tenant.name}</span>
           </Link>
-          {canSeeSettings ? (
-            <Link to="/ajustes" aria-label="Ajustes" className="text-muted-foreground ml-auto">
-              {navIcons.settings}
-            </Link>
-          ) : null}
-          {session?.demo ? null : (
-            <Button variant="ghost" size="sm" className={canSeeSettings ? '' : 'ml-auto'} onPress={() => void signOut()}>
-              Salir
+          <DropdownMenuTrigger>
+            <Button variant="ghost" aria-label="Menú de usuario" className="ml-auto h-auto rounded-full p-1">
+              <Avatar>
+                <AvatarFallback>{initials(userName)}</AvatarFallback>
+              </Avatar>
             </Button>
-          )}
+            {userMenu('bottom end')}
+          </DropdownMenuTrigger>
         </AppShellMobileHeader>
         <PlanBanner />
         <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">{children}</AppShellContent>
@@ -217,7 +204,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <nav
         aria-label="Principal"
         style={{ gridTemplateColumns: `repeat(${bottomItems.length}, minmax(0, 1fr))` }}
-        className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
+        className="bg-sidebar border-border grid shrink-0 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {bottomItems.map((item) => (
           <Link

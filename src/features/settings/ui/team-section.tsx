@@ -14,7 +14,7 @@ import {
   type TeamResult,
 } from '../application/team-actions'
 
-/** Members of the company. Only rendered for people allowed to manage the team, never in demo mode. */
+/** Members of the company. Only rendered for people allowed to manage the team. */
 export function TeamSection({ tenantId }: { tenantId: string }) {
   const session = useSession()
   const queryClient = useQueryClient()

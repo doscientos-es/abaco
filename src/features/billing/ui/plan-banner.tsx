@@ -5,10 +5,10 @@ import { useSession } from '@/features/auth'
 
 import { subscriptionQuery } from '../application/billing-actions'
 
-/** Shows trial days left, read-only mode or a failed payment. Hidden in demo mode and when all is well. */
+/** Shows trial days left, read-only mode or a failed payment. Hidden when all is well. */
 export function PlanBanner() {
   const session = useSession()
-  const tenantId = session && !session.demo ? session.tenantId : null
+  const tenantId = session?.tenantId ?? null
   const { data: sub } = useQuery({ ...subscriptionQuery(tenantId ?? ''), enabled: tenantId !== null })
   if (!sub || !session) return null
 

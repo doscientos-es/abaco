@@ -1,11 +1,10 @@
 import { useSyncExternalStore } from 'react'
 
 import type { TenantData } from '../domain/types'
-import { seedTenant } from './seed'
 
 /**
- * Repository port. localStorage backs demo mode; the Supabase adapter
- * (supabase-repository.ts) backs real sessions, filtered by RLS.
+ * Repository port. The Supabase adapter (supabase-repository.ts) is the only implementation,
+ * filtered by RLS; `setRepository` must be called at startup.
  * `save` receives the previous and next state so adapters can write only the differences.
  * It may return a fresh state when the server changed data (e.g. assigned document numbers).
  */
@@ -19,36 +18,12 @@ export type AppState = {
   tenants: Record<string, TenantData>
 }
 
-const STORAGE_KEY = 'abderrahim-presupuestos:v1'
-
-function initialState(): AppState {
-  const a = seedTenant('tenant-reformas', 'Reformas Abderrahim', 'B12345678')
-  const b = seedTenant('tenant-demo', 'Construcciones Demo', 'B87654321')
-  return { activeTenantId: a.tenant.id, tenants: { [a.tenant.id]: a, [b.tenant.id]: b } }
+const unconfigured: TenantRepository = {
+  load: () => Promise.reject(new Error('El almacén de datos no está configurado.')),
+  save: () => Promise.reject(new Error('El almacén de datos no está configurado.')),
 }
 
-export const localStorageRepository: TenantRepository = {
-  load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as AppState
-        // Data saved before invoices existed has no `invoices` list.
-        for (const data of Object.values(parsed.tenants)) data.invoices ??= []
-        return Promise.resolve(parsed)
-      }
-    } catch {
-      // Corrupted storage falls back to demo data.
-    }
-    return Promise.resolve(initialState())
-  },
-  save(_previous, next) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    return Promise.resolve(undefined)
-  },
-}
-
-let repository: TenantRepository = localStorageRepository
+let repository: TenantRepository = unconfigured
 let state: AppState | undefined
 let hydration: Promise<void> | undefined
 /** Saves run one after another so the server sees changes in the order they were made. */
@@ -132,10 +107,6 @@ export function updateTenantData(mutator: (data: TenantData) => TenantData): voi
   })
 }
 
-export function resetDemoData(): void {
-  updateState(() => initialState())
-}
-
 function subscribe(listener: () => void) {
   listeners.add(listener)
   return () => listeners.delete(listener)
@@ -153,7 +124,7 @@ export function useTenantData(): TenantData {
   return data
 }
 
-/** Ids are uuid so the same value works in localStorage and as a Postgres uuid primary key. */
+/** Ids are uuid so the client can create rows with their final Postgres uuid primary key. */
 export function newId(): string {
   return crypto.randomUUID()
 }
