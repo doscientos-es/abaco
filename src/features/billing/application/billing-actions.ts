@@ -13,6 +13,9 @@ export type Subscription = {
   interval: Interval | null
   currentPeriodEnd: Date | null
   cancelAtPeriodEnd: boolean
+  /** Plan change already requested: applied on the next renewal. */
+  nextPlan: PaidPlan | null
+  nextInterval: Interval | null
   /** Whether the company can create and edit data. Mirrors `tenant_can_write` in the database. */
   canWrite: boolean
   /** Whole days of trial left (0 when over or not on trial). */
@@ -29,6 +32,8 @@ export function describeSubscription(row: {
   billing_interval: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  next_plan: string | null
+  next_interval: string | null
 }): Subscription {
   const status = (statuses.includes(row.subscription_status) ? row.subscription_status : 'canceled') as SubscriptionStatus
   const trialEndsAt = new Date(row.trial_ends_at)
@@ -40,6 +45,8 @@ export function describeSubscription(row: {
     interval: row.billing_interval === 'year' || row.billing_interval === 'month' ? row.billing_interval : null,
     currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
     cancelAtPeriodEnd: row.cancel_at_period_end,
+    nextPlan: row.next_plan === 'solo' || row.next_plan === 'team' || row.next_plan === 'business' ? row.next_plan : null,
+    nextInterval: row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
     canWrite: trialActive || status === 'active' || status === 'past_due',
     trialDaysLeft: trialActive ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000)) : 0,
   }
@@ -52,7 +59,7 @@ export const subscriptionQuery = (tenantId: string) =>
     queryFn: async (): Promise<Subscription> => {
       const { data, error } = await createBrowserSupabaseClient()
         .from('tenants')
-        .select('plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end')
+        .select('plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval')
         .eq('id', tenantId)
         .single()
       if (error) throw new Error('No se pudo cargar el plan.')
@@ -72,6 +79,48 @@ export const memberCountQuery = (tenantId: string) =>
         .eq('tenant_id', tenantId)
       if (error) throw new Error('No se pudo contar el equipo.')
       return count ?? 0
+    },
+  })
+
+export type PaymentStatus = 'pending' | 'succeeded' | 'failed'
+
+export type Payment = {
+  id: string
+  /** Redsys operation number: the reference to quote when asking about a charge. */
+  order: string
+  kind: 'first' | 'renewal'
+  plan: PaidPlan
+  period: Interval
+  /** Amount charged, VAT included. */
+  amountCents: number
+  status: PaymentStatus
+  createdAt: Date
+  settledAt: Date | null
+}
+
+/** Every charge attempt of the company, newest first. Only the owner can read them (RLS). */
+export const paymentsQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['billing-payments', tenantId],
+    staleTime: 60_000,
+    queryFn: async (): Promise<Payment[]> => {
+      const { data, error } = await createBrowserSupabaseClient()
+        .from('billing_payments')
+        .select('id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+      if (error) throw new Error('No se pudo cargar el historial de pagos.')
+      return data.map((row) => ({
+        id: row.id,
+        order: row.merchant_order,
+        kind: row.kind as Payment['kind'],
+        plan: row.plan as PaidPlan,
+        period: row.period as Interval,
+        amountCents: row.amount_cents,
+        status: row.status as PaymentStatus,
+        createdAt: new Date(row.created_at),
+        settledAt: row.settled_at ? new Date(row.settled_at) : null,
+      }))
     },
   })
 

@@ -1,4 +1,4 @@
-export { subscriptionQuery } from './application/billing-actions'
+export { paymentsQuery, subscriptionQuery } from './application/billing-actions'
 export type { Subscription } from './application/billing-actions'
 export { memberLimit, planCatalog } from './domain/plans'
 export { BillingSection } from './ui/billing-section'

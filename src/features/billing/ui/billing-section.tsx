@@ -25,6 +25,8 @@ import {
   type PlanInfo,
 } from '../domain/plans'
 
+import { PaymentHistory } from './payment-history'
+
 const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 
 function currentLine(sub: Subscription): string {
@@ -41,7 +43,7 @@ function currentLine(sub: Subscription): string {
 }
 
 /** Plan and payment. Only rendered for the owner. */
-export function BillingSection({ tenantId }: { tenantId: string }) {
+export function BillingSection({ tenantId, companyName }: { tenantId: string; companyName: string }) {
   const subscription = useQuery(subscriptionQuery(tenantId)).data
   const [interval, setInterval] = useState<Interval>('year')
   const [busy, setBusy] = useState<string | null>(null)
@@ -75,6 +77,8 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
       </div>
 
       <div className="space-y-5 p-5">
+        <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
+        <hr className="border-border" />
         {onTrial ? (
           <div className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
             <p className="font-medium">

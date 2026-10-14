@@ -336,7 +336,7 @@ export function SettingsPage() {
       ) : null}
 
       {session?.tenantId && session.role === 'owner' ? (
-        <BillingSection tenantId={session.tenantId} />
+        <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}
 
       <div className="flex items-center justify-end gap-3">

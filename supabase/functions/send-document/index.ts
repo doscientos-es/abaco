@@ -96,7 +96,8 @@ Deno.serve(async (request) => {
   const company = tenant?.name ?? ''
   const signature = (tenant?.email_signature ?? '').trim() || company
   const customIntro = ((kind === 'invoice' ? tenant?.invoice_email_intro : tenant?.estimate_email_intro) ?? '').trim()
-  const brandColor = colorPattern.test(tenant?.brand_color ?? '') ? tenant!.brand_color : '#2a4227'
+  const rawColor = tenant?.brand_color ?? ''
+  const brandColor = colorPattern.test(rawColor) ? rawColor : '#2a4227'
 
   // 4. Contenido.
   let subject: string
@@ -145,6 +146,7 @@ Deno.serve(async (request) => {
       replyTo: emailPattern.test(tenant?.email ?? '') ? tenant?.email : undefined,
     })
   } catch (error) {
+    // eslint-disable-next-line no-console -- único rastro del fallo de Resend en los logs de la función
     console.error('send-document: fallo de Resend', error instanceof Error ? error.message : 'desconocido')
     return reply(502, { error: 'send_failed' })
   }
