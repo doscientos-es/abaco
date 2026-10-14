@@ -1,5 +1,5 @@
-import { parseEuros } from '@/shared/domain/money'
 import { formLimits } from '@/shared/domain/form-limits'
+import { parseEuros } from '@/shared/domain/money'
 import { normalizeHeader, type ImportSchema } from '@/shared/domain/table-import'
 import type { LedgerEntry, LedgerKind } from '@/shared/domain/types'
 
@@ -30,7 +30,12 @@ function parseDate(input: string): string | null {
     return date.toISOString().slice(0, 10)
   } else return null
   const check = new Date(Date.UTC(year, month - 1, day))
-  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  )
+    return null
   return `${year}-${pad(month)}-${pad(day)}`
 }
 
@@ -40,32 +45,62 @@ export const ledgerImportSchema: ImportSchema<LedgerInput> = {
   columns: [
     { label: 'Fecha', required: true, hint: 'Formato DD/MM/AAAA.', example: '15/03/2026' },
     { label: 'Tipo', required: true, hint: 'Solo: Ingreso o Gasto.', example: 'Gasto' },
-    { label: 'Concepto', aliases: ['Descripción'], required: true, hint: 'Texto corto.', example: 'Compra de azulejos' },
-    { label: 'Categoría', aliases: ['Categoria'], hint: 'Si se deja vacío será Otros.', example: 'Materiales' },
-    { label: 'IVA %', aliases: ['IVA'], hint: 'Porcentaje, sin el símbolo %. Si se deja vacío será 0.', example: '21' },
-    { label: 'Total', aliases: ['Importe'], required: true, hint: 'Importe con IVA incluido, positivo, coma decimal, sin símbolo de moneda.', example: '1210,00' },
+    {
+      label: 'Concepto',
+      aliases: ['Descripción'],
+      required: true,
+      hint: 'Texto corto.',
+      example: 'Compra de azulejos',
+    },
+    {
+      label: 'Categoría',
+      aliases: ['Categoria'],
+      hint: 'Si se deja vacío será Otros.',
+      example: 'Materiales',
+    },
+    {
+      label: 'IVA %',
+      aliases: ['IVA'],
+      hint: 'Porcentaje, sin el símbolo %. Si se deja vacío será 0.',
+      example: '21',
+    },
+    {
+      label: 'Total',
+      aliases: ['Importe'],
+      required: true,
+      hint: 'Importe con IVA incluido, positivo, coma decimal, sin símbolo de moneda.',
+      example: '1210,00',
+    },
   ],
   parse(row) {
     const date = parseDate(row['Fecha'] ?? '')
     if (!date) return { ok: false, error: `Fecha no válida: ${row['Fecha'] ?? ''}` }
     const rawKind = row['Tipo'] ?? ''
     const kind = kinds[normalizeHeader(rawKind)]
-    if (!kind) return { ok: false, error: `Tipo no válido: ${rawKind || '(vacío)'}. Usa Ingreso o Gasto.` }
+    if (!kind)
+      return { ok: false, error: `Tipo no válido: ${rawKind || '(vacío)'}. Usa Ingreso o Gasto.` }
     const concept = row['Concepto'] ?? ''
     if (!concept.trim()) return { ok: false, error: 'Falta el concepto.' }
-    if (concept.length > formLimits.ledgerConcept) return { ok: false, error: `El concepto supera ${formLimits.ledgerConcept} caracteres.` }
+    if (concept.length > formLimits.ledgerConcept)
+      return { ok: false, error: `El concepto supera ${formLimits.ledgerConcept} caracteres.` }
     const category = row['Categoría'] || 'Otros'
-    if (category.length > formLimits.ledgerCategory) return { ok: false, error: `La categoría supera ${formLimits.ledgerCategory} caracteres.` }
+    if (category.length > formLimits.ledgerCategory)
+      return { ok: false, error: `La categoría supera ${formLimits.ledgerCategory} caracteres.` }
     const rawTotal = (row['Total'] ?? '').replace(/[€$]/g, '')
-    if (!/^-?[\d.,\s]+$/.test(rawTotal)) return { ok: false, error: `Importe no válido: ${row['Total'] ?? ''}` }
+    if (!/^-?[\d.,\s]+$/.test(rawTotal))
+      return { ok: false, error: `Importe no válido: ${row['Total'] ?? ''}` }
     const amountCents = Math.abs(parseEuros(rawTotal))
     if (amountCents === 0) return { ok: false, error: 'El importe no puede ser 0.' }
     if (!Number.isSafeInteger(amountCents) || amountCents > formLimits.monetaryAmount * 100) {
-      return { ok: false, error: `El importe supera ${formLimits.monetaryAmount.toLocaleString('es-ES')} €.` }
+      return {
+        ok: false,
+        error: `El importe supera ${formLimits.monetaryAmount.toLocaleString('es-ES')} €.`,
+      }
     }
     const vatText = (row['IVA %'] ?? '').replace('%', '').replace(',', '.')
     const vatRate = vatText ? Number(vatText) : 0
-    if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) return { ok: false, error: `IVA no válido: ${row['IVA %'] ?? ''}` }
+    if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100)
+      return { ok: false, error: `IVA no válido: ${row['IVA %'] ?? ''}` }
     return {
       ok: true,
       value: {

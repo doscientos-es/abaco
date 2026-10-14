@@ -41,6 +41,7 @@ export function TextField({
   label,
   value,
   onChange,
+  onBlur,
   type = 'text',
   placeholder,
   icon,
@@ -55,6 +56,7 @@ export function TextField({
   label: string
   value: string
   onChange: (value: string) => void
+  onBlur?: () => void
   type?: string
   placeholder: string
   icon?: ReactNode
@@ -85,6 +87,7 @@ export function TextField({
           {...(step === undefined ? {} : { step })}
           className={icon ? 'pl-9' : ''}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
         />
       </div>
     </FormField>

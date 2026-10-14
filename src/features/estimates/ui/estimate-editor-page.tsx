@@ -17,7 +17,7 @@ import {
 } from '@doscientos/ui'
 import { Copy, DotsThree, Eye, Files, Trash, WhatsappLogo } from '@phosphor-icons/react'
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
@@ -50,6 +50,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [preview, setPreview] = useState(false)
   const [creatingClient, setCreatingClient] = useState(false)
   const estimate = estimates.find((e) => e.id === estimateId)
+  const [titleDraft, setTitleDraft] = useState(estimate?.title ?? '')
+
+  useEffect(() => {
+    setTitleDraft(estimate?.title ?? '')
+  }, [estimateId, estimate?.title])
 
   if (!estimate) {
     return (
@@ -201,13 +206,23 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Título de la obra"
-            minLength={2}
+            minLength={1}
             maxLength={formLimits.estimateTitle}
             className="sm:col-span-2"
             placeholder="Ej. Reforma de baño"
             icon={fieldIcons.file}
-            value={estimate.title}
-            onChange={(title) => patchEstimate(estimate.id, { title })}
+            helper={`Obligatorio · máximo ${formLimits.estimateTitle} caracteres.`}
+            value={titleDraft}
+            onChange={setTitleDraft}
+            onBlur={() => {
+              const title = titleDraft.trim()
+              if (title.length >= 1 && title.length <= formLimits.estimateTitle) {
+                patchEstimate(estimate.id, { title })
+                setTitleDraft(title)
+              } else {
+                setTitleDraft(estimate.title)
+              }
+            }}
           />
           <div className="flex flex-col gap-1.5">
             <SelectField
