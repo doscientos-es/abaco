@@ -11,12 +11,13 @@ import {
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import doscientosLogo from '@/assets/logo.svg'
 import { can, useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
-import doscientosLogo from '@/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
 
+import { version } from '../../../../package.json'
 import { patchTenant } from '../application/settings-actions'
 
 import { BrandTab } from './brand-tab'
@@ -55,7 +56,9 @@ export function SettingsPage() {
   }
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(tenant))
   const valid =
-    form.name.trim() !== '' && (form.brandColor === '' || hexColor.test(form.brandColor)) && isLogoOk(form.logoUrl)
+    form.name.trim() !== '' &&
+    (form.brandColor === '' || hexColor.test(form.brandColor)) &&
+    isLogoOk(form.logoUrl)
 
   function save() {
     if (!valid) return
@@ -91,14 +94,17 @@ export function SettingsPage() {
         <PageHeaderHeading>
           <PageHeaderTitle>Ajustes</PageHeaderTitle>
           <PageHeaderDescription>
-            Los datos de tu empresa. Aparecen en los presupuestos, las facturas y los mensajes que envías.
+            Los datos de tu empresa. Aparecen en los presupuestos, las facturas y los mensajes que
+            envías.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
 
       <Tabs
         selectedKey={tab}
-        onSelectionChange={(key) => void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })}
+        onSelectionChange={(key) =>
+          void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })
+        }
       >
         <TabsList aria-label="Secciones de ajustes" className="w-full overflow-x-auto sm:w-fit">
           {allowed.map((id) => (
@@ -125,13 +131,16 @@ export function SettingsPage() {
         </div>
       ) : null}
 
-      <section className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border px-5 py-4">
+      <footer className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-5">
         <div className="flex items-center gap-4">
-          <span className="bg-background border-border flex h-10 w-12 shrink-0 items-center justify-center rounded-lg border shadow-sm">
+          <span className="flex h-10 w-12 shrink-0 items-center justify-center">
             <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
           </span>
           <div className="leading-tight">
-            <h2 className="text-sm font-semibold">Acerca de {brand.name}</h2>
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <h2 className="text-sm font-semibold">Acerca de {brand.name}</h2>
+              <span className="text-muted-foreground text-xs">v{version}</span>
+            </div>
             <p className="text-muted-foreground text-xs">{brand.tagline}</p>
           </div>
         </div>
@@ -144,7 +153,7 @@ export function SettingsPage() {
           Un producto de
           <img src={doscientosLogo} alt={brand.maker} className="h-3 w-auto" />
         </a>
-      </section>
+      </footer>
     </div>
   )
 }

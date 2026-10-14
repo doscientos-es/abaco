@@ -53,6 +53,7 @@ export function PaymentHistory({
   const paid = (payments ?? []).filter((p) => p.status === 'succeeded')
   const totalPaid = paid.reduce((sum, p) => sum + p.amountCents, 0)
 
+  const onTrial = subscription?.status === 'trialing'
   const active = subscription && ['active', 'past_due'].includes(subscription.status)
   const nextPlan = planInfo(subscription?.nextPlan ?? subscription?.plan ?? 'trial')
   const nextInterval = subscription?.nextInterval ?? subscription?.interval
@@ -77,14 +78,23 @@ export function PaymentHistory({
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">
-          <dt className="text-muted-foreground text-xs">Próximo cobro</dt>
+          <dt className="text-muted-foreground text-xs">
+            {onTrial ? 'Fin de la prueba gratuita' : 'Próximo cobro'}
+          </dt>
           <dd className="font-medium">
-            {willRenew && periodEnd
-              ? `${cents(nextCents)} el ${day.format(periodEnd)}`
-              : active
-                ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
-                : 'Ninguno'}
+            {onTrial && subscription
+              ? day.format(subscription.trialEndsAt)
+              : willRenew && periodEnd
+                ? `${cents(nextCents)} el ${day.format(periodEnd)}`
+                : active
+                  ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
+                  : 'Ninguno'}
           </dd>
+          {onTrial ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              No se cobra automáticamente al terminar.
+            </p>
+          ) : null}
         </div>
       </dl>
       {subscription?.nextPlan && willRenew ? (

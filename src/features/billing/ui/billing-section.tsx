@@ -73,14 +73,31 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
     return () => window.clearInterval(timer)
   }, [returned, queryClient, tenantId])
 
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return
+      // Browser Back can restore this page with the pre-redirect disabled state.
+      setBusy(null)
+      void queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] })
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [queryClient, tenantId])
+
   async function go(key: string, action: () => Promise<BillingResult>) {
     setBusy(key)
     setError('')
-    const result = await action()
-    if (result.ok && result.form) return submitToRedsys(result.form)
-    if (result.ok) await queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
-    else setError(result.message)
-    setBusy(null)
+    try {
+      const result = await action()
+      if (result.ok && result.form) return submitToRedsys(result.form)
+      if (result.ok) await queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
+      else setError(result.message)
+    } catch {
+      setError('No se pudo completar la operación. Inténtalo de nuevo.')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const subscribed = subscription && ['active', 'past_due'].includes(subscription.status)

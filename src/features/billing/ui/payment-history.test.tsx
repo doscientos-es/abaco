@@ -15,13 +15,13 @@ vi.mock('../application/billing-actions', () => ({
 }))
 
 const subscription: Subscription = {
-  plan: 'trial', status: 'trialing', trialEndsAt: new Date('2026-11-01'),
+  plan: 'trial', status: 'trialing', trialEndsAt: new Date('2026-11-01T12:00:00Z'),
   interval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
   nextPlan: null, nextInterval: null, canWrite: true, trialDaysLeft: 18,
 }
 
-const render = () => renderToStaticMarkup(
-  <PaymentHistory tenantId="trial-company" companyName="Trial company" subscription={subscription} />,
+const render = (currentSubscription: Subscription = subscription) => renderToStaticMarkup(
+  <PaymentHistory tenantId="trial-company" companyName="Trial company" subscription={currentSubscription} />,
 )
 
 describe('PaymentHistory', () => {
@@ -36,6 +36,63 @@ describe('PaymentHistory', () => {
     const html = render()
     expect(html).toContain('Todavía no has hecho ningún pago.')
     expect(html).not.toContain('Cargando…')
+  })
+
+  it('shows the trial end date without suggesting an automatic charge', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+
+    const html = render()
+    expect(html).toContain('Fin de la prueba gratuita')
+    expect(html).toContain('1 de noviembre de 2026')
+    expect(html).toContain('No se cobra automáticamente al terminar.')
+    expect(html).not.toContain('Próximo cobro')
+  })
+
+  it('keeps the end date visible for an expired trial', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+
+    const html = render({
+      ...subscription,
+      trialEndsAt: new Date('2026-10-01T12:00:00Z'),
+      canWrite: false,
+      trialDaysLeft: 0,
+    })
+    expect(html).toContain('Fin de la prueba gratuita')
+    expect(html).toContain('1 de octubre de 2026')
+    expect(html).not.toContain('Próximo cobro')
+  })
+
+  it('keeps the next charge and renewal date for a paid subscription', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+
+    const html = render({
+      ...subscription,
+      plan: 'solo',
+      status: 'active',
+      interval: 'month',
+      currentPeriodEnd: new Date('2026-12-01T12:00:00Z'),
+    })
+    expect(html).toContain('Próximo cobro')
+    expect(html).toContain('24,20')
+    expect(html).toContain('el 1 de diciembre de 2026')
+    expect(html).not.toContain('Fin de la prueba gratuita')
+    expect(html).not.toContain('No se cobra automáticamente al terminar.')
+  })
+
+  it('does not show a next charge for a subscription canceled at period end', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+
+    const html = render({
+      ...subscription,
+      plan: 'solo',
+      status: 'active',
+      interval: 'month',
+      currentPeriodEnd: new Date('2026-12-01T12:00:00Z'),
+      cancelAtPeriodEnd: true,
+    })
+    expect(html).toContain('Próximo cobro')
+    expect(html).toContain('Ninguno: termina el 1 de diciembre de 2026')
+    expect(html).not.toContain('Fin de la prueba gratuita')
   })
 
   it('shows loading only while the initial request is pending', () => {
