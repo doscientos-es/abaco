@@ -1,6 +1,6 @@
 import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   cancelPlan,
@@ -51,6 +51,27 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
 
   const queryClient = useQueryClient()
 
+  // Vuelta de Redsys (?pago=ok | cancelado). El aviso del banco (webhook) puede tardar unos segundos:
+  // se consulta el plan cada 3 s, hasta 45 s, hasta que aparezca activo.
+  const [returned] = useState(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('pago'),
+  )
+  const activated = subscription?.status === 'active'
+  useEffect(() => {
+    if (returned) window.history.replaceState(null, '', window.location.pathname)
+  }, [returned])
+  useEffect(() => {
+    if (returned !== 'ok') return
+    let tries = 0
+    const timer = window.setInterval(() => {
+      tries += 1
+      void queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] })
+      if (tries >= 15) window.clearInterval(timer)
+    }, 3000)
+    return () => window.clearInterval(timer)
+  }, [returned, queryClient, tenantId])
+
   async function go(key: string, action: () => Promise<BillingResult>) {
     setBusy(key)
     setError('')
@@ -77,6 +98,18 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
       </div>
 
       <div className="space-y-5 p-5">
+        {returned === 'ok' ? (
+          <p role="status" className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
+            {activated
+              ? 'Pago recibido. Tu plan ya está activo, gracias.'
+              : 'Estamos confirmando el pago con el banco. En unos segundos verás tu plan activo; no hace falta repetir el pago.'}
+          </p>
+        ) : null}
+        {returned === 'cancelado' ? (
+          <p role="status" className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
+            El pago no se ha completado y no se ha cobrado nada. Puedes volver a intentarlo cuando quieras.
+          </p>
+        ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
         <hr className="border-border" />
         {onTrial ? (

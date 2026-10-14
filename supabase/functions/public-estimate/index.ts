@@ -116,9 +116,10 @@ Deno.serve(async (request) => {
 
   if (action !== 'view') {
     // Aviso al dueño. Si falla el correo, la respuesta del cliente ya está guardada y no se le molesta.
-    await notifyOwner(estimate, tenant, client, action === 'accept').catch((error) =>
-      console.error('No se pudo avisar de la respuesta', error instanceof Error ? error.message : error),
-    )
+    await notifyOwner(estimate, tenant, client, action === 'accept').catch((error) => {
+      // eslint-disable-next-line no-console -- único rastro del fallo del aviso en los logs de la función
+      console.error('public-estimate: no se pudo avisar', error instanceof Error ? error.message : 'desconocido')
+    })
   }
 
   // El token y los ids internos no hacen falta en la página.
