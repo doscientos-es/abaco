@@ -214,7 +214,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <nav
         aria-label="Principal"
         style={{ gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))` }}
-        className="bg-sidebar border-border grid shrink-0 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
       >
         {tabs.map((item) => (
           <Link
