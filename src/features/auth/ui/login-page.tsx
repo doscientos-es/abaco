@@ -31,7 +31,7 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
     // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
     await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
     // Only same-site paths are honoured, so the link can't send people elsewhere.
-    const target = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
+    const target = redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\') ? redirect : '/'
     await navigate({ href: target })
   }
 

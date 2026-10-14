@@ -25,11 +25,13 @@ export type AuthSession = {
 
 /** One row per company the user belongs to; the role can differ in each one. */
 async function fetchCompanies(userId: string): Promise<Company[]> {
-  const { data: memberships } = await createBrowserSupabaseClient()
+  const { data: memberships, error } = await createBrowserSupabaseClient()
     .from('memberships')
     .select('tenant_id, role, tenants(name)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
+  // A failed query must not look like "no companies", or the user lands on the no-company page.
+  if (error) throw new Error(`memberships: ${error.message}`)
   const companies: Company[] = []
   for (const row of (memberships ?? []) as unknown as MembershipRow[]) {
     if (!isRole(row.role)) continue
