@@ -141,7 +141,7 @@ export function SettingsPage() {
           </span>
           <div className="leading-tight">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h2 className="text-sm font-semibold">Acerca de {brand.name}</h2>
+              <h2 className="text-sm font-semibold">{brand.name}</h2>
               <span className="text-muted-foreground text-xs">v{version}</span>
             </div>
             <p className="text-muted-foreground text-xs">{brand.tagline}</p>

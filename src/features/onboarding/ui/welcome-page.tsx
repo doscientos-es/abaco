@@ -3,12 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { AuthLayout, completeWelcome, FormError, sessionQuery, useSession } from '@/features/auth'
 import { subscriptionQuery, TRIAL_DAYS } from '@/features/billing'
-
-import { sessionQuery, useSession } from '../application/auth-actions'
-import { completeWelcome } from '../application/welcome-actions'
-
-import { AuthLayout, FormError } from './auth-layout'
 
 const day = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 

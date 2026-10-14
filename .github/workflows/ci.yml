@@ -89,4 +89,3 @@ jobs:
           fi
           git tag --annotate "v$VERSION" --message "v$VERSION"
           git push origin HEAD:main --follow-tags
-

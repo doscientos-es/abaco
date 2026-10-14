@@ -119,4 +119,3 @@ cuando modelo, tenant, permisos y políticas estén aprobados.
 - Ajustes → Novedades muestra el historial paginado. Los commits que todavía
   no tienen una release aparecen como «Sin publicar», no como cambios desplegados.
   El footer de Ajustes muestra la versión del `package.json` de ese build.
-

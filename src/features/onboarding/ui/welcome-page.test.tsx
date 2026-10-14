@@ -2,7 +2,7 @@ import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ActionResult } from '../application/auth-actions'
+import type { ActionResult } from '@/features/auth'
 
 import { WelcomePage } from './welcome-page'
 
@@ -22,11 +22,15 @@ vi.mock('@/features/billing', () => ({
   TRIAL_DAYS: 14,
   subscriptionQuery: (id: string) => ({ queryKey: ['subscription', id] }),
 }))
-vi.mock('../application/auth-actions', () => ({
+vi.mock('@/features/auth', () => ({
   sessionQuery: { queryKey: ['auth', 'session'] },
   useSession: () => ({ tenantId: 'company-1', role: 'owner', needsWelcome: true }),
+  completeWelcome: complete,
+  AuthLayout: ({ title, description, children }: {
+    title: string; description: string; children: React.ReactNode;
+  }) => <main><h1>{title}</h1><p>{description}</p>{children}</main>,
+  FormError: ({ message }: { message: string | null }) => message ? <p role="alert">{message}</p> : null,
 }))
-vi.mock('../application/welcome-actions', () => ({ completeWelcome: complete }))
 
 describe('WelcomePage', () => {
   let busy: 'trial' | 'plan' | null
@@ -80,8 +84,8 @@ describe('WelcomePage', () => {
     await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
     expect(complete).toHaveBeenCalledOnce()
     expect(fetchQuery).toHaveBeenCalledWith({ queryKey: ['auth', 'session'], staleTime: 0 })
-    expect(complete.mock.invocationCallOrder[0]).toBeLessThan(fetchQuery.mock.invocationCallOrder[0]!)
-    expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0]!)
+    expect(complete.mock.invocationCallOrder[0]).toBeLessThan(fetchQuery.mock.invocationCallOrder[0] ?? 0)
+    expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0] ?? 0)
     expect(busy).toBeNull()
   })
 

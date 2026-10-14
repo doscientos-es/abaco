@@ -6,6 +6,8 @@
 
 ### Nuevas funciones
 
+- Add tests for welcome page and session loading logic
+- Add welcome page and redirect logic for new users feat(billing): enhance payment handling and add trial subscription feat(settings): implement changelog section for user updates feat(auth): introduce welcome actions for user onboarding feat(auth): add welcomePendingField to manage user onboarding state feat(settings): add company and brand tabs for improved management feat(changelog): create changelog section with pagination and formatting fix(auth): handle session loading and redirect to welcome page
 - Improve payment handling and add trial subscription logic
 - Add custom plan card with contact option
 - Enhance payment history loading and error handling

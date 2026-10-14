@@ -8,6 +8,8 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add tests for welcome page and session loading logic",
+            "Add welcome page and redirect logic for new users feat(billing): enhance payment handling and add trial subscription feat(settings): implement changelog section for user updates feat(auth): introduce welcome actions for user onboarding feat(auth): add welcomePendingField to manage user onboarding state feat(settings): add company and brand tabs for improved management feat(changelog): create changelog section with pagination and formatting fix(auth): handle session loading and redirect to welcome page",
             "Improve payment handling and add trial subscription logic",
             "Add custom plan card with contact option",
             "Enhance payment history loading and error handling",
@@ -52,6 +54,20 @@
         }
       ],
       "changes": [
+        {
+          "sha": "7b0a85c8811f2fbb499cf169d7e0ad44a8d7a26b",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add tests for welcome page and session loading logic"
+        },
+        {
+          "sha": "19cfdf7daa2730e6f808f1d98c51e421cd888d4a",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add welcome page and redirect logic for new users feat(billing): enhance payment handling and add trial subscription feat(settings): implement changelog section for user updates feat(auth): introduce welcome actions for user onboarding feat(auth): add welcomePendingField to manage user onboarding state feat(settings): add company and brand tabs for improved management feat(changelog): create changelog section with pagination and formatting fix(auth): handle session loading and redirect to welcome page"
+        },
         {
           "sha": "b2992d19a3cc7bb3d50ad6c89ea3f247ef8b909f",
           "type": "feat",
