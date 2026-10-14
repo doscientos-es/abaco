@@ -15,13 +15,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import {
-  calculateTotals,
+  clampPercent,
+  estimateTotals,
   milestoneAmounts,
   milestonePercentSum,
   paidForEstimate,
 } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
-import type { EstimateStatus } from '@/shared/domain/types'
+import type { Estimate, EstimateStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
 import { fieldIcons } from '@/shared/ui/field-icons'
@@ -39,6 +40,7 @@ import {
 import { EstimateDocument } from './estimate-document'
 import { LinesEditor } from './lines-editor'
 import { MilestonesEditor } from './milestones-editor'
+import { PriceInput } from './price-input'
 
 export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const { estimates, clients, catalog, tenant, ledger } = useTenantData()
@@ -59,7 +61,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   }
 
   const client = clients.find((c) => c.id === estimate.clientId)
-  const totals = calculateTotals(estimate.lines, estimate.vatRate)
+  const totals = estimateTotals(estimate)
   const amounts = milestoneAmounts(estimate.milestones, totals.totalCents)
   const percentSum = milestonePercentSum(estimate.milestones)
   const paid = paidForEstimate(estimate.id, ledger)
@@ -207,7 +209,60 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <LinesEditor estimate={estimate} catalog={catalog} />
+          <div className="border-border bg-surface-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3">
+            <SelectField
+              label="Descuento global"
+              value={estimate.discountType}
+              options={[
+                { value: 'none', label: 'Sin descuento' },
+                { value: 'percent', label: 'Porcentaje (%)' },
+                { value: 'amount', label: 'Importe (€)' },
+              ]}
+              onChange={(discountType) =>
+                patchEstimate(estimate.id, {
+                  discountType: discountType as Estimate['discountType'],
+                  discountValue: 0,
+                })
+              }
+            />
+            {estimate.discountType === 'percent' ? (
+              <FormField label="Porcentaje">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="any"
+                  value={estimate.discountValue || ''}
+                  onChange={(event) =>
+                    patchEstimate(estimate.id, {
+                      discountValue: clampPercent(Number(event.target.value) || 0),
+                    })
+                  }
+                />
+              </FormField>
+            ) : null}
+            {estimate.discountType === 'amount' ? (
+              <FormField label="Importe sin IVA (€)">
+                <PriceInput
+                  label="Importe del descuento"
+                  cents={estimate.discountValue}
+                  onCommit={(discountValue) => patchEstimate(estimate.id, { discountValue })}
+                />
+              </FormField>
+            ) : null}
+          </div>
           <dl className="ml-auto w-full max-w-xs space-y-1 tabular-nums">
+            {totals.lineDiscountCents + totals.globalDiscountCents > 0 ? (
+              <>
+                <Line label="Suma de partidas" value={totals.grossCents} />
+                {totals.lineDiscountCents > 0 ? (
+                  <Line label="Descuentos por partida" value={-totals.lineDiscountCents} />
+                ) : null}
+                {totals.globalDiscountCents > 0 ? (
+                  <Line label="Descuento global" value={-totals.globalDiscountCents} />
+                ) : null}
+              </>
+            ) : null}
             <Line label="Base imponible" value={totals.subtotalCents} />
             <Line label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
             <div className="flex justify-between border-t pt-2 text-lg font-semibold">

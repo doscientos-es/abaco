@@ -2,27 +2,72 @@ import { applyRate, lineTotal } from './money'
 import type { Cents, Estimate, EstimateLine, LedgerEntry, Milestone } from './types'
 
 export type EstimateTotals = {
+  /** Sums by kind, after per-line discounts. */
   materialsCents: Cents
   laborCents: Cents
   otherCents: Cents
+  /** Sum of lines before any discount. */
+  grossCents: Cents
+  /** Total taken off by per-line discounts. */
+  lineDiscountCents: Cents
+  /** Whole-estimate discount, applied after the per-line ones. */
+  globalDiscountCents: Cents
+  /** Taxable base after every discount. */
   subtotalCents: Cents
   vatCents: Cents
   totalCents: Cents
 }
 
-export function calculateTotals(lines: EstimateLine[], vatRate: number): EstimateTotals {
+export type EstimateDiscount = { type: Estimate['discountType']; value: number }
+
+export function clampPercent(value: number): number {
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0
+}
+
+/** Line amount after its own percentage discount. */
+export function lineNetCents(line: EstimateLine): Cents {
+  const gross = lineTotal(line.quantity, line.unitPriceCents)
+  return gross - Math.round((gross * clampPercent(line.discountPercent)) / 100)
+}
+
+export function calculateTotals(
+  lines: EstimateLine[],
+  vatRate: number,
+  discount: EstimateDiscount = { type: 'none', value: 0 },
+): EstimateTotals {
   const sums = { material: 0, labor: 0, other: 0 }
-  for (const line of lines) sums[line.kind] += lineTotal(line.quantity, line.unitPriceCents)
-  const subtotalCents = sums.material + sums.labor + sums.other
+  let grossCents = 0
+  for (const line of lines) {
+    sums[line.kind] += lineNetCents(line)
+    grossCents += lineTotal(line.quantity, line.unitPriceCents)
+  }
+  const netCents = sums.material + sums.labor + sums.other
+  const globalDiscountCents =
+    discount.type === 'percent'
+      ? Math.round((netCents * clampPercent(discount.value)) / 100)
+      : discount.type === 'amount'
+        ? Math.min(netCents, Math.max(0, Math.round(discount.value)))
+        : 0
+  const subtotalCents = netCents - globalDiscountCents
   const vatCents = applyRate(subtotalCents, vatRate)
   return {
     materialsCents: sums.material,
     laborCents: sums.labor,
     otherCents: sums.other,
+    grossCents,
+    lineDiscountCents: grossCents - netCents,
+    globalDiscountCents,
     subtotalCents,
     vatCents,
     totalCents: subtotalCents + vatCents,
   }
+}
+
+export function estimateTotals(estimate: Estimate): EstimateTotals {
+  return calculateTotals(estimate.lines, estimate.vatRate, {
+    type: estimate.discountType,
+    value: estimate.discountValue,
+  })
 }
 
 export type MilestoneAmount = Milestone & { amountCents: Cents }
@@ -65,7 +110,7 @@ export function paidForEstimate(estimateId: string, ledger: LedgerEntry[]): Cent
 }
 
 export function estimateTotalCents(estimate: Estimate): Cents {
-  return calculateTotals(estimate.lines, estimate.vatRate).totalCents
+  return estimateTotals(estimate).totalCents
 }
 
 export function ledgerNetCents(entry: LedgerEntry): Cents {

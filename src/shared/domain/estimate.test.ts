@@ -18,6 +18,7 @@ const line = (kind: EstimateLine['kind'], quantity: number, unitPriceCents: numb
   unit: 'ud',
   quantity,
   unitPriceCents,
+  discountPercent: 0,
 })
 
 describe('calculateTotals', () => {
@@ -32,6 +33,22 @@ describe('calculateTotals', () => {
 
   it('returns zeros for no lines', () => {
     expect(calculateTotals([], 21).totalCents).toBe(0)
+  })
+
+  it('applies a per-line discount, then a global percentage', () => {
+    const lines = [{ ...line('labor', 10, 1000), discountPercent: 10 }, line('material', 1, 5000)]
+    const totals = calculateTotals(lines, 21, { type: 'percent', value: 10 })
+    expect(totals.grossCents).toBe(15000)
+    expect(totals.lineDiscountCents).toBe(1000)
+    expect(totals.globalDiscountCents).toBe(1400)
+    expect(totals.subtotalCents).toBe(12600)
+    expect(totals.totalCents).toBe(12600 + 2646)
+  })
+
+  it('caps a global amount discount at the base', () => {
+    const totals = calculateTotals([line('other', 1, 1000)], 21, { type: 'amount', value: 5000 })
+    expect(totals.globalDiscountCents).toBe(1000)
+    expect(totals.totalCents).toBe(0)
   })
 })
 

@@ -117,10 +117,23 @@ Deno.serve(async (request) => {
   } else {
     const { data: lines } = await admin
       .from('estimate_lines')
-      .select('quantity, unit_price_cents')
+      .select('quantity, unit_price_cents, discount_percent')
       .eq('estimate_id', id)
       .eq('tenant_id', doc.tenant_id)
-    const subtotal = (lines ?? []).reduce((sum, l) => sum + Math.round(Number(l.quantity) * Number(l.unit_price_cents)), 0)
+    // Misma lógica que calculateTotals: descuento por línea y luego el global.
+    const net = (lines ?? []).reduce((sum, l) => {
+      const gross = Math.round(Number(l.quantity) * Number(l.unit_price_cents))
+      const pct = Math.min(100, Math.max(0, Number(l.discount_percent) || 0))
+      return sum + gross - Math.round((gross * pct) / 100)
+    }, 0)
+    const discountValue = Number(doc.discount_value) || 0
+    const globalDiscount =
+      doc.discount_type === 'percent'
+        ? Math.round((net * Math.min(100, Math.max(0, discountValue))) / 100)
+        : doc.discount_type === 'amount'
+          ? Math.min(net, Math.max(0, Math.round(discountValue)))
+          : 0
+    const subtotal = net - globalDiscount
     const total = subtotal + Math.round((subtotal * Number(doc.vat_rate)) / 100)
     subject = `Presupuesto ${doc.number} · ${company}`
     text = [

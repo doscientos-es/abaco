@@ -60,6 +60,8 @@ export type EstimateLine = {
   unit: string
   quantity: number
   unitPriceCents: Cents
+  /** Percentage taken off this line (0..100). */
+  discountPercent: number
 }
 
 export type Milestone = {
@@ -79,6 +81,9 @@ export type Estimate = {
   title: string
   status: EstimateStatus
   lines: EstimateLine[]
+  /** Whole-estimate discount: a percentage, or an amount in cents. */
+  discountType: 'none' | 'percent' | 'amount'
+  discountValue: number
   vatRate: number
   milestones: Milestone[]
   clauses: string

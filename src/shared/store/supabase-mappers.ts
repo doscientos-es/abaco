@@ -142,6 +142,10 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     title: str(row.title),
     status: str(row.status) as Estimate['status'],
     vatRate: num(row.vat_rate),
+    discountType: (['percent', 'amount'].includes(str(row.discount_type))
+      ? str(row.discount_type)
+      : 'none') as Estimate['discountType'],
+    discountValue: num(row.discount_value),
     clauses: str(row.clauses),
     validUntil: str(row.valid_until),
     createdAt: str(row.created_at).slice(0, 10),
@@ -154,6 +158,7 @@ export function estimateFromRow(row: EstimateRow): Estimate {
         unit: str(l.unit),
         quantity: num(l.quantity),
         unitPriceCents: num(l.unit_price_cents),
+        discountPercent: num(l.discount_percent),
       }),
     ),
     milestones: milestones.map(
@@ -175,6 +180,8 @@ export const estimateToRow = (e: Estimate): Row => ({
   title: e.title,
   status: e.status,
   vat_rate: e.vatRate,
+  discount_type: e.discountType,
+  discount_value: e.discountType === 'none' ? 0 : e.discountValue,
   clauses: e.clauses,
   valid_until: e.validUntil,
 })
@@ -190,6 +197,7 @@ export const lineToRow = (e: Estimate, l: EstimateLine, position: number): Row =
   unit: l.unit,
   quantity: l.quantity,
   unit_price_cents: l.unitPriceCents,
+  discount_percent: l.discountPercent,
 })
 
 export const milestoneToRow = (e: Estimate, m: Milestone, position: number): Row => ({

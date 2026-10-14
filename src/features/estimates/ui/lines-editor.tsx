@@ -1,6 +1,7 @@
 import { AutocompleteCombobox, Button, HighlightMatch, Input } from '@doscientos/ui'
 import { useState } from 'react'
 
+import { clampPercent, lineNetCents } from '@/shared/domain/estimate'
 import { formatEuros, lineTotal } from '@/shared/domain/money'
 import type { CatalogItem, Estimate, EstimateLine } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
@@ -9,7 +10,7 @@ import { patchEstimate } from '../application/estimate-actions'
 import { PriceInput } from './price-input'
 
 const FREE_KEY = '__free__'
-const gridCols = 'grid grid-cols-2 items-center gap-2 sm:grid-cols-[1fr_5rem_5rem_8rem_6rem_4rem]'
+const gridCols = 'grid grid-cols-2 items-center gap-2 sm:grid-cols-[1fr_5rem_5rem_8rem_14rem_4rem]'
 
 /** Visible field label on phones, where the column header row is hidden. */
 function MobileLabel({ children }: { children: string }) {
@@ -42,6 +43,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
         unit: item.unit,
         quantity: 1,
         unitPriceCents: item.unitPriceCents,
+        discountPercent: 0,
       },
     ])
   }
@@ -57,6 +59,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
         unit: 'ud',
         quantity: 1,
         unitPriceCents: 0,
+        discountPercent: 0,
       },
     ])
   }
@@ -86,7 +89,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
             <span className="text-right">Cant.</span>
             <span>Unidad</span>
             <span className="text-right">Precio (sin IVA)</span>
-            <span className="text-right">Importe</span>
+            <span className="text-right">Descuento e importe</span>
             <span className="w-16" />
           </div>
           {estimate.lines.map((line) => (
@@ -131,10 +134,34 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                   onCommit={(unitPriceCents) => updateLine(line.id, { unitPriceCents })}
                 />
               </div>
-              <p className="col-span-2 flex items-baseline justify-between text-sm font-semibold tabular-nums sm:col-span-1 sm:justify-end">
-                <span className="text-muted-foreground text-xs font-normal sm:hidden">Importe</span>
-                {formatEuros(lineTotal(line.quantity, line.unitPriceCents))}
-              </p>
+              <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+                <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                  Dto.
+                  <Input
+                    aria-label="Descuento de la línea (%)"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="any"
+                    className="w-16 text-right tabular-nums"
+                    value={line.discountPercent || ''}
+                    placeholder="0"
+                    onChange={(event) =>
+                      updateLine(line.id, { discountPercent: clampPercent(Number(event.target.value) || 0) })
+                    }
+                  />
+                  %
+                </div>
+                <p className="text-sm font-semibold tabular-nums">
+                  {line.discountPercent > 0 ? (
+                    <span className="text-muted-foreground mr-1 text-xs font-normal line-through">
+                      {formatEuros(lineTotal(line.quantity, line.unitPriceCents))}
+                    </span>
+                  ) : null}
+                  {formatEuros(lineNetCents(line))}
+                </p>
+              </div>
               <Button
                 size="sm"
                 variant="ghost"

@@ -15,6 +15,8 @@ export function createEstimate(clientId: string, title = 'Nueva reforma'): strin
       title: title.trim() || 'Nueva reforma',
       status: 'draft',
       lines: [],
+      discountType: 'none',
+      discountValue: 0,
       vatRate: data.tenant.defaultVatRate,
       milestones: defaultMilestones(data.tenant.defaultDepositPercent),
       clauses:
@@ -57,6 +59,9 @@ export function duplicateEstimate(id: string): string | null {
       number: formatEstimateNumber(data.tenant.nextEstimateNumber, new Date().getFullYear()),
       status: 'draft',
       createdAt: new Date().toISOString().slice(0, 10),
+      // Fresh ids: rows are upserted by id, so reusing them would move the originals' children.
+      lines: source.lines.map((l) => ({ ...l, id: newId() })),
+      milestones: source.milestones.map((m) => ({ ...m, id: newId() })),
     }
     return {
       ...data,

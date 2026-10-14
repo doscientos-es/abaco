@@ -1,5 +1,5 @@
-import { calculateTotals, milestoneAmounts } from '@/shared/domain/estimate'
-import { formatEuros, lineTotal } from '@/shared/domain/money'
+import { estimateTotals, lineNetCents, milestoneAmounts } from '@/shared/domain/estimate'
+import { formatEuros } from '@/shared/domain/money'
 import type { Client, Estimate, Tenant } from '@/shared/domain/types'
 
 /** Client-facing proposal. Rendered on screen and printed/saved as PDF via the browser. */
@@ -12,7 +12,7 @@ export function EstimateDocument({
   client: Client | undefined
   tenant: Tenant
 }) {
-  const totals = calculateTotals(estimate.lines, estimate.vatRate)
+  const totals = estimateTotals(estimate)
   const milestones = milestoneAmounts(estimate.milestones, totals.totalCents)
 
   return (
@@ -57,13 +57,20 @@ export function EstimateDocument({
             <tbody>
               {estimate.lines.map((line) => (
                 <tr key={line.id} className="border-b">
-                  <td className="py-2">{line.description}</td>
+                  <td className="py-2">
+                    {line.description}
+                    {line.discountPercent > 0 ? (
+                      <span className="text-muted-foreground block text-xs">
+                        Descuento {line.discountPercent}%
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="py-2 text-right tabular-nums">
                     {line.quantity} {line.unit}
                   </td>
                   <td className="py-2 text-right tabular-nums">{formatEuros(line.unitPriceCents)}</td>
                   <td className="py-2 text-right tabular-nums">
-                    {formatEuros(lineTotal(line.quantity, line.unitPriceCents))}
+                    {formatEuros(lineNetCents(line))}
                   </td>
                 </tr>
               ))}
@@ -74,6 +81,16 @@ export function EstimateDocument({
           <Row label="Materiales" value={totals.materialsCents} />
           <Row label="Mano de obra" value={totals.laborCents} />
           {totals.otherCents > 0 ? <Row label="Otros" value={totals.otherCents} /> : null}
+          {totals.globalDiscountCents > 0 ? (
+            <Row
+              label={
+                estimate.discountType === 'percent'
+                  ? `Descuento ${estimate.discountValue}%`
+                  : 'Descuento'
+              }
+              value={-totals.globalDiscountCents}
+            />
+          ) : null}
           <Row label="Base imponible" value={totals.subtotalCents} />
           <Row label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
           <div className="flex justify-between border-t pt-2 text-base font-semibold">
