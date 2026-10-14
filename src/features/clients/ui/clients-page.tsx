@@ -16,9 +16,9 @@ import {
 } from '@doscientos/ui'
 import { useState } from 'react'
 
+import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import type { Client } from '@/shared/domain/types'
-import { formLimits } from '@/shared/domain/form-limits'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
@@ -129,7 +129,10 @@ export function ClientsPage() {
                 <div className="min-w-0">
                   <p className="font-medium break-words">{client.name}</p>
                   {client.phone ? (
-                    <a href={`tel:${client.phone}`} className="text-primary block text-sm break-words">
+                    <a
+                      href={`tel:${client.phone}`}
+                      className="text-primary block text-sm break-words"
+                    >
                       {client.phone}
                     </a>
                   ) : null}
@@ -137,7 +140,9 @@ export function ClientsPage() {
                     <p className="text-muted-foreground truncate text-xs">{client.email}</p>
                   ) : null}
                   {client.address ? (
-                    <p className="text-muted-foreground mt-1 text-xs break-words">{client.address}</p>
+                    <p className="text-muted-foreground mt-1 text-xs break-words">
+                      {client.address}
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex gap-2">
@@ -172,7 +177,7 @@ export function ClientsPage() {
                   <TableCell className="font-medium break-words">{client.name}</TableCell>
                   <TableCell>
                     {client.phone}
-                    <div className="text-muted-foreground break-all text-xs">{client.email}</div>
+                    <div className="text-muted-foreground text-xs break-all">{client.email}</div>
                   </TableCell>
                   <TableCell className="break-words">{client.address}</TableCell>
                   <TableCell className="space-x-1 text-right">

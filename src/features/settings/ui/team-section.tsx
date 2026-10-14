@@ -149,7 +149,8 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
               busy ||
               email.trim().length > 254 ||
               !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-              (fullName.trim() !== '' && (fullName.trim().length < 2 || fullName.trim().length > 120))
+              (fullName.trim() !== '' &&
+                (fullName.trim().length < 2 || fullName.trim().length > 120))
             }
             onPress={() => void invite()}
           >

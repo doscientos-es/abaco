@@ -421,7 +421,7 @@ export function LedgerPage() {
           step="0.01"
           placeholder="21"
           icon={fieldIcons.percent}
-          helper="El importe ya incluye este IVA."
+          helper="Entre 0 y 100. El importe ya incluye este IVA."
           value={form.vatRate}
           onChange={(vatRate) => setForm({ ...form, vatRate })}
         />

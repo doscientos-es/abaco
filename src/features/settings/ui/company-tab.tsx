@@ -2,7 +2,7 @@ import { formLimits } from '@/shared/domain/form-limits'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 
-import { Section, type FormProps } from './settings-form'
+import { isWebsiteOk, Section, type FormProps } from './settings-form'
 
 /** Who the company is, where it gets paid and the defaults for new estimates. */
 export function CompanyTab({ form, set }: FormProps) {
@@ -14,7 +14,7 @@ export function CompanyTab({ form, set }: FormProps) {
           maxLength={formLimits.companyName}
           placeholder="Reformas Abderrahim"
           icon={fieldIcons.building}
-          helper="Obligatorio. Es el nombre que ve el cliente."
+          helper={`Obligatorio · máximo ${formLimits.companyName} caracteres. Es el nombre que ve el cliente.`}
           value={form.name}
           onChange={set('name')}
         />
@@ -41,7 +41,11 @@ export function CompanyTab({ form, set }: FormProps) {
           icon={fieldIcons.globe}
           type="url"
           maxLength={2048}
-          helper="Incluye https://, por ejemplo https://tuempresa.es."
+          helper={
+            isWebsiteOk(form.website)
+              ? 'Incluye https://, por ejemplo https://tuempresa.es.'
+              : 'Escribe una dirección web válida e incluye https://.'
+          }
           value={form.website}
           onChange={set('website')}
         />
@@ -57,6 +61,11 @@ export function CompanyTab({ form, set }: FormProps) {
           maxLength={formLimits.email}
           placeholder="hola@tuempresa.es"
           icon={fieldIcons.mail}
+          helper={
+            form.email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+              ? undefined
+              : 'Escribe un correo válido.'
+          }
           value={form.email}
           onChange={set('email')}
         />
@@ -120,7 +129,7 @@ export function CompanyTab({ form, set }: FormProps) {
           step="0.01"
           placeholder="10"
           icon={fieldIcons.percent}
-          helper="Entre 0 y 100."
+          helper="Entre 0 y 100. Se admite hasta 2 decimales."
           value={form.defaultVatRate}
           onChange={set('defaultVatRate')}
         />
@@ -132,7 +141,7 @@ export function CompanyTab({ form, set }: FormProps) {
           step="0.01"
           placeholder="40"
           icon={fieldIcons.percent}
-          helper="Primer pago al aceptar el presupuesto."
+          helper="Entre 0 y 100. Se admite hasta 2 decimales. Primer pago al aceptar el presupuesto."
           value={form.defaultDepositPercent}
           onChange={set('defaultDepositPercent')}
         />

@@ -20,14 +20,20 @@ const corsHeaders = {
 }
 
 function reply(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 }
 
 const tenantColumns =
   'id, name, legal_name, tax_id, email, phone, address, postal_code, city, website, brand_color, logo_url, document_footer'
 
 const escapeHtml = (value: string) =>
-  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
+  value.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
+  )
 
 async function notifyViewed(
   estimate: Record<string, unknown>,
@@ -44,7 +50,13 @@ async function notifyViewed(
   const html = `<p>${escapeHtml(who)} <strong>acaba de abrir</strong> el presupuesto ${escapeHtml(title)}. Es un buen momento para llamarle.</p>${
     link ? `<p><a href="${escapeHtml(link)}">Abrir presupuesto</a></p>` : ''
   }`
-  await sendEmail({ to, subject: `Han abierto tu presupuesto: ${title}`, html, text, fromName: 'Ábaco' })
+  await sendEmail({
+    to,
+    subject: `Han abierto tu presupuesto: ${title}`,
+    html,
+    text,
+    fromName: 'Ábaco',
+  })
 }
 
 async function notifyOwner(
@@ -60,7 +72,9 @@ async function notifyOwner(
   const title = `${String(estimate.number)} · ${String(estimate.title)}`
   const appUrl = Deno.env.get('APP_URL')
   const link = appUrl ? `${appUrl.replace(/\/$/, '')}/presupuestos/${String(estimate.id)}` : ''
-  const note = accepted ? ' Ábaco creará la factura de la señal la próxima vez que abras la app.' : ''
+  const note = accepted
+    ? ' Ábaco creará la factura de la señal la próxima vez que abras la app.'
+    : ''
   const text = `${who} ${verb} el presupuesto ${title}.${note}${link ? `\n\n${link}` : ''}`
   const html = `<p>${escapeHtml(who)} <strong>${verb}</strong> el presupuesto ${escapeHtml(title)}.${escapeHtml(note)}</p>${
     link ? `<p><a href="${escapeHtml(link)}">Abrir presupuesto</a></p>` : ''
@@ -85,7 +99,10 @@ Deno.serve(async (request) => {
   const input = (await request.json().catch(() => null)) as Record<string, unknown> | null
   const token = typeof input?.token === 'string' ? input.token : ''
   const action = input?.action
-  if (!uuidPattern.test(token) || (action !== 'view' && action !== 'accept' && action !== 'reject')) {
+  if (
+    !uuidPattern.test(token) ||
+    (action !== 'view' && action !== 'accept' && action !== 'reject')
+  ) {
     return reply(400, { error: 'invalid_input' })
   }
   const name = typeof input?.name === 'string' ? input.name.trim() : ''
@@ -101,8 +118,10 @@ Deno.serve(async (request) => {
   if (!estimate || estimate.status === 'draft') return reply(404, { error: 'not_found' })
 
   if (action !== 'view') {
-    if (estimate.status !== 'sent') return reply(409, { error: 'already_responded', status: estimate.status })
-    if (String(estimate.valid_until) < new Date().toISOString().slice(0, 10)) return reply(409, { error: 'expired' })
+    if (estimate.status !== 'sent')
+      return reply(409, { error: 'already_responded', status: estimate.status })
+    if (String(estimate.valid_until) < new Date().toISOString().slice(0, 10))
+      return reply(409, { error: 'expired' })
     if (action === 'accept' && name.length < 2) return reply(422, { error: 'name_required' })
     if (name.length > 120) return reply(422, { error: 'name_too_long' })
 
@@ -144,7 +163,10 @@ Deno.serve(async (request) => {
     if (marked?.length) {
       await notifyViewed(estimate, tenant, client).catch((error) => {
         // eslint-disable-next-line no-console -- único rastro del fallo del aviso en los logs de la función
-        console.error('public-estimate: no se pudo avisar de la apertura', error instanceof Error ? error.message : 'desconocido')
+        console.error(
+          'public-estimate: no se pudo avisar de la apertura',
+          error instanceof Error ? error.message : 'desconocido',
+        )
       })
     }
   }
@@ -153,7 +175,10 @@ Deno.serve(async (request) => {
     // Aviso al dueño. Si falla el correo, la respuesta del cliente ya está guardada y no se le molesta.
     await notifyOwner(estimate, tenant, client, action === 'accept').catch((error) => {
       // eslint-disable-next-line no-console -- único rastro del fallo del aviso en los logs de la función
-      console.error('public-estimate: no se pudo avisar', error instanceof Error ? error.message : 'desconocido')
+      console.error(
+        'public-estimate: no se pudo avisar',
+        error instanceof Error ? error.message : 'desconocido',
+      )
     })
   }
 

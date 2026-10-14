@@ -91,6 +91,7 @@ export function PublicEstimatePage({ token }: { token: string }) {
                 placeholder="Nombre y apellidos"
                 minLength={2}
                 maxLength={formLimits.respondentName}
+                helper="Obligatorio para aceptar · máximo 120 caracteres."
               />
               <p className="text-muted-foreground text-xs">
                 Al aceptar confirmas que estás conforme con este presupuesto. Quedan registrados tu
