@@ -22,6 +22,7 @@ import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as FacturasIndexRouteImport } from './routes/facturas.index'
 import { Route as FacturasInvoiceIdRouteImport } from './routes/facturas.$invoiceId'
+import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
 
@@ -90,6 +91,11 @@ const FacturasInvoiceIdRoute = FacturasInvoiceIdRouteImport.update({
   path: '/$invoiceId',
   getParentRoute: () => FacturasRoute,
 } as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PresupuestosIndexRoute = PresupuestosIndexRouteImport.update({
   id: '/presupuestos/',
   path: '/presupuestos/',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/facturas': typeof FacturasIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/facturas/$invoiceId'
+    | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/facturas/'
     | '/presupuestos/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/facturas/$invoiceId'
+    | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/facturas'
     | '/presupuestos'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/facturas/$invoiceId'
+    | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/facturas/'
     | '/presupuestos/'
@@ -217,6 +229,7 @@ export interface RootRouteChildren {
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
+  PTokenRoute: typeof PTokenRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
 }
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FacturasInvoiceIdRouteImport
       parentRoute: typeof FacturasRoute
     }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/presupuestos/': {
       id: '/presupuestos/'
       path: '/presupuestos'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,
+  PTokenRoute: PTokenRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
 }

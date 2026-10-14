@@ -149,6 +149,9 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     clauses: str(row.clauses),
     validUntil: str(row.valid_until),
     createdAt: str(row.created_at).slice(0, 10),
+    ...present('publicToken', row.public_token),
+    ...present('respondedAt', row.responded_at),
+    ...present('respondedBy', row.responded_by),
     lines: lines.map(
       (l): EstimateLine => ({
         id: str(l.id),

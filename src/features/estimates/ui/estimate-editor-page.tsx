@@ -66,6 +66,17 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const percentSum = milestonePercentSum(estimate.milestones)
   const paid = paidForEstimate(estimate.id, ledger)
 
+  const publicLink = estimate.publicToken ? `${window.location.origin}/p/${estimate.publicToken}` : ''
+
+  async function copyPublicLink() {
+    if (!publicLink) {
+      toast.error('Aún no hay enlace', { description: 'Espera unos segundos a que se guarde el presupuesto.' })
+      return
+    }
+    await navigator.clipboard.writeText(publicLink)
+    toast.success('Enlace copiado', { description: 'El cliente puede verlo y aceptarlo desde ahí.' })
+  }
+
   function buildMessage() {
     if (!estimate) return ''
     return [
@@ -73,6 +84,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
       '',
       `Te enviamos el presupuesto ${estimate.number} para «${estimate.title}».`,
       `Total: ${formatEuros(totals.totalCents)} (IVA incluido). Válido hasta ${estimate.validUntil}.`,
+      ...(publicLink ? [`Puedes verlo y aceptarlo aquí: ${publicLink}`] : []),
       '',
       'Quedamos a tu disposición para cualquier duda.',
       tenant.name,
@@ -121,6 +133,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           <Button onPress={() => void sendByEmail()}>Enviar por email</Button>
           <Button variant="outline" onPress={sendByWhatsapp}>
             Enviar por WhatsApp
+          </Button>
+          <Button variant="outline" onPress={() => void copyPublicLink()}>
+            Copiar enlace del cliente
           </Button>
           <Button variant="outline" onPress={() => setPreview(true)}>
             Vista del cliente

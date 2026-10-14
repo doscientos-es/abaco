@@ -136,12 +136,15 @@ Deno.serve(async (request) => {
     const subtotal = net - globalDiscount
     const total = subtotal + Math.round((subtotal * Number(doc.vat_rate)) / 100)
     subject = `Presupuesto ${doc.number} · ${company}`
+    const appUrl = (Deno.env.get('APP_URL') ?? '').replace(/\/+$/, '')
+    const publicLink = appUrl && doc.public_token ? `${appUrl}/p/${doc.public_token}` : ''
     text = [
       `Hola ${client?.name ?? ''},`,
       '',
       ...(customIntro ? [customIntro, ''] : []),
       `Te enviamos el presupuesto ${doc.number} para «${doc.title}».`,
       `Total: ${euros(total)} (IVA incluido). Válido hasta ${doc.valid_until}.`,
+      ...(publicLink ? ['', `Puedes verlo y aceptarlo aquí: ${publicLink}`] : []),
       '',
       'Quedamos a tu disposición para cualquier duda.',
       signature,

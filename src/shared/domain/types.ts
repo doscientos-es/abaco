@@ -89,6 +89,11 @@ export type Estimate = {
   clauses: string
   validUntil: string
   createdAt: string
+  /** Secret of the public link; owned by the database, so it is absent on estimates not yet saved. */
+  publicToken?: string
+  /** Set when the client accepted or rejected through the public link. */
+  respondedAt?: string
+  respondedBy?: string
 }
 
 export type LedgerKind = 'income' | 'expense'

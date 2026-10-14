@@ -53,8 +53,10 @@ export function duplicateEstimate(id: string): string | null {
     const source = data.estimates.find((e) => e.id === id)
     if (!source) return data
     created = newId()
+    // The copy gets its own public link from the database, and nobody has answered it yet.
+    const { publicToken: _token, respondedAt: _at, respondedBy: _by, ...base } = source
     const copy: Estimate = {
-      ...source,
+      ...base,
       id: created,
       number: formatEstimateNumber(data.tenant.nextEstimateNumber, new Date().getFullYear()),
       status: 'draft',
