@@ -8,18 +8,22 @@ export async function printDocument(element: HTMLElement, title: string): Promis
   document.body.append(frame)
 
   const printWindow = frame.contentWindow
-  const printDocument = frame.contentDocument
-  if (!printWindow || !printDocument) {
+  const frameDocument = frame.contentDocument
+  if (!printWindow || !frameDocument) {
     frame.remove()
     throw new Error('No se ha podido preparar el documento.')
   }
 
-  const cleanup = () => frame.remove()
+  let cleanupTimeout: ReturnType<typeof setTimeout> | undefined
+  const cleanup = () => {
+    clearTimeout(cleanupTimeout)
+    frame.remove()
+  }
   let readinessTimeout: ReturnType<typeof setTimeout> | undefined
   try {
-    printDocument.title = title
-    printDocument.documentElement.lang = 'es'
-    printDocument.body.className = 'invoice-print'
+    frameDocument.title = title
+    frameDocument.documentElement.lang = 'es'
+    frameDocument.body.className = 'invoice-print'
     const styles = Array.from(
       document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>('link[rel="stylesheet"], style'),
     ).map((source) => {
@@ -32,15 +36,15 @@ export async function printDocument(element: HTMLElement, title: string): Promis
             link.onerror = () => reject(new Error('No se ha podido cargar el estilo del documento.'))
           })
         : Promise.resolve()
-      printDocument.head.append(copy)
+      frameDocument.head.append(copy)
       return ready
     })
-    printDocument.body.append(element.cloneNode(true))
+    frameDocument.body.append(element.cloneNode(true))
 
     const assetsReady = async () => {
       await Promise.all(styles)
-      await printDocument.fonts?.ready
-      await Promise.all(Array.from(printDocument.images, (image) => image.decode()))
+      await frameDocument.fonts?.ready
+      await Promise.all(Array.from(frameDocument.images, (image) => image.decode()))
     }
     await Promise.race([
       assetsReady(),
@@ -52,8 +56,7 @@ export async function printDocument(element: HTMLElement, title: string): Promis
     await new Promise<void>((resolve) => printWindow.requestAnimationFrame(() => resolve()))
     printWindow.addEventListener('afterprint', cleanup, { once: true })
     // Some browsers omit afterprint when the dialog is cancelled.
-    const cleanupTimeout = setTimeout(cleanup, 600_000)
-    printWindow.addEventListener('afterprint', () => clearTimeout(cleanupTimeout), { once: true })
+    cleanupTimeout = setTimeout(cleanup, 600_000)
     printWindow.focus()
     printWindow.print()
   } catch (error) {
