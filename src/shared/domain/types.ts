@@ -15,6 +15,14 @@ export type Tenant = {
   city?: string
   website?: string
   iban?: string
+  /** Branding applied to documents and emails. Empty means the Ábaco default look. */
+  brandColor?: string
+  logoUrl?: string
+  emailFromName?: string
+  emailSignature?: string
+  invoiceEmailIntro?: string
+  estimateEmailIntro?: string
+  documentFooter?: string
   defaultVatRate: number
   defaultDepositPercent: number
   nextEstimateNumber: number

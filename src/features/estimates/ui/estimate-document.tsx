@@ -19,7 +19,12 @@ export function EstimateDocument({
     <article className="estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm sm:p-8 shadow-sm print:rounded-none print:border-0 print:p-0 print:shadow-none">
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:gap-6">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">{tenant.name}</h2>
+          {tenant.logoUrl ? (
+            <img src={tenant.logoUrl} alt={tenant.name} className="mb-3 max-h-14 max-w-44 object-contain" />
+          ) : null}
+          <h2 className="text-xl font-semibold tracking-tight" style={tenant.brandColor ? { color: tenant.brandColor } : undefined}>
+            {tenant.name}
+          </h2>
           <p className="text-muted-foreground">
             {tenant.taxId} · {tenant.phone} · {tenant.email}
           </p>
@@ -104,6 +109,11 @@ export function EstimateDocument({
         <div className="border-t pt-2">Firma de la empresa</div>
         <div className="border-t pt-2">Conforme del cliente</div>
       </footer>
+      {tenant.documentFooter ? (
+        <p className="text-muted-foreground border-t pt-3 text-center text-xs whitespace-pre-line">
+          {tenant.documentFooter}
+        </p>
+      ) : null}
     </article>
   )
 }

@@ -17,15 +17,18 @@ import {
 import { useState } from 'react'
 
 import type { Client } from '@/shared/domain/types'
-import { updateTenantData, useTenantData } from '@/shared/store/store'
+import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
+import { clientImportSchema, clientKeys } from '../application/client-import'
 import { ClientFormDialog } from './client-form-dialog'
 
 export function ClientsPage() {
   const { clients } = useTenantData()
+  const [importOpen, setImportOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
@@ -59,11 +62,26 @@ export function ClientsPage() {
           <PageHeaderDescription>Datos de contacto para tus presupuestos.</PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
+          <Button variant="outline" onPress={() => setImportOpen(true)}>
+            Importar de Excel
+          </Button>
           <Button onPress={create}>Nuevo cliente</Button>
         </PageHeaderActions>
       </PageHeader>
 
       <ClientFormDialog open={dialogOpen} client={editing} onClose={reset} />
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        schema={clientImportSchema}
+        existingKeys={clientKeys(clients)}
+        onImport={(values) =>
+          updateTenantData((data) => ({
+            ...data,
+            clients: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.clients],
+          }))
+        }
+      />
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input

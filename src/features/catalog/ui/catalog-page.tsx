@@ -24,8 +24,11 @@ import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
+import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+
+import { catalogImportSchema, catalogKeys } from '../application/catalog-import'
 
 const kindLabels: Record<CatalogKind, string> = {
   material: 'Material',
@@ -42,6 +45,7 @@ export function CatalogPage() {
   const [query, setQuery] = useState('')
   const [kindFilter, setKindFilter] = useState<'all' | CatalogKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(empty)
   const [toDelete, setToDelete] = useState<CatalogItem | null>(null)
@@ -114,9 +118,25 @@ export function CatalogPage() {
           <PageHeaderDescription>Materiales, mano de obra y servicios con su precio.</PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
+          <Button variant="outline" onPress={() => setImportOpen(true)}>
+            Importar de Excel
+          </Button>
           <Button onPress={create}>Nuevo artículo</Button>
         </PageHeaderActions>
       </PageHeader>
+
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        schema={catalogImportSchema}
+        existingKeys={catalogKeys(catalog)}
+        onImport={(values) =>
+          updateTenantData((data) => ({
+            ...data,
+            catalog: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.catalog],
+          }))
+        }
+      />
 
       <FormDialog
         open={dialogOpen}

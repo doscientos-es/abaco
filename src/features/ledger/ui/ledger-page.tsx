@@ -28,7 +28,10 @@ import { StatCard } from '@/shared/ui/stat-card'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
+import { ImportDialog } from '@/shared/ui/import-dialog'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+
+import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -36,6 +39,7 @@ export function LedgerPage() {
   const { ledger, tenant } = useTenantData()
   const [month, setMonth] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
   const [form, setForm] = useState({
     kind: 'expense' as LedgerKind,
@@ -92,6 +96,9 @@ export function LedgerPage() {
             onChange={(event) => setMonth(event.target.value)}
           />
           <Button onPress={() => setDialogOpen(true)}>Nuevo apunte</Button>
+          <Button variant="outline" onPress={() => setImportOpen(true)}>
+            Importar de Excel
+          </Button>
           <Button
             variant="outline"
             onPress={() =>
@@ -156,6 +163,19 @@ export function LedgerPage() {
           />
         </ChartCard>
       </div>
+
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        schema={ledgerImportSchema}
+        existingKeys={ledgerKeys(ledger)}
+        onImport={(values) =>
+          updateTenantData((data) => ({
+            ...data,
+            ledger: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.ledger],
+          }))
+        }
+      />
 
       <FormDialog
         open={dialogOpen}

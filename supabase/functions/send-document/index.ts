@@ -31,9 +31,14 @@ const escapeHtml = (value: string) =>
 const euros = (cents: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
 
-/** Plain text in, simple HTML out (paragraphs). Everything is escaped. */
-function toHtml(text: string) {
-  return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1a1a1a">${text
+const colorPattern = /^#[0-9a-fA-F]{6}$/
+
+/** Plain text in, simple HTML out (paragraphs) with the company's color and logo. Everything is escaped. */
+function toHtml(text: string, brand: { color: string; logoUrl: string; company: string }) {
+  const logo = /^https:\/\//.test(brand.logoUrl)
+    ? `<img src="${escapeHtml(brand.logoUrl)}" alt="${escapeHtml(brand.company)}" style="display:block;max-height:48px;max-width:180px;margin:0 0 16px">`
+    : ''
+  return `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1a1a1a;border-top:4px solid ${brand.color};padding-top:16px">${logo}${text
     .split('\n')
     .map((line) => (line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>'))
     .join('')}</div>`
@@ -78,11 +83,20 @@ Deno.serve(async (request) => {
   // 3. Cliente y empresa.
   const [{ data: client }, { data: tenant }] = await Promise.all([
     admin.from('clients').select('name, email').eq('id', doc.client_id).eq('tenant_id', doc.tenant_id).maybeSingle(),
-    admin.from('tenants').select('name, email').eq('id', doc.tenant_id).maybeSingle(),
+    admin
+      .from('tenants')
+      .select(
+        'name, email, brand_color, logo_url, email_from_name, email_signature, invoice_email_intro, estimate_email_intro',
+      )
+      .eq('id', doc.tenant_id)
+      .maybeSingle(),
   ])
   const to = (client?.email ?? '').trim()
   if (!emailPattern.test(to)) return reply(422, { error: 'no_client_email' })
   const company = tenant?.name ?? ''
+  const signature = (tenant?.email_signature ?? '').trim() || company
+  const customIntro = ((kind === 'invoice' ? tenant?.invoice_email_intro : tenant?.estimate_email_intro) ?? '').trim()
+  const brandColor = colorPattern.test(tenant?.brand_color ?? '') ? tenant!.brand_color : '#2a4227'
 
   // 4. Contenido.
   let subject: string
@@ -92,11 +106,12 @@ Deno.serve(async (request) => {
     text = [
       `Hola ${client?.name ?? ''},`,
       '',
+      ...(customIntro ? [customIntro, ''] : []),
       `Te enviamos la factura ${doc.number} por «${doc.concept}».`,
       `Importe: ${euros(Number(doc.total_cents))} (IVA incluido). Vencimiento: ${doc.due_date}.`,
       '',
       'Gracias por confiar en nosotros.',
-      company,
+      signature,
     ].join('\n')
   } else {
     const { data: lines } = await admin
@@ -110,11 +125,12 @@ Deno.serve(async (request) => {
     text = [
       `Hola ${client?.name ?? ''},`,
       '',
+      ...(customIntro ? [customIntro, ''] : []),
       `Te enviamos el presupuesto ${doc.number} para «${doc.title}».`,
       `Total: ${euros(total)} (IVA incluido). Válido hasta ${doc.valid_until}.`,
       '',
       'Quedamos a tu disposición para cualquier duda.',
-      company,
+      signature,
     ].join('\n')
   }
 
@@ -124,7 +140,8 @@ Deno.serve(async (request) => {
       to,
       subject,
       text,
-      html: toHtml(text),
+      html: toHtml(text, { color: brandColor, logoUrl: tenant?.logo_url ?? '', company }),
+      fromName: (tenant?.email_from_name ?? '').trim() || company,
       replyTo: emailPattern.test(tenant?.email ?? '') ? tenant?.email : undefined,
     })
   } catch (error) {

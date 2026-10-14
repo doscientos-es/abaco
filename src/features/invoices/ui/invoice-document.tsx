@@ -21,7 +21,12 @@ export function InvoiceDocument({
     <article className="invoice-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:gap-6">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">{tenant.legalName || tenant.name}</h2>
+          {tenant.logoUrl ? (
+            <img src={tenant.logoUrl} alt={tenant.name} className="mb-3 max-h-14 max-w-44 object-contain" />
+          ) : null}
+          <h2 className="text-xl font-semibold tracking-tight" style={tenant.brandColor ? { color: tenant.brandColor } : undefined}>
+            {tenant.legalName || tenant.name}
+          </h2>
           <p className="text-muted-foreground">{tenant.taxId}</p>
           {issuer ? <p className="text-muted-foreground">{issuer}</p> : null}
           <p className="text-muted-foreground">
@@ -80,6 +85,12 @@ export function InvoiceDocument({
             Transferencia bancaria a {tenant.iban}, antes del {invoice.dueDate}.
           </p>
         </section>
+      ) : null}
+
+      {tenant.documentFooter ? (
+        <p className="text-muted-foreground border-t pt-3 text-center text-xs whitespace-pre-line">
+          {tenant.documentFooter}
+        </p>
       ) : null}
     </article>
   )

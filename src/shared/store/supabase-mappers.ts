@@ -47,6 +47,13 @@ export function tenantFromRow(row: Row): Tenant {
     ...present('city', row.city),
     ...present('website', row.website),
     ...present('iban', row.iban),
+    ...present('brandColor', row.brand_color),
+    ...present('logoUrl', row.logo_url),
+    ...present('emailFromName', row.email_from_name),
+    ...present('emailSignature', row.email_signature),
+    ...present('invoiceEmailIntro', row.invoice_email_intro),
+    ...present('estimateEmailIntro', row.estimate_email_intro),
+    ...present('documentFooter', row.document_footer),
   }
 }
 
@@ -64,6 +71,13 @@ export function tenantToRow(tenant: Tenant): Row {
     city: tenant.city ?? null,
     website: tenant.website ?? null,
     iban: tenant.iban ?? null,
+    brand_color: tenant.brandColor || null,
+    logo_url: tenant.logoUrl || null,
+    email_from_name: tenant.emailFromName || null,
+    email_signature: tenant.emailSignature || null,
+    invoice_email_intro: tenant.invoiceEmailIntro || null,
+    estimate_email_intro: tenant.estimateEmailIntro || null,
+    document_footer: tenant.documentFooter || null,
     default_vat_rate: tenant.defaultVatRate,
     default_deposit_percent: tenant.defaultDepositPercent,
   }
