@@ -41,7 +41,9 @@ describe('ChangelogSection', () => {
   it('escapes commit descriptions instead of rendering them as HTML', () => {
     const html = renderToStaticMarkup(
       <ChangelogSection
-        releases={[{ ...release, sections: [{ title: 'Mejoras', items: ['<script>alert(1)</script>'] }] }]}
+        releases={[
+          { ...release, sections: [{ title: 'Mejoras', items: ['<script>alert(1)</script>'] }] },
+        ]}
       />,
     )
 

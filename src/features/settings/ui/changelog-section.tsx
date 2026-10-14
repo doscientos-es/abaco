@@ -19,7 +19,9 @@ export function ChangelogSection({ releases = changelog.releases }: { releases?:
         <h2 id="changelog-heading" className="text-lg font-semibold">
           Novedades
         </h2>
-        <p className="text-muted-foreground text-sm">Las nuevas funciones, mejoras y correcciones de Ábaco.</p>
+        <p className="text-muted-foreground text-sm">
+          Las nuevas funciones, mejoras y correcciones de Ábaco.
+        </p>
       </div>
       {pager.total ? (
         <>

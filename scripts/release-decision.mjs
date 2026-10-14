@@ -16,5 +16,5 @@ export function decideRelease(previousVersion, currentVersion) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [previousVersion = '', currentVersion = ''] = process.argv.slice(2)
   const { bumpPatch } = decideRelease(previousVersion, currentVersion)
-  console.log(`bump_patch=${bumpPatch}`)
+  process.stdout.write(`bump_patch=${bumpPatch}\n`)
 }
