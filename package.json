@@ -4,8 +4,8 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "pnpm typecheck && vite build",
+    "dev": "pnpm changelog:sync --soft && vite",
+    "build": "pnpm changelog:sync --soft && pnpm typecheck && vite build",
     "preview": "vite preview",
     "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
     "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
@@ -13,9 +13,11 @@
     "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "quality": "pnpm format:check && pnpm lint && pnpm structure:check && pnpm typecheck && pnpm test",
+    "quality": "pnpm changelog:check && pnpm format:check && pnpm lint && pnpm structure:check && pnpm typecheck && pnpm test",
     "quality:quick": "pnpm format:check && pnpm lint",
-    "hooks:install": "node .githooks/install.mjs"
+    "hooks:install": "node .githooks/install.mjs",
+    "changelog:sync": "changelog generate src/shared/lib/changelog.json --md CHANGELOG.md",
+    "changelog:check": "changelog generate src/shared/lib/changelog.json --md CHANGELOG.md --check"
   },
   "dependencies": {
     "@doscientos/ui": "^0.1.43",

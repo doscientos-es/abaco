@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AjustesRouteImport } from './routes/ajustes'
+import { Route as BienvenidaRouteImport } from './routes/bienvenida'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const AjustesRoute = AjustesRouteImport.update({
   id: '/ajustes',
   path: '/ajustes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BienvenidaRoute = BienvenidaRouteImport.update({
+  id: '/bienvenida',
+  path: '/bienvenida',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogoRoute = CatalogoRouteImport.update({
@@ -110,6 +116,7 @@ const PresupuestosEstimateIdRoute = PresupuestosEstimateIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ajustes': typeof AjustesRoute
+  '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar': typeof ConfirmarRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ajustes': typeof AjustesRoute
+  '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar': typeof ConfirmarRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ajustes': typeof AjustesRoute
+  '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar': typeof ConfirmarRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ajustes'
+    | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ajustes'
+    | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ajustes'
+    | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
@@ -220,6 +232,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AjustesRoute: typeof AjustesRoute
+  BienvenidaRoute: typeof BienvenidaRoute
   CatalogoRoute: typeof CatalogoRoute
   ClientesRoute: typeof ClientesRoute
   ConfirmarRoute: typeof ConfirmarRoute
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/ajustes'
       fullPath: '/ajustes'
       preLoaderRoute: typeof AjustesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bienvenida': {
+      id: '/bienvenida'
+      path: '/bienvenida'
+      fullPath: '/bienvenida'
+      preLoaderRoute: typeof BienvenidaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/catalogo': {
@@ -368,6 +388,7 @@ const FacturasRouteWithChildren = FacturasRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AjustesRoute: AjustesRoute,
+  BienvenidaRoute: BienvenidaRoute,
   CatalogoRoute: CatalogoRoute,
   ClientesRoute: ClientesRoute,
   ConfirmarRoute: ConfirmarRoute,

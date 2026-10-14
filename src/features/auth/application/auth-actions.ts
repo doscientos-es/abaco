@@ -3,6 +3,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import { can, type Permission } from '../domain/permissions'
+import { welcomePendingField } from '../domain/welcome'
 import { loadSession } from '../infrastructure/load-session'
 
 export const sessionQuery = queryOptions({
@@ -51,7 +52,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
   const { data, error } = await createBrowserSupabaseClient().auth.signUp({
     email: input.email,
     password: input.password,
-    options: { data: { full_name: input.fullName, company_name: input.companyName } },
+    options: { data: { full_name: input.fullName, company_name: input.companyName, [welcomePendingField]: true } },
   })
   if (error) {
     const exists = /already registered|already exists/i.test(error.message)

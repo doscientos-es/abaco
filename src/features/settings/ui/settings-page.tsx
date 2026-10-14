@@ -20,17 +20,19 @@ import { useTenantData } from '@/shared/store/store'
 import { version } from '../../../../package.json'
 import { patchTenant } from '../application/settings-actions'
 import { BrandTab } from './brand-tab'
+import { ChangelogSection } from './changelog-section'
 import { CompanyTab } from './company-tab'
 import { hexColor, isLogoOk, percent, toForm, type Form } from './settings-form'
 import { TeamSection } from './team-section'
 
-export type SettingsTab = 'empresa' | 'marca' | 'equipo' | 'plan'
+export type SettingsTab = 'empresa' | 'marca' | 'equipo' | 'plan' | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   marca: 'Marca y documentos',
   equipo: 'Equipo',
   plan: 'Plan y facturación',
+  novedades: 'Novedades',
 }
 
 export function SettingsPage() {
@@ -46,6 +48,7 @@ export function SettingsPage() {
   const allowed: SettingsTab[] = ['empresa', 'marca']
   if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')
+  allowed.push('novedades')
   const tab = requested && allowed.includes(requested) ? requested : 'empresa'
   const editsCompany = tab === 'empresa' || tab === 'marca'
 
@@ -120,6 +123,7 @@ export function SettingsPage() {
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}
+      {tab === 'novedades' ? <ChangelogSection /> : null}
 
       {editsCompany ? (
         <div className="flex items-center justify-end gap-3">

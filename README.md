@@ -96,3 +96,27 @@ una regresión en `@doscientos/configs` y corregir la regla o la plantilla delib
 Antes de añadir una nueva feature, replica los escenarios `default`, `loading`,
 `empty`, `error` y contenido largo usando fixtures; conecta backend real sólo
 cuando modelo, tenant, permisos y políticas estén aprobados.
+
+## Versiones y novedades de Ábaco
+
+- Tras pasar CI, cada push a `main` aumenta automáticamente el patch de
+  `package.json`, genera las novedades, crea un commit `chore(release): vX.Y.Z`
+  y etiqueta la versión. No publica la aplicación en npm.
+- Como en los módulos, un cambio manual de versión se respeta. Para preparar
+  una minor o major, usa `npm version minor --no-git-tag-version --ignore-scripts`
+  o su equivalente con `major` antes de enviar los cambios.
+- GitHub Actions necesita permiso de escritura en el repositorio y la rama
+  debe permitir el commit de release del bot. Si `main` avanza durante la
+  validación, se rechaza la release obsoleta.
+- `@doscientos/changelog` genera `CHANGELOG.md` y
+  `src/shared/lib/changelog.json` desde Git. Ambos se versionan y no se editan
+  a mano. Usa `pnpm changelog:sync` y comprueba con `pnpm changelog:check`.
+- Usa Conventional Commits con descripciones útiles para quien usa el producto:
+  `feat` aparece en Nuevas funciones, `fix` en Correcciones y `perf` en Mejoras.
+  No incluyas credenciales ni información privada en los mensajes.
+- `dev` y `build` sincronizan las novedades. En clones superficiales, `--soft`
+  conserva los archivos versionados; CI obtiene todo el historial Git.
+- Ajustes → Novedades muestra el historial paginado. Los commits que todavía
+  no tienen una release aparecen como «Sin publicar», no como cambios desplegados.
+  El footer de Ajustes muestra la versión del `package.json` de ese build.
+

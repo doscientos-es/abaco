@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.2
@@ -26,5 +28,65 @@ jobs:
           node-version: 22.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm changelog:sync
       - run: pnpm quality
       - run: pnpm build
+
+  version:
+    name: Version Ábaco
+    needs: quality
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: decision
+        name: Preserve manual versions or bump patch
+        env:
+          PREVIOUS_SHA: ${{ github.event.before }}
+        run: |
+          current_version="$(node -p "require('./package.json').version")"
+          previous_version=""
+          if [ -n "$PREVIOUS_SHA" ] && git cat-file -e "$PREVIOUS_SHA:package.json" 2>/dev/null; then
+            previous_version="$(git show "$PREVIOUS_SHA:package.json" | node -p "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")"
+          fi
+          node scripts/release-decision.mjs "$previous_version" "$current_version" >> "$GITHUB_OUTPUT"
+      - name: Bump patch version
+        if: steps.decision.outputs.bump_patch == 'true'
+        run: npm version patch --no-git-tag-version --ignore-scripts
+      - name: Generate release changelog
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          pnpm changelog:sync --release "$VERSION"
+          pnpm changelog:check --release "$VERSION"
+      - name: Refuse an obsolete release
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "main advanced during validation; refusing an obsolete release."
+            exit 1
+          fi
+      - name: Commit version and tag release
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json CHANGELOG.md src/shared/lib/changelog.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): v$VERSION [skip ci]"
+          fi
+          git tag --annotate "v$VERSION" --message "v$VERSION"
+          git push origin HEAD:main --follow-tags
+

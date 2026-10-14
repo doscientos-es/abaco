@@ -4,7 +4,7 @@ import { Outlet, createRootRouteWithContext, redirect, useRouterState } from '@t
 import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
-import { NoCompanyPage, sessionQuery } from '@/features/auth'
+import { NoCompanyPage, sessionQuery, welcomeRedirect } from '@/features/auth'
 import { invoiceNewlyAcceptedEstimates } from '@/features/invoices/application/invoice-actions'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
@@ -24,6 +24,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })
     }
     if (session && guestOnlyPaths.includes(path)) throw redirect({ to: '/', replace: true })
+    if (session && !isPublicPath(path)) {
+      const destination = welcomeRedirect(session.needsWelcome, path)
+      if (destination) throw redirect({ to: destination, replace: true })
+    }
     // Screens read the store synchronously, so the data must be loaded before they render.
     if (session?.role && !isPublicPath(path)) {
       await hydrateStore()
@@ -62,6 +66,7 @@ function RootLayout() {
 
   if (isPublic || !session) return <Outlet />
   if (!session.role) return <NoCompanyPage />
+  if (pathname === '/bienvenida') return <Outlet />
   return (
     <AppFrame>
       <Outlet />

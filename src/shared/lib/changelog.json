@@ -1,0 +1,303 @@
+{
+  "releases": [
+    {
+      "version": null,
+      "date": "2026-10-14",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Improve payment handling and add trial subscription logic",
+            "Add custom plan card with contact option",
+            "Enhance payment history loading and error handling",
+            "Add notification for estimate views and follow-up reminders",
+            "Add company and brand tabs for improved settings management",
+            "Add automatic reminders for overdue invoices and estimates",
+            "Add paidCents tracking and update payment logic",
+            "Update plan prices and add SQL migration for pricing",
+            "Add refreshStore function to update state on visibility change",
+            "Add public estimate feature for client responses",
+            "Add support for line and global discounts in estimates",
+            "Add payment history feature for company owners",
+            "Add branding options for tenants including color and logo",
+            "Add client selection validation and update options",
+            "Replace email sending with server-side document sending",
+            "Increase trial member limit to 15 and update UI accordingly",
+            "Update icon rendering in EmptyHint component",
+            "Add new logo SVG asset",
+            "Add self-service signup and registration page",
+            "Add brand information and update UI references",
+            "Restrict trigger functions from public API access",
+            "Add initial configuration for Supabase functions",
+            "Integrate Redsys payment system and update billing logic",
+            "Enhance billing system with new subscription features",
+            "Implement subscription management and Stripe integration",
+            "Add company management features for user roles and creation",
+            "Integrate Supabase repository and enhance error handling",
+            "Add business schema and row-level security policies",
+            "Implement team management features for user roles",
+            "Implement role-based permissions and user authentication flow",
+            "App de presupuestos (React + Supabase)"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Handle error in fetchCompanies to prevent no-company page",
+            "Update search query initialization for invoices page",
+            "Change message display to output element in team section",
+            "Update type definition for description prop in AuthLayout"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "b2992d19a3cc7bb3d50ad6c89ea3f247ef8b909f",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Improve payment handling and add trial subscription logic"
+        },
+        {
+          "sha": "64684bab20d5a96f5685448efe44d82fa84afe21",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add custom plan card with contact option"
+        },
+        {
+          "sha": "d7588d1f2bc5d5209b00158eda5dd79b72ba6345",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Enhance payment history loading and error handling"
+        },
+        {
+          "sha": "b1c13efeb4fd0c2171d8f1ca33acc97715bc01ec",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add notification for estimate views and follow-up reminders"
+        },
+        {
+          "sha": "b92a853c5f8b25f040f92e51ac787ce7f193b62d",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Add company and brand tabs for improved settings management"
+        },
+        {
+          "sha": "e02cd4f84ef10e5ef6a42e4d3a0167635ce13404",
+          "type": "feat",
+          "scope": "invoices",
+          "breaking": false,
+          "description": "Add automatic reminders for overdue invoices and estimates"
+        },
+        {
+          "sha": "e27cdfbaef9c54d4f9701e7d61fbb0a049e6197b",
+          "type": "feat",
+          "scope": "invoices",
+          "breaking": false,
+          "description": "Add paidCents tracking and update payment logic"
+        },
+        {
+          "sha": "a992b4eb7cd26fae9bfdd9b58723b4b84d24704c",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Update plan prices and add SQL migration for pricing"
+        },
+        {
+          "sha": "cc208864029af37fbc9ec51ed8a89076346fe12f",
+          "type": "feat",
+          "scope": "store",
+          "breaking": false,
+          "description": "Add refreshStore function to update state on visibility change"
+        },
+        {
+          "sha": "543361f768fa1e81428a1f696a93715d9b935c83",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add public estimate feature for client responses"
+        },
+        {
+          "sha": "d6d0d374a11996eb6d29251b7ed776ab69319a4b",
+          "type": "feat",
+          "scope": "estimate",
+          "breaking": false,
+          "description": "Add support for line and global discounts in estimates"
+        },
+        {
+          "sha": "59de65e6cd0ee352dd0a6492352649e59fd0270c",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add payment history feature for company owners"
+        },
+        {
+          "sha": "6f72658f021fb0e47dcf3ae21b035460d249ba49",
+          "type": "feat",
+          "scope": "branding",
+          "breaking": false,
+          "description": "Add branding options for tenants including color and logo"
+        },
+        {
+          "sha": "ed03919c4c21860d28e9c209eff0fc86abe501bb",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add client selection validation and update options"
+        },
+        {
+          "sha": "7bb14a5f374280501b16a9dc1fcbd9145bd26765",
+          "type": "fix",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Handle error in fetchCompanies to prevent no-company page"
+        },
+        {
+          "sha": "f76fbd8c3621e50aec3566b1f9fbe12b8ff9d724",
+          "type": "feat",
+          "scope": "email",
+          "breaking": false,
+          "description": "Replace email sending with server-side document sending"
+        },
+        {
+          "sha": "591e004314a02b2fa49ff444b65275d73f2364db",
+          "type": "fix",
+          "scope": "invoices",
+          "breaking": false,
+          "description": "Update search query initialization for invoices page"
+        },
+        {
+          "sha": "c552841fb01925a82f90058dc391cc32d4de627a",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Increase trial member limit to 15 and update UI accordingly"
+        },
+        {
+          "sha": "89c9e33a9d936ebdc65a4c1f42472968f03ee070",
+          "type": "feat",
+          "scope": "charts",
+          "breaking": false,
+          "description": "Update icon rendering in EmptyHint component"
+        },
+        {
+          "sha": "60dc6b741183ed6fd4ebdd7a9c01a24731438c28",
+          "type": "feat",
+          "scope": "assets",
+          "breaking": false,
+          "description": "Add new logo SVG asset"
+        },
+        {
+          "sha": "a2891682829127ade4e8266d6c40718a55f7f291",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add self-service signup and registration page"
+        },
+        {
+          "sha": "11ba9cf04151c42872e616bc7396c26f71240fe4",
+          "type": "feat",
+          "scope": "branding",
+          "breaking": false,
+          "description": "Add brand information and update UI references"
+        },
+        {
+          "sha": "3e6bf828feb199aae6bda35766526530686e9eed",
+          "type": "feat",
+          "scope": "supabase",
+          "breaking": false,
+          "description": "Restrict trigger functions from public API access"
+        },
+        {
+          "sha": "f2164505bf7b2694d8717fce13592a9486ad8166",
+          "type": "feat",
+          "scope": "supabase",
+          "breaking": false,
+          "description": "Add initial configuration for Supabase functions"
+        },
+        {
+          "sha": "fe2d9820f0000d7532643152a549130b64022faa",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Integrate Redsys payment system and update billing logic"
+        },
+        {
+          "sha": "74f1426cf3d9e1f49fdfc587f889f7232bf7f38f",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Enhance billing system with new subscription features"
+        },
+        {
+          "sha": "5d05ae20a1d89ea5b87312b4bfe3f48a5137bedf",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement subscription management and Stripe integration"
+        },
+        {
+          "sha": "2c92aeb21b4cbacf763f01d8f31bd1e82a83c55d",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add company management features for user roles and creation"
+        },
+        {
+          "sha": "f704edc0c3fc26c971a55684a77e4ba84d5e1380",
+          "type": "feat",
+          "scope": "store",
+          "breaking": false,
+          "description": "Integrate Supabase repository and enhance error handling"
+        },
+        {
+          "sha": "8aed698c94bb4635564ff9bc49b636a582657868",
+          "type": "feat",
+          "scope": "database",
+          "breaking": false,
+          "description": "Add business schema and row-level security policies"
+        },
+        {
+          "sha": "c2e74fe301af67db53d740fa3dfdcbcc56d081a3",
+          "type": "fix",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Change message display to output element in team section"
+        },
+        {
+          "sha": "884d3fc400dbdc9483eb8166f4853f009f043d97",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Implement team management features for user roles"
+        },
+        {
+          "sha": "5ac6af7e7f60d03fb7bcbb39a93c38c7f9576cef",
+          "type": "fix",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Update type definition for description prop in AuthLayout"
+        },
+        {
+          "sha": "b7689e14812eea6663ec3edb41d60f50a3421ab9",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Implement role-based permissions and user authentication flow"
+        },
+        {
+          "sha": "cb6f4d9083ce7d7807a6bbf055fb569cb661d04d",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "App de presupuestos (React + Supabase)"
+        }
+      ]
+    }
+  ]
+}

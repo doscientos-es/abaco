@@ -1,6 +1,7 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import { isRole, type Role } from '../domain/permissions'
+import { needsWelcome } from '../domain/welcome'
 import { activeCompanyField, getPreferredCompanyId } from './active-company'
 
 export type Company = { id: string; name: string; role: Role }
@@ -21,6 +22,8 @@ export type AuthSession = {
   role: Role | null
   /** Every company the user belongs to, to switch between them. */
   companies: Company[]
+  /** New signup owners see the trial/payment choice once. Existing and invited accounts do not. */
+  needsWelcome: boolean
 }
 
 /** One row per company the user belongs to; the role can differ in each one. */
@@ -84,5 +87,6 @@ export async function loadSession(): Promise<AuthSession | null> {
     tenantId: active?.id ?? null,
     role: active?.role ?? null,
     companies,
+    needsWelcome: needsWelcome(active?.role ?? null, user.user_metadata ?? {}),
   }
 }
