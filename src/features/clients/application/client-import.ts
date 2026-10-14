@@ -1,4 +1,5 @@
 import type { ImportSchema } from '@/shared/domain/table-import'
+import { formLimits } from '@/shared/domain/form-limits'
 import type { Client } from '@/shared/domain/types'
 
 import type { ClientInput } from './client-actions'
@@ -22,18 +23,28 @@ export const clientImportSchema: ImportSchema<ClientInput> = {
   ],
   parse(row) {
     const name = row['Nombre'] ?? ''
-    if (!name) return { ok: false, error: 'Falta el nombre.' }
+    if (!name.trim()) return { ok: false, error: 'Falta el nombre.' }
+    if (name.length > formLimits.clientName) return { ok: false, error: `El nombre supera ${formLimits.clientName} caracteres.` }
     const email = row['Email'] ?? ''
     if (email && !emailPattern.test(email)) return { ok: false, error: `Email no válido: ${email}` }
+    if (email.length > formLimits.email) return { ok: false, error: `El email supera ${formLimits.email} caracteres.` }
+    const taxId = (row['NIF'] ?? '').replace(/\s/g, '').toUpperCase()
+    if (taxId.length > formLimits.taxId) return { ok: false, error: `El NIF supera ${formLimits.taxId} caracteres.` }
+    const phone = row['Teléfono'] ?? ''
+    if (phone.length > formLimits.phone) return { ok: false, error: `El teléfono supera ${formLimits.phone} caracteres.` }
+    const address = row['Dirección'] ?? ''
+    if (address.length > formLimits.address) return { ok: false, error: `La dirección supera ${formLimits.address} caracteres.` }
+    const notes = row['Notas'] ?? ''
+    if (notes.length > formLimits.notes) return { ok: false, error: `Las notas superan ${formLimits.notes} caracteres.` }
     return {
       ok: true,
       value: {
-        name,
-        taxId: (row['NIF'] ?? '').replace(/\s/g, '').toUpperCase(),
+        name: name.trim(),
+        taxId,
         email,
-        phone: row['Teléfono'] ?? '',
-        address: row['Dirección'] ?? '',
-        notes: row['Notas'] ?? '',
+        phone,
+        address,
+        notes,
       },
     }
   },

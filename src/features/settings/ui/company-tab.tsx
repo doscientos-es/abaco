@@ -62,9 +62,11 @@ export function CompanyTab({ form, set }: FormProps) {
           placeholder="hola@tuempresa.es"
           icon={fieldIcons.mail}
           helper={
-            form.email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-              ? undefined
-              : 'Escribe un correo válido.'
+            form.email === ''
+              ? 'Opcional.'
+              : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+                ? 'Formato válido.'
+                : 'Escribe un correo válido.'
           }
           value={form.email}
           onChange={set('email')}

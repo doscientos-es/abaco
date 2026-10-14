@@ -1,4 +1,5 @@
 import { parseEuros } from '@/shared/domain/money'
+import { formLimits } from '@/shared/domain/form-limits'
 import { normalizeHeader, type ImportSchema } from '@/shared/domain/table-import'
 import type { CatalogItem, CatalogKind } from '@/shared/domain/types'
 
@@ -29,7 +30,14 @@ export const catalogImportSchema: ImportSchema<CatalogInput> = {
   ],
   parse(row) {
     const name = row['Nombre'] ?? ''
-    if (!name) return { ok: false, error: 'Falta el nombre.' }
+    if (!name.trim()) return { ok: false, error: 'Falta el nombre.' }
+    if (name.length > formLimits.catalogName) return { ok: false, error: `El nombre supera ${formLimits.catalogName} caracteres.` }
+    const sku = row['Referencia'] ?? ''
+    if (sku.length > formLimits.sku) return { ok: false, error: `La referencia supera ${formLimits.sku} caracteres.` }
+    const category = row['Categoría'] ?? ''
+    if (category.length > formLimits.category) return { ok: false, error: `La categoría supera ${formLimits.category} caracteres.` }
+    const unit = row['Unidad'] || 'ud'
+    if (unit.length > formLimits.unit) return { ok: false, error: `La unidad supera ${formLimits.unit} caracteres.` }
     const rawKind = row['Tipo'] ?? ''
     const kind = rawKind ? kinds[normalizeHeader(rawKind)] : 'material'
     if (!kind) return { ok: false, error: `Tipo no válido: ${rawKind}` }
@@ -37,14 +45,17 @@ export const catalogImportSchema: ImportSchema<CatalogInput> = {
     if (!/^-?[\d.,\s]+$/.test(rawPrice)) return { ok: false, error: `Precio no válido: ${row['Precio'] ?? ''}` }
     const unitPriceCents = parseEuros(rawPrice)
     if (unitPriceCents < 0) return { ok: false, error: 'El precio no puede ser negativo.' }
+    if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents > formLimits.monetaryAmount * 100) {
+      return { ok: false, error: `El precio supera ${formLimits.monetaryAmount.toLocaleString('es-ES')} €.` }
+    }
     return {
       ok: true,
       value: {
-        name,
-        sku: row['Referencia'] ?? '',
+        name: name.trim(),
+        sku,
         kind,
-        category: row['Categoría'] ?? '',
-        unit: row['Unidad'] || 'ud',
+        category,
+        unit,
         unitPriceCents,
       },
     }

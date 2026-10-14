@@ -1,4 +1,5 @@
 import { parseEuros } from '@/shared/domain/money'
+import { formLimits } from '@/shared/domain/form-limits'
 import { normalizeHeader, type ImportSchema } from '@/shared/domain/table-import'
 import type { LedgerEntry, LedgerKind } from '@/shared/domain/types'
 
@@ -51,11 +52,17 @@ export const ledgerImportSchema: ImportSchema<LedgerInput> = {
     const kind = kinds[normalizeHeader(rawKind)]
     if (!kind) return { ok: false, error: `Tipo no válido: ${rawKind || '(vacío)'}. Usa Ingreso o Gasto.` }
     const concept = row['Concepto'] ?? ''
-    if (!concept) return { ok: false, error: 'Falta el concepto.' }
+    if (!concept.trim()) return { ok: false, error: 'Falta el concepto.' }
+    if (concept.length > formLimits.ledgerConcept) return { ok: false, error: `El concepto supera ${formLimits.ledgerConcept} caracteres.` }
+    const category = row['Categoría'] || 'Otros'
+    if (category.length > formLimits.ledgerCategory) return { ok: false, error: `La categoría supera ${formLimits.ledgerCategory} caracteres.` }
     const rawTotal = (row['Total'] ?? '').replace(/[€$]/g, '')
     if (!/^-?[\d.,\s]+$/.test(rawTotal)) return { ok: false, error: `Importe no válido: ${row['Total'] ?? ''}` }
     const amountCents = Math.abs(parseEuros(rawTotal))
     if (amountCents === 0) return { ok: false, error: 'El importe no puede ser 0.' }
+    if (!Number.isSafeInteger(amountCents) || amountCents > formLimits.monetaryAmount * 100) {
+      return { ok: false, error: `El importe supera ${formLimits.monetaryAmount.toLocaleString('es-ES')} €.` }
+    }
     const vatText = (row['IVA %'] ?? '').replace('%', '').replace(',', '.')
     const vatRate = vatText ? Number(vatText) : 0
     if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) return { ok: false, error: `IVA no válido: ${row['IVA %'] ?? ''}` }
@@ -64,10 +71,10 @@ export const ledgerImportSchema: ImportSchema<LedgerInput> = {
       value: {
         kind,
         date,
-        concept,
-        category: row['Categoría'] || 'Otros',
+        concept: concept.trim(),
+        category,
         amountCents,
-        vatRate,
+        vatRate: Math.round(vatRate * 100) / 100,
         estimateId: null,
         milestoneId: null,
       },
