@@ -28,6 +28,7 @@ let state: AppState | undefined
 let hydration: Promise<void> | undefined
 /** Saves run one after another so the server sees changes in the order they were made. */
 let saveQueue: Promise<unknown> = Promise.resolve()
+let pendingSaves = 0
 const listeners = new Set<() => void>()
 
 /** Chooses the data source. Call before `hydrateStore`; clears any loaded data. */
@@ -68,6 +69,22 @@ export function setActiveTenantId(id: string): void {
   emit()
 }
 
+/**
+ * Reloads from the source so answers given elsewhere (e.g. a client accepting an estimate) show up.
+ * Skipped while saves are pending, so it never overwrites edits that have not reached the server.
+ */
+export async function refreshStore(): Promise<void> {
+  if (!state || pendingSaves > 0) return
+  try {
+    const loaded = await repository.load()
+    if (pendingSaves > 0) return
+    state = { ...loaded, activeTenantId: state.tenants[state.activeTenantId] ? state.activeTenantId : loaded.activeTenantId }
+    emit()
+  } catch {
+    // A failed refresh keeps the data already on screen.
+  }
+}
+
 function current(): AppState {
   if (!state) throw new Error('Los datos todavía no se han cargado.')
   return state
@@ -84,6 +101,7 @@ export function updateState(mutator: (draft: AppState) => AppState): void {
   // Optimistic: the UI updates now; a failed save rolls back to what the source holds.
   state = next
   emit()
+  pendingSaves += 1
   saveQueue = saveQueue
     .then(() => repository.save(previous, next))
     .then((fresh) => {
@@ -96,6 +114,9 @@ export function updateState(mutator: (draft: AppState) => AppState): void {
       console.error('No se pudo guardar el cambio; se recargan los datos.', error)
       state = await repository.load()
       emit()
+    })
+    .finally(() => {
+      pendingSaves -= 1
     })
 }
 

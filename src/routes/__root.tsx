@@ -1,10 +1,11 @@
 import { Toaster } from '@doscientos/ui'
 import type { QueryClient } from '@tanstack/react-query'
 import { Outlet, createRootRouteWithContext, redirect, useRouterState } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
 import { NoCompanyPage, sessionQuery } from '@/features/auth'
-import { hydrateStore, setActiveTenantId } from '@/shared/store/store'
+import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
 /** Screens reachable without being signed in. */
@@ -39,6 +40,21 @@ function RootLayout() {
   const { session } = Route.useRouteContext()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isPublic = isPublicPath(pathname) || pathname === '/nueva-contrasena'
+  const signedIn = Boolean(session?.role) && !isPublic
+
+  // Picks up changes made elsewhere (a client accepting an estimate) when the user comes back to the tab.
+  useEffect(() => {
+    if (!signedIn) return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshStore()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [signedIn])
 
   if (isPublic || !session) return <Outlet />
   if (!session.role) return <NoCompanyPage />
