@@ -1,0 +1,263 @@
+/* A single paper layout. The preview scales this sheet; printing never reflows it. */
+.invoice-document.invoice-sheet {
+  page: invoice;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9mm;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0;
+  border-top: 5mm solid var(--invoice-brand, #2a4227);
+  padding: 12mm 16mm 16mm;
+  background: #fff;
+  color: #253041;
+  font-size: 10pt;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  box-shadow: 0 2px 12px rgb(15 23 42 / 8%);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.invoice-sheet :is(p, h2, h3, dl, dd) {
+  margin: 0;
+}
+
+.invoice-sheet-header,
+.invoice-sheet-client {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 68mm;
+  gap: 10mm;
+  break-inside: avoid;
+}
+
+.invoice-sheet-identity {
+  color: #667085;
+  font-size: 8.5pt;
+}
+
+.invoice-sheet-logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 52mm;
+  max-height: 20mm;
+  margin-bottom: 4mm;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.invoice-sheet .invoice-sheet-company {
+  margin-bottom: 2mm;
+  color: var(--invoice-brand, #2a4227);
+  font-size: 17pt;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.invoice-sheet-contact {
+  margin-top: 2mm !important;
+}
+
+.invoice-sheet-address,
+.invoice-sheet-concept {
+  white-space: pre-line;
+}
+
+.invoice-sheet-reference,
+.invoice-sheet-origin {
+  text-align: right;
+}
+
+.invoice-sheet-label {
+  color: #667085;
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.invoice-sheet-reference > .invoice-sheet-label {
+  color: var(--invoice-brand, #2a4227);
+}
+
+.invoice-sheet-number {
+  font-size: 20pt;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.4;
+}
+
+.invoice-sheet .invoice-sheet-dates {
+  display: grid;
+  gap: 3mm;
+  margin-top: 5mm;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-sheet-dates dt {
+  color: #667085;
+  font-size: 7.5pt;
+}
+
+.invoice-sheet-dates dd {
+  font-size: 9pt;
+  font-weight: 500;
+}
+
+.invoice-sheet-client {
+  border-block: 1px solid #e4e7ec;
+  padding-block: 6mm;
+  color: #667085;
+  font-size: 9pt;
+}
+
+.invoice-sheet-client h3 {
+  margin-block: 2mm 1mm;
+  color: #253041;
+  font-size: 12pt;
+  font-weight: 600;
+}
+
+.invoice-sheet-origin > p:last-child {
+  margin-top: 2mm;
+  color: #253041;
+  font-weight: 500;
+}
+
+.invoice-sheet-lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoice-sheet-lines th {
+  border-bottom: 2px solid var(--invoice-brand, #2a4227);
+  padding: 3mm;
+  background: #f7f8fa;
+  color: #475467;
+  font-size: 8pt;
+  font-weight: 600;
+  text-align: left;
+}
+
+.invoice-sheet-lines td {
+  border-bottom: 1px solid #e4e7ec;
+  padding: 5mm 3mm;
+  vertical-align: top;
+}
+
+.invoice-sheet-lines tr {
+  break-inside: avoid;
+}
+
+.invoice-sheet-lines .invoice-sheet-rate,
+.invoice-sheet-lines .invoice-sheet-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-sheet-rate {
+  width: 17mm;
+}
+
+.invoice-sheet-amount {
+  width: 34mm;
+}
+
+.invoice-sheet .invoice-sheet-totals {
+  display: grid;
+  gap: 2mm;
+  width: 78mm;
+  margin-top: 7mm;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  break-inside: avoid;
+}
+
+.invoice-sheet-totals > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4mm;
+}
+
+.invoice-sheet-totals dt {
+  color: #667085;
+  font-size: 9pt;
+}
+
+.invoice-sheet-totals .invoice-sheet-total {
+  margin-top: 3mm;
+  border-top: 2px solid var(--invoice-brand, #2a4227);
+  padding-top: 4mm;
+}
+
+.invoice-sheet-total dt {
+  color: #253041;
+  font-size: 10pt;
+  font-weight: 600;
+}
+
+.invoice-sheet-total dd {
+  color: var(--invoice-brand, #2a4227);
+  font-size: 20pt;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.invoice-sheet-footer {
+  margin-top: auto;
+  padding-top: 10mm;
+  color: #667085;
+  font-size: 8.5pt;
+  break-inside: avoid;
+}
+
+.invoice-sheet-payment h3 {
+  margin-block: 2mm;
+  color: #253041;
+  font-size: 10pt;
+  font-weight: 600;
+}
+
+.invoice-sheet .invoice-sheet-iban {
+  margin-bottom: 2mm;
+  color: #253041;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-sheet .invoice-sheet-legal {
+  margin-top: 6mm;
+  border-top: 1px solid #e4e7ec;
+  padding-top: 4mm;
+  font-size: 7.5pt;
+  white-space: pre-line;
+}
+
+@page invoice {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  body.invoice-print {
+    min-width: 0;
+    margin: 0;
+    background: #fff;
+  }
+
+  .invoice-document.invoice-sheet {
+    position: static;
+    inset: auto;
+    width: 210mm;
+    max-width: none;
+    margin: 0;
+    box-shadow: none;
+    zoom: 1;
+  }
+}

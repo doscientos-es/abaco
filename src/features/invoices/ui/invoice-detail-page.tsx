@@ -9,13 +9,16 @@ import {
   toast,
 } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
+import { printDocument } from '@/shared/lib/print-document'
 import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
 import { useTenantData } from '@/shared/store/store'
+import { DocumentPreview } from '@/shared/ui/document-preview'
+import { fieldIcons } from '@/shared/ui/field-icons'
 import { PageNotFound } from '@/shared/ui/page-states'
 
 import {
@@ -36,6 +39,8 @@ const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 
 export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
   const { invoices, clients, tenant, estimates } = useTenantData()
   const navigate = useNavigate()
+  const documentRef = useRef<HTMLElement>(null)
+  const [printing, setPrinting] = useState(false)
   const invoice = invoices.find((i) => i.id === invoiceId)
 
   if (!invoice) {
@@ -64,6 +69,20 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
     if (sent && inv.status === 'issued') setInvoiceStatus(inv.id, 'sent')
   }
 
+  async function download() {
+    if (!documentRef.current || !invoice) return
+    setPrinting(true)
+    try {
+      await printDocument(documentRef.current, `Factura ${invoice.number}`)
+    } catch {
+      toast.error('No se pudo preparar el PDF', {
+        description: 'Comprueba que el logo y los estilos se hayan cargado y vuelve a intentarlo.',
+      })
+    } finally {
+      setPrinting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader className="print:hidden">
@@ -76,9 +95,13 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
-          <Button onPress={() => window.print()}>Descargar PDF</Button>
+          <Button isDisabled={printing} onPress={() => void download()}>
+            {fieldIcons.file}
+            {printing ? 'Preparando PDF…' : 'Descargar PDF'}
+          </Button>
           <Button variant="outline" onPress={() => void send(invoice)}>
-            Enviar
+            {fieldIcons.mail}
+            Enviar por email
           </Button>
           <Button
             variant="outline"
@@ -95,11 +118,26 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
         </PageHeaderActions>
       </PageHeader>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <aside className="border-border bg-card space-y-4 rounded-lg border p-4 print:hidden">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0">
+          <DocumentPreview>
+            <InvoiceDocument
+              invoice={invoice}
+              client={client}
+              tenant={tenant}
+              estimateNumber={estimate?.number}
+              documentRef={documentRef}
+            />
+          </DocumentPreview>
+        </div>
+        <aside aria-label="Gestión de la factura" className="border-border bg-card space-y-5 rounded-xl border p-5 print:hidden">
           <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Gestión del cobro</h2>
             <Badge variant={variant}>{label}</Badge>
-            <p className="text-xl font-semibold tabular-nums">{formatEuros(invoice.totalCents)}</p>
+          </div>
+          <div className="space-y-1 border-b pb-5">
+            <p className="text-muted-foreground text-xs">Importe de la factura</p>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">{formatEuros(invoice.totalCents)}</p>
           </div>
           <dl className="space-y-3 text-sm">
             <Detail label="Concepto" value={invoice.concept} />
@@ -148,8 +186,6 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
             </Button>
           </div>
         </aside>
-
-        <InvoiceDocument invoice={invoice} client={client} tenant={tenant} />
       </div>
     </div>
   )
