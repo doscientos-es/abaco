@@ -49,7 +49,7 @@ export function PaymentHistory({
   companyName: string
   subscription: Subscription | undefined
 }) {
-  const { data: payments, isError } = useQuery(paymentsQuery(tenantId))
+  const { data: payments, isPending, isError, fetchStatus, refetch } = useQuery(paymentsQuery(tenantId))
   const paid = (payments ?? []).filter((p) => p.status === 'succeeded')
   const totalPaid = paid.reduce((sum, p) => sum + p.amountCents, 0)
 
@@ -95,11 +95,20 @@ export function PaymentHistory({
 
       <div>
         <h3 className="mb-2 text-sm font-semibold">Pagos realizados</h3>
-        {isError ? (
-          <p className="text-destructive text-sm">No se pudo cargar el historial de pagos.</p>
-        ) : !payments ? (
+        {isError || (isPending && fetchStatus === 'paused') ? (
+          <div className="space-y-2">
+            <p role="alert" className="text-destructive text-sm">
+              {fetchStatus === 'paused'
+                ? 'Sin conexión. Comprueba tu conexión para cargar el historial de pagos.'
+                : 'No se pudo cargar el historial de pagos.'}
+            </p>
+            <Button variant="outline" size="sm" onPress={() => void refetch()}>
+              Reintentar
+            </Button>
+          </div>
+        ) : isPending ? (
           <p className="text-muted-foreground text-sm">Cargando…</p>
-        ) : payments.length === 0 ? (
+        ) : !payments?.length ? (
           <p className="text-muted-foreground text-sm">Todavía no has hecho ningún pago. Aquí aparecerán con su justificante.</p>
         ) : (
           <ul className="divide-border border-border divide-y rounded-lg border text-sm">

@@ -103,24 +103,41 @@ export const paymentsQuery = (tenantId: string) =>
   queryOptions({
     queryKey: ['billing-payments', tenantId],
     staleTime: 60_000,
-    queryFn: async (): Promise<Payment[]> => {
-      const { data, error } = await createBrowserSupabaseClient()
-        .from('billing_payments')
-        .select('id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-      if (error) throw new Error('No se pudo cargar el historial de pagos.')
-      return data.map((row) => ({
-        id: row.id,
-        order: row.merchant_order,
-        kind: row.kind as Payment['kind'],
-        plan: row.plan as PaidPlan,
-        period: row.period as Interval,
-        amountCents: row.amount_cents,
-        status: row.status as PaymentStatus,
-        createdAt: new Date(row.created_at),
-        settledAt: row.settled_at ? new Date(row.settled_at) : null,
-      }))
+    retry: false,
+    queryFn: async ({ signal }): Promise<Payment[]> => {
+      const controller = new AbortController()
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        // Also bound a stalled auth/token lookup, before Supabase starts the HTTP request.
+        const { data, error } = await Promise.race([
+          createBrowserSupabaseClient()
+            .from('billing_payments')
+            .select('id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at')
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false })
+            .abortSignal(AbortSignal.any([signal, controller.signal])),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error('No se pudo cargar el historial de pagos.'))
+              controller.abort()
+            }, 15_000)
+          }),
+        ])
+        if (error) throw new Error('No se pudo cargar el historial de pagos.')
+        return data.map((row) => ({
+          id: row.id,
+          order: row.merchant_order,
+          kind: row.kind as Payment['kind'],
+          plan: row.plan as PaidPlan,
+          period: row.period as Interval,
+          amountCents: row.amount_cents,
+          status: row.status as PaymentStatus,
+          createdAt: new Date(row.created_at),
+          settledAt: row.settled_at ? new Date(row.settled_at) : null,
+        }))
+      } finally {
+        clearTimeout(timer)
+      }
     },
   })
 
