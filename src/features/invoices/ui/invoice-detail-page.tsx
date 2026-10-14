@@ -9,6 +9,7 @@ import {
   toast,
 } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
@@ -16,7 +17,13 @@ import { sendDocument } from '@/shared/lib/send-document'
 import { useTenantData } from '@/shared/store/store'
 import { PageNotFound } from '@/shared/ui/page-states'
 
-import { deleteInvoice, markInvoicePaid, setInvoiceStatus } from '../application/invoice-actions'
+import {
+  deleteInvoice,
+  invoiceOutstandingCents,
+  markInvoicePaid,
+  registerInvoicePayment,
+  setInvoiceStatus,
+} from '../application/invoice-actions'
 import { InvoiceDocument } from './invoice-document'
 
 const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 'info' | 'success' }> = {
@@ -107,6 +114,7 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
               </dd>
             </div>
           </dl>
+          <PaymentForm key={invoice.paidCents} invoice={invoice} />
           <div className="flex flex-wrap gap-2 border-t pt-4">
             <Button
               isDisabled={invoice.status === 'paid'}
@@ -130,6 +138,44 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
 
         <InvoiceDocument invoice={invoice} client={client} tenant={tenant} />
       </div>
+    </div>
+  )
+}
+
+/** Registers a payment; the amount starts as everything still owed, so one click closes the invoice. */
+function PaymentForm({ invoice }: { invoice: Invoice }) {
+  const owed = invoiceOutstandingCents(invoice)
+  const [amount, setAmount] = useState((owed / 100).toFixed(2))
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  if (invoice.status === 'paid') return null
+  const cents = Math.round(Number(amount.replace(',', '.')) * 100)
+  const valid = Number.isFinite(cents) && cents > 0
+
+  return (
+    <div className="space-y-2 border-t pt-4 text-sm">
+      <dl>
+        <Detail label="Cobrado hasta ahora" value={formatEuros(invoice.paidCents)} />
+        <Detail label="Pendiente" value={formatEuros(owed)} />
+      </dl>
+      <div className="flex gap-2">
+        <input
+          aria-label="Importe cobrado (€)"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="border-input bg-background w-28 rounded-md border px-2 py-1.5 tabular-nums"
+        />
+        <input
+          type="date"
+          aria-label="Fecha del cobro"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="border-input bg-background rounded-md border px-2 py-1.5"
+        />
+      </div>
+      <Button isDisabled={!valid} onPress={() => registerInvoicePayment(invoice.id, cents, date)}>
+        {cents >= owed ? 'Registrar cobro completo' : 'Registrar cobro parcial'}
+      </Button>
     </div>
   )
 }

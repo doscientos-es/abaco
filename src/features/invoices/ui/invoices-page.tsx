@@ -32,7 +32,7 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
-import { deleteInvoice, markInvoicePaid, setInvoiceStatus } from '../application/invoice-actions'
+import { deleteInvoice, invoiceOutstandingCents, markInvoicePaid, setInvoiceStatus } from '../application/invoice-actions'
 
 const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 'info' | 'success' }> = {
   issued: { label: 'Emitida', variant: 'neutral' },
@@ -62,10 +62,12 @@ export function InvoicesPage() {
           .includes(q)),
   )
   const pager = usePagination(visible, `${status}|${clientId}|${q}`)
-  const pendingCents = invoices.filter((i) => i.status !== 'paid').reduce((sum, i) => sum + i.totalCents, 0)
+  const pendingCents = invoices
+    .filter((i) => i.status !== 'paid')
+    .reduce((sum, i) => sum + invoiceOutstandingCents(i), 0)
   const overdueCents = invoices
     .filter((i) => i.status !== 'paid' && i.dueDate < today)
-    .reduce((sum, i) => sum + i.totalCents, 0)
+    .reduce((sum, i) => sum + invoiceOutstandingCents(i), 0)
   const filtered = status !== 'all' || clientId !== 'all' || q !== ''
 
   function clearFilters() {

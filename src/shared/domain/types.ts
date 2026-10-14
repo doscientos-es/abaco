@@ -125,6 +125,8 @@ export type Invoice = {
   concept: string
   /** Gross amount including VAT. */
   totalCents: Cents
+  /** Sum of the payments received so far (gross). The invoice is paid when it reaches the total. */
+  paidCents: Cents
   vatRate: number
   status: InvoiceStatus
   issuedAt: string

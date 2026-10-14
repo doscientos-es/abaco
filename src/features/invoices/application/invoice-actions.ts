@@ -23,6 +23,7 @@ export function generateInvoice(estimate: Estimate, milestone: MilestoneAmount):
       clientId: estimate.clientId,
       concept: `${estimate.title} · ${milestone.label || 'Hito'}`,
       totalCents: milestone.amountCents,
+      paidCents: 0,
       vatRate: estimate.vatRate,
       status: 'issued',
       issuedAt: today(),
@@ -39,32 +40,48 @@ export function setInvoiceStatus(id: string, status: InvoiceStatus): void {
   }))
 }
 
-/** Marks the invoice as paid and records the income in the ledger (once). */
-export function markInvoicePaid(id: string): void {
+export function invoiceOutstandingCents(invoice: Pick<Invoice, 'totalCents' | 'paidCents'>): number {
+  return Math.max(0, invoice.totalCents - invoice.paidCents)
+}
+
+/**
+ * Records a payment (total or partial) as income in the ledger and adds it to the invoice.
+ * The amount is capped at what is still owed; the invoice becomes paid when nothing is left.
+ */
+export function registerInvoicePayment(id: string, amountCents: number, date = today()): void {
   updateTenantData((data) => {
     const invoice = data.invoices.find((i) => i.id === id)
     if (!invoice || invoice.status === 'paid') return data
-    const alreadyRecorded = data.ledger.some(
-      (l) => l.estimateId === invoice.estimateId && l.milestoneId === invoice.milestoneId,
-    )
+    const amount = Math.min(Math.round(amountCents), invoiceOutstandingCents(invoice))
+    if (amount <= 0) return data
+    const paidCents = invoice.paidCents + amount
+    const complete = paidCents >= invoice.totalCents
     const entry: LedgerEntry = {
       id: newId(),
       tenantId: data.tenant.id,
       kind: 'income',
-      date: today(),
-      concept: `${invoice.number} · ${invoice.concept}`,
+      date,
+      concept: `${invoice.number} · ${complete && amount === invoice.totalCents ? '' : complete ? 'último cobro · ' : 'cobro parcial · '}${invoice.concept}`,
       category: 'Cobro de presupuesto',
-      amountCents: invoice.totalCents,
+      amountCents: amount,
       vatRate: invoice.vatRate,
       estimateId: invoice.estimateId,
       milestoneId: invoice.milestoneId,
     }
     return {
       ...data,
-      invoices: data.invoices.map((i) => (i.id === id ? { ...i, status: 'paid' } : i)),
-      ledger: alreadyRecorded ? data.ledger : [entry, ...data.ledger],
+      invoices: data.invoices.map((i) =>
+        i.id === id ? { ...i, paidCents, status: complete ? 'paid' : i.status } : i,
+      ),
+      ledger: [entry, ...data.ledger],
     }
   })
+}
+
+/** Marks the invoice as fully paid: registers whatever is still owed. */
+export function markInvoicePaid(id: string): void {
+  // The amount is capped at what is owed, so asking for "everything" pays exactly the remainder.
+  registerInvoicePayment(id, Number.MAX_SAFE_INTEGER)
 }
 
 export function deleteInvoice(id: string): void {
