@@ -30,7 +30,10 @@ import {
 } from '../application/invoice-actions'
 import { InvoiceDocument } from './invoice-document'
 
-const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 'info' | 'success' }> = {
+const statusConfig: Record<
+  InvoiceStatus,
+  { label: string; variant: 'neutral' | 'info' | 'success' }
+> = {
   issued: { label: 'Emitida', variant: 'neutral' },
   sent: { label: 'Enviada', variant: 'info' },
   paid: { label: 'Cobrada', variant: 'success' },
@@ -62,7 +65,9 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
 
   async function send(inv: Invoice) {
     if (!client?.email) {
-      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      toast.error('No se envió', {
+        description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.',
+      })
       return
     }
     const sent = await sendDocument('invoice', inv.id)
@@ -130,14 +135,19 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
             />
           </DocumentPreview>
         </div>
-        <aside aria-label="Gestión de la factura" className="border-border bg-card space-y-5 rounded-xl border p-5 print:hidden">
+        <aside
+          aria-label="Gestión de la factura"
+          className="border-border bg-card space-y-5 rounded-xl border p-5 print:hidden"
+        >
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">Gestión del cobro</h2>
             <Badge variant={variant}>{label}</Badge>
           </div>
           <div className="space-y-1 border-b pb-5">
             <p className="text-muted-foreground text-xs">Importe de la factura</p>
-            <p className="text-3xl font-semibold tracking-tight tabular-nums">{formatEuros(invoice.totalCents)}</p>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">
+              {formatEuros(invoice.totalCents)}
+            </p>
           </div>
           <dl className="space-y-3 text-sm">
             <Detail label="Concepto" value={invoice.concept} />
@@ -206,20 +216,20 @@ function PaymentForm({ invoice }: { invoice: Invoice }) {
         <Detail label="Cobrado hasta ahora" value={formatEuros(invoice.paidCents)} />
         <Detail label="Pendiente" value={formatEuros(owed)} />
       </dl>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row xl:flex-col">
         <input
           aria-label="Importe cobrado (€)"
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="border-input bg-background w-28 rounded-md border px-2 py-1.5 tabular-nums"
+          className="border-input bg-background min-w-0 rounded-md border px-2 py-1.5 tabular-nums"
         />
         <input
           type="date"
           aria-label="Fecha del cobro"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="border-input bg-background rounded-md border px-2 py-1.5"
+          className="border-input bg-background min-w-0 rounded-md border px-2 py-1.5"
         />
       </div>
       <Button isDisabled={!valid} onPress={() => registerInvoicePayment(invoice.id, cents, date)}>

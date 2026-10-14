@@ -8,6 +8,10 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add settled status display for paid invoices",
+            "Add tests for invoice document rendering and printing",
+            "Add document preview and print functionality for invoices",
+            "Implement welcome page and session handling logic",
             "Add tests for welcome page and session loading logic",
             "Add welcome page and redirect logic for new users feat(billing): enhance payment handling and add trial subscription feat(settings): implement changelog section for user updates feat(auth): introduce welcome actions for user onboarding feat(auth): add welcomePendingField to manage user onboarding state feat(settings): add company and brand tabs for improved management feat(changelog): create changelog section with pagination and formatting fix(auth): handle session loading and redirect to welcome page",
             "Improve payment handling and add trial subscription logic",
@@ -54,6 +58,34 @@
         }
       ],
       "changes": [
+        {
+          "sha": "82407c5e7c4aa4878b98b8b4abf38c4d76438e04",
+          "type": "feat",
+          "scope": "invoice",
+          "breaking": false,
+          "description": "Add settled status display for paid invoices"
+        },
+        {
+          "sha": "c434dd2f166fb8ed38c26644418dba246e76dd93",
+          "type": "feat",
+          "scope": "invoice",
+          "breaking": false,
+          "description": "Add tests for invoice document rendering and printing"
+        },
+        {
+          "sha": "accfe1d4d7c0cbab5c4d4efc0e5c436af59d7225",
+          "type": "feat",
+          "scope": "invoice",
+          "breaking": false,
+          "description": "Add document preview and print functionality for invoices"
+        },
+        {
+          "sha": "ceb3faf52c3565dea41ab6c5adab581c71b482d2",
+          "type": "feat",
+          "scope": "onboarding",
+          "breaking": false,
+          "description": "Implement welcome page and session handling logic"
+        },
         {
           "sha": "7b0a85c8811f2fbb499cf169d7e0ad44a8d7a26b",
           "type": "feat",

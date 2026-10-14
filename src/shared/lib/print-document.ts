@@ -25,17 +25,21 @@ export async function printDocument(element: HTMLElement, title: string): Promis
     frameDocument.documentElement.lang = 'es'
     frameDocument.body.className = 'invoice-print'
     const styles = Array.from(
-      document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>('link[rel="stylesheet"], style'),
+      document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>(
+        'link[rel="stylesheet"], style',
+      ),
     ).map((source) => {
       const copy = source.cloneNode(true) as HTMLLinkElement | HTMLStyleElement
-      const ready = source.tagName === 'LINK'
-        ? new Promise<void>((resolve, reject) => {
-            const link = copy as HTMLLinkElement
-            link.href = (source as HTMLLinkElement).href
-            link.onload = () => resolve()
-            link.onerror = () => reject(new Error('No se ha podido cargar el estilo del documento.'))
-          })
-        : Promise.resolve()
+      const ready =
+        source.tagName === 'LINK'
+          ? new Promise<void>((resolve, reject) => {
+              const link = copy as HTMLLinkElement
+              link.href = (source as HTMLLinkElement).href
+              link.onload = () => resolve()
+              link.onerror = () =>
+                reject(new Error('No se ha podido cargar el estilo del documento.'))
+            })
+          : Promise.resolve()
       frameDocument.head.append(copy)
       return ready
     })
@@ -49,7 +53,10 @@ export async function printDocument(element: HTMLElement, title: string): Promis
     await Promise.race([
       assetsReady(),
       new Promise<never>((_, reject) => {
-        readinessTimeout = setTimeout(() => reject(new Error('El documento tarda demasiado en cargar.')), 15_000)
+        readinessTimeout = setTimeout(
+          () => reject(new Error('El documento tarda demasiado en cargar.')),
+          15_000,
+        )
       }),
     ])
     clearTimeout(readinessTimeout)

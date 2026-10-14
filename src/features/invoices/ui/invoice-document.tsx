@@ -58,8 +58,14 @@ export function InvoiceDocument({
           <p className="invoice-sheet-label">Factura</p>
           <p className="invoice-sheet-number">{invoice.number}</p>
           <dl className="invoice-sheet-dates">
-            <div><dt>Fecha de emisión</dt><dd>{dateLabel(invoice.issuedAt)}</dd></div>
-            <div><dt>Vencimiento</dt><dd>{dateLabel(invoice.dueDate)}</dd></div>
+            <div>
+              <dt>Fecha de emisión</dt>
+              <dd>{dateLabel(invoice.issuedAt)}</dd>
+            </div>
+            <div>
+              <dt>Vencimiento</dt>
+              <dd>{dateLabel(invoice.dueDate)}</dd>
+            </div>
           </dl>
         </div>
       </header>
@@ -85,8 +91,12 @@ export function InvoiceDocument({
           <thead>
             <tr>
               <th scope="col">Concepto</th>
-              <th scope="col" className="invoice-sheet-rate">IVA</th>
-              <th scope="col" className="invoice-sheet-amount">Importe</th>
+              <th scope="col" className="invoice-sheet-rate">
+                IVA
+              </th>
+              <th scope="col" className="invoice-sheet-amount">
+                Importe
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -130,7 +140,9 @@ export function InvoiceDocument({
             ) : null}
           </section>
         ) : null}
-        {tenant.documentFooter ? <p className="invoice-sheet-legal">{tenant.documentFooter}</p> : null}
+        {tenant.documentFooter ? (
+          <p className="invoice-sheet-legal">{tenant.documentFooter}</p>
+        ) : null}
       </footer>
     </article>
   )

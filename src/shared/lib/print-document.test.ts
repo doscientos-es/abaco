@@ -10,20 +10,31 @@ function setup() {
   const print = vi.fn()
   const decode = vi.fn().mockResolvedValue(undefined)
   const frameDocument = {
-    title: '', documentElement: { lang: '' },
-    head: { append: vi.fn() }, body: { className: '', append: vi.fn() },
-    fonts: { ready: Promise.resolve() }, images: [{ decode }],
+    title: '',
+    documentElement: { lang: '' },
+    head: { append: vi.fn() },
+    body: { className: '', append: vi.fn() },
+    fonts: { ready: Promise.resolve() },
+    images: [{ decode }],
   }
   const frame = {
-    title: '', tabIndex: 0, style: { cssText: '' }, setAttribute: vi.fn(), remove: vi.fn(),
+    title: '',
+    tabIndex: 0,
+    style: { cssText: '' },
+    setAttribute: vi.fn(),
+    remove: vi.fn(),
     contentDocument: frameDocument,
     contentWindow: {
       addEventListener: afterPrint.addEventListener.bind(afterPrint),
-      requestAnimationFrame: (callback: () => void) => callback(), focus: vi.fn(), print,
+      requestAnimationFrame: (callback: () => void) => callback(),
+      focus: vi.fn(),
+      print,
     },
   }
   const page = {
-    createElement: vi.fn(() => frame), body: { append: vi.fn() }, querySelectorAll: vi.fn<() => unknown[]>(() => []),
+    createElement: vi.fn(() => frame),
+    body: { append: vi.fn() },
+    querySelectorAll: vi.fn<() => unknown[]>(() => []),
   }
   vi.stubGlobal('document', page)
   return { clone, cloneNode, element, frame, frameDocument, page, print, decode, afterPrint }
@@ -54,7 +65,9 @@ describe('printDocument', () => {
   it('waits for the same fonts and logo to be ready before opening the PDF dialog', async () => {
     const { element, frameDocument, print } = setup()
     let fontsReady = () => {}
-    frameDocument.fonts.ready = new Promise<void>((resolve) => { fontsReady = resolve })
+    frameDocument.fonts.ready = new Promise<void>((resolve) => {
+      fontsReady = resolve
+    })
     const task = printDocument(element, 'Factura')
 
     expect(print).not.toHaveBeenCalled()
@@ -75,11 +88,14 @@ describe('printDocument', () => {
   it('copies and waits for the original stylesheet rather than inventing a separate PDF design', async () => {
     const { element, page, frameDocument, print } = setup()
     const link = {
-      href: '', onload: undefined as (() => void) | undefined,
+      href: '',
+      onload: undefined as (() => void) | undefined,
       onerror: undefined as (() => void) | undefined,
     }
     const source = {
-      tagName: 'LINK', href: 'https://example.test/app.css', cloneNode: vi.fn(() => link),
+      tagName: 'LINK',
+      href: 'https://example.test/app.css',
+      cloneNode: vi.fn(() => link),
     }
     page.querySelectorAll.mockReturnValue([source])
 
