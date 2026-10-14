@@ -23,6 +23,8 @@ export type Tenant = {
   invoiceEmailIntro?: string
   estimateEmailIntro?: string
   documentFooter?: string
+  /** Opt-in: the daily job emails clients about overdue invoices and estimates about to expire. */
+  autoReminders?: boolean
   defaultVatRate: number
   defaultDepositPercent: number
   nextEstimateNumber: number

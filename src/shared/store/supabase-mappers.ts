@@ -54,6 +54,7 @@ export function tenantFromRow(row: Row): Tenant {
     ...present('invoiceEmailIntro', row.invoice_email_intro),
     ...present('estimateEmailIntro', row.estimate_email_intro),
     ...present('documentFooter', row.document_footer),
+    autoReminders: row.auto_reminders === true,
   }
 }
 
@@ -78,6 +79,7 @@ export function tenantToRow(tenant: Tenant): Row {
     invoice_email_intro: tenant.invoiceEmailIntro || null,
     estimate_email_intro: tenant.estimateEmailIntro || null,
     document_footer: tenant.documentFooter || null,
+    auto_reminders: tenant.autoReminders === true,
     default_vat_rate: tenant.defaultVatRate,
     default_deposit_percent: tenant.defaultDepositPercent,
   }

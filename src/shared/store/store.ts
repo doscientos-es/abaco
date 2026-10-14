@@ -145,6 +145,12 @@ export function useTenantData(): TenantData {
   return data
 }
 
+/** Non-reactive read of the active tenant's data, for actions that decide what to do from it. */
+export function currentTenantData(): TenantData | undefined {
+  if (!state) return undefined
+  return state.tenants[state.activeTenantId]
+}
+
 /** Ids are uuid so the client can create rows with their final Postgres uuid primary key. */
 export function newId(): string {
   return crypto.randomUUID()

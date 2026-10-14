@@ -17,7 +17,13 @@ import {
 } from '@doscientos/ui'
 import { useState } from 'react'
 
-import { buildLedgerCsv, downloadTextFile, ledgerVatSummary } from '@/shared/domain/csv'
+import {
+  buildLedgerCsv,
+  buildQuarterlyVatCsv,
+  downloadTextFile,
+  ledgerVatSummary,
+  quarterlyVat,
+} from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
@@ -57,6 +63,7 @@ export function LedgerPage() {
   const income = visible.filter((e) => e.kind === 'income').reduce((s, e) => s + e.amountCents, 0)
   const expense = visible.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amountCents, 0)
   const vat = ledgerVatSummary(visible)
+  const quarters = quarterlyVat(ledger)
   const months = monthlySeries(ledger)
   const expenseByCategory = categoryTotals(visible, 'expense')
 
@@ -163,6 +170,50 @@ export function LedgerPage() {
           />
         </ChartCard>
       </div>
+
+      {quarters.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-base font-semibold">IVA por trimestre (modelo 303)</h2>
+              <p className="text-muted-foreground text-sm">
+                Con todos los apuntes, sin filtrar por mes. Un resultado negativo es IVA a compensar.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onPress={() =>
+                downloadTextFile(
+                  `iva-trimestral-${tenant.name.toLowerCase().replace(/\W+/g, '-')}.csv`,
+                  buildQuarterlyVatCsv(quarters),
+                )
+              }
+            >
+              Exportar IVA trimestral
+            </Button>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Trimestre</TableHead>
+                <TableHead className="text-right">Repercutido</TableHead>
+                <TableHead className="text-right">Soportado</TableHead>
+                <TableHead className="text-right">A ingresar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {quarters.map((q) => (
+                <TableRow key={q.key}>
+                  <TableCell>{q.key}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatEuros(q.collected)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatEuros(q.paid)}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{formatEuros(q.toPay)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </section>
+      ) : null}
 
       <ImportDialog
         open={importOpen}

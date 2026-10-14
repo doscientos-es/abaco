@@ -14,7 +14,7 @@ import type { Tenant } from '@/shared/domain/types'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
-import { TextareaField, TextField } from '@/shared/ui/form'
+import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
 
 import { patchTenant } from '../application/settings-actions'
 import { TeamSection } from './team-section'
@@ -39,6 +39,7 @@ type Form = {
   documentFooter: string
   defaultVatRate: string
   defaultDepositPercent: string
+  autoReminders: string
 }
 
 const hexColor = /^#[0-9a-fA-F]{6}$/
@@ -65,6 +66,7 @@ function toForm(t: Tenant): Form {
     documentFooter: t.documentFooter ?? '',
     defaultVatRate: String(t.defaultVatRate),
     defaultDepositPercent: String(t.defaultDepositPercent),
+    autoReminders: t.autoReminders ? 'yes' : 'no',
   }
 }
 
@@ -121,6 +123,7 @@ export function SettingsPage() {
       documentFooter: form.documentFooter.trim(),
       defaultVatRate: percent(form.defaultVatRate, tenant.defaultVatRate),
       defaultDepositPercent: percent(form.defaultDepositPercent, tenant.defaultDepositPercent),
+      autoReminders: form.autoReminders === 'yes',
     })
     setSaved(true)
   }
@@ -328,6 +331,16 @@ export function SettingsPage() {
           helper="Primer pago al aceptar el presupuesto."
           value={form.defaultDepositPercent}
           onChange={set('defaultDepositPercent')}
+        />
+        <SelectField
+          className="sm:col-span-2"
+          label="Recordatorios por correo: facturas vencidas (cada 7 días, máx. 3) y presupuestos que caducan en 3 días"
+          value={form.autoReminders}
+          options={[
+            { value: 'no', label: 'Desactivados' },
+            { value: 'yes', label: 'Activados' },
+          ]}
+          onChange={set('autoReminders')}
         />
       </Section>
 

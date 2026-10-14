@@ -1,6 +1,6 @@
-import type { MilestoneAmount } from '@/shared/domain/estimate'
+import { estimateTotalCents, milestoneAmounts, type MilestoneAmount } from '@/shared/domain/estimate'
 import type { Estimate, Invoice, InvoiceStatus, LedgerEntry } from '@/shared/domain/types'
-import { newId, updateTenantData } from '@/shared/store/store'
+import { currentTenantData, newId, updateTenantData } from '@/shared/store/store'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -31,6 +31,27 @@ export function generateInvoice(estimate: Estimate, milestone: MilestoneAmount):
     }
     return { ...data, invoices: [invoice, ...data.invoices] }
   })
+}
+
+/**
+ * Issues the first-milestone invoice (usually the deposit) of every estimate the client accepted
+ * through the public link and that has no invoice yet. Estimates accepted by hand are left alone.
+ */
+export function invoiceNewlyAcceptedEstimates(): void {
+  const pending = (data: { estimates: Estimate[]; invoices: Invoice[] }) =>
+    data.estimates.filter(
+      (e) =>
+        e.status === 'accepted' &&
+        e.respondedAt &&
+        e.milestones.length > 0 &&
+        !data.invoices.some((i) => i.estimateId === e.id),
+    )
+  const data = currentTenantData()
+  if (!data) return
+  for (const estimate of pending(data)) {
+    const first = milestoneAmounts(estimate.milestones, estimateTotalCents(estimate))[0]
+    if (first && first.amountCents > 0) generateInvoice(estimate, first)
+  }
 }
 
 export function setInvoiceStatus(id: string, status: InvoiceStatus): void {

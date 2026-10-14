@@ -16,3 +16,6 @@ verify_jwt = false
 # Página pública del presupuesto: el cliente no tiene sesión; la credencial es el token del enlace.
 [functions.public-estimate]
 verify_jwt = false
+
+[functions.send-reminders]
+verify_jwt = false

@@ -22,7 +22,16 @@ import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 
 export function DashboardPage() {
-  const { estimates, ledger, clients, tenant } = useTenantData()
+  const { estimates, ledger, clients, tenant, invoices } = useTenantData()
+  const todayIso = new Date().toISOString().slice(0, 10)
+  // Unpaid invoices, the oldest due date first so what is late comes on top.
+  const owed = invoices
+    .filter((i) => i.status !== 'paid' && i.totalCents > i.paidCents)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  const owedTotal = owed.reduce((sum, i) => sum + i.totalCents - i.paidCents, 0)
+  const overdueTotal = owed
+    .filter((i) => i.dueDate < todayIso)
+    .reduce((sum, i) => sum + i.totalCents - i.paidCents, 0)
   const open = estimates.filter((e) => e.status === 'sent')
   const accepted = estimates.filter((e) => e.status === 'accepted')
   const pendingCollection = accepted.reduce(
@@ -120,6 +129,54 @@ export function DashboardPage() {
           />
         </ChartCard>
       </div>
+
+      {owed.length > 0 ? (
+        <Card className="overflow-hidden">
+          <CardHeader className="border-border flex-row items-center justify-between border-b pb-4">
+            <div>
+              <CardTitle>Qué me deben</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                {formatEuros(owedTotal)} por cobrar
+                {overdueTotal > 0 ? ` · ${formatEuros(overdueTotal)} vencido` : ''}
+              </p>
+            </div>
+            <Link
+              to="/facturas"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+            >
+              Ver facturas →
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
+            {owed.slice(0, 5).map((invoice) => {
+              const late = invoice.dueDate < todayIso
+              return (
+                <Link
+                  key={invoice.id}
+                  to="/facturas/$invoiceId"
+                  params={{ invoiceId: invoice.id }}
+                  className="border-border hover:bg-muted/60 flex items-center justify-between gap-4 border-t px-6 py-3.5 text-sm transition-colors first:border-t-0"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">
+                      {clients.find((c) => c.id === invoice.clientId)?.name ?? 'Sin cliente'}
+                    </span>
+                    <span className="text-muted-foreground block truncate text-xs">
+                      {invoice.number} · {invoice.concept}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right tabular-nums">
+                    <span className="block font-medium">{formatEuros(invoice.totalCents - invoice.paidCents)}</span>
+                    <span className={late ? 'text-destructive block text-xs font-medium' : 'text-muted-foreground block text-xs'}>
+                      {late ? `Vencida el ${invoice.dueDate}` : `Vence el ${invoice.dueDate}`}
+                    </span>
+                  </span>
+                </Link>
+              )
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="overflow-hidden">
         <CardHeader className="border-border flex-row items-center justify-between border-b pb-4">

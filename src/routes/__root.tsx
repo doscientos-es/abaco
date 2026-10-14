@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
 import { NoCompanyPage, sessionQuery } from '@/features/auth'
+import { invoiceNewlyAcceptedEstimates } from '@/features/invoices/application/invoice-actions'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
@@ -45,8 +46,11 @@ function RootLayout() {
   // Picks up changes made elsewhere (a client accepting an estimate) when the user comes back to the tab.
   useEffect(() => {
     if (!signedIn) return
+    // After each reload, estimates the client just accepted get their first invoice automatically.
+    const refresh = () => refreshStore().then(invoiceNewlyAcceptedEstimates)
+    void refresh()
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void refreshStore()
+      if (document.visibilityState === 'visible') void refresh()
     }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)

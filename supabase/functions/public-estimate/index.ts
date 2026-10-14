@@ -8,6 +8,8 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { sendEmail } from '../_shared/resend.ts'
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const corsHeaders = {
@@ -23,6 +25,36 @@ function reply(status: number, body: Record<string, unknown>) {
 
 const tenantColumns =
   'id, name, legal_name, tax_id, email, phone, address, postal_code, city, website, brand_color, logo_url, document_footer'
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
+
+async function notifyOwner(
+  estimate: Record<string, unknown>,
+  tenant: Record<string, unknown> | null,
+  client: Record<string, unknown> | null,
+  accepted: boolean,
+) {
+  const to = typeof tenant?.email === 'string' ? tenant.email : ''
+  if (!to) return
+  const who = String(estimate.responded_by ?? '') || String(client?.name ?? 'Tu cliente')
+  const verb = accepted ? 'ha aceptado' : 'ha rechazado'
+  const title = `${String(estimate.number)} · ${String(estimate.title)}`
+  const appUrl = Deno.env.get('APP_URL')
+  const link = appUrl ? `${appUrl.replace(/\/$/, '')}/presupuestos/${String(estimate.id)}` : ''
+  const note = accepted ? ' Ábaco creará la factura de la señal la próxima vez que abras la app.' : ''
+  const text = `${who} ${verb} el presupuesto ${title}.${note}${link ? `\n\n${link}` : ''}`
+  const html = `<p>${escapeHtml(who)} <strong>${verb}</strong> el presupuesto ${escapeHtml(title)}.${escapeHtml(note)}</p>${
+    link ? `<p><a href="${escapeHtml(link)}">Abrir presupuesto</a></p>` : ''
+  }`
+  await sendEmail({
+    to,
+    subject: `${accepted ? 'Aceptado' : 'Rechazado'}: ${title}`,
+    html,
+    text,
+    fromName: 'Ábaco',
+  })
+}
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
@@ -81,6 +113,13 @@ Deno.serve(async (request) => {
       .eq('tenant_id', estimate.tenant_id)
       .maybeSingle(),
   ])
+
+  if (action !== 'view') {
+    // Aviso al dueño. Si falla el correo, la respuesta del cliente ya está guardada y no se le molesta.
+    await notifyOwner(estimate, tenant, client, action === 'accept').catch((error) =>
+      console.error('No se pudo avisar de la respuesta', error instanceof Error ? error.message : error),
+    )
+  }
 
   // El token y los ids internos no hacen falta en la página.
   const { public_token: _token, ...publicEstimate } = estimate
