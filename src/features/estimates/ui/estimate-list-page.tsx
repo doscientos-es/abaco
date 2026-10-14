@@ -49,6 +49,7 @@ export function EstimateListPage() {
   }
 
   function confirmNew() {
+    if (!newClientId) return
     const id = createEstimate(newClientId, newTitle)
     setCreating(false)
     void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
@@ -171,6 +172,7 @@ export function EstimateListPage() {
         title="Nuevo presupuesto"
         description="Elige el cliente y la obra. Después añades partidas desde el catálogo."
         submitLabel="Crear y añadir partidas"
+        submitDisabled={!newClientId}
         onSubmit={confirmNew}
       >
         {clients.length === 0 ? (
@@ -188,7 +190,10 @@ export function EstimateListPage() {
             <SelectField
               label="Cliente"
               value={newClientId}
-              options={[{ value: '', label: 'Sin cliente' }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
+              options={[
+                ...(newClientId ? [] : [{ value: '', label: 'Selecciona un cliente' }]),
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
               onChange={setNewClientId}
             />
             <button

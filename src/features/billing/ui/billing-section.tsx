@@ -123,6 +123,14 @@ export function BillingSection({ tenantId }: { tenantId: string }) {
           ))}
         </div>
 
+        <p className="border-border bg-muted/40 rounded-lg border border-dashed p-3 text-sm">
+          ¿Buscas algo más personalizado? Llámanos al{' '}
+          <a href="tel:+34624140151" className="text-primary font-medium whitespace-nowrap hover:underline">
+            624 14 01 51
+          </a>
+          .
+        </p>
+
         <ul className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2">
           {includedInEveryPlan.map((item) => (
             <li key={item}>✓ {item}</li>
