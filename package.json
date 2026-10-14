@@ -1,7 +1,7 @@
 {
-  "name": "@doscientos-es/presupuestos",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@doscientos-es/abaco",
+  "version": "0.0.1",
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -13,7 +13,7 @@ import {
   AppShellMobileHeader,
   AppShellSidebar,
 } from '@doscientos/ui'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 
 import {
@@ -61,8 +61,11 @@ const navGroups: NavGroup[] = [
   },
 ]
 
-/** Bottom bar on mobile; Ajustes lives in the mobile header instead to keep 6 columns. */
-const flatItems = navGroups.flatMap((group) => group.items).filter((item) => item.to !== '/ajustes')
+const MAX_TABS = 5
+
+/** Bottom bar on mobile, most used first. Ajustes lives in the user menu instead. */
+const bottomOrder: NavTo[] = ['/', '/presupuestos', '/clientes', '/facturas', '/catalogo', '/contabilidad']
+const flatItems = bottomOrder.flatMap((to) => navGroups.flatMap((group) => group.items).filter((item) => item.to === to))
 
 /** Pages each item needs; hidden from the menu when the role lacks it. RLS still enforces it. */
 const navPermission: Partial<Record<NavTo, Permission>> = {
@@ -98,6 +101,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
     .map((group) => ({ ...group, items: group.items.filter(allowed) }))
     .filter((group) => group.items.length > 0)
   const bottomItems = flatItems.filter(allowed)
+  // Up to 5 sections fit as tabs; with more, the least used go under "Más".
+  const tabs = bottomItems.length > MAX_TABS ? bottomItems.slice(0, MAX_TABS - 1) : bottomItems
+  const moreItems = bottomItems.slice(tabs.length)
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const moreActive = moreItems.some((item) => pathname.startsWith(item.to))
+  const tabClass =
+    'text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none'
   const canSeeSettings = can(session?.role, 'settings:write')
 
   /** Same menu in the sidebar footer (desktop) and the mobile header. */
@@ -203,21 +213,40 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
       <nav
         aria-label="Principal"
-        style={{ gridTemplateColumns: `repeat(${bottomItems.length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))` }}
         className="bg-sidebar border-border grid shrink-0 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        {bottomItems.map((item) => (
+        {tabs.map((item) => (
           <Link
             key={item.to}
             to={item.to}
             activeOptions={{ exact: item.to === '/' }}
             activeProps={{ className: 'text-primary font-medium' }}
-            className="text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none"
+            className={tabClass}
           >
             {item.icon}
             <span className="max-w-full truncate">{item.label}</span>
           </Link>
         ))}
+        {moreItems.length > 0 ? (
+          <DropdownMenuTrigger>
+            <Button
+              variant="ghost"
+              aria-label="Más secciones"
+              className={`${tabClass} h-auto rounded-none ${moreActive ? 'text-primary font-medium' : ''}`}
+            >
+              {navIcons.more}
+              <span>Más</span>
+            </Button>
+            <DropdownMenuContent placement="top end">
+              {moreItems.map((item) => (
+                <DropdownMenuItem key={item.to} onAction={() => void navigate({ to: item.to })}>
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenuTrigger>
+        ) : null}
       </nav>
       <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
     </AppShell>
