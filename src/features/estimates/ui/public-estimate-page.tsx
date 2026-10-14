@@ -1,6 +1,7 @@
 import { Button, Card, CardContent } from '@doscientos/ui'
 import { useEffect, useState } from 'react'
 
+import { formLimits } from '@/shared/domain/form-limits'
 import { TextField } from '@/shared/ui/form'
 
 import {
@@ -15,11 +16,14 @@ const errorTexts: Record<string, string> = {
   expired: 'Este presupuesto ha caducado. Pide a la empresa que te envíe uno actualizado.',
   already_responded: 'Este presupuesto ya fue respondido.',
   name_required: 'Escribe tu nombre completo para aceptar.',
+  name_too_long: 'El nombre no puede superar 120 caracteres.',
 }
 
 /** Page the client opens from the emailed link: no account, the token in the URL is the credential. */
 export function PublicEstimatePage({ token }: { token: string }) {
-  const [state, setState] = useState<{ loading: true } | { loading: false; data?: PublicEstimate; error?: string }>({
+  const [state, setState] = useState<
+    { loading: true } | { loading: false; data?: PublicEstimate; error?: string }
+  >({
     loading: true,
   })
   const [name, setName] = useState('')
@@ -30,7 +34,9 @@ export function PublicEstimatePage({ token }: { token: string }) {
     let cancelled = false
     void loadPublicEstimate(token).then((result) => {
       if (cancelled) return
-      setState(result.ok ? { loading: false, data: result.data } : { loading: false, error: result.error })
+      setState(
+        result.ok ? { loading: false, data: result.data } : { loading: false, error: result.error },
+      )
     })
     return () => {
       cancelled = true
@@ -43,14 +49,19 @@ export function PublicEstimatePage({ token }: { token: string }) {
     const result = await respondToPublicEstimate(token, action, name)
     setBusy(false)
     if (result.ok) setState({ loading: false, data: result.data })
-    else setMessage(errorTexts[result.error] ?? 'No se pudo registrar tu respuesta. Inténtalo de nuevo.')
+    else
+      setMessage(
+        errorTexts[result.error] ?? 'No se pudo registrar tu respuesta. Inténtalo de nuevo.',
+      )
   }
 
-  if (state.loading) return <p className="text-muted-foreground p-8 text-center text-sm">Cargando presupuesto…</p>
+  if (state.loading)
+    return <p className="text-muted-foreground p-8 text-center text-sm">Cargando presupuesto…</p>
   if (!state.data) {
     return (
       <p className="mx-auto max-w-md p-8 text-center text-sm">
-        {errorTexts[state.error ?? ''] ?? 'No pudimos cargar el presupuesto. Inténtalo de nuevo en unos minutos.'}
+        {errorTexts[state.error ?? ''] ??
+          'No pudimos cargar el presupuesto. Inténtalo de nuevo en unos minutos.'}
       </p>
     )
   }
@@ -73,13 +84,24 @@ export function PublicEstimatePage({ token }: { token: string }) {
             <p className="text-sm">{errorTexts.expired}</p>
           ) : (
             <>
-              <TextField label="Tu nombre completo" value={name} onChange={setName} placeholder="Nombre y apellidos" />
+              <TextField
+                label="Tu nombre completo"
+                value={name}
+                onChange={setName}
+                placeholder="Nombre y apellidos"
+                minLength={2}
+                maxLength={formLimits.respondentName}
+              />
               <p className="text-muted-foreground text-xs">
-                Al aceptar confirmas que estás conforme con este presupuesto. Quedan registrados tu nombre y la fecha.
+                Al aceptar confirmas que estás conforme con este presupuesto. Quedan registrados tu
+                nombre y la fecha.
               </p>
               {message ? <p className="text-destructive text-sm">{message}</p> : null}
               <div className="flex flex-wrap gap-2">
-                <Button isDisabled={busy} onPress={() => void respond('accept')}>
+                <Button
+                  isDisabled={busy || name.trim().length < 2}
+                  onPress={() => void respond('accept')}
+                >
                   Aceptar presupuesto
                 </Button>
                 <Button variant="outline" isDisabled={busy} onPress={() => void respond('reject')}>

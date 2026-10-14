@@ -15,17 +15,11 @@ import {
   PageHeaderTitle,
   toast,
 } from '@doscientos/ui'
-import {
-  Copy,
-  DotsThree,
-  Eye,
-  Files,
-  Trash,
-  WhatsappLogo,
-} from '@phosphor-icons/react'
+import { Copy, DotsThree, Eye, Files, Trash, WhatsappLogo } from '@phosphor-icons/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
   clampPercent,
   estimateTotals,
@@ -33,22 +27,18 @@ import {
   milestonePercentSum,
   paidForEstimate,
 } from '@/shared/domain/estimate'
+import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, EstimateStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
-import { fieldIcons } from '@/shared/ui/field-icons'
 import { useTenantData } from '@/shared/store/store'
+import { fieldIcons } from '@/shared/ui/field-icons'
 import { FormField, SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { PageNotFound } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
-import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 
-import {
-  deleteEstimate,
-  duplicateEstimate,
-  patchEstimate,
-} from '../application/estimate-actions'
+import { deleteEstimate, duplicateEstimate, patchEstimate } from '../application/estimate-actions'
 import { EstimateDocument } from './estimate-document'
 import { LinesEditor } from './lines-editor'
 import { MilestonesEditor } from './milestones-editor'
@@ -78,15 +68,21 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const percentSum = milestonePercentSum(estimate.milestones)
   const paid = paidForEstimate(estimate.id, ledger)
 
-  const publicLink = estimate.publicToken ? `${window.location.origin}/p/${estimate.publicToken}` : ''
+  const publicLink = estimate.publicToken
+    ? `${window.location.origin}/p/${estimate.publicToken}`
+    : ''
 
   async function copyPublicLink() {
     if (!publicLink) {
-      toast.error('Aún no hay enlace', { description: 'Espera unos segundos a que se guarde el presupuesto.' })
+      toast.error('Aún no hay enlace', {
+        description: 'Espera unos segundos a que se guarde el presupuesto.',
+      })
       return
     }
     await navigator.clipboard.writeText(publicLink)
-    toast.success('Enlace copiado', { description: 'El cliente puede verlo y aceptarlo desde ahí.' })
+    toast.success('Enlace copiado', {
+      description: 'El cliente puede verlo y aceptarlo desde ahí.',
+    })
   }
 
   function buildMessage() {
@@ -106,7 +102,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   async function sendByEmail() {
     if (!estimate) return
     if (!client?.email) {
-      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      toast.error('No se envió', {
+        description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.',
+      })
       return
     }
     const sent = await sendDocument('estimate', estimate.id)
@@ -173,7 +171,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               <DropdownMenuItem
                 onAction={() => {
                   const id = duplicateEstimate(estimate.id)
-                  if (id) void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
+                  if (id)
+                    void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
                 }}
               >
                 <Files aria-hidden="true" className="size-4" />
@@ -202,6 +201,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Título de la obra"
+            minLength={2}
+            maxLength={formLimits.estimateTitle}
             className="sm:col-span-2"
             placeholder="Ej. Reforma de baño"
             icon={fieldIcons.file}
@@ -244,9 +245,17 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             <Input
               type="number"
               min={0}
+              max={100}
+              step="0.01"
               placeholder="10"
               value={estimate.vatRate}
-              onChange={(event) => patchEstimate(estimate.id, { vatRate: Number(event.target.value) || 0 })}
+              onChange={(event) =>
+                patchEstimate(estimate.id, {
+                  vatRate:
+                    Math.round(Math.min(100, Math.max(0, Number(event.target.value) || 0)) * 100) /
+                    100,
+                })
+              }
             />
           </FormField>
         </CardContent>
@@ -348,6 +357,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             hideLabel
             placeholder="Forma de pago, plazos, garantía, qué incluye y qué no…"
             value={estimate.clauses}
+            maxLength={formLimits.estimateClauses}
+            helper={`Máximo ${formLimits.estimateClauses} caracteres.`}
             onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
           />
         </CardContent>
@@ -358,7 +369,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         onClose={() => setCreatingClient(false)}
         onSaved={(clientId) => patchEstimate(estimate.id, { clientId })}
       />
-
     </div>
   )
 }

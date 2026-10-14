@@ -38,15 +38,16 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
     >
       <TextField
         label="Nombre de la empresa"
+        minLength={1}
+        maxLength={120}
+        helper="Obligatorio · máximo 120 caracteres."
         className="sm:col-span-2"
         placeholder="Ej. Reformas Abderrahim"
         icon={fieldIcons.user}
         value={name}
         onChange={setName}
       />
-      {error ? (
-        <output className="text-destructive text-sm sm:col-span-2">{error}</output>
-      ) : null}
+      {error ? <output className="text-destructive text-sm sm:col-span-2">{error}</output> : null}
     </FormDialog>
   )
 }

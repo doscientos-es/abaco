@@ -18,6 +18,7 @@ import {
 } from '@doscientos/ui'
 import { useState } from 'react'
 
+import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 import type { CatalogItem, CatalogKind } from '@/shared/domain/types'
@@ -86,14 +87,24 @@ export function CatalogPage() {
   }
 
   function save() {
-    if (!form.name.trim()) return
+    const priceCents = parseEuros(form.price)
+    if (
+      !form.name.trim() ||
+      form.name.trim().length > formLimits.catalogName ||
+      form.sku.trim().length > formLimits.sku ||
+      form.category.trim().length > formLimits.category ||
+      form.unit.trim().length > formLimits.unit ||
+      priceCents < 0 ||
+      priceCents > formLimits.monetaryAmount * 100
+    )
+      return
     const values = {
       sku: form.sku.trim(),
       name: form.name.trim(),
       kind: form.kind,
       category: form.category.trim(),
       unit: form.unit.trim() || 'ud',
-      unitPriceCents: parseEuros(form.price),
+      unitPriceCents: priceCents,
     }
     updateTenantData((data) => {
       if (editingId) {
@@ -160,11 +171,19 @@ export function CatalogPage() {
         title={editingId ? 'Editar artículo' : 'Nuevo artículo'}
         description="Podrás usarlo al crear presupuestos."
         submitLabel={editingId ? 'Guardar cambios' : 'Añadir al catálogo'}
-        submitDisabled={!form.name.trim()}
+        submitDisabled={
+          !form.name.trim() ||
+          form.name.trim().length > formLimits.catalogName ||
+          parseEuros(form.price) < 0 ||
+          parseEuros(form.price) > formLimits.monetaryAmount * 100
+        }
         onSubmit={save}
       >
         <TextField
           label="Nombre"
+          minLength={1}
+          maxLength={formLimits.catalogName}
+          helper={`Obligatorio · máximo ${formLimits.catalogName} caracteres.`}
           className="sm:col-span-2"
           placeholder="Ej. Alicatado de pared"
           icon={fieldIcons.tag}
@@ -173,6 +192,7 @@ export function CatalogPage() {
         />
         <TextField
           label="Referencia"
+          maxLength={formLimits.sku}
           placeholder="MAT-001"
           icon={fieldIcons.hash}
           helper="Tu código interno."
@@ -187,6 +207,7 @@ export function CatalogPage() {
         />
         <TextField
           label="Categoría"
+          maxLength={formLimits.category}
           placeholder="Ej. Albañilería"
           helper="Sirve para filtrar el catálogo."
           value={form.category}
@@ -194,6 +215,7 @@ export function CatalogPage() {
         />
         <TextField
           label="Unidad"
+          maxLength={formLimits.unit}
           placeholder="m², h, ud…"
           icon={fieldIcons.ruler}
           value={form.unit}
@@ -201,6 +223,7 @@ export function CatalogPage() {
         />
         <TextField
           label="Precio unitario (€, sin IVA)"
+          maxLength={18}
           className="sm:col-span-2"
           placeholder="0,00"
           icon={fieldIcons.euro}
@@ -213,6 +236,7 @@ export function CatalogPage() {
       <FilterBar>
         <Input
           aria-label="Buscar en el catálogo"
+          maxLength={formLimits.searchQuery}
           placeholder="Buscar por referencia, nombre, categoría o unidad"
           className="sm:max-w-sm sm:flex-1"
           value={query}
@@ -288,7 +312,7 @@ export function CatalogPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium">{item.name}</p>
+                    <p className="font-medium break-words">{item.name}</p>
                     <p className="text-muted-foreground text-xs">
                       {[item.sku, item.category].filter(Boolean).join(' · ')}
                     </p>

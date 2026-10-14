@@ -40,7 +40,9 @@ export function RecoverPage() {
         description={`Si ${email.trim()} tiene cuenta, recibirás un enlace para elegir una nueva contraseña. Caduca en 1 hora.`}
         footer={backToLogin}
       >
-        <p className="text-muted-foreground text-sm">¿No llega? Mira en la carpeta de spam o inténtalo de nuevo en unos minutos.</p>
+        <p className="text-muted-foreground text-sm">
+          ¿No llega? Mira en la carpeta de spam o inténtalo de nuevo en unos minutos.
+        </p>
       </AuthLayout>
     )
   }
@@ -55,6 +57,7 @@ export function RecoverPage() {
         <TextField
           label="Correo"
           type="email"
+          maxLength={254}
           placeholder="nombre@empresa.es"
           icon={fieldIcons.mail}
           value={email}

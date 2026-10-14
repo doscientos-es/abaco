@@ -38,6 +38,7 @@ export function NewPasswordPage({ invite }: { invite: boolean }) {
         <TextField
           label="Contraseña"
           type="password"
+          maxLength={256}
           placeholder="Nueva contraseña"
           helper={passwordRules}
           value={password}
@@ -46,6 +47,7 @@ export function NewPasswordPage({ invite }: { invite: boolean }) {
         <TextField
           label="Repite la contraseña"
           type="password"
+          maxLength={256}
           placeholder="Repítela"
           value={confirm}
           onChange={setConfirm}

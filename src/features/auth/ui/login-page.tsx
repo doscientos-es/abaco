@@ -31,7 +31,10 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
       // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
       await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
       // Only same-site paths are honoured, so the link can't send people elsewhere.
-      const target = redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\') ? redirect : '/'
+      const target =
+        redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\')
+          ? redirect
+          : '/'
       await navigate({ href: target })
     } catch {
       setError('No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.')
@@ -58,6 +61,7 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
         <TextField
           label="Correo"
           type="email"
+          maxLength={254}
           placeholder="nombre@empresa.es"
           icon={fieldIcons.mail}
           value={email}
@@ -66,6 +70,7 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
         <TextField
           label="Contraseña"
           type="password"
+          maxLength={256}
           placeholder="Tu contraseña"
           value={password}
           onChange={setPassword}

@@ -88,7 +88,7 @@ Deno.serve(async (request) => {
   if (!uuidPattern.test(token) || (action !== 'view' && action !== 'accept' && action !== 'reject')) {
     return reply(400, { error: 'invalid_input' })
   }
-  const name = typeof input?.name === 'string' ? input.name.trim().slice(0, 120) : ''
+  const name = typeof input?.name === 'string' ? input.name.trim() : ''
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
@@ -104,6 +104,7 @@ Deno.serve(async (request) => {
     if (estimate.status !== 'sent') return reply(409, { error: 'already_responded', status: estimate.status })
     if (String(estimate.valid_until) < new Date().toISOString().slice(0, 10)) return reply(409, { error: 'expired' })
     if (action === 'accept' && name.length < 2) return reply(422, { error: 'name_required' })
+    if (name.length > 120) return reply(422, { error: 'name_too_long' })
 
     const { data: updated } = await admin
       .from('estimates')

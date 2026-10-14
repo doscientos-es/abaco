@@ -59,6 +59,27 @@ export function SettingsPage() {
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(tenant))
   const valid =
     form.name.trim() !== '' &&
+    form.name.length <= 120 &&
+    form.legalName.length <= 160 &&
+    form.taxId.length <= 32 &&
+    form.email.length <= 254 &&
+    (form.email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) &&
+    form.phone.length <= 32 &&
+    form.address.length <= 300 &&
+    form.postalCode.length <= 20 &&
+    form.city.length <= 100 &&
+    form.website.length <= 2048 &&
+    form.iban.length <= 34 &&
+    form.logoUrl.length <= 500 &&
+    form.emailFromName.length <= 80 &&
+    form.emailSignature.length <= 500 &&
+    form.invoiceEmailIntro.length <= 1000 &&
+    form.estimateEmailIntro.length <= 1000 &&
+    form.documentFooter.length <= 500 &&
+    [form.defaultVatRate, form.defaultDepositPercent].every((value) => {
+      const number = Number(value.replace(',', '.'))
+      return value.trim() !== '' && Number.isFinite(number) && number >= 0 && number <= 100
+    }) &&
     (form.brandColor === '' || hexColor.test(form.brandColor)) &&
     isLogoOk(form.logoUrl) &&
     isWebsiteOk(form.website)

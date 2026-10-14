@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { formLimits } from '@/shared/domain/form-limits'
 import type { Client } from '@/shared/domain/types'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField, TextareaField } from '@/shared/ui/form'
@@ -40,8 +41,10 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
     setForm((previous) => ({ ...previous, [key]: value }))
 
   function save() {
-    const clean = { ...form, name: form.name.trim() }
-    if (!clean.name) return
+    const clean = Object.fromEntries(
+      Object.entries(form).map(([key, value]) => [key, value.trim()]),
+    ) as ClientInput
+    if (!clean.name || clean.name.length > formLimits.clientName) return
     let id: string
     if (client) {
       updateClient(client.id, clean)
@@ -62,11 +65,14 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       title={client ? 'Editar cliente' : 'Nuevo cliente'}
       description="Estos datos aparecen en tus presupuestos."
       submitLabel={client ? 'Guardar cambios' : 'Crear cliente'}
-      submitDisabled={!form.name.trim()}
+      submitDisabled={!form.name.trim() || form.name.trim().length > formLimits.clientName}
       onSubmit={save}
     >
       <TextField
         label="Nombre"
+        minLength={1}
+        maxLength={formLimits.clientName}
+        helper={`Obligatorio · máximo ${formLimits.clientName} caracteres.`}
         className="sm:col-span-2"
         placeholder="Ej. Marta Soler"
         icon={fieldIcons.user}
@@ -75,6 +81,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       />
       <TextField
         label="NIF / CIF"
+        maxLength={formLimits.taxId}
         placeholder="12345678Z"
         icon={fieldIcons.id}
         helper="Opcional. Necesario para facturar."
@@ -83,6 +90,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       />
       <TextField
         label="Teléfono"
+        maxLength={formLimits.phone}
         type="tel"
         placeholder="600 000 000"
         icon={fieldIcons.phone}
@@ -92,6 +100,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       />
       <TextField
         label="Email"
+        maxLength={formLimits.email}
         type="email"
         className="sm:col-span-2"
         placeholder="cliente@ejemplo.com"
@@ -102,6 +111,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       />
       <TextField
         label="Dirección de la obra"
+        maxLength={formLimits.address}
         className="sm:col-span-2"
         placeholder="C/ Mayor 12, 2º, Barcelona"
         icon={fieldIcons.pin}
@@ -110,6 +120,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
       />
       <TextareaField
         label="Notas"
+        maxLength={formLimits.notes}
         className="sm:col-span-2"
         placeholder="Preferencias, horarios, acceso a la obra…"
         value={form.notes}

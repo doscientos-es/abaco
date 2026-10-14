@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { ArrowDownToLine, DotsThree, FileXls, Plus, UploadSimple } from '@phosphor-icons/react'
+import { DotsThree, DownloadSimple, Plus, UploadSimple } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import {
@@ -29,6 +29,7 @@ import {
   quarterlyVat,
 } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
+import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
@@ -92,7 +93,19 @@ export function LedgerPage() {
 
   function add() {
     const amountCents = parseEuros(form.amount)
-    if (!form.concept.trim() || amountCents <= 0) return
+    const vatRate = Number(form.vatRate.replace(',', '.'))
+    if (
+      !form.concept.trim() ||
+      form.concept.trim().length > formLimits.ledgerConcept ||
+      form.category.trim().length > formLimits.ledgerCategory ||
+      amountCents <= 0 ||
+      amountCents > formLimits.monetaryAmount * 100 ||
+      !Number.isFinite(vatRate) ||
+      vatRate < 0 ||
+      vatRate > 100 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(form.date)
+    )
+      return
     const entry: LedgerEntry = {
       id: newId(),
       tenantId: tenant.id,
@@ -101,7 +114,7 @@ export function LedgerPage() {
       concept: form.concept.trim(),
       category: form.category.trim(),
       amountCents,
-      vatRate: Number(form.vatRate) || 0,
+      vatRate: Math.round(vatRate * 100) / 100,
       estimateId: null,
       milestoneId: null,
     }
@@ -129,10 +142,10 @@ export function LedgerPage() {
               <DotsThree aria-hidden="true" weight="bold" className="size-5" />
               Más opciones
             </Button>
-            <DropdownMenuContent placement="bottom end">
+            <DropdownMenuContent placement="bottom end" className="w-64">
               <DropdownMenuItem onAction={() => setImportOpen(true)}>
-                <UploadSimple aria-hidden="true" className="size-4" />
-                Importar de Excel
+                <UploadSimple aria-hidden="true" className="size-4 shrink-0" />
+                <span className="whitespace-nowrap">Importar de Excel</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onAction={() =>
@@ -143,8 +156,8 @@ export function LedgerPage() {
                 }
                 isDisabled={monthEntries.length === 0}
               >
-                <ArrowDownToLine aria-hidden="true" className="size-4" />
-                Exportar CSV para la gestoría
+                <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
+                <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenuTrigger>
@@ -290,6 +303,7 @@ export function LedgerPage() {
         <Input
           type="search"
           aria-label="Buscar apuntes"
+          maxLength={formLimits.searchQuery}
           placeholder="Buscar concepto, categoría o fecha…"
           className="sm:max-w-sm sm:flex-1"
           value={query}
@@ -346,7 +360,16 @@ export function LedgerPage() {
         title="Nuevo apunte"
         description="Registra un ingreso o un gasto en el libro."
         submitLabel="Añadir apunte"
-        submitDisabled={!form.concept.trim() || parseEuros(form.amount) <= 0}
+        submitDisabled={
+          !form.concept.trim() ||
+          form.concept.trim().length > formLimits.ledgerConcept ||
+          form.category.trim().length > formLimits.ledgerCategory ||
+          parseEuros(form.amount) <= 0 ||
+          parseEuros(form.amount) > formLimits.monetaryAmount * 100 ||
+          !Number.isFinite(Number(form.vatRate.replace(',', '.'))) ||
+          Number(form.vatRate.replace(',', '.')) < 0 ||
+          Number(form.vatRate.replace(',', '.')) > 100
+        }
         onSubmit={add}
       >
         <SelectField
@@ -367,6 +390,7 @@ export function LedgerPage() {
         />
         <TextField
           label="Importe con IVA (€)"
+          maxLength={18}
           placeholder="0,00"
           icon={fieldIcons.euro}
           value={form.amount}
@@ -374,6 +398,8 @@ export function LedgerPage() {
         />
         <TextField
           label="Concepto"
+          minLength={2}
+          maxLength={formLimits.ledgerConcept}
           className="sm:col-span-2"
           placeholder="Ej. Compra de material en Leroy Merlin"
           value={form.concept}
@@ -381,6 +407,7 @@ export function LedgerPage() {
         />
         <TextField
           label="Categoría"
+          maxLength={formLimits.ledgerCategory}
           placeholder="Ej. Materiales"
           icon={fieldIcons.tag}
           value={form.category}
@@ -388,6 +415,10 @@ export function LedgerPage() {
         />
         <TextField
           label="IVA %"
+          type="number"
+          min={0}
+          max={100}
+          step="0.01"
           placeholder="21"
           icon={fieldIcons.percent}
           helper="El importe ya incluye este IVA."

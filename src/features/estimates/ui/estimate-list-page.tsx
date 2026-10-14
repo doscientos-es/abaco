@@ -18,6 +18,7 @@ import { useState } from 'react'
 
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import { estimateTotalCents } from '@/shared/domain/estimate'
+import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { EstimateStatus } from '@/shared/domain/types'
@@ -82,6 +83,7 @@ export function EstimateListPage() {
         <Input
           type="search"
           aria-label="Buscar presupuestos"
+          maxLength={formLimits.searchQuery}
           placeholder="Buscar por número, obra o cliente…"
           className="sm:max-w-sm sm:flex-1"
           value={query}
@@ -247,6 +249,8 @@ export function EstimateListPage() {
         )}
         <TextField
           label="Título de la obra"
+          minLength={2}
+          maxLength={formLimits.estimateTitle}
           placeholder="Ej. Reforma de baño"
           icon={fieldIcons.file}
           value={newTitle}

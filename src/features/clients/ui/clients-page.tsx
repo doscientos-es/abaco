@@ -18,6 +18,7 @@ import { useState } from 'react'
 
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import type { Client } from '@/shared/domain/types'
+import { formLimits } from '@/shared/domain/form-limits'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
@@ -90,6 +91,7 @@ export function ClientsPage() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           aria-label="Buscar clientes"
+          maxLength={formLimits.searchQuery}
           placeholder="Buscar por nombre, email, teléfono o NIF"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -125,9 +127,9 @@ export function ClientsPage() {
                 className="border-border bg-card space-y-3 rounded-lg border p-4 shadow-(--ui-shadow-hairline)"
               >
                 <div className="min-w-0">
-                  <p className="font-medium">{client.name}</p>
+                  <p className="font-medium break-words">{client.name}</p>
                   {client.phone ? (
-                    <a href={`tel:${client.phone}`} className="text-primary block text-sm">
+                    <a href={`tel:${client.phone}`} className="text-primary block text-sm break-words">
                       {client.phone}
                     </a>
                   ) : null}
@@ -135,7 +137,7 @@ export function ClientsPage() {
                     <p className="text-muted-foreground truncate text-xs">{client.email}</p>
                   ) : null}
                   {client.address ? (
-                    <p className="text-muted-foreground mt-1 text-xs">{client.address}</p>
+                    <p className="text-muted-foreground mt-1 text-xs break-words">{client.address}</p>
                   ) : null}
                 </div>
                 <div className="flex gap-2">
@@ -167,12 +169,12 @@ export function ClientsPage() {
             <TableBody>
               {pager.pageItems.map((client) => (
                 <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
+                  <TableCell className="font-medium break-words">{client.name}</TableCell>
                   <TableCell>
                     {client.phone}
-                    <div className="text-muted-foreground text-xs">{client.email}</div>
+                    <div className="text-muted-foreground break-all text-xs">{client.email}</div>
                   </TableCell>
-                  <TableCell>{client.address}</TableCell>
+                  <TableCell className="break-words">{client.address}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <Button size="sm" variant="outline" onPress={() => edit(client)}>
                       Editar

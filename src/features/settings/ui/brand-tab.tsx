@@ -29,6 +29,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
           <input
             aria-label="Color en hexadecimal"
             placeholder={defaultBrandColor}
+            maxLength={7}
             value={form.brandColor}
             onChange={(event) => set('brandColor')(event.target.value.trim())}
             className="border-border bg-background h-9 w-32 rounded-md border px-3 text-sm"
@@ -40,14 +41,21 @@ export function BrandTab({ form, set, tenant }: FormProps) {
           ) : null}
         </div>
         <span className={colorOk ? 'text-muted-foreground/80 text-xs' : 'text-destructive text-xs'}>
-          {colorOk ? 'Se usa en el nombre del documento y en la barra superior del correo.' : 'Usa el formato #RRGGBB.'}
+          {colorOk
+            ? 'Se usa en el nombre del documento y en la barra superior del correo.'
+            : 'Usa el formato #RRGGBB.'}
         </span>
       </div>
       <TextField
         label="Logo (enlace)"
+        maxLength={500}
         placeholder="https://tuempresa.es/logo.png"
         icon={fieldIcons.globe}
-        helper={logoOk ? 'Enlace público que empiece por https://. Mejor PNG o JPG.' : 'Debe empezar por https://'}
+        helper={
+          logoOk
+            ? 'Enlace público que empiece por https://. Mejor PNG o JPG.'
+            : 'Debe empezar por https://'
+        }
         value={form.logoUrl}
         onChange={set('logoUrl')}
       />
@@ -57,7 +65,11 @@ export function BrandTab({ form, set, tenant }: FormProps) {
           style={{ borderTopColor: color ?? defaultBrandColor }}
         >
           {logoOk && form.logoUrl.trim() ? (
-            <img src={form.logoUrl.trim()} alt="Vista previa del logo" className="max-h-12 max-w-40 object-contain" />
+            <img
+              src={form.logoUrl.trim()}
+              alt="Vista previa del logo"
+              className="max-h-12 max-w-40 object-contain"
+            />
           ) : null}
           <span className="text-lg font-semibold" style={{ color }}>
             {form.name || tenant.name}
@@ -66,6 +78,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
       ) : null}
       <TextField
         label="Nombre del remitente"
+        maxLength={80}
         placeholder={tenant.name}
         icon={fieldIcons.mail}
         helper="Lo que ve el cliente como remitente del correo. Por defecto, tu nombre comercial."
@@ -74,6 +87,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
       />
       <TextareaField
         label="Firma del correo"
+        maxLength={500}
         placeholder={`Un saludo,\n${tenant.name}`}
         helper="Cierra todos los correos. Por defecto, tu nombre comercial."
         value={form.emailSignature}
@@ -82,6 +96,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
       <TextareaField
         className="sm:col-span-2"
         label="Mensaje en correos de presupuesto"
+        maxLength={1000}
         placeholder="Gracias por contar con nosotros. Cualquier duda, responde a este correo."
         helper="Se añade antes de los datos del presupuesto."
         value={form.estimateEmailIntro}
@@ -90,6 +105,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
       <TextareaField
         className="sm:col-span-2"
         label="Mensaje en correos de factura"
+        maxLength={1000}
         placeholder="Adjuntamos tu factura. El pago se realiza por transferencia."
         helper="Se añade antes de los datos de la factura."
         value={form.invoiceEmailIntro}
@@ -98,6 +114,7 @@ export function BrandTab({ form, set, tenant }: FormProps) {
       <TextareaField
         className="sm:col-span-2"
         label="Pie de página de los documentos"
+        maxLength={500}
         placeholder="Inscrita en el Registro Mercantil de Barcelona, tomo 1234…"
         helper="Aparece al final de presupuestos y facturas."
         value={form.documentFooter}

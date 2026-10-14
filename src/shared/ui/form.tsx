@@ -46,6 +46,11 @@ export function TextField({
   icon,
   helper,
   className,
+  maxLength,
+  minLength,
+  min,
+  max,
+  step,
 }: {
   label: string
   value: string
@@ -55,6 +60,11 @@ export function TextField({
   icon?: ReactNode
   helper?: string
   className?: string
+  maxLength?: number
+  minLength?: number
+  min?: number
+  max?: number
+  step?: number | string
 }) {
   return (
     <FormField label={label} helper={helper} className={className}>
@@ -68,6 +78,11 @@ export function TextField({
           type={type}
           value={value}
           placeholder={placeholder}
+          {...(maxLength === undefined ? {} : { maxLength })}
+          {...(minLength === undefined ? {} : { minLength })}
+          {...(min === undefined ? {} : { min })}
+          {...(max === undefined ? {} : { max })}
+          {...(step === undefined ? {} : { step })}
           className={icon ? 'pl-9' : ''}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -141,6 +156,8 @@ export function TextareaField({
   placeholder,
   helper,
   className,
+  maxLength,
+  minLength,
 }: {
   label: string
   hideLabel?: boolean
@@ -149,12 +166,16 @@ export function TextareaField({
   placeholder: string
   helper?: string
   className?: string
+  maxLength?: number
+  minLength?: number
 }) {
   const control = (
     <Textarea
       aria-label={label}
       value={value}
       placeholder={placeholder}
+      {...(maxLength === undefined ? {} : { maxLength })}
+      {...(minLength === undefined ? {} : { minLength })}
       onChange={(event) => onChange(event.target.value)}
     />
   )

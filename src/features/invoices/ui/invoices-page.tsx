@@ -23,6 +23,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
+import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
@@ -54,8 +55,7 @@ export function InvoicesPage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
   const [clientId, setClientId] = useState('all')
-  const initialQuery = useSearch({ from: '/facturas/' }).q
-  const [query, setQuery] = useState(typeof initialQuery === 'string' ? initialQuery : '')
+  const query = useSearch({ from: '/facturas/' }).q ?? ''
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
   const estimateOf = (id: string) => estimates.find((e) => e.id === id)
@@ -85,6 +85,14 @@ export function InvoicesPage() {
     setStatus('all')
     setClientId('all')
     setQuery('')
+  }
+
+  function setQuery(value: string) {
+    void navigate({
+      to: '/facturas',
+      search: value ? { q: value } : {},
+      replace: true,
+    })
   }
 
   function openInvoice(invoiceId: string) {
@@ -188,6 +196,7 @@ export function InvoicesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
           type="search"
+          maxLength={formLimits.searchQuery}
           aria-label="Buscar facturas"
           className="sm:w-72"
           placeholder="Buscar por nº, concepto, cliente…"

@@ -2,6 +2,7 @@ import { AutocompleteCombobox, Button, HighlightMatch, Input } from '@doscientos
 import { useState } from 'react'
 
 import { clampPercent, lineNetCents } from '@/shared/domain/estimate'
+import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros, lineTotal } from '@/shared/domain/money'
 import type { CatalogItem, Estimate, EstimateLine } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
@@ -84,7 +85,9 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
     <div className="space-y-4">
       {estimate.lines.length > 0 ? (
         <div className="space-y-2">
-          <div className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium sm:grid`}>
+          <div
+            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium sm:grid`}
+          >
             <span>Descripción</span>
             <span className="text-right">Cant.</span>
             <span>Unidad</span>
@@ -99,6 +102,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
             >
               <Input
                 aria-label="Descripción"
+                maxLength={formLimits.estimateLineDescription}
                 placeholder="Describe el trabajo o material"
                 className="col-span-2 sm:col-span-1"
                 value={line.description}
@@ -111,16 +115,28 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                   type="number"
                   inputMode="decimal"
                   min={0}
-                  step="any"
+                  max={formLimits.quantity}
+                  step="0.001"
                   className="text-right tabular-nums"
                   value={line.quantity}
-                  onChange={(event) => updateLine(line.id, { quantity: Number(event.target.value) || 0 })}
+                  onChange={(event) =>
+                    updateLine(line.id, {
+                      quantity:
+                        Math.round(
+                          Math.min(
+                            formLimits.quantity,
+                            Math.max(0, Number(event.target.value) || 0),
+                          ) * 1000,
+                        ) / 1000,
+                    })
+                  }
                 />
               </div>
               <div>
                 <MobileLabel>Unidad</MobileLabel>
                 <Input
                   aria-label="Unidad"
+                  maxLength={formLimits.unit}
                   placeholder="ud, m², h…"
                   value={line.unit}
                   onChange={(event) => updateLine(line.id, { unit: event.target.value })}
@@ -143,12 +159,16 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     inputMode="decimal"
                     min={0}
                     max={100}
-                    step="any"
+                    step="0.01"
                     className="w-16 text-right tabular-nums"
                     value={line.discountPercent || ''}
                     placeholder="0"
                     onChange={(event) =>
-                      updateLine(line.id, { discountPercent: clampPercent(Number(event.target.value) || 0) })
+                      updateLine(line.id, {
+                        discountPercent: Number(
+                          clampPercent(Number(event.target.value) || 0).toFixed(2),
+                        ),
+                      })
                     }
                   />
                   %
@@ -199,7 +219,9 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
             }
             renderItem={(item, q) =>
               item.free ? (
-                <span className="text-primary font-medium">Añadir «{q.trim()}» como partida libre</span>
+                <span className="text-primary font-medium">
+                  Añadir «{q.trim()}» como partida libre
+                </span>
               ) : (
                 <span className="flex w-full items-center justify-between gap-3">
                   <HighlightMatch text={item.label} query={q} />

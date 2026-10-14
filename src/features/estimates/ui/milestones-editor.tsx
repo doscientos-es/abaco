@@ -1,15 +1,14 @@
 import { Button, Input } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
 
+import { generateInvoice } from '@/features/invoices/application/invoice-actions'
 import type { MilestoneAmount } from '@/shared/domain/estimate'
+import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, useTenantData } from '@/shared/store/store'
 
-import { generateInvoice } from '@/features/invoices/application/invoice-actions'
-
 import { patchEstimate, registerMilestonePayment } from '../application/estimate-actions'
-
 
 type Props = {
   estimate: Estimate
@@ -20,10 +19,29 @@ type Props = {
   ledger: LedgerEntry[]
 }
 
-export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, totalCents, ledger }: Props) {
+export function MilestonesEditor({
+  estimate,
+  amounts,
+  percentSum,
+  paidCents,
+  totalCents,
+  ledger,
+}: Props) {
   const { invoices } = useTenantData()
 
   function setMilestones(milestones: Milestone[]) {
+    if (
+      milestones.some(
+        (milestone) =>
+          milestone.label.trim().length < 1 ||
+          milestone.label.length > formLimits.milestoneLabel ||
+          (milestone.description?.length ?? 0) > formLimits.milestoneDescription ||
+          !Number.isFinite(milestone.percent) ||
+          milestone.percent < 0 ||
+          milestone.percent > 100,
+      )
+    )
+      return
     patchEstimate(estimate.id, { milestones })
   }
 
@@ -35,7 +53,12 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
     const remaining = Math.max(0, 100 - percentSum)
     setMilestones([
       ...estimate.milestones,
-      { id: newId(), label: `Hito ${estimate.milestones.length + 1}`, description: '', percent: remaining },
+      {
+        id: newId(),
+        label: `Hito ${estimate.milestones.length + 1}`,
+        description: '',
+        percent: remaining,
+      },
     ])
   }
 
@@ -58,8 +81,12 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
       {amounts.length > 0 ? (
         <div className="space-y-3">
           {amounts.map((m) => {
-            const registered = ledger.some((l) => l.estimateId === estimate.id && l.milestoneId === m.id)
-            const invoice = invoices.find((i) => i.estimateId === estimate.id && i.milestoneId === m.id)
+            const registered = ledger.some(
+              (l) => l.estimateId === estimate.id && l.milestoneId === m.id,
+            )
+            const invoice = invoices.find(
+              (i) => i.estimateId === estimate.id && i.milestoneId === m.id,
+            )
             const invoiced = invoice !== undefined
             return (
               <div key={m.id} className="border-border bg-card overflow-hidden rounded-lg border">
@@ -67,6 +94,7 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                   <div className="space-y-2">
                     <Input
                       aria-label="Concepto del hito"
+                      maxLength={formLimits.milestoneLabel}
                       placeholder="Ej. Señal a la aceptación"
                       className="font-medium"
                       value={m.label}
@@ -74,6 +102,7 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                     />
                     <Input
                       aria-label="Descripción del hito"
+                      maxLength={formLimits.milestoneDescription}
                       placeholder="Descripción opcional (qué se entrega o cuándo se cobra)"
                       value={m.description ?? ''}
                       onChange={(event) => update(m.id, { description: event.target.value })}
@@ -87,10 +116,17 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                       inputMode="decimal"
                       min={0}
                       max={100}
-                      step="any"
+                      step="0.01"
                       className="text-right tabular-nums"
                       value={m.percent}
-                      onChange={(event) => update(m.id, { percent: Number(event.target.value) || 0 })}
+                      onChange={(event) =>
+                        update(m.id, {
+                          percent:
+                            Math.round(
+                              Math.min(100, Math.max(0, Number(event.target.value) || 0)) * 100,
+                            ) / 100,
+                        })
+                      }
                     />
                   </div>
                   <div className="text-muted-foreground flex flex-col gap-1 text-xs sm:items-end">
@@ -102,7 +138,11 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                 </div>
                 <div className="border-border bg-surface-subtle flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
                   <p className="text-muted-foreground text-xs">
-                    {registered ? 'Cobrado' : invoiced ? 'Facturado, pendiente de cobro' : 'Sin facturar'}
+                    {registered
+                      ? 'Cobrado'
+                      : invoiced
+                        ? 'Facturado, pendiente de cobro'
+                        : 'Sin facturar'}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {invoice ? (
@@ -136,7 +176,9 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
                       variant="ghost"
                       className="text-destructive"
                       isDisabled={registered}
-                      onPress={() => setMilestones(estimate.milestones.filter((x) => x.id !== m.id))}
+                      onPress={() =>
+                        setMilestones(estimate.milestones.filter((x) => x.id !== m.id))
+                      }
                     >
                       Quitar
                     </Button>
@@ -152,11 +194,16 @@ export function MilestonesEditor({ estimate, amounts, percentSum, paidCents, tot
 
       <div className="border-border bg-surface-subtle flex flex-col gap-2 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center sm:justify-between">
         <p className={balanced ? 'text-muted-foreground text-xs' : 'text-destructive text-xs'}>
-          Suma de hitos: {percentSum}% {balanced ? '' : '(debe sumar 100%)'} · Cobrado: {formatEuros(paidCents)} de{' '}
-          {formatEuros(totalCents)}
+          Suma de hitos: {percentSum}% {balanced ? '' : '(debe sumar 100%)'} · Cobrado:{' '}
+          {formatEuros(paidCents)} de {formatEuros(totalCents)}
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" isDisabled={amounts.length === 0} onPress={distributeEvenly}>
+          <Button
+            size="sm"
+            variant="ghost"
+            isDisabled={amounts.length === 0}
+            onPress={distributeEvenly}
+          >
             Repartir a partes iguales
           </Button>
           <Button size="sm" variant="outline" onPress={add}>

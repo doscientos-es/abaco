@@ -2,7 +2,14 @@ import { Button } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { assignableRoles, isRole, roleDescriptions, roleLabels, useSession, type Role } from '@/features/auth'
+import {
+  assignableRoles,
+  isRole,
+  roleDescriptions,
+  roleLabels,
+  useSession,
+  type Role,
+} from '@/features/auth'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 
@@ -31,12 +38,19 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
     const result = await action()
     setBusy(false)
     if (!result.ok) return setMessage(result.message)
-    setMessage(result.status === 'added' ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.' : success)
+    setMessage(
+      result.status === 'added'
+        ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.'
+        : success,
+    )
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
   }
 
   const invite = async () => {
-    await run(() => inviteMember({ tenantId, email: email.trim(), fullName: fullName.trim(), role }), 'Invitación enviada por correo.')
+    await run(
+      () => inviteMember({ tenantId, email: email.trim(), fullName: fullName.trim(), role }),
+      'Invitación enviada por correo.',
+    )
     setEmail('')
     setFullName('')
   }
@@ -55,7 +69,10 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
           return (
             <li key={member.userId} className="flex flex-wrap items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{member.fullName || member.email}{isMe ? ' (tú)' : ''}</p>
+                <p className="truncate text-sm font-medium">
+                  {member.fullName || member.email}
+                  {isMe ? ' (tú)' : ''}
+                </p>
                 <p className="text-muted-foreground truncate text-xs">{member.email}</p>
               </div>
               {editable ? (
@@ -67,10 +84,24 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                     className="w-40"
                     options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
                     onChange={(value) => {
-                      if (isRole(value)) void run(() => changeMemberRole(tenantId, member.userId, value), 'Rol actualizado.')
+                      if (isRole(value))
+                        void run(
+                          () => changeMemberRole(tenantId, member.userId, value),
+                          'Rol actualizado.',
+                        )
                     }}
                   />
-                  <Button variant="ghost" size="sm" isDisabled={busy} onPress={() => void run(() => removeMember(tenantId, member.userId), 'Persona quitada del equipo.')}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isDisabled={busy}
+                    onPress={() =>
+                      void run(
+                        () => removeMember(tenantId, member.userId),
+                        'Persona quitada del equipo.',
+                      )
+                    }
+                  >
                     Quitar
                   </Button>
                 </>
@@ -80,12 +111,30 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
             </li>
           )
         })}
-        {team.isError ? <li className="text-destructive px-5 py-3 text-sm">No se pudo cargar el equipo.</li> : null}
+        {team.isError ? (
+          <li className="text-destructive px-5 py-3 text-sm">No se pudo cargar el equipo.</li>
+        ) : null}
       </ul>
 
       <div className="border-border grid gap-4 border-t p-5 sm:grid-cols-2">
-        <TextField label="Nombre" placeholder="Ana García" icon={fieldIcons.user} value={fullName} onChange={setFullName} />
-        <TextField label="Correo" type="email" placeholder="ana@empresa.es" icon={fieldIcons.mail} value={email} onChange={setEmail} />
+        <TextField
+          label="Nombre"
+          placeholder="Ana García"
+          minLength={2}
+          maxLength={120}
+          icon={fieldIcons.user}
+          value={fullName}
+          onChange={setFullName}
+        />
+        <TextField
+          label="Correo"
+          type="email"
+          placeholder="ana@empresa.es"
+          maxLength={254}
+          icon={fieldIcons.mail}
+          value={email}
+          onChange={setEmail}
+        />
         <SelectField
           label="Rol"
           value={role}
@@ -95,7 +144,15 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
         <p className="text-muted-foreground self-end text-xs">{roleDescriptions[role]}</p>
         <div className="flex items-center justify-end gap-3 sm:col-span-2">
           {message ? <output className="text-muted-foreground text-sm">{message}</output> : null}
-          <Button isDisabled={busy || email.trim() === ''} onPress={() => void invite()}>
+          <Button
+            isDisabled={
+              busy ||
+              email.trim().length > 254 ||
+              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+              (fullName.trim() !== '' && (fullName.trim().length < 2 || fullName.trim().length > 120))
+            }
+            onPress={() => void invite()}
+          >
             Invitar
           </Button>
         </div>
