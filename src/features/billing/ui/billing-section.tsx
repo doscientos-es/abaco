@@ -25,6 +25,7 @@ import {
   type PlanInfo,
 } from '../domain/plans'
 
+import { CustomPlanCard } from './custom-plan-card'
 import { PaymentHistory } from './payment-history'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -140,7 +141,7 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
           </TabsList>
         </Tabs>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {planCatalog.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -158,15 +159,8 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
               }
             />
           ))}
+          <CustomPlanCard />
         </div>
-
-        <p className="border-border bg-muted/40 rounded-lg border border-dashed p-3 text-sm">
-          ¿Buscas algo más personalizado? Llámanos al{' '}
-          <a href="tel:+34624140151" className="text-primary font-medium whitespace-nowrap hover:underline">
-            624 14 01 51
-          </a>
-          .
-        </p>
 
         <ul className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2">
           {includedInEveryPlan.map((item) => (
