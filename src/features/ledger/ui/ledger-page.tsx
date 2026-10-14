@@ -37,6 +37,9 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
+/** `2026-03-15` -> `2026-T1`, same key as quarterlyVat. */
+const quarterKey = (date: string) => `${date.slice(0, 4)}-T${Math.ceil(Number(date.slice(5, 7)) / 3)}`
+
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -199,6 +202,7 @@ export function LedgerPage() {
                 <TableHead className="text-right">Repercutido</TableHead>
                 <TableHead className="text-right">Soportado</TableHead>
                 <TableHead className="text-right">A ingresar</TableHead>
+                <TableHead className="text-right">Para la gestoría</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -208,6 +212,19 @@ export function LedgerPage() {
                   <TableCell className="text-right tabular-nums">{formatEuros(q.collected)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatEuros(q.paid)}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">{formatEuros(q.toPay)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      onPress={() =>
+                        downloadTextFile(
+                          `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${q.key}.csv`,
+                          buildLedgerCsv(ledger.filter((e) => quarterKey(e.date) === q.key)),
+                        )
+                      }
+                    >
+                      Libro del trimestre
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -95,13 +95,23 @@ export function CompanyTab({ form, set }: FormProps) {
         />
         <SelectField
           className="sm:col-span-2"
-          label="Recordatorios por correo: facturas vencidas (cada 7 días, máx. 3) y presupuestos que caducan en 3 días"
+          label="Recordatorios por correo: facturas vencidas (cada 7 días, máx. 3), presupuestos sin respuesta a los 4 días y presupuestos que caducan en 3 días"
           value={form.autoReminders}
           options={[
             { value: 'no', label: 'Desactivados' },
             { value: 'yes', label: 'Activados' },
           ]}
           onChange={set('autoReminders')}
+        />
+        <SelectField
+          className="sm:col-span-2"
+          label="Resumen semanal por correo (cada lunes, a tu email de empresa)"
+          value={form.weeklySummary}
+          options={[
+            { value: 'yes', label: 'Activado' },
+            { value: 'no', label: 'Desactivado' },
+          ]}
+          onChange={set('weeklySummary')}
         />
       </Section>
     </>

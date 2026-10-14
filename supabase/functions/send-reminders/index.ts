@@ -5,6 +5,7 @@
  * Solo actúa en empresas con `tenants.auto_reminders = true`:
  *  - Facturas vencidas y sin cobrar: un aviso cada 7 días, hasta 3.
  *  - Presupuestos enviados que caducan en 3 días o menos: un único aviso.
+ *  - Presupuestos enviados hace 4+ días sin respuesta: un único seguimiento.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -108,6 +109,27 @@ Deno.serve(async (request) => {
           .update({ reminder_count: Number(invoice.reminder_count) + 1, last_reminder_at: now.toISOString() })
           .eq('id', invoice.id)
       }
+    }
+
+    // Presupuestos enviados hace 4 días o más sin respuesta (y que aún no están a punto de caducar,
+    // porque entonces ya los cubre el aviso de abajo): un único seguimiento amable.
+    const followupBefore = new Date(now.getTime() - 4 * DAY).toISOString()
+    const { data: waiting } = await admin
+      .from('estimates')
+      .select('id, client_id, number, title, valid_until, public_token')
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'sent')
+      .gt('valid_until', soon)
+      .lte('sent_at', followupBefore)
+      .is('followup_sent_at', null)
+    for (const estimate of (waiting ?? []) as Row[]) {
+      const link = appUrl && estimate.public_token ? `${appUrl}/p/${estimate.public_token}` : ''
+      const ok = await deliver(estimate.client_id, `¿Pudiste ver el presupuesto ${estimate.number}? · ${company}`, () => [
+        `Hace unos días te enviamos el presupuesto ${estimate.number} para «${estimate.title}».`,
+        'Si tienes cualquier duda o quieres ajustar algo, responde a este correo y lo vemos.',
+        ...(link ? [`Puedes verlo y aceptarlo aquí: ${link}`] : []),
+      ])
+      if (ok) await admin.from('estimates').update({ followup_sent_at: now.toISOString() }).eq('id', estimate.id)
     }
 
     // Presupuestos enviados que están a punto de caducar: un solo aviso.

@@ -29,6 +29,24 @@ const tenantColumns =
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
 
+async function notifyViewed(
+  estimate: Record<string, unknown>,
+  tenant: Record<string, unknown> | null,
+  client: Record<string, unknown> | null,
+) {
+  const to = typeof tenant?.email === 'string' ? tenant.email : ''
+  if (!to) return
+  const who = String(client?.name ?? 'Tu cliente')
+  const title = `${String(estimate.number)} · ${String(estimate.title)}`
+  const appUrl = Deno.env.get('APP_URL')
+  const link = appUrl ? `${appUrl.replace(/\/$/, '')}/presupuestos/${String(estimate.id)}` : ''
+  const text = `${who} acaba de abrir el presupuesto ${title}. Es un buen momento para llamarle.${link ? `\n\n${link}` : ''}`
+  const html = `<p>${escapeHtml(who)} <strong>acaba de abrir</strong> el presupuesto ${escapeHtml(title)}. Es un buen momento para llamarle.</p>${
+    link ? `<p><a href="${escapeHtml(link)}">Abrir presupuesto</a></p>` : ''
+  }`
+  await sendEmail({ to, subject: `Han abierto tu presupuesto: ${title}`, html, text, fromName: 'Ábaco' })
+}
+
 async function notifyOwner(
   estimate: Record<string, unknown>,
   tenant: Record<string, unknown> | null,
@@ -113,6 +131,22 @@ Deno.serve(async (request) => {
       .eq('tenant_id', estimate.tenant_id)
       .maybeSingle(),
   ])
+
+  if (action === 'view' && estimate.status === 'sent' && !estimate.viewed_at) {
+    // Primera apertura: se marca y se avisa al dueño una sola vez (el update solo gana si sigue sin abrir).
+    const { data: marked } = await admin
+      .from('estimates')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', estimate.id)
+      .is('viewed_at', null)
+      .select('id')
+    if (marked?.length) {
+      await notifyViewed(estimate, tenant, client).catch((error) => {
+        // eslint-disable-next-line no-console -- único rastro del fallo del aviso en los logs de la función
+        console.error('public-estimate: no se pudo avisar de la apertura', error instanceof Error ? error.message : 'desconocido')
+      })
+    }
+  }
 
   if (action !== 'view') {
     // Aviso al dueño. Si falla el correo, la respuesta del cliente ya está guardada y no se le molesta.

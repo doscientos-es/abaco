@@ -80,6 +80,7 @@ export function SettingsPage() {
       defaultVatRate: percent(form.defaultVatRate, tenant.defaultVatRate),
       defaultDepositPercent: percent(form.defaultDepositPercent, tenant.defaultDepositPercent),
       autoReminders: form.autoReminders === 'yes',
+      weeklySummary: form.weeklySummary === 'yes',
     })
     setSaved(true)
   }

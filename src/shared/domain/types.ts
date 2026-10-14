@@ -25,6 +25,8 @@ export type Tenant = {
   documentFooter?: string
   /** Opt-in: the daily job emails clients about overdue invoices and estimates about to expire. */
   autoReminders?: boolean
+  /** Weekly email to the owner with invoiced, pending and open estimates. On unless turned off. */
+  weeklySummary?: boolean
   defaultVatRate: number
   defaultDepositPercent: number
   nextEstimateNumber: number

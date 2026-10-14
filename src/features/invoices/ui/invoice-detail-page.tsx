@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
+import { openWhatsapp } from '@/shared/lib/whatsapp'
 import { useTenantData } from '@/shared/store/store'
 import { PageNotFound } from '@/shared/ui/page-states'
 
@@ -78,6 +79,18 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
           <Button onPress={() => window.print()}>Descargar PDF</Button>
           <Button variant="outline" onPress={() => void send(invoice)}>
             Enviar
+          </Button>
+          <Button
+            variant="outline"
+            onPress={() => {
+              const owed = formatEuros(invoiceOutstandingCents(invoice))
+              openWhatsapp(
+                client?.phone ?? '',
+                `Hola ${client?.name ?? ''}, te paso la factura ${invoice.number} (${invoice.concept}) por ${owed}, vence el ${invoice.dueDate}. Gracias, ${tenant.name}.`,
+              )
+            }}
+          >
+            WhatsApp
           </Button>
         </PageHeaderActions>
       </PageHeader>
