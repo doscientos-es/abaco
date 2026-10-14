@@ -19,7 +19,6 @@ import { useTenantData } from '@/shared/store/store'
 
 import { version } from '../../../../package.json'
 import { patchTenant } from '../application/settings-actions'
-
 import { BrandTab } from './brand-tab'
 import { CompanyTab } from './company-tab'
 import { hexColor, isLogoOk, percent, toForm, type Form } from './settings-form'
