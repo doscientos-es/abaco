@@ -23,6 +23,7 @@ import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
@@ -180,14 +181,10 @@ export function ClientsPage() {
                     <div className="text-muted-foreground text-xs break-all">{client.email}</div>
                   </TableCell>
                   <TableCell className="break-words">{client.address}</TableCell>
-                  <TableCell className="space-x-1 text-right">
-                    <Button size="sm" variant="outline" onPress={() => edit(client)}>
-                      Editar
-                    </Button>
-                    <Button size="sm" variant="destructive" onPress={() => setToDelete(client)}>
-                      Eliminar
-                    </Button>
-                  </TableCell>
+                  <TableRowActions
+                    onEdit={() => edit(client)}
+                    onDelete={() => setToDelete(client)}
+                  />
                 </TableRow>
               ))}
             </TableBody>

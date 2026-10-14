@@ -28,6 +28,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { catalogImportSchema, catalogKeys } from '../application/catalog-import'
@@ -367,19 +368,7 @@ export function CatalogPage() {
                   <TableCell className="text-right tabular-nums">
                     {formatEuros(item.unitPriceCents)} / {item.unit}
                   </TableCell>
-                  <TableCell className="space-x-1 text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onPress={() => edit(item)}>
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive"
-                      onPress={() => setToDelete(item)}
-                    >
-                      Eliminar
-                    </Button>
-                  </TableCell>
+                  <TableRowActions onEdit={() => edit(item)} onDelete={() => setToDelete(item)} />
                 </TableRow>
               ))}
             </TableBody>
