@@ -33,6 +33,9 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
+      '@doscientos/changelog':
+        specifier: ^0.1.4
+        version: 0.1.4
       '@doscientos/configs':
         specifier: ^0.1.9
         version: 0.1.9(oxlint-tsgolint@7.0.2001)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))(vitest@4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)))
@@ -160,6 +163,11 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
+
+  '@doscientos/changelog@0.1.4':
+    resolution: {integrity: sha512-b5Wda0NPpYfiqUoZKBtOUiQN4p150B8LPBK41NXtN0XVU8IBNyPzE3Dikl3vHenpwthnoxBL3yIoIkmb09a/Ng==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@doscientos/configs@0.1.9':
     resolution: {integrity: sha512-Pp5bVaThLotBw86E1cpj1Ck5vCAKUKJgYHgfxgQpW1v687HSFPFeI4RdMX6xv/wAL8l165KjRhb1eNf+93K1Hw==}
@@ -1610,6 +1618,8 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@doscientos/changelog@0.1.4': {}
 
   '@doscientos/configs@0.1.9(oxlint-tsgolint@7.0.2001)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))(vitest@4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)))':
     optionalDependencies:
