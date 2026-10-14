@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Update changelog with new features and improvements
 - Add settled status display for paid invoices
 - Add tests for invoice document rendering and printing
 - Add document preview and print functionality for invoices

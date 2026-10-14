@@ -25,14 +25,19 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
     if (!parsed.success) return setError(firstError(parsed.error))
     setBusy(true)
     setError(null)
-    const result = await signIn(parsed.data.email, parsed.data.password)
-    setBusy(false)
-    if (!result.ok) return setError(result.message)
-    // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
-    await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
-    // Only same-site paths are honoured, so the link can't send people elsewhere.
-    const target = redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\') ? redirect : '/'
-    await navigate({ href: target })
+    try {
+      const result = await signIn(parsed.data.email, parsed.data.password)
+      if (!result.ok) return setError(result.message)
+      // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
+      await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+      // Only same-site paths are honoured, so the link can't send people elsewhere.
+      const target = redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\') ? redirect : '/'
+      await navigate({ href: target })
+    } catch {
+      setError('No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (

@@ -29,6 +29,8 @@ export function CompanyTab({ form, set }: FormProps) {
           label="Web"
           placeholder="https://tuempresa.es"
           icon={fieldIcons.globe}
+          type="url"
+          helper="Incluye https://, por ejemplo https://tuempresa.es."
           value={form.website}
           onChange={set('website')}
         />

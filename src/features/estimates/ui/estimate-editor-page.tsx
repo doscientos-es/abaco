@@ -4,6 +4,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   PageHeader,
   PageHeaderActions,
@@ -11,6 +15,14 @@ import {
   PageHeaderTitle,
   toast,
 } from '@doscientos/ui'
+import {
+  Copy,
+  DotsThree,
+  Eye,
+  Files,
+  Trash,
+  WhatsappLogo,
+} from '@phosphor-icons/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -130,34 +142,56 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
-          <Button onPress={() => void sendByEmail()}>Enviar por email</Button>
-          <Button variant="outline" onPress={sendByWhatsapp}>
-            Enviar por WhatsApp
-          </Button>
-          <Button variant="outline" onPress={() => void copyPublicLink()}>
-            Copiar enlace del cliente
+          <Button onPress={() => void sendByEmail()}>
+            <span className="inline-flex items-center gap-2">
+              {fieldIcons.mail}
+              Enviar por email
+            </span>
           </Button>
           <Button variant="outline" onPress={() => setPreview(true)}>
-            Vista del cliente
+            <span className="inline-flex items-center gap-2">
+              <Eye aria-hidden="true" className="size-4" />
+              Vista del cliente
+            </span>
           </Button>
-          <Button
-            variant="outline"
-            onPress={() => {
-              const id = duplicateEstimate(estimate.id)
-              if (id) void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
-            }}
-          >
-            Duplicar
-          </Button>
-          <Button
-            variant="destructive"
-            onPress={() => {
-              deleteEstimate(estimate.id)
-              void navigate({ to: '/presupuestos' })
-            }}
-          >
-            Eliminar
-          </Button>
+          <DropdownMenuTrigger>
+            <Button variant="outline" aria-label="Más opciones del presupuesto">
+              <span className="inline-flex items-center gap-2">
+                <DotsThree aria-hidden="true" weight="bold" className="size-4" />
+                Más opciones
+              </span>
+            </Button>
+            <DropdownMenuContent placement="bottom end">
+              <DropdownMenuItem onAction={sendByWhatsapp}>
+                <WhatsappLogo aria-hidden="true" className="size-4" />
+                Enviar por WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onAction={() => void copyPublicLink()}>
+                <Copy aria-hidden="true" className="size-4" />
+                Copiar enlace del cliente
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onAction={() => {
+                  const id = duplicateEstimate(estimate.id)
+                  if (id) void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
+                }}
+              >
+                <Files aria-hidden="true" className="size-4" />
+                Duplicar presupuesto
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onAction={() => {
+                  deleteEstimate(estimate.id)
+                  void navigate({ to: '/presupuestos' })
+                }}
+              >
+                <Trash aria-hidden="true" className="size-4" />
+                Eliminar presupuesto
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuTrigger>
         </PageHeaderActions>
       </PageHeader>
 

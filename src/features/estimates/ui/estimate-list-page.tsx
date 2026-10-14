@@ -5,6 +5,7 @@ import {
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
+  Input,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +16,9 @@ import {
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import { estimateTotalCents } from '@/shared/domain/estimate'
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { EstimateStatus } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
@@ -26,16 +29,22 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
-import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
-
 import { createEstimate } from '../application/estimate-actions'
 
 export function EstimateListPage() {
   const { estimates, clients } = useTenantData()
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | EstimateStatus>('all')
-  const visible = estimates.filter((e) => status === 'all' || e.status === status)
-  const pager = usePagination(visible, status)
+  const [query, setQuery] = useState('')
+  const visible = estimates.filter((e) => {
+    const client = clients.find((c) => c.id === e.clientId)
+    const statusLabel = statusLabels[e.status]
+    return (
+      (status === 'all' || e.status === status) &&
+      fuzzySearch(query, e.number, e.title, statusLabel, client?.name ?? '')
+    )
+  })
+  const pager = usePagination(visible, `${status}|${query.trim().toLocaleLowerCase('es')}`)
 
   const [creating, setCreating] = useState(false)
   const [newClientId, setNewClientId] = useState('')
@@ -60,14 +69,24 @@ export function EstimateListPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Presupuestos</PageHeaderTitle>
-          <PageHeaderDescription>Crea, envía y sigue cada propuesta hasta el cobro.</PageHeaderDescription>
+          <PageHeaderDescription>
+            Crea, envía y sigue cada propuesta hasta el cobro.
+          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button onPress={startNew}>Crear presupuesto</Button>
         </PageHeaderActions>
       </PageHeader>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input
+          type="search"
+          aria-label="Buscar presupuestos"
+          placeholder="Buscar por número, obra o cliente…"
+          className="sm:max-w-sm sm:flex-1"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
         <SelectField
           label="Filtrar por estado"
           hideLabel
@@ -79,6 +98,18 @@ export function EstimateListPage() {
           ]}
           onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
         />
+        {query || status !== 'all' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setQuery('')
+              setStatus('all')
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        ) : null}
         <p className="text-muted-foreground text-sm tabular-nums">
           {visible.length} {visible.length === 1 ? 'presupuesto' : 'presupuestos'}
         </p>
@@ -97,10 +128,16 @@ export function EstimateListPage() {
           <EmptyPanel
             icon={fieldIcons.search}
             title="Sin resultados"
-            description="No hay presupuestos con ese estado."
+            description="Prueba otra búsqueda o limpia los filtros para ver todos los presupuestos."
           >
-            <Button variant="outline" onPress={() => setStatus('all')}>
-              Ver todos
+            <Button
+              variant="outline"
+              onPress={() => {
+                setQuery('')
+                setStatus('all')
+              }}
+            >
+              Limpiar filtros
             </Button>
           </EmptyPanel>
         )
@@ -119,7 +156,8 @@ export function EstimateListPage() {
                     <StatusBadge status={estimate.status} />
                   </span>
                   <span className="text-muted-foreground block text-xs">
-                    {estimate.number} · {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                    {estimate.number} ·{' '}
+                    {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
                   </span>
                   <span className="block text-lg font-semibold tabular-nums">
                     {formatEuros(estimateTotalCents(estimate))}
@@ -151,7 +189,9 @@ export function EstimateListPage() {
                       {estimate.title}
                     </Link>
                   </TableCell>
-                  <TableCell>{clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}</TableCell>
+                  <TableCell>
+                    {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={estimate.status} />
                   </TableCell>

@@ -16,6 +16,7 @@ import {
 } from '@doscientos/ui'
 import { useState } from 'react'
 
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import type { Client } from '@/shared/domain/types'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
@@ -35,7 +36,7 @@ export function ClientsPage() {
   const [toDelete, setToDelete] = useState<Client | null>(null)
 
   const visible = clients.filter((client) =>
-    `${client.name} ${client.email} ${client.phone}`.toLowerCase().includes(query.toLowerCase()),
+    fuzzySearch(query, client.name, client.email, client.phone, client.taxId, client.address),
   )
   const pager = usePagination(visible, query)
 
@@ -78,7 +79,10 @@ export function ClientsPage() {
         onImport={(values) =>
           updateTenantData((data) => ({
             ...data,
-            clients: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.clients],
+            clients: [
+              ...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })),
+              ...data.clients,
+            ],
           }))
         }
       />
@@ -86,7 +90,7 @@ export function ClientsPage() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           aria-label="Buscar clientes"
-          placeholder="Buscar por nombre, email o teléfono"
+          placeholder="Buscar por nombre, email, teléfono o NIF"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -130,13 +134,19 @@ export function ClientsPage() {
                   {client.email ? (
                     <p className="text-muted-foreground truncate text-xs">{client.email}</p>
                   ) : null}
-                  {client.address ? <p className="text-muted-foreground mt-1 text-xs">{client.address}</p> : null}
+                  {client.address ? (
+                    <p className="text-muted-foreground mt-1 text-xs">{client.address}</p>
+                  ) : null}
                 </div>
                 <div className="flex gap-2">
                   <Button className="flex-1" variant="outline" onPress={() => edit(client)}>
                     Editar
                   </Button>
-                  <Button className="text-destructive flex-1" variant="ghost" onPress={() => setToDelete(client)}>
+                  <Button
+                    className="text-destructive flex-1"
+                    variant="ghost"
+                    onPress={() => setToDelete(client)}
+                  >
                     Eliminar
                   </Button>
                 </div>

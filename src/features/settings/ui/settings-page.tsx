@@ -22,7 +22,7 @@ import { patchTenant } from '../application/settings-actions'
 import { BrandTab } from './brand-tab'
 import { ChangelogSection } from './changelog-section'
 import { CompanyTab } from './company-tab'
-import { hexColor, isLogoOk, percent, toForm, type Form } from './settings-form'
+import { hexColor, isLogoOk, isWebsiteOk, percent, toForm, type Form } from './settings-form'
 import { TeamSection } from './team-section'
 
 export type SettingsTab = 'empresa' | 'marca' | 'equipo' | 'plan' | 'novedades'
@@ -60,7 +60,8 @@ export function SettingsPage() {
   const valid =
     form.name.trim() !== '' &&
     (form.brandColor === '' || hexColor.test(form.brandColor)) &&
-    isLogoOk(form.logoUrl)
+    isLogoOk(form.logoUrl) &&
+    isWebsiteOk(form.website)
 
   function save() {
     if (!valid) return

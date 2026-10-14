@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update changelog with new features and improvements",
             "Add settled status display for paid invoices",
             "Add tests for invoice document rendering and printing",
             "Add document preview and print functionality for invoices",
@@ -58,6 +59,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "1a14abdfdf7bddd06e4bb3b0a3a3ac78f9ee6112",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and improvements"
+        },
         {
           "sha": "82407c5e7c4aa4878b98b8b4abf38c4d76438e04",
           "type": "feat",

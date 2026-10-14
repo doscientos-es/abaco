@@ -2,6 +2,9 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Input,
   PageHeader,
   PageHeaderActions,
@@ -15,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { ArrowDownToLine, DotsThree, FileXls, Plus, UploadSimple } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import {
@@ -25,20 +29,22 @@ import {
   quarterlyVat,
 } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
 import type { LedgerEntry, LedgerKind } from '@/shared/domain/types'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { ChartCard, Donut, MonthlyBars } from '@/shared/ui/charts'
-import { StatCard } from '@/shared/ui/stat-card'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
+import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 /** `2026-03-15` -> `2026-T1`, same key as quarterlyVat. */
-const quarterKey = (date: string) => `${date.slice(0, 4)}-T${Math.ceil(Number(date.slice(5, 7)) / 3)}`
+const quarterKey = (date: string) =>
+  `${date.slice(0, 4)}-T${Math.ceil(Number(date.slice(5, 7)) / 3)}`
 
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 
@@ -47,6 +53,8 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function LedgerPage() {
   const { ledger, tenant } = useTenantData()
   const [month, setMonth] = useState('')
+  const [query, setQuery] = useState('')
+  const [kindFilter, setKindFilter] = useState<'all' | LedgerKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
@@ -59,16 +67,28 @@ export function LedgerPage() {
     vatRate: String(tenant.defaultVatRate),
   })
 
-  const visible = ledger
+  const monthEntries = ledger
     .filter((entry) => !month || entry.date.startsWith(month))
     .sort((a, b) => b.date.localeCompare(a.date))
-  const pager = usePagination(visible, month)
-  const income = visible.filter((e) => e.kind === 'income').reduce((s, e) => s + e.amountCents, 0)
-  const expense = visible.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amountCents, 0)
-  const vat = ledgerVatSummary(visible)
+  const visible = monthEntries.filter(
+    (entry) =>
+      (kindFilter === 'all' || entry.kind === kindFilter) &&
+      fuzzySearch(query, entry.concept, entry.category, entry.date, entry.kind),
+  )
+  const pager = usePagination(
+    visible,
+    `${month}|${kindFilter}|${query.trim().toLocaleLowerCase('es')}`,
+  )
+  const income = monthEntries
+    .filter((e) => e.kind === 'income')
+    .reduce((s, e) => s + e.amountCents, 0)
+  const expense = monthEntries
+    .filter((e) => e.kind === 'expense')
+    .reduce((s, e) => s + e.amountCents, 0)
+  const vat = ledgerVatSummary(monthEntries)
   const quarters = quarterlyVat(ledger)
   const months = monthlySeries(ledger)
-  const expenseByCategory = categoryTotals(visible, 'expense')
+  const expenseByCategory = categoryTotals(monthEntries, 'expense')
 
   function add() {
     const amountCents = parseEuros(form.amount)
@@ -95,31 +115,60 @@ export function LedgerPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Contabilidad</PageHeaderTitle>
-          <PageHeaderDescription>Ingresos, gastos e IVA listos para tu gestoría.</PageHeaderDescription>
+          <PageHeaderDescription>
+            Ingresos, gastos e IVA listos para tu gestoría.
+          </PageHeaderDescription>
         </PageHeaderHeading>
-        <PageHeaderActions>
-          <Input
-            type="month"
-            aria-label="Filtrar por mes"
-            className="w-40"
-            value={month}
-            onChange={(event) => setMonth(event.target.value)}
-          />
-          <Button onPress={() => setDialogOpen(true)}>Nuevo apunte</Button>
-          <Button variant="outline" onPress={() => setImportOpen(true)}>
-            Importar de Excel
+        <PageHeaderActions className="shrink-0">
+          <Button onPress={() => setDialogOpen(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Nuevo apunte
           </Button>
-          <Button
-            variant="outline"
-            onPress={() =>
-              downloadTextFile(`libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${month || 'todo'}.csv`, buildLedgerCsv(visible))
-            }
-            isDisabled={visible.length === 0}
-          >
-            Exportar CSV para la gestoría
-          </Button>
+          <DropdownMenuTrigger>
+            <Button variant="outline" aria-label="Más opciones de contabilidad">
+              <DotsThree aria-hidden="true" weight="bold" className="size-5" />
+              Más opciones
+            </Button>
+            <DropdownMenuContent placement="bottom end">
+              <DropdownMenuItem onAction={() => setImportOpen(true)}>
+                <UploadSimple aria-hidden="true" className="size-4" />
+                Importar de Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onAction={() =>
+                  downloadTextFile(
+                    `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${month || 'todo'}.csv`,
+                    buildLedgerCsv(monthEntries),
+                  )
+                }
+                isDisabled={monthEntries.length === 0}
+              >
+                <ArrowDownToLine aria-hidden="true" className="size-4" />
+                Exportar CSV para la gestoría
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuTrigger>
         </PageHeaderActions>
       </PageHeader>
+
+      <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Periodo</p>
+          <p className="text-muted-foreground text-xs">Filtra indicadores y apuntes por mes</p>
+        </div>
+        <Input
+          type="month"
+          aria-label="Filtrar por mes"
+          className="w-44"
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+        />
+        {month ? (
+          <Button variant="ghost" size="sm" onPress={() => setMonth('')}>
+            Ver todos
+          </Button>
+        ) : null}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -180,7 +229,8 @@ export function LedgerPage() {
             <div>
               <h2 className="text-base font-semibold">IVA por trimestre (modelo 303)</h2>
               <p className="text-muted-foreground text-sm">
-                Con todos los apuntes, sin filtrar por mes. Un resultado negativo es IVA a compensar.
+                Con todos los apuntes, sin filtrar por mes. Un resultado negativo es IVA a
+                compensar.
               </p>
             </div>
             <Button
@@ -209,9 +259,13 @@ export function LedgerPage() {
               {quarters.map((q) => (
                 <TableRow key={q.key}>
                   <TableCell>{q.key}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatEuros(q.collected)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatEuros(q.collected)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{formatEuros(q.paid)}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">{formatEuros(q.toPay)}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatEuros(q.toPay)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -232,6 +286,44 @@ export function LedgerPage() {
         </section>
       ) : null}
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Input
+          type="search"
+          aria-label="Buscar apuntes"
+          placeholder="Buscar concepto, categoría o fecha…"
+          className="sm:max-w-sm sm:flex-1"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <SelectField
+          label="Filtrar por tipo"
+          hideLabel
+          className="sm:w-44"
+          value={kindFilter}
+          options={[
+            { value: 'all', label: 'Todos los tipos' },
+            { value: 'income', label: 'Ingresos' },
+            { value: 'expense', label: 'Gastos' },
+          ]}
+          onChange={(value) => setKindFilter(value as 'all' | LedgerKind)}
+        />
+        {query || kindFilter !== 'all' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setQuery('')
+              setKindFilter('all')
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        ) : null}
+        <p className="text-muted-foreground text-sm tabular-nums sm:ml-auto">
+          {visible.length} {visible.length === 1 ? 'apunte' : 'apuntes'}
+        </p>
+      </div>
+
       <ImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
@@ -240,7 +332,10 @@ export function LedgerPage() {
         onImport={(values) =>
           updateTenantData((data) => ({
             ...data,
-            ledger: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.ledger],
+            ledger: [
+              ...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })),
+              ...data.ledger,
+            ],
           }))
         }
       />
@@ -326,7 +421,11 @@ export function LedgerPage() {
               <Badge variant={entry.kind === 'income' ? 'success' : 'danger'}>
                 {entry.kind === 'income' ? 'Ingreso' : 'Gasto'}
               </Badge>
-              <Button className="text-destructive" variant="ghost" onPress={() => setToDelete(entry)}>
+              <Button
+                className="text-destructive"
+                variant="ghost"
+                onPress={() => setToDelete(entry)}
+              >
                 Eliminar
               </Button>
             </div>
@@ -360,8 +459,12 @@ export function LedgerPage() {
                   {entry.kind === 'income' ? 'Ingreso' : 'Gasto'}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right tabular-nums">{formatEuros(ledgerNetCents(entry))}</TableCell>
-              <TableCell className="text-right font-medium tabular-nums">{formatEuros(entry.amountCents)}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatEuros(ledgerNetCents(entry))}
+              </TableCell>
+              <TableCell className="text-right font-medium tabular-nums">
+                {formatEuros(entry.amountCents)}
+              </TableCell>
               <TableCell className="text-right">
                 <Button size="sm" variant="destructive" onPress={() => setToDelete(entry)}>
                   Eliminar

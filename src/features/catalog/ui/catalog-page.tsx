@@ -18,6 +18,7 @@ import {
 } from '@doscientos/ui'
 import { useState } from 'react'
 
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 import type { CatalogItem, CatalogKind } from '@/shared/domain/types'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
@@ -38,7 +39,14 @@ const kindLabels: Record<CatalogKind, string> = {
 
 const kindOptions = Object.entries(kindLabels).map(([value, label]) => ({ value, label }))
 
-const empty = { sku: '', name: '', kind: 'material' as CatalogKind, category: '', unit: 'ud', price: '' }
+const empty = {
+  sku: '',
+  name: '',
+  kind: 'material' as CatalogKind,
+  category: '',
+  unit: 'ud',
+  price: '',
+}
 
 export function CatalogPage() {
   const { catalog, tenant } = useTenantData()
@@ -57,7 +65,7 @@ export function CatalogPage() {
     (item) =>
       (kindFilter === 'all' || item.kind === kindFilter) &&
       (categoryFilter === 'all' || item.category === categoryFilter) &&
-      `${item.sku} ${item.name} ${item.category}`.toLowerCase().includes(query.toLowerCase()),
+      fuzzySearch(query, item.sku, item.name, item.category, item.kind, item.unit),
   )
   const pager = usePagination(visible, `${query}|${kindFilter}|${categoryFilter}`)
 
@@ -89,7 +97,10 @@ export function CatalogPage() {
     }
     updateTenantData((data) => {
       if (editingId) {
-        return { ...data, catalog: data.catalog.map((i) => (i.id === editingId ? { ...i, ...values } : i)) }
+        return {
+          ...data,
+          catalog: data.catalog.map((i) => (i.id === editingId ? { ...i, ...values } : i)),
+        }
       }
       const item: CatalogItem = { id: newId(), tenantId: tenant.id, ...values }
       return { ...data, catalog: [item, ...data.catalog] }
@@ -115,7 +126,9 @@ export function CatalogPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Catálogo</PageHeaderTitle>
-          <PageHeaderDescription>Materiales, mano de obra y servicios con su precio.</PageHeaderDescription>
+          <PageHeaderDescription>
+            Materiales, mano de obra y servicios con su precio.
+          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button variant="outline" onPress={() => setImportOpen(true)}>
@@ -133,7 +146,10 @@ export function CatalogPage() {
         onImport={(values) =>
           updateTenantData((data) => ({
             ...data,
-            catalog: [...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })), ...data.catalog],
+            catalog: [
+              ...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })),
+              ...data.catalog,
+            ],
           }))
         }
       />
@@ -197,7 +213,7 @@ export function CatalogPage() {
       <FilterBar>
         <Input
           aria-label="Buscar en el catálogo"
-          placeholder="Buscar por referencia, nombre o categoría"
+          placeholder="Buscar por referencia, nombre, categoría o unidad"
           className="sm:max-w-sm sm:flex-1"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -279,7 +295,9 @@ export function CatalogPage() {
                   </div>
                   <p className="shrink-0 text-right font-semibold tabular-nums">
                     {formatEuros(item.unitPriceCents)}
-                    <span className="text-muted-foreground block text-xs font-normal">/ {item.unit}</span>
+                    <span className="text-muted-foreground block text-xs font-normal">
+                      / {item.unit}
+                    </span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -288,7 +306,11 @@ export function CatalogPage() {
                   <Button variant="outline" onPress={() => edit(item)}>
                     Editar
                   </Button>
-                  <Button className="text-destructive" variant="ghost" onPress={() => setToDelete(item)}>
+                  <Button
+                    className="text-destructive"
+                    variant="ghost"
+                    onPress={() => setToDelete(item)}
+                  >
                     Eliminar
                   </Button>
                 </div>
@@ -325,7 +347,12 @@ export function CatalogPage() {
                     <Button size="sm" variant="ghost" onPress={() => edit(item)}>
                       Editar
                     </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onPress={() => setToDelete(item)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onPress={() => setToDelete(item)}
+                    >
                       Eliminar
                     </Button>
                   </TableCell>
@@ -343,7 +370,11 @@ export function CatalogPage() {
           if (!open) setToDelete(null)
         }}
         title="¿Eliminar artículo?"
-        description={toDelete ? `«${toDelete.name}» se quitará del catálogo. Los presupuestos ya creados no cambian.` : null}
+        description={
+          toDelete
+            ? `«${toDelete.name}» se quitará del catálogo. Los presupuestos ya creados no cambian.`
+            : null
+        }
         confirmLabel="Eliminar"
         destructive
         onConfirm={() => {

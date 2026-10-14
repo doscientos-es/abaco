@@ -22,6 +22,7 @@ import { DotsThree } from '@phosphor-icons/react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
@@ -32,9 +33,17 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
-import { deleteInvoice, invoiceOutstandingCents, markInvoicePaid, setInvoiceStatus } from '../application/invoice-actions'
+import {
+  deleteInvoice,
+  invoiceOutstandingCents,
+  markInvoicePaid,
+  setInvoiceStatus,
+} from '../application/invoice-actions'
 
-const statusConfig: Record<InvoiceStatus, { label: string; variant: 'neutral' | 'info' | 'success' }> = {
+const statusConfig: Record<
+  InvoiceStatus,
+  { label: string; variant: 'neutral' | 'info' | 'success' }
+> = {
   issued: { label: 'Emitida', variant: 'neutral' },
   sent: { label: 'Enviada', variant: 'info' },
   paid: { label: 'Cobrada', variant: 'success' },
@@ -50,16 +59,18 @@ export function InvoicesPage() {
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
   const estimateOf = (id: string) => estimates.find((e) => e.id === id)
-  const q = query.trim().toLowerCase()
+  const q = query.trim()
   const visible = invoices.filter(
     (i) =>
       (status === 'all' || i.status === status) &&
       (clientId === 'all' || i.clientId === clientId) &&
-      (q === '' ||
-        [i.number, i.concept, clientName(i.clientId), estimateOf(i.estimateId)?.number ?? '']
-          .join(' ')
-          .toLowerCase()
-          .includes(q)),
+      fuzzySearch(
+        q,
+        i.number,
+        i.concept,
+        clientName(i.clientId),
+        estimateOf(i.estimateId)?.number ?? '',
+      ),
   )
   const pager = usePagination(visible, `${status}|${clientId}|${q}`)
   const pendingCents = invoices
@@ -90,7 +101,11 @@ export function InvoicesPage() {
   function actions(invoice: Invoice) {
     return (
       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-        <Button size="sm" isDisabled={invoice.status === 'paid'} onPress={() => markInvoicePaid(invoice.id)}>
+        <Button
+          size="sm"
+          isDisabled={invoice.status === 'paid'}
+          onPress={() => markInvoicePaid(invoice.id)}
+        >
           {invoice.status === 'paid' ? 'Cobrada' : 'Cobrar'}
         </Button>
         <DropdownMenuTrigger>
@@ -98,9 +113,15 @@ export function InvoicesPage() {
             <DotsThree weight="bold" className="size-4" />
           </Button>
           <DropdownMenuContent placement="bottom end">
-            <DropdownMenuItem onAction={() => openInvoice(invoice.id)}>Ver factura</DropdownMenuItem>
-            <DropdownMenuItem onAction={() => downloadInvoice(invoice.id)}>Descargar PDF</DropdownMenuItem>
-            <DropdownMenuItem onAction={() => void send(invoice)}>Enviar por email</DropdownMenuItem>
+            <DropdownMenuItem onAction={() => openInvoice(invoice.id)}>
+              Ver factura
+            </DropdownMenuItem>
+            <DropdownMenuItem onAction={() => downloadInvoice(invoice.id)}>
+              Descargar PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onAction={() => void send(invoice)}>
+              Enviar por email
+            </DropdownMenuItem>
             {invoice.status === 'paid' ? null : (
               <>
                 <DropdownMenuSeparator />
@@ -128,7 +149,9 @@ export function InvoicesPage() {
   async function send(invoice: Invoice) {
     const client = clients.find((c) => c.id === invoice.clientId)
     if (!client?.email) {
-      toast.error('No se envió', { description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.' })
+      toast.error('No se envió', {
+        description: 'El cliente no tiene email. Añádelo en Clientes y vuelve a enviar.',
+      })
       return
     }
     const sent = await sendDocument('invoice', invoice.id)
@@ -147,7 +170,12 @@ export function InvoicesPage() {
       </PageHeader>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Pendiente de cobro" value={formatEuros(pendingCents)} tone="warning" icon={fieldIcons.euro} />
+        <StatCard
+          label="Pendiente de cobro"
+          value={formatEuros(pendingCents)}
+          tone="warning"
+          icon={fieldIcons.euro}
+        />
         <StatCard
           label="Vencido"
           value={formatEuros(overdueCents)}
@@ -201,7 +229,9 @@ export function InvoicesPage() {
       {visible.length === 0 ? (
         <EmptyPanel
           icon={invoices.length === 0 ? fieldIcons.file : fieldIcons.search}
-          title={invoices.length === 0 ? 'Aún no has hecho ninguna factura' : 'Ninguna factura coincide'}
+          title={
+            invoices.length === 0 ? 'Aún no has hecho ninguna factura' : 'Ninguna factura coincide'
+          }
           description={
             invoices.length === 0
               ? 'Las facturas se crean desde un presupuesto: ábrelo, ve a «Hitos de pago» y pulsa «Generar factura».'
@@ -227,7 +257,10 @@ export function InvoicesPage() {
             {pager.pageItems.map((invoice) => {
               const { label, variant } = statusConfig[invoice.status]
               return (
-                <li key={invoice.id} className="border-border bg-card space-y-3 rounded-lg border p-4">
+                <li
+                  key={invoice.id}
+                  className="border-border bg-card space-y-3 rounded-lg border p-4"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-muted-foreground text-xs">{invoice.number}</p>
@@ -241,7 +274,9 @@ export function InvoicesPage() {
                     </div>
                     <Badge variant={variant}>{label}</Badge>
                   </div>
-                  <p className="text-xl font-semibold tabular-nums">{formatEuros(invoice.totalCents)}</p>
+                  <p className="text-xl font-semibold tabular-nums">
+                    {formatEuros(invoice.totalCents)}
+                  </p>
                   <p className="text-xs">
                     <Link to="/clientes" className="underline-offset-4 hover:underline">
                       {clientName(invoice.clientId)}
@@ -293,7 +328,9 @@ export function InvoicesPage() {
                         {invoice.number}
                       </Link>
                     </TableCell>
-                    <TableCell className="max-w-64 truncate font-medium">{invoice.concept}</TableCell>
+                    <TableCell className="max-w-64 truncate font-medium">
+                      {invoice.concept}
+                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Link to="/clientes" className="underline-offset-4 hover:underline">
                         {clientName(invoice.clientId)}
