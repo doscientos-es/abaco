@@ -24,9 +24,9 @@ export const TRIAL_DAYS = 14
 export const TRIAL_MEMBERS = 15
 
 export const planCatalog: readonly PlanInfo[] = [
-  { id: 'solo', name: 'Autónomo', members: 1, monthly: 15, yearly: 150, audience: 'Trabajas tú solo.' },
-  { id: 'team', name: 'Equipo', members: 5, monthly: 29, yearly: 290, audience: 'Tú y tu cuadrilla, hasta 5 personas.' },
-  { id: 'business', name: 'Empresa', members: 15, monthly: 49, yearly: 490, audience: 'Varias cuadrillas u oficina, hasta 15 personas.' },
+  { id: 'solo', name: 'Autónomo', members: 1, monthly: 20, yearly: 200, audience: 'Trabajas tú solo.' },
+  { id: 'team', name: 'Equipo', members: 5, monthly: 34, yearly: 340, audience: 'Tú y tu cuadrilla, hasta 5 personas.' },
+  { id: 'business', name: 'Empresa', members: 15, monthly: 54, yearly: 540, audience: 'Varias cuadrillas u oficina, hasta 15 personas.' },
 ]
 
 export const includedInEveryPlan = [
