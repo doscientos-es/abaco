@@ -59,7 +59,9 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
       await navigator.clipboard.writeText(buildAiPrompt(schema))
       toast.success('Prompt copiado', { description: 'Pégalo en ChatGPT y adjunta tu Excel.' })
     } catch {
-      toast.error('No se pudo copiar', { description: 'Tu navegador ha bloqueado el portapapeles.' })
+      toast.error('No se pudo copiar', {
+        description: 'Tu navegador ha bloqueado el portapapeles.',
+      })
     }
   }
 
@@ -71,8 +73,8 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
         <DialogHeader className="pr-8">
           <DialogTitle>Importar {schema.plural}</DialogTitle>
           <DialogDescription>
-            Sube un Excel (.xlsx) o CSV con las cabeceras en la primera fila. Si el formato no coincide, no se
-            importa nada.
+            Sube un Excel (.xlsx) o CSV con las cabeceras en la primera fila. Si el formato no
+            coincide, no se importa nada.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
@@ -87,13 +89,19 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
             className="border-border file:bg-secondary file:text-secondary-foreground block w-full rounded-md border text-sm file:mr-3 file:border-0 file:px-3 file:py-2"
           />
           <p className="text-muted-foreground text-xs">
-            Columnas: {schema.columns.map((c) => `${c.label}${c.required ? '*' : ''}`).join(', ')} (* obligatorias).
+            Columnas: {schema.columns.map((c) => `${c.label}${c.required ? '*' : ''}`).join(', ')}{' '}
+            (* obligatorias).
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
-              onPress={() => downloadTextFile(`plantilla-${schema.plural.split(' ')[0]}.csv`, buildTemplateCsv(schema))}
+              onPress={() =>
+                downloadTextFile(
+                  `plantilla-${schema.plural.split(' ')[0]}.csv`,
+                  buildTemplateCsv(schema),
+                )
+              }
             >
               Descargar plantilla
             </Button>
@@ -104,11 +112,15 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
 
           {reading ? <p className="text-sm">Leyendo {fileName}…</p> : null}
           {plan && 'fatal' in plan ? (
-            <div role="alert" className="border-destructive/40 bg-destructive/10 space-y-2 rounded-md border p-3 text-sm">
+            <div
+              role="alert"
+              className="border-destructive/40 bg-destructive/10 space-y-2 rounded-md border p-3 text-sm"
+            >
               <p className="font-medium">No se ha importado nada</p>
               <p>{plan.fatal}</p>
               <p className="text-muted-foreground">
-                Copia el prompt, pégalo en ChatGPT con tu Excel adjunto y sube el archivo que te devuelva.
+                Copia el prompt, pégalo en ChatGPT con tu Excel adjunto y sube el archivo que te
+                devuelva.
               </p>
             </div>
           ) : null}

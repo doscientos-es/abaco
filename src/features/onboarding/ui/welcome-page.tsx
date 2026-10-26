@@ -39,9 +39,11 @@ export function WelcomePage() {
       }
       // Refresh before navigating so the root guard no longer sends us back to welcome.
       await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
-      await navigate(choice === 'plan'
-        ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
-        : { to: '/', replace: true })
+      await navigate(
+        choice === 'plan'
+          ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
+          : { to: '/', replace: true },
+      )
     } catch {
       setError('No se pudo continuar. Inténtalo de nuevo.')
     } finally {
@@ -54,7 +56,10 @@ export function WelcomePage() {
       title="¿Cómo quieres empezar?"
       description="Tu empresa ya está lista. Puedes probar Ábaco gratis o elegir un plan ahora."
     >
-      <section aria-label="Prueba gratuita" className="border-primary/30 bg-primary/5 space-y-3 rounded-xl border p-4">
+      <section
+        aria-label="Prueba gratuita"
+        className="border-primary/30 bg-primary/5 space-y-3 rounded-xl border p-4"
+      >
         <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
           Sin tarjeta
         </span>
@@ -65,7 +70,8 @@ export function WelcomePage() {
           </p>
           {trialing ? (
             <p className="text-muted-foreground text-xs">
-              {expired ? 'Tu prueba terminó el' : 'Tu prueba termina el'} {day.format(subscription.trialEndsAt)}.
+              {expired ? 'Tu prueba terminó el' : 'Tu prueba termina el'}{' '}
+              {day.format(subscription.trialEndsAt)}.
             </p>
           ) : null}
         </div>
@@ -73,7 +79,10 @@ export function WelcomePage() {
           {busy === 'trial' ? 'Entrando…' : trialLabel}
         </Button>
       </section>
-      <section aria-label="Elegir un plan" className="border-border space-y-3 rounded-xl border p-4">
+      <section
+        aria-label="Elegir un plan"
+        className="border-border space-y-3 rounded-xl border p-4"
+      >
         <div className="space-y-1">
           <h2 className="font-semibold">¿Ya lo tienes claro?</h2>
           <p className="text-muted-foreground text-sm">
@@ -90,8 +99,8 @@ export function WelcomePage() {
         </Button>
       </section>
       <p className="text-muted-foreground text-xs leading-relaxed">
-        Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan.
-        Si no contratas, tus datos se conservan en modo lectura.
+        Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan. Si no
+        contratas, tus datos se conservan en modo lectura.
       </p>
       <FormError message={error} />
     </AuthLayout>

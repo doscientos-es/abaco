@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import doscientosLogo from '@/assets/logo.svg'
+import doscientosLogo from '@/shared/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 
 /** Centered card shared by every public auth screen. */
@@ -21,7 +21,7 @@ export function AuthLayout({
       <div className="w-full max-w-sm space-y-7">
         <div className="flex flex-col items-center gap-3 text-center">
           <img src="/abaco-logo.svg" alt={brand.name} className="h-16 w-auto" />
-          <p className="text-[#2a4227]/80 text-sm">{brand.tagline}</p>
+          <p className="text-sm text-[#2a4227]/80">{brand.tagline}</p>
         </div>
         <section className="space-y-5 rounded-2xl border border-white/70 bg-white/80 p-7 shadow-xl shadow-[#2a4227]/10 backdrop-blur-xl">
           <header className="space-y-1">

@@ -2,13 +2,13 @@
  * Invita a una persona a una empresa. Necesita service role, por eso vive aquí y no en el
  * navegador. Valida sesión, pertenencia y rol de quien invita antes de actuar.
  *
- * Body: { tenantId: uuid, email: string, role: 'admin' | 'editor' | 'viewer', fullName?: string }
+ * Body: { tenantId: uuid, email: string, role: 'admin' | 'editor' | 'viewer' | 'technician', fullName?: string }
  * El correo lo envía el hook auth-email (Resend) al llamar a inviteUserByEmail.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-type Role = 'owner' | 'admin' | 'editor' | 'viewer'
-const invitable: Role[] = ['admin', 'editor', 'viewer']
+type Role = 'owner' | 'admin' | 'editor' | 'viewer' | 'technician'
+const invitable: Role[] = ['admin', 'editor', 'viewer', 'technician']
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -20,7 +20,10 @@ const corsHeaders = {
 }
 
 function reply(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 }
 
 Deno.serve(async (request) => {
@@ -35,7 +38,9 @@ Deno.serve(async (request) => {
   if (!authorization) return reply(401, { error: 'Inicia sesión para invitar' })
 
   // 1. Identidad real, tomada del token (nunca del body).
-  const asCaller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } })
+  const asCaller = createClient(url, anonKey, {
+    global: { headers: { Authorization: authorization } },
+  })
   const { data: caller } = await asCaller.auth.getUser()
   if (!caller.user) return reply(401, { error: 'Sesión no válida' })
 
@@ -57,13 +62,18 @@ Deno.serve(async (request) => {
     .eq('tenant_id', tenantId)
     .eq('user_id', caller.user.id)
     .maybeSingle()
-  if (!mine || !['owner', 'admin'].includes(mine.role)) return reply(403, { error: 'No tienes permiso para invitar' })
-  if (role === 'admin' && mine.role !== 'owner') return reply(403, { error: 'Solo el propietario puede nombrar administradores' })
+  if (!mine || !['owner', 'admin'].includes(mine.role))
+    return reply(403, { error: 'No tienes permiso para invitar' })
+  if (role === 'admin' && mine.role !== 'owner')
+    return reply(403, { error: 'Solo el propietario puede nombrar administradores' })
 
   // 3b. Plan: antes de enviar ningún correo, comprobar que caben más personas.
   const [{ data: tenant }, { count: members }] = await Promise.all([
     admin.from('tenants').select('plan').eq('id', tenantId).maybeSingle(),
-    admin.from('memberships').select('user_id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    admin
+      .from('memberships')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
   ])
   const { data: limit } = await admin.rpc('plan_member_limit', { p_plan: tenant?.plan ?? 'trial' })
   if (typeof limit === 'number' && (members ?? 0) >= limit) {
@@ -78,7 +88,11 @@ Deno.serve(async (request) => {
   let userId = invite.data.user?.id
   let status: 'invited' | 'added' = 'invited'
   if (invite.error || !userId) {
-    const { data: existing } = await admin.from('profiles').select('id').eq('email', email).maybeSingle()
+    const { data: existing } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
     if (!existing) return reply(502, { error: 'No se pudo enviar la invitación' })
     userId = existing.id
     status = 'added'
@@ -86,7 +100,10 @@ Deno.serve(async (request) => {
 
   const { error } = await admin
     .from('memberships')
-    .upsert({ tenant_id: tenantId, user_id: userId, role, invited_by: caller.user.id }, { onConflict: 'tenant_id,user_id', ignoreDuplicates: true })
+    .upsert(
+      { tenant_id: tenantId, user_id: userId, role, invited_by: caller.user.id },
+      { onConflict: 'tenant_id,user_id', ignoreDuplicates: true },
+    )
   if (error?.code === 'P0403') return reply(409, { error: 'plan_limit' })
   if (error) return reply(500, { error: 'No se pudo añadir a la persona al equipo' })
 

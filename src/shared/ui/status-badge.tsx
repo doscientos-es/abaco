@@ -2,9 +2,12 @@ import { Badge } from '@doscientos/ui'
 
 import type { EstimateStatus } from '../domain/types'
 
-const config: Record<EstimateStatus, { label: string; variant: 'neutral' | 'info' | 'success' | 'danger' }> = {
+const config: Record<
+  EstimateStatus,
+  { label: string; variant: 'neutral' | 'info' | 'success' | 'danger' }
+> = {
   draft: { label: 'Borrador', variant: 'neutral' },
-  sent: { label: 'Enviado', variant: 'info' },
+  sent: { label: 'Publicado', variant: 'info' },
   accepted: { label: 'Aceptado', variant: 'success' },
   rejected: { label: 'Rechazado', variant: 'danger' },
 }

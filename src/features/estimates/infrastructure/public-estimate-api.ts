@@ -7,14 +7,24 @@ import {
   type EstimateRow,
 } from '@/shared/store/supabase-mappers'
 
-export type PublicEstimate = { estimate: Estimate; tenant: Tenant; client: Client | undefined }
+export type PublicEstimate = {
+  estimate: Estimate
+  tenant: Tenant
+  client: Client | undefined
+  publicationSource: 'publication' | 'migration'
+}
 export type PublicAction = 'view' | 'accept' | 'reject'
 export type PublicResult =
   | { ok: true; data: PublicEstimate }
   | { ok: false; error: string; status?: string }
 
 type ErrorContext = { json?: () => Promise<{ error?: string; status?: string }> }
-type Payload = { estimate: EstimateRow; tenant: Record<string, unknown>; client: Record<string, unknown> | null }
+type Payload = {
+  estimate: EstimateRow
+  tenant: Record<string, unknown>
+  client: Record<string, unknown> | null
+  publicationSource: 'publication' | 'migration'
+}
 
 /** Calls the public-estimate Edge Function: the link token is the only credential. */
 export async function callPublicEstimate(
@@ -22,12 +32,21 @@ export async function callPublicEstimate(
   action: PublicAction,
   name?: string,
 ): Promise<PublicResult> {
-  const { data, error } = await createBrowserSupabaseClient().functions.invoke<Payload>('public-estimate', {
-    body: { token, action, ...(name ? { name } : {}) },
-  })
+  const { data, error } = await createBrowserSupabaseClient().functions.invoke<Payload>(
+    'public-estimate',
+    {
+      body: { token, action, ...(name ? { name } : {}) },
+    },
+  )
   if (error || !data) {
-    const body = await (error as { context?: ErrorContext } | null)?.context?.json?.().catch(() => undefined)
-    return { ok: false, error: body?.error ?? 'unknown', ...(body?.status ? { status: body.status } : {}) }
+    const body = await (error as { context?: ErrorContext } | null)?.context
+      ?.json?.()
+      .catch(() => undefined)
+    return {
+      ok: false,
+      error: body?.error ?? 'unknown',
+      ...(body?.status ? { status: body.status } : {}),
+    }
   }
   return {
     ok: true,
@@ -35,6 +54,7 @@ export async function callPublicEstimate(
       estimate: estimateFromRow(data.estimate),
       tenant: tenantFromRow(data.tenant),
       client: data.client ? clientFromRow(data.client) : undefined,
+      publicationSource: data.publicationSource,
     },
   }
 }

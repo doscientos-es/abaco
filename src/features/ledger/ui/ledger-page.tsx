@@ -17,12 +17,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  toast,
 } from '@doscientos/ui'
 import { DotsThree, DownloadSimple, Plus, UploadSimple } from '@phosphor-icons/react'
 import { useState } from 'react'
 
+import { useSession } from '@/features/auth'
 import {
+  buildClientsCsv,
+  buildExpensesCsv,
+  buildInvoicesCsv,
   buildLedgerCsv,
+  buildPaymentsCsv,
   buildQuarterlyVatCsv,
   downloadTextFile,
   ledgerVatSummary,
@@ -34,7 +40,7 @@ import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
 import type { LedgerEntry, LedgerKind } from '@/shared/domain/types'
-import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
+import { newId, updateTenantData, useSaveStatus, useTenantData } from '@/shared/store/store'
 import { ChartCard, Donut, MonthlyBars } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -47,18 +53,25 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 const quarterKey = (date: string) =>
   `${date.slice(0, 4)}-T${Math.ceil(Number(date.slice(5, 7)) / 3)}`
 
+import { loadAccountingExport } from '../application/accounting-export-actions'
+import { hasProtectedLedgerHistory } from '../application/expense-allocation-actions'
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
+import { ExpenseAllocationDialog } from './expense-allocation-dialog'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
 export function LedgerPage() {
+  const session = useSession()
   const { ledger, tenant } = useTenantData()
+  const saveStatus = useSaveStatus()
   const [month, setMonth] = useState('')
   const [query, setQuery] = useState('')
   const [kindFilter, setKindFilter] = useState<'all' | LedgerKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
+  const [toAllocate, setToAllocate] = useState<LedgerEntry | null>(null)
   const [form, setForm] = useState({
     kind: 'expense' as LedgerKind,
     date: today(),
@@ -91,6 +104,38 @@ export function LedgerPage() {
   const months = monthlySeries(ledger)
   const expenseByCategory = categoryTotals(monthEntries, 'expense')
 
+  async function exportDataset(dataset: 'clients' | 'invoices' | 'payments' | 'expenses') {
+    if (
+      exportBusy ||
+      session?.tenantId !== tenant.id ||
+      !['owner', 'admin'].includes(session?.role ?? '')
+    )
+      return
+    setExportBusy(true)
+    try {
+      const data = await loadAccountingExport(tenant.id, dataset)
+      const content = {
+        clients: buildClientsCsv(data.clients),
+        invoices: buildInvoicesCsv(data.invoices),
+        payments: buildPaymentsCsv(data.payments, data.invoices),
+        expenses: buildExpensesCsv(data.expenses),
+      }[dataset]
+      const slug = tenant.name
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+      downloadTextFile(`abaco-${slug || tenant.id}-${dataset}-${today()}.csv`, content)
+      toast.success('CSV preparado con todos los registros autorizados')
+    } catch (error) {
+      toast.error('No se pudo exportar el CSV', {
+        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+      })
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
   function add() {
     const amountCents = parseEuros(form.amount)
     const vatRate = Number(form.vatRate.replace(',', '.'))
@@ -121,6 +166,22 @@ export function LedgerPage() {
     updateTenantData((data) => ({ ...data, ledger: [entry, ...data.ledger] }))
     setForm({ ...form, concept: '', amount: '' })
     setDialogOpen(false)
+  }
+
+  async function confirmDeletion(entry: LedgerEntry) {
+    try {
+      const hasHistory = await hasProtectedLedgerHistory(tenant.id, entry.id, entry.kind)
+      if (hasHistory) {
+        toast.error('Este asiento tiene historial financiero y no se puede eliminar')
+        return
+      }
+    } catch (error) {
+      toast.error('No se pudo comprobar el historial del asiento', {
+        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+      })
+      return
+    }
+    setToDelete(entry)
   }
 
   return (
@@ -159,6 +220,29 @@ export function LedgerPage() {
                 <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
                 <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
               </DropdownMenuItem>
+              {session?.tenantId === tenant.id &&
+              ['owner', 'admin'].includes(session?.role ?? '') ? (
+                <>
+                  {(['clients', 'invoices', 'payments', 'expenses'] as const).map((dataset) => (
+                    <DropdownMenuItem
+                      key={dataset}
+                      isDisabled={exportBusy}
+                      onAction={() => void exportDataset(dataset)}
+                    >
+                      <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
+                      <span className="whitespace-nowrap">
+                        {dataset === 'clients'
+                          ? 'Exportar clientes'
+                          : dataset === 'invoices'
+                            ? 'Exportar facturas'
+                            : dataset === 'payments'
+                              ? 'Exportar cobros'
+                              : 'Exportar gastos'}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenuTrigger>
         </PageHeaderActions>
@@ -441,21 +525,37 @@ export function LedgerPage() {
                 </p>
               </div>
               <p className="shrink-0 text-right font-semibold tabular-nums">
-                {entry.kind === 'income' ? '+' : '−'}
-                {formatEuros(entry.amountCents)}
+                {entry.kind === 'income' && entry.amountCents > 0 ? '+' : '−'}
+                {formatEuros(Math.abs(entry.amountCents))}
                 <span className="text-muted-foreground block text-xs font-normal">
                   Base {formatEuros(ledgerNetCents(entry))}
                 </span>
               </p>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <Badge variant={entry.kind === 'income' ? 'success' : 'danger'}>
-                {entry.kind === 'income' ? 'Ingreso' : 'Gasto'}
+              <Badge
+                variant={entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'}
+              >
+                {entry.kind === 'income'
+                  ? entry.amountCents < 0
+                    ? 'Reembolso'
+                    : 'Ingreso'
+                  : 'Gasto'}
               </Badge>
+              {entry.kind === 'expense' && ['owner', 'admin'].includes(session?.role ?? '') ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isDisabled={saveStatus.state !== 'saved'}
+                  onPress={() => setToAllocate(entry)}
+                >
+                  Imputar
+                </Button>
+              ) : null}
               <Button
                 className="text-destructive"
                 variant="ghost"
-                onPress={() => setToDelete(entry)}
+                onPress={() => void confirmDeletion(entry)}
               >
                 Eliminar
               </Button>
@@ -486,8 +586,14 @@ export function LedgerPage() {
                 <div className="text-muted-foreground text-xs">{entry.category}</div>
               </TableCell>
               <TableCell>
-                <Badge variant={entry.kind === 'income' ? 'success' : 'danger'}>
-                  {entry.kind === 'income' ? 'Ingreso' : 'Gasto'}
+                <Badge
+                  variant={entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'}
+                >
+                  {entry.kind === 'income'
+                    ? entry.amountCents < 0
+                      ? 'Reembolso'
+                      : 'Ingreso'
+                    : 'Gasto'}
                 </Badge>
               </TableCell>
               <TableCell className="text-right tabular-nums">
@@ -497,7 +603,17 @@ export function LedgerPage() {
                 {formatEuros(entry.amountCents)}
               </TableCell>
               <TableCell className="text-right">
-                <Button size="sm" variant="destructive" onPress={() => setToDelete(entry)}>
+                {entry.kind === 'expense' && ['owner', 'admin'].includes(session?.role ?? '') ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    isDisabled={saveStatus.state !== 'saved'}
+                    onPress={() => setToAllocate(entry)}
+                  >
+                    Imputar
+                  </Button>
+                ) : null}{' '}
+                <Button size="sm" variant="destructive" onPress={() => void confirmDeletion(entry)}>
                   Eliminar
                 </Button>
               </TableCell>
@@ -506,6 +622,8 @@ export function LedgerPage() {
         </TableBody>
       </Table>
       <TablePagination controller={pager} noun="apuntes" />
+
+      <ExpenseAllocationDialog entry={toAllocate} onClose={() => setToAllocate(null)} />
 
       <ConfirmDialog
         open={toDelete !== null}

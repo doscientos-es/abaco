@@ -44,8 +44,8 @@ export function PageError({ reset }: { reset?: () => void }) {
       <ErrorStateIcon className="size-8" />
       <ErrorStateTitle>Algo no ha ido bien</ErrorStateTitle>
       <ErrorStateDescription>
-        No hemos podido mostrar esta pantalla. Tus datos están a salvo. Prueba a intentarlo de
-        nuevo o vuelve al inicio.
+        No hemos podido mostrar esta pantalla. Tus datos están a salvo. Prueba a intentarlo de nuevo
+        o vuelve al inicio.
       </ErrorStateDescription>
       <ErrorStateActions>
         {reset ? <Button onPress={reset}>Intentarlo de nuevo</Button> : null}
@@ -90,7 +90,7 @@ export function PageNotFound({
 }: {
   title?: string
   description?: string
-  backTo?: '/' | '/presupuestos' | '/clientes' | '/facturas'
+  backTo?: '/' | '/presupuestos' | '/clientes' | '/facturas' | '/trabajos'
   backLabel?: string
 }) {
   return (
@@ -98,7 +98,10 @@ export function PageNotFound({
       <DataViewStateTitle>{title}</DataViewStateTitle>
       <DataViewStateDescription>{description}</DataViewStateDescription>
       <DataViewStateActions>
-        <Link to={backTo} className="text-primary text-sm font-medium underline-offset-4 hover:underline">
+        <Link
+          to={backTo}
+          className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+        >
           {backLabel}
         </Link>
       </DataViewStateActions>

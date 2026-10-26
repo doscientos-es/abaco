@@ -34,6 +34,7 @@ import { createEstimate } from '../application/estimate-actions'
 
 export function EstimateListPage() {
   const { estimates, clients } = useTenantData()
+  const activeClients = clients.filter((client) => !client.archivedAt)
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | EstimateStatus>('all')
   const [query, setQuery] = useState('')
@@ -53,7 +54,7 @@ export function EstimateListPage() {
   const [creatingClient, setCreatingClient] = useState(false)
 
   function startNew() {
-    setNewClientId(clients[0]?.id ?? '')
+    setNewClientId(activeClients[0]?.id ?? '')
     setNewTitle('')
     setCreating(true)
   }
@@ -217,7 +218,7 @@ export function EstimateListPage() {
         submitDisabled={!newClientId}
         onSubmit={confirmNew}
       >
-        {clients.length === 0 ? (
+        {activeClients.length === 0 ? (
           <div className="border-border bg-muted/40 flex flex-col items-start gap-2 rounded-lg border border-dashed p-4 sm:col-span-2">
             <p className="text-sm font-medium">Todavía no tienes ningún cliente</p>
             <p className="text-muted-foreground text-xs">
@@ -234,7 +235,7 @@ export function EstimateListPage() {
               value={newClientId}
               options={[
                 ...(newClientId ? [] : [{ value: '', label: 'Selecciona un cliente' }]),
-                ...clients.map((c) => ({ value: c.id, label: c.name })),
+                ...activeClients.map((c) => ({ value: c.id, label: c.name })),
               ]}
               onChange={setNewClientId}
             />

@@ -44,12 +44,15 @@ const invoice: Invoice = {
   number: 'F-2026-002',
   estimateId: 'test-estimate',
   milestoneId: 'test-milestone',
+  workExtraId: null,
   clientId: client.id,
   concept: 'Reforma de habitación · Inicio',
   totalCents: 24200,
   paidCents: 0,
   vatRate: 21,
   status: 'issued',
+  documentStatus: 'issued',
+  emailAcceptedAt: null,
   issuedAt: '2026-10-13',
   dueDate: '2026-10-28',
 }
@@ -99,6 +102,82 @@ describe('InvoiceDocument', () => {
       expect(html).toContain(value)
     }
     expect(html).toContain('Indica F-2026-002 como concepto')
+  })
+
+  it('shows the accepted extra and work reference without inventing an estimate', () => {
+    const html = render(tenant, {
+      ...invoice,
+      estimateId: null,
+      milestoneId: null,
+      workExtraId: 'approved-extra',
+      snapshot: {
+        source: 'issuance',
+        capturedAt: '2026-10-22T09:00:00Z',
+        issuer: {
+          name: tenant.name,
+          legalName: tenant.legalName ?? '',
+          taxId: tenant.taxId ?? '',
+          email: tenant.email ?? '',
+          phone: tenant.phone ?? '',
+          address: tenant.address ?? '',
+          postalCode: tenant.postalCode ?? '',
+          city: tenant.city ?? '',
+          website: tenant.website ?? '',
+          iban: tenant.iban ?? '',
+          brandColor: tenant.brandColor ?? '',
+          logoUrl: tenant.logoUrl ?? '',
+          documentFooter: tenant.documentFooter ?? '',
+        },
+        client,
+        estimateNumber: '',
+        workTitle: 'Instalación de piscina',
+        extraDescription: 'Sustituir la bomba acordada con el cliente',
+      },
+    })
+
+    expect(html).toContain('Trabajo de referencia')
+    expect(html).toContain('Instalación de piscina')
+    expect(html).toContain('Sustituir la bomba acordada con el cliente')
+    expect(html).not.toContain('Presupuesto de referencia')
+  })
+
+  it('identifies the frozen contract period on a recurring invoice', () => {
+    const html = render(tenant, {
+      ...invoice,
+      estimateId: null,
+      milestoneId: null,
+      contractPeriodId: 'period-1',
+      concept: 'Mantenimiento de piscina · septiembre',
+      snapshot: {
+        source: 'issuance',
+        capturedAt: '2026-10-25T12:00:00Z',
+        issuer: {
+          name: tenant.name,
+          legalName: tenant.legalName ?? '',
+          taxId: tenant.taxId,
+          email: tenant.email,
+          phone: tenant.phone,
+          address: tenant.address ?? '',
+          postalCode: tenant.postalCode ?? '',
+          city: tenant.city ?? '',
+          website: tenant.website ?? '',
+          iban: tenant.iban ?? '',
+          brandColor: tenant.brandColor ?? '',
+          logoUrl: tenant.logoUrl ?? '',
+          documentFooter: tenant.documentFooter ?? '',
+        },
+        client,
+        estimateNumber: '',
+        contractTitle: 'Mantenimiento de piscina',
+        contractPeriodStart: '2026-09-01',
+        contractPeriodEnd: '2026-09-30',
+      },
+    })
+    expect(html).toContain('Contrato de referencia')
+    expect(html).toContain('Mantenimiento de piscina')
+    expect(html).toContain('1/9/2026')
+    expect(html).toContain('30/9/2026')
+    expect(html).not.toContain('Presupuesto de referencia')
   })
 
   it('keeps the actual milestone amount and tax breakdown, not the full estimate total', () => {
@@ -175,5 +254,47 @@ describe('InvoiceDocument', () => {
 
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
     expect(html).not.toContain('<script>')
+  })
+
+  it('uses the captured parties and reference after their master records change', () => {
+    const captured: Invoice = {
+      ...invoice,
+      snapshot: {
+        source: 'issuance',
+        capturedAt: '2026-10-13T09:00:00Z',
+        issuer: {
+          name: 'Empresa original',
+          legalName: '',
+          taxId: 'B11111111',
+          email: '',
+          phone: '',
+          address: '',
+          postalCode: '',
+          city: '',
+          website: '',
+          iban: '',
+          brandColor: '',
+          logoUrl: '',
+          documentFooter: '',
+        },
+        client: { name: 'Cliente original', taxId: '11111111A', address: '', email: '' },
+        estimateNumber: 'P-2026-001',
+      },
+    }
+    const html = renderToStaticMarkup(
+      <InvoiceDocument
+        invoice={captured}
+        tenant={{ ...tenant, name: 'Empresa modificada' }}
+        client={{ ...client, name: 'Cliente modificado' }}
+        estimateNumber="P-2026-999"
+      />,
+    )
+
+    expect(html).toContain('Empresa original')
+    expect(html).toContain('Cliente original')
+    expect(html).toContain('P-2026-001')
+    expect(html).not.toContain('Empresa modificada')
+    expect(html).not.toContain('Cliente modificado')
+    expect(html).not.toContain('P-2026-999')
   })
 })

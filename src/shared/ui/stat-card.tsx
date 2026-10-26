@@ -37,15 +37,21 @@ export function StatCard({
   className?: string
 }) {
   return (
-    <div className={`border-border bg-card flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 ${className}`}>
+    <div
+      className={`border-border bg-card flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 ${className}`}
+    >
       {icon ? (
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg [&>svg]:size-4 ${iconTone[tone]}`}>
+        <span
+          className={`flex size-9 shrink-0 items-center justify-center rounded-lg [&>svg]:size-4 ${iconTone[tone]}`}
+        >
           {icon}
         </span>
       ) : null}
       <div className="min-w-0 flex-1">
         <p className="text-muted-foreground truncate text-xs">{label}</p>
-        <p className="truncate text-xl leading-tight font-semibold tracking-tight tabular-nums">{value}</p>
+        <p className="truncate text-xl leading-tight font-semibold tracking-tight tabular-nums">
+          {value}
+        </p>
         {hint ? <p className="text-muted-foreground truncate text-xs">{hint}</p> : null}
       </div>
       {trend && trend.length > 1 ? <Sparkline values={trend} className={lineTone[tone]} /> : null}
@@ -61,7 +67,14 @@ function Sparkline({ values, className }: { values: number[]; className: string 
     .join(' ')
   return (
     <svg viewBox="0 0 60 24" className="hidden h-7 w-16 shrink-0 sm:block" aria-hidden="true">
-      <polyline points={points} fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} />
+      <polyline
+        points={points}
+        fill="none"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      />
     </svg>
   )
 }

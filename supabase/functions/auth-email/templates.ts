@@ -1,4 +1,11 @@
-export type EmailKind = 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email' | 'reauthentication'
+export type EmailKind =
+  | 'signup'
+  | 'invite'
+  | 'magiclink'
+  | 'recovery'
+  | 'email_change'
+  | 'email'
+  | 'reauthentication'
 
 const brand = { name: 'Ábaco', maker: 'Doscientos', makerUrl: 'https://doscientos.es' }
 
@@ -8,14 +15,17 @@ const templates: Record<EmailKind, Template> = {
   recovery: {
     subject: 'Restablece tu contraseña',
     title: 'Restablece tu contraseña',
-    intro: 'Hemos recibido una petición para cambiar tu contraseña. Pulsa el botón para elegir una nueva.',
+    intro:
+      'Hemos recibido una petición para cambiar tu contraseña. Pulsa el botón para elegir una nueva.',
     cta: 'Elegir nueva contraseña',
-    outro: 'Si no lo has pedido tú, ignora este correo: tu contraseña no cambiará. El enlace caduca en 1 hora.',
+    outro:
+      'Si no lo has pedido tú, ignora este correo: tu contraseña no cambiará. El enlace caduca en 1 hora.',
   },
   invite: {
     subject: 'Te han invitado a Ábaco',
     title: 'Te han invitado a Ábaco',
-    intro: 'Te han dado acceso a Ábaco, la aplicación de presupuestos de tu empresa. Pulsa el botón para crear tu contraseña y entrar.',
+    intro:
+      'Te han dado acceso a Ábaco, la aplicación de presupuestos de tu empresa. Pulsa el botón para crear tu contraseña y entrar.',
     cta: 'Aceptar invitación',
     outro: 'Si no esperabas esta invitación, puedes ignorar este correo.',
   },
@@ -57,7 +67,10 @@ const templates: Record<EmailKind, Template> = {
 }
 
 const escapeHtml = (value: string) =>
-  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
+  value.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
+  )
 
 export function renderEmail(kind: EmailKind, link: string, code: string) {
   const t = templates[kind] ?? templates.email

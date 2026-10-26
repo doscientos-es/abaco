@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Role } from '../domain/permissions'
 import { needsWelcome, welcomePendingField } from '../domain/welcome'
-
 import { signUp } from './auth-actions'
 import { completeWelcome, welcomeRedirect } from './welcome-actions'
 
 const { updateUser, signup, rpc } = vi.hoisted(() => ({
-  updateUser: vi.fn(), signup: vi.fn(), rpc: vi.fn(),
+  updateUser: vi.fn(),
+  signup: vi.fn(),
+  rpc: vi.fn(),
 }))
 vi.mock('@/shared/lib/supabase/client', () => ({
   createBrowserSupabaseClient: () => ({ auth: { updateUser, signUp: signup }, rpc }),
@@ -21,9 +22,12 @@ describe('welcome eligibility and routing', () => {
     expect(needsWelcome('owner', { [welcomePendingField]: 'true' })).toBe(false)
   })
 
-  it.each<Role | null>(['admin', 'editor', 'viewer', null])('does not gate a %s account', (role) => {
-    expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
-  })
+  it.each<Role | null>(['admin', 'editor', 'viewer', null])(
+    'does not gate a %s account',
+    (role) => {
+      expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
+    },
+  )
 
   it('routes a pending owner to welcome without a redirect loop', () => {
     expect(welcomeRedirect(true, '/')).toBe('/bienvenida')
@@ -43,20 +47,32 @@ describe('welcome eligibility and routing', () => {
 })
 
 describe('welcome persistence', () => {
-  beforeEach(() => { vi.resetAllMocks() })
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
 
   it('marks a new signup for welcome even when email confirmation is required', async () => {
     signup.mockResolvedValue({ data: { session: null }, error: null })
 
-    await expect(signUp({
-      fullName: 'Demo owner', companyName: 'Demo company',
-      email: 'owner@example.test', password: 'test-only-password',
-    })).resolves.toEqual({ ok: true, needsConfirmation: true })
-    expect(signup).toHaveBeenCalledWith(expect.objectContaining({
-      options: { data: {
-        full_name: 'Demo owner', company_name: 'Demo company', [welcomePendingField]: true,
-      } },
-    }))
+    await expect(
+      signUp({
+        fullName: 'Demo owner',
+        companyName: 'Demo company',
+        email: 'owner@example.test',
+        password: 'test-only-password',
+      }),
+    ).resolves.toEqual({ ok: true, needsConfirmation: true })
+    expect(signup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: {
+          data: {
+            full_name: 'Demo owner',
+            company_name: 'Demo company',
+            [welcomePendingField]: true,
+          },
+        },
+      }),
+    )
   })
 
   it('completes welcome without starting checkout or changing trial dates', async () => {
@@ -71,7 +87,8 @@ describe('welcome persistence', () => {
     updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
 
     await expect(completeWelcome()).resolves.toEqual({
-      ok: false, message: 'No se pudo guardar tu elección. Inténtalo de nuevo.',
+      ok: false,
+      message: 'No se pudo guardar tu elección. Inténtalo de nuevo.',
     })
   })
 

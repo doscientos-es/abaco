@@ -6,16 +6,26 @@ import type { ActionResult } from '@/features/auth'
 
 import { WelcomePage } from './welcome-page'
 
-const { state, button, query, complete, fetchQuery, navigate, setBusy, setError } = vi.hoisted(() => ({
-  state: vi.fn(), button: vi.fn(), query: vi.fn(), complete: vi.fn(), fetchQuery: vi.fn(),
-  navigate: vi.fn(), setBusy: vi.fn(), setError: vi.fn(),
-}))
+const { state, button, query, complete, fetchQuery, navigate, setBusy, setError } = vi.hoisted(
+  () => ({
+    state: vi.fn(),
+    button: vi.fn(),
+    query: vi.fn(),
+    complete: vi.fn(),
+    fetchQuery: vi.fn(),
+    navigate: vi.fn(),
+    setBusy: vi.fn(),
+    setError: vi.fn(),
+  }),
+)
 vi.mock('react', async (importOriginal) => ({
-  ...await importOriginal<typeof React>(), useState: state,
+  ...(await importOriginal<typeof React>()),
+  useState: state,
 }))
 vi.mock('@doscientos/ui', () => ({ Button: button }))
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: query, useQueryClient: () => ({ fetchQuery }),
+  useQuery: query,
+  useQueryClient: () => ({ fetchQuery }),
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 vi.mock('@/features/billing', () => ({
@@ -26,10 +36,23 @@ vi.mock('@/features/auth', () => ({
   sessionQuery: { queryKey: ['auth', 'session'] },
   useSession: () => ({ tenantId: 'company-1', role: 'owner', needsWelcome: true }),
   completeWelcome: complete,
-  AuthLayout: ({ title, description, children }: {
-    title: string; description: string; children: React.ReactNode;
-  }) => <main><h1>{title}</h1><p>{description}</p>{children}</main>,
-  FormError: ({ message }: { message: string | null }) => message ? <p role="alert">{message}</p> : null,
+  AuthLayout: ({
+    title,
+    description,
+    children,
+  }: {
+    title: string
+    description: string
+    children: React.ReactNode
+  }) => (
+    <main>
+      <h1>{title}</h1>
+      <p>{description}</p>
+      {children}
+    </main>
+  ),
+  FormError: ({ message }: { message: string | null }) =>
+    message ? <p role="alert">{message}</p> : null,
 }))
 
 describe('WelcomePage', () => {
@@ -50,16 +73,26 @@ describe('WelcomePage', () => {
     vi.resetAllMocks()
     busy = null
     error = null
-    setBusy.mockImplementation((value: typeof busy) => { busy = value })
-    setError.mockImplementation((value: string | null) => { error = value })
-    state.mockImplementation(() => stateCalls++ === 0 ? [busy, setBusy] : [error, setError])
-    button.mockImplementation(({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
-      <button disabled={isDisabled}>{children}</button>
-    ))
-    query.mockReturnValue({ data: {
-      status: 'trialing', canWrite: true, trialDaysLeft: 14,
-      trialEndsAt: new Date('2026-11-01T12:00:00Z'),
-    } })
+    setBusy.mockImplementation((value: typeof busy) => {
+      busy = value
+    })
+    setError.mockImplementation((value: string | null) => {
+      error = value
+    })
+    state.mockImplementation(() => (stateCalls++ === 0 ? [busy, setBusy] : [error, setError]))
+    button.mockImplementation(
+      ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
+        <button disabled={isDisabled}>{children}</button>
+      ),
+    )
+    query.mockReturnValue({
+      data: {
+        status: 'trialing',
+        canWrite: true,
+        trialDaysLeft: 14,
+        trialEndsAt: new Date('2026-11-01T12:00:00Z'),
+      },
+    })
     complete.mockResolvedValue({ ok: true })
     fetchQuery.mockResolvedValue({ needsWelcome: false })
     navigate.mockResolvedValue(undefined)
@@ -84,8 +117,12 @@ describe('WelcomePage', () => {
     await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
     expect(complete).toHaveBeenCalledOnce()
     expect(fetchQuery).toHaveBeenCalledWith({ queryKey: ['auth', 'session'], staleTime: 0 })
-    expect(complete.mock.invocationCallOrder[0]).toBeLessThan(fetchQuery.mock.invocationCallOrder[0] ?? 0)
-    expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(navigate.mock.invocationCallOrder[0] ?? 0)
+    expect(complete.mock.invocationCallOrder[0]).toBeLessThan(
+      fetchQuery.mock.invocationCallOrder[0] ?? 0,
+    )
+    expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      navigate.mock.invocationCallOrder[0] ?? 0,
+    )
     expect(busy).toBeNull()
   })
 
@@ -93,16 +130,24 @@ describe('WelcomePage', () => {
     render()
     choose('Elegir un plan ahora')
 
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({
-      to: '/ajustes', search: { tab: 'plan' }, replace: true,
-    }))
+    await vi.waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        to: '/ajustes',
+        search: { tab: 'plan' },
+        replace: true,
+      }),
+    )
     expect(complete).toHaveBeenCalledOnce()
     expect(busy).toBeNull()
   })
 
   it('disables both choices while saving and re-enables them on failure', async () => {
     let finish: (result: ActionResult) => void = () => {}
-    complete.mockReturnValue(new Promise<ActionResult>((resolve) => { finish = resolve }))
+    complete.mockReturnValue(
+      new Promise<ActionResult>((resolve) => {
+        finish = resolve
+      }),
+    )
     render()
     choose('Empezar 14 días gratis')
     button.mockClear()
@@ -130,19 +175,27 @@ describe('WelcomePage', () => {
   })
 
   it('uses the actual trial time remaining instead of restarting fourteen days', () => {
-    query.mockReturnValue({ data: {
-      status: 'trialing', canWrite: true, trialDaysLeft: 7,
-      trialEndsAt: new Date('2026-11-01T12:00:00Z'),
-    } })
+    query.mockReturnValue({
+      data: {
+        status: 'trialing',
+        canWrite: true,
+        trialDaysLeft: 7,
+        trialEndsAt: new Date('2026-11-01T12:00:00Z'),
+      },
+    })
 
     expect(render()).toContain('Empezar 7 días gratis')
   })
 
   it('does not promise another free trial after the existing one has expired', () => {
-    query.mockReturnValue({ data: {
-      status: 'trialing', canWrite: false, trialDaysLeft: 0,
-      trialEndsAt: new Date('2026-10-01T12:00:00Z'),
-    } })
+    query.mockReturnValue({
+      data: {
+        status: 'trialing',
+        canWrite: false,
+        trialDaysLeft: 0,
+        trialEndsAt: new Date('2026-10-01T12:00:00Z'),
+      },
+    })
 
     const html = render()
     expect(html).toContain('Continuar en modo lectura')

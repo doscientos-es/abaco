@@ -25,12 +25,19 @@ export function InvoiceDocument({
   estimateNumber?: string | undefined
   documentRef?: Ref<HTMLElement>
 }) {
+  const issuer = invoice.snapshot?.issuer ?? tenant
+  const recipient = invoice.snapshot?.client ?? client
+  const reference = invoice.contractPeriodId
+    ? invoice.snapshot?.contractTitle
+    : invoice.workExtraId
+      ? invoice.snapshot?.workTitle
+      : (invoice.snapshot?.estimateNumber ?? estimateNumber)
   const baseCents = Math.round(invoice.totalCents / (1 + invoice.vatRate / 100))
   const vatCents = invoice.totalCents - baseCents
-  const locality = [tenant.postalCode, tenant.city].filter(Boolean).join(' ')
-  const contact = [tenant.phone, tenant.email].filter(Boolean).join(' · ')
-  const brandColor = /^#[0-9a-f]{6}$/i.test(tenant.brandColor?.trim() ?? '')
-    ? tenant.brandColor?.trim()
+  const locality = [issuer.postalCode, issuer.city].filter(Boolean).join(' ')
+  const contact = [issuer.phone, issuer.email].filter(Boolean).join(' · ')
+  const brandColor = /^#[0-9a-f]{6}$/i.test(issuer.brandColor?.trim() ?? '')
+    ? issuer.brandColor?.trim()
     : '#2a4227'
   const style = { '--invoice-brand': brandColor } as CSSProperties
 
@@ -43,16 +50,16 @@ export function InvoiceDocument({
     >
       <header className="invoice-sheet-header">
         <div className="invoice-sheet-identity">
-          {tenant.logoUrl?.trim() ? (
-            <img src={tenant.logoUrl.trim()} alt={tenant.name} className="invoice-sheet-logo" />
+          {issuer.logoUrl?.trim() ? (
+            <img src={issuer.logoUrl.trim()} alt={issuer.name} className="invoice-sheet-logo" />
           ) : null}
-          <h2 className="invoice-sheet-company">{tenant.name}</h2>
-          {tenant.legalName && tenant.legalName !== tenant.name ? <p>{tenant.legalName}</p> : null}
-          {tenant.taxId ? <p>NIF / CIF: {tenant.taxId}</p> : null}
-          {tenant.address ? <p className="invoice-sheet-address">{tenant.address}</p> : null}
+          <h2 className="invoice-sheet-company">{issuer.name}</h2>
+          {issuer.legalName && issuer.legalName !== issuer.name ? <p>{issuer.legalName}</p> : null}
+          {issuer.taxId ? <p>NIF / CIF: {issuer.taxId}</p> : null}
+          {issuer.address ? <p className="invoice-sheet-address">{issuer.address}</p> : null}
           {locality ? <p>{locality}</p> : null}
           {contact ? <p className="invoice-sheet-contact">{contact}</p> : null}
-          {tenant.website ? <p>{tenant.website}</p> : null}
+          {issuer.website ? <p>{issuer.website}</p> : null}
         </div>
         <div className="invoice-sheet-reference">
           <p className="invoice-sheet-label">Factura</p>
@@ -73,15 +80,29 @@ export function InvoiceDocument({
       <section aria-label="Datos del cliente" className="invoice-sheet-client">
         <div>
           <p className="invoice-sheet-label">Facturar a</p>
-          <h3>{client?.name ?? 'Sin cliente'}</h3>
-          {client?.taxId ? <p>NIF / CIF: {client.taxId}</p> : null}
-          {client?.address ? <p className="invoice-sheet-address">{client.address}</p> : null}
-          {client?.email ? <p>{client.email}</p> : null}
+          <h3>{recipient?.name ?? 'Sin cliente'}</h3>
+          {recipient?.taxId ? <p>NIF / CIF: {recipient.taxId}</p> : null}
+          {recipient?.address ? <p className="invoice-sheet-address">{recipient.address}</p> : null}
+          {recipient?.email ? <p>{recipient.email}</p> : null}
         </div>
-        {estimateNumber ? (
+        {reference ? (
           <div className="invoice-sheet-origin">
-            <p className="invoice-sheet-label">Presupuesto de referencia</p>
-            <p>{estimateNumber}</p>
+            <p className="invoice-sheet-label">
+              {invoice.contractPeriodId
+                ? 'Contrato de referencia'
+                : invoice.workExtraId
+                  ? 'Trabajo de referencia'
+                  : 'Presupuesto de referencia'}
+            </p>
+            <p>{reference}</p>
+            {invoice.contractPeriodId &&
+            invoice.snapshot?.contractPeriodStart &&
+            invoice.snapshot.contractPeriodEnd ? (
+              <p>
+                {dateLabel(invoice.snapshot.contractPeriodStart)} –{' '}
+                {dateLabel(invoice.snapshot.contractPeriodEnd)}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -101,7 +122,9 @@ export function InvoiceDocument({
           </thead>
           <tbody>
             <tr>
-              <td className="invoice-sheet-concept">{invoice.concept}</td>
+              <td className="invoice-sheet-concept">
+                {invoice.snapshot?.extraDescription ?? invoice.concept}
+              </td>
               <td className="invoice-sheet-rate">{invoice.vatRate}%</td>
               <td className="invoice-sheet-amount">{formatEuros(baseCents)}</td>
             </tr>
@@ -127,11 +150,11 @@ export function InvoiceDocument({
       </section>
 
       <footer className="invoice-sheet-footer">
-        {tenant.iban ? (
+        {issuer.iban ? (
           <section aria-label="Forma de pago" className="invoice-sheet-payment">
             <p className="invoice-sheet-label">Forma de pago</p>
             <h3>Transferencia bancaria</h3>
-            <p className="invoice-sheet-iban">IBAN: {tenant.iban}</p>
+            <p className="invoice-sheet-iban">IBAN: {issuer.iban}</p>
             {invoice.status !== 'paid' ? (
               <>
                 <p>Indica {invoice.number} como concepto de la transferencia.</p>
@@ -140,8 +163,8 @@ export function InvoiceDocument({
             ) : null}
           </section>
         ) : null}
-        {tenant.documentFooter ? (
-          <p className="invoice-sheet-legal">{tenant.documentFooter}</p>
+        {issuer.documentFooter ? (
+          <p className="invoice-sheet-legal">{issuer.documentFooter}</p>
         ) : null}
       </footer>
     </article>

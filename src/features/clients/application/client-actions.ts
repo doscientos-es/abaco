@@ -1,7 +1,7 @@
 import type { Client } from '@/shared/domain/types'
 import { newId, updateTenantData } from '@/shared/store/store'
 
-export type ClientInput = Omit<Client, 'id' | 'tenantId'>
+export type ClientInput = Omit<Client, 'id' | 'tenantId' | 'archivedAt'>
 
 /** Adds a client to the active company and returns its id. */
 export function createClient(input: ClientInput): string {

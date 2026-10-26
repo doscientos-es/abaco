@@ -18,7 +18,8 @@ const DAY = 24 * 60 * 60 * 1000
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const euros = (cents: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+const euros = (cents: number) =>
+  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
 const isoDay = (date: Date) => date.toISOString().slice(0, 10)
 
 function toHtml(text: string, color: string) {
@@ -35,7 +36,8 @@ Deno.serve(async (request) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const cronSecret = Deno.env.get('CRON_SECRET')
   if (!url || !serviceKey || !cronSecret) return new Response('Sin configurar', { status: 500 })
-  if (request.headers.get('x-cron-secret') !== cronSecret) return new Response('No autorizado', { status: 401 })
+  if (request.headers.get('x-cron-secret') !== cronSecret)
+    return new Response('No autorizado', { status: 401 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const now = new Date()
@@ -65,7 +67,13 @@ Deno.serve(async (request) => {
         .maybeSingle()
       const to = String(client?.email ?? '').trim()
       if (!emailPattern.test(to)) return false
-      const text = [`Hola ${client?.name ?? ''},`, '', ...body(String(client?.name ?? '')), '', signature].join('\n')
+      const text = [
+        `Hola ${client?.name ?? ''},`,
+        '',
+        ...body(String(client?.name ?? '')),
+        '',
+        signature,
+      ].join('\n')
       try {
         await sendEmail({
           to,
@@ -79,7 +87,10 @@ Deno.serve(async (request) => {
         return true
       } catch (error) {
         // eslint-disable-next-line no-console -- único rastro del fallo de Resend en los logs de la función
-        console.error('send-reminders: fallo de Resend', error instanceof Error ? error.message : 'desconocido')
+        console.error(
+          'send-reminders: fallo de Resend',
+          error instanceof Error ? error.message : 'desconocido',
+        )
         failed++
         return false
       }
@@ -88,7 +99,9 @@ Deno.serve(async (request) => {
     // Facturas vencidas: la primera al pasar el vencimiento y luego cada 7 días.
     const { data: invoices } = await admin
       .from('invoices')
-      .select('id, client_id, number, concept, total_cents, paid_cents, due_date, reminder_count, last_reminder_at')
+      .select(
+        'id, client_id, number, concept, total_cents, paid_cents, due_date, reminder_count, last_reminder_at',
+      )
       .eq('tenant_id', tenant.id)
       .in('status', ['issued', 'sent'])
       .lt('due_date', today)
@@ -98,15 +111,22 @@ Deno.serve(async (request) => {
       if (owed <= 0) continue
       const last = invoice.last_reminder_at ? new Date(invoice.last_reminder_at).getTime() : 0
       if (now.getTime() - last < 7 * DAY) continue
-      const ok = await deliver(invoice.client_id, `Recordatorio: factura ${invoice.number} · ${company}`, () => [
-        `Te recordamos que la factura ${invoice.number} por «${invoice.concept}» venció el ${invoice.due_date} y aún figura pendiente.`,
-        `Importe pendiente: ${euros(owed)}.`,
-        'Si ya la has pagado, ignora este mensaje. Gracias.',
-      ])
+      const ok = await deliver(
+        invoice.client_id,
+        `Recordatorio: factura ${invoice.number} · ${company}`,
+        () => [
+          `Te recordamos que la factura ${invoice.number} por «${invoice.concept}» venció el ${invoice.due_date} y aún figura pendiente.`,
+          `Importe pendiente: ${euros(owed)}.`,
+          'Si ya la has pagado, ignora este mensaje. Gracias.',
+        ],
+      )
       if (ok) {
         await admin
           .from('invoices')
-          .update({ reminder_count: Number(invoice.reminder_count) + 1, last_reminder_at: now.toISOString() })
+          .update({
+            reminder_count: Number(invoice.reminder_count) + 1,
+            last_reminder_at: now.toISOString(),
+          })
           .eq('id', invoice.id)
       }
     }
@@ -120,16 +140,24 @@ Deno.serve(async (request) => {
       .eq('tenant_id', tenant.id)
       .eq('status', 'sent')
       .gt('valid_until', soon)
-      .lte('sent_at', followupBefore)
+      .lte('email_sent_at', followupBefore)
       .is('followup_sent_at', null)
     for (const estimate of (waiting ?? []) as Row[]) {
       const link = appUrl && estimate.public_token ? `${appUrl}/p/${estimate.public_token}` : ''
-      const ok = await deliver(estimate.client_id, `¿Pudiste ver el presupuesto ${estimate.number}? · ${company}`, () => [
-        `Hace unos días te enviamos el presupuesto ${estimate.number} para «${estimate.title}».`,
-        'Si tienes cualquier duda o quieres ajustar algo, responde a este correo y lo vemos.',
-        ...(link ? [`Puedes verlo y aceptarlo aquí: ${link}`] : []),
-      ])
-      if (ok) await admin.from('estimates').update({ followup_sent_at: now.toISOString() }).eq('id', estimate.id)
+      const ok = await deliver(
+        estimate.client_id,
+        `¿Pudiste ver el presupuesto ${estimate.number}? · ${company}`,
+        () => [
+          `Hace unos días te enviamos el presupuesto ${estimate.number} para «${estimate.title}».`,
+          'Si tienes cualquier duda o quieres ajustar algo, responde a este correo y lo vemos.',
+          ...(link ? [`Puedes verlo y aceptarlo aquí: ${link}`] : []),
+        ],
+      )
+      if (ok)
+        await admin
+          .from('estimates')
+          .update({ followup_sent_at: now.toISOString() })
+          .eq('id', estimate.id)
     }
 
     // Presupuestos enviados que están a punto de caducar: un solo aviso.
@@ -138,16 +166,25 @@ Deno.serve(async (request) => {
       .select('id, client_id, number, title, valid_until, public_token')
       .eq('tenant_id', tenant.id)
       .eq('status', 'sent')
+      .not('email_sent_at', 'is', null)
       .gte('valid_until', today)
       .lte('valid_until', soon)
       .is('reminder_sent_at', null)
     for (const estimate of (estimates ?? []) as Row[]) {
       const link = appUrl && estimate.public_token ? `${appUrl}/p/${estimate.public_token}` : ''
-      const ok = await deliver(estimate.client_id, `Tu presupuesto ${estimate.number} caduca pronto · ${company}`, () => [
-        `El presupuesto ${estimate.number} para «${estimate.title}» es válido hasta el ${estimate.valid_until}.`,
-        ...(link ? [`Puedes verlo y aceptarlo aquí: ${link}`] : []),
-      ])
-      if (ok) await admin.from('estimates').update({ reminder_sent_at: now.toISOString() }).eq('id', estimate.id)
+      const ok = await deliver(
+        estimate.client_id,
+        `Tu presupuesto ${estimate.number} caduca pronto · ${company}`,
+        () => [
+          `El presupuesto ${estimate.number} para «${estimate.title}» es válido hasta el ${estimate.valid_until}.`,
+          ...(link ? [`Puedes verlo y aceptarlo aquí: ${link}`] : []),
+        ],
+      )
+      if (ok)
+        await admin
+          .from('estimates')
+          .update({ reminder_sent_at: now.toISOString() })
+          .eq('id', estimate.id)
     }
   }
   return Response.json({ sent, failed })

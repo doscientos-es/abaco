@@ -51,7 +51,9 @@ export function DashboardPage() {
   const byStatus = (Object.keys(statusLabels) as EstimateStatus[]).map((status) => ({
     label: statusLabels[status],
     tone: statusTones[status],
-    value: estimates.filter((e) => e.status === status).reduce((sum, e) => sum + estimateTotalCents(e), 0),
+    value: estimates
+      .filter((e) => e.status === status)
+      .reduce((sum, e) => sum + estimateTotalCents(e), 0),
   }))
 
   return (
@@ -114,7 +116,11 @@ export function DashboardPage() {
             emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
           />
         </ChartCard>
-        <ChartCard className="lg:col-span-2" title="Presupuestos por estado" description="Importe total de cada grupo.">
+        <ChartCard
+          className="lg:col-span-2"
+          title="Presupuestos por estado"
+          description="Importe total de cada grupo."
+        >
           <Donut
             data={byStatus}
             centerLabel="Total"
@@ -166,8 +172,16 @@ export function DashboardPage() {
                     </span>
                   </span>
                   <span className="shrink-0 text-right tabular-nums">
-                    <span className="block font-medium">{formatEuros(invoice.totalCents - invoice.paidCents)}</span>
-                    <span className={late ? 'text-destructive block text-xs font-medium' : 'text-muted-foreground block text-xs'}>
+                    <span className="block font-medium">
+                      {formatEuros(invoice.totalCents - invoice.paidCents)}
+                    </span>
+                    <span
+                      className={
+                        late
+                          ? 'text-destructive block text-xs font-medium'
+                          : 'text-muted-foreground block text-xs'
+                      }
+                    >
                       {late ? `Vencida el ${invoice.dueDate}` : `Vence el ${invoice.dueDate}`}
                     </span>
                   </span>
@@ -199,7 +213,8 @@ export function DashboardPage() {
               <span className="min-w-0">
                 <span className="block truncate font-medium">{estimate.title}</span>
                 <span className="text-muted-foreground block truncate text-xs">
-                  {estimate.number} · {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                  {estimate.number} ·{' '}
+                  {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-4 tabular-nums">
@@ -215,7 +230,10 @@ export function DashboardPage() {
               title="Todavía no has creado presupuestos"
               description="Tus cinco últimos presupuestos aparecerán aquí, con su importe y estado."
               action={
-                <Link to="/presupuestos" className="text-primary underline-offset-4 hover:underline">
+                <Link
+                  to="/presupuestos"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
                   Crear el primero →
                 </Link>
               }

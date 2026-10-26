@@ -28,11 +28,16 @@ const ok: ActionResult = { ok: true }
 function translateAuthError(message: string): string {
   const text = message.toLowerCase()
   if (text.includes('invalid login credentials')) return 'Correo o contraseña incorrectos.'
-  if (text.includes('email not confirmed')) return 'Aún no has confirmado tu correo. Revisa tu bandeja de entrada.'
-  if (text.includes('rate limit') || text.includes('too many')) return 'Demasiados intentos. Espera unos minutos y vuelve a probar.'
-  if (text.includes('same password') || text.includes('different from the old')) return 'Elige una contraseña distinta de la anterior.'
-  if (text.includes('weak') || text.includes('password should')) return 'La contraseña es demasiado débil.'
-  if (text.includes('expired') || text.includes('invalid') || text.includes('otp')) return 'El enlace ha caducado o ya se usó. Pide uno nuevo.'
+  if (text.includes('email not confirmed'))
+    return 'Aún no has confirmado tu correo. Revisa tu bandeja de entrada.'
+  if (text.includes('rate limit') || text.includes('too many'))
+    return 'Demasiados intentos. Espera unos minutos y vuelve a probar.'
+  if (text.includes('same password') || text.includes('different from the old'))
+    return 'Elige una contraseña distinta de la anterior.'
+  if (text.includes('weak') || text.includes('password should'))
+    return 'La contraseña es demasiado débil.'
+  if (text.includes('expired') || text.includes('invalid') || text.includes('otp'))
+    return 'El enlace ha caducado o ya se usó. Pide uno nuevo.'
   return 'Algo ha fallado. Inténtalo de nuevo.'
 }
 
@@ -52,11 +57,22 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
   const { data, error } = await createBrowserSupabaseClient().auth.signUp({
     email: input.email,
     password: input.password,
-    options: { data: { full_name: input.fullName, company_name: input.companyName, [welcomePendingField]: true } },
+    options: {
+      data: {
+        full_name: input.fullName,
+        company_name: input.companyName,
+        [welcomePendingField]: true,
+      },
+    },
   })
   if (error) {
     const exists = /already registered|already exists/i.test(error.message)
-    return { ok: false, message: exists ? 'Ya existe una cuenta con ese correo. Entra o recupera la contraseña.' : translateAuthError(error.message) }
+    return {
+      ok: false,
+      message: exists
+        ? 'Ya existe una cuenta con ese correo. Entra o recupera la contraseña.'
+        : translateAuthError(error.message),
+    }
   }
   return { ok: true, needsConfirmation: !data.session }
 }
@@ -64,21 +80,35 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
 /** Always reports success so the form never reveals whether an email has an account. */
 export async function requestPasswordReset(email: string): Promise<ActionResult> {
   const { error } = await createBrowserSupabaseClient().auth.resetPasswordForEmail(email)
-  if (error && /rate limit|too many/i.test(error.message)) return { ok: false, message: translateAuthError(error.message) }
+  if (error && /rate limit|too many/i.test(error.message))
+    return { ok: false, message: translateAuthError(error.message) }
   return ok
 }
 
 export type ConfirmType = 'recovery' | 'invite' | 'signup' | 'magiclink' | 'email_change' | 'email'
 
-const confirmTypes: readonly string[] = ['recovery', 'invite', 'signup', 'magiclink', 'email_change', 'email']
+const confirmTypes: readonly string[] = [
+  'recovery',
+  'invite',
+  'signup',
+  'magiclink',
+  'email_change',
+  'email',
+]
 
 export function isConfirmType(value: string): value is ConfirmType {
   return confirmTypes.includes(value)
 }
 
 /** Exchanges the token_hash from the email link for a session. */
-export async function confirmEmailLink(tokenHash: string, type: ConfirmType): Promise<ActionResult> {
-  const { error } = await createBrowserSupabaseClient().auth.verifyOtp({ token_hash: tokenHash, type })
+export async function confirmEmailLink(
+  tokenHash: string,
+  type: ConfirmType,
+): Promise<ActionResult> {
+  const { error } = await createBrowserSupabaseClient().auth.verifyOtp({
+    token_hash: tokenHash,
+    type,
+  })
   return error ? { ok: false, message: translateAuthError(error.message) } : ok
 }
 

@@ -12,11 +12,19 @@ export async function chooseCompany(id: string): Promise<void> {
 export async function createCompany(name: string): Promise<ActionResult> {
   const clean = name.trim()
   if (!clean) return { ok: false, message: 'Escribe el nombre de la empresa.' }
-  if (clean.length > 120) return { ok: false, message: 'El nombre no puede superar 120 caracteres.' }
-  const { data, error } = await createBrowserSupabaseClient().rpc('create_company', { p_name: clean })
+  if (clean.length > 120)
+    return { ok: false, message: 'El nombre no puede superar 120 caracteres.' }
+  const { data, error } = await createBrowserSupabaseClient().rpc('create_company', {
+    p_name: clean,
+  })
   if (error || typeof data !== 'string') {
     const full = error?.message.includes('máximo')
-    return { ok: false, message: full ? 'Has alcanzado el máximo de empresas.' : 'No se pudo crear la empresa. Inténtalo de nuevo.' }
+    return {
+      ok: false,
+      message: full
+        ? 'Has alcanzado el máximo de empresas.'
+        : 'No se pudo crear la empresa. Inténtalo de nuevo.',
+    }
   }
   await setPreferredCompanyId(data)
   return { ok: true }

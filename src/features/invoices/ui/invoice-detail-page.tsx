@@ -8,7 +8,8 @@ import {
   PageHeaderTitle,
   toast,
 } from '@doscientos/ui'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
@@ -16,19 +17,19 @@ import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { printDocument } from '@/shared/lib/print-document'
 import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
-import { useTenantData } from '@/shared/store/store'
+import { refreshStore, useTenantData } from '@/shared/store/store'
 import { DocumentPreview } from '@/shared/ui/document-preview'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { SelectField } from '@/shared/ui/form'
 import { PageNotFound } from '@/shared/ui/page-states'
 
 import {
-  deleteInvoice,
   invoiceOutstandingCents,
-  markInvoicePaid,
   registerInvoicePayment,
-  setInvoiceStatus,
+  type PaymentMethod,
 } from '../application/invoice-actions'
 import { InvoiceDocument } from './invoice-document'
+import { InvoicePaymentHistory } from './invoice-payment-history'
 
 const statusConfig: Record<
   InvoiceStatus,
@@ -41,7 +42,6 @@ const statusConfig: Record<
 
 export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
   const { invoices, clients, tenant, estimates } = useTenantData()
-  const navigate = useNavigate()
   const documentRef = useRef<HTMLElement>(null)
   const [printing, setPrinting] = useState(false)
   const invoice = invoices.find((i) => i.id === invoiceId)
@@ -58,7 +58,9 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
   }
 
   const client = clients.find((c) => c.id === invoice.clientId)
-  const estimate = estimates.find((e) => e.id === invoice.estimateId)
+  const estimate = invoice.estimateId
+    ? estimates.find((e) => e.id === invoice.estimateId)
+    : undefined
   const { label, variant } = statusConfig[invoice.status]
   const today = new Date().toISOString().slice(0, 10)
   const overdue = invoice.status !== 'paid' && invoice.dueDate < today
@@ -71,7 +73,7 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
       return
     }
     const sent = await sendDocument('invoice', inv.id)
-    if (sent && inv.status === 'issued') setInvoiceStatus(inv.id, 'sent')
+    if (sent) await refreshStore()
   }
 
   async function download() {
@@ -125,6 +127,12 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0">
+          {invoice.snapshot?.source === 'migration' ? (
+            <p className="bg-warning/10 text-foreground mb-3 rounded-lg px-3 py-2 text-xs print:hidden">
+              Los datos de emisor y cliente de esta factura anterior se reconstruyeron durante la
+              migración. Comprueba el documento original antes de reenviarla.
+            </p>
+          ) : null}
           <DocumentPreview>
             <InvoiceDocument
               invoice={invoice}
@@ -153,13 +161,29 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
             <Detail label="Concepto" value={invoice.concept} />
             <Detail label="Cliente" value={client?.name ?? 'Sin cliente'} />
             <Detail label="Emitida" value={invoice.issuedAt} />
+            <Detail label="Estado documental" value="Emitida" />
+            <Detail
+              label="Entrega por email"
+              value={
+                invoice.emailAcceptedAt
+                  ? `Aceptada por el proveedor el ${new Date(invoice.emailAcceptedAt).toLocaleString('es-ES')}`
+                  : 'Sin envío confirmado'
+              }
+            />
+            <Detail label="Saldo pendiente" value={formatEuros(invoiceOutstandingCents(invoice))} />
             <Detail
               label="Vence"
               value={`${invoice.dueDate}${overdue ? ' · vencida' : ''}`}
               danger={overdue}
             />
             <div>
-              <dt className="text-muted-foreground text-xs">Presupuesto</dt>
+              <dt className="text-muted-foreground text-xs">
+                {invoice.contractPeriodId
+                  ? 'Contrato de origen'
+                  : invoice.workExtraId
+                    ? 'Trabajo de origen'
+                    : 'Presupuesto'}
+              </dt>
               <dd>
                 {estimate ? (
                   <Link
@@ -170,31 +194,15 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
                     {estimate.number}
                   </Link>
                 ) : (
-                  '—'
+                  ((invoice.contractPeriodId
+                    ? invoice.snapshot?.contractTitle
+                    : invoice.snapshot?.workTitle) ?? '—')
                 )}
               </dd>
             </div>
           </dl>
           <PaymentForm key={invoice.paidCents} invoice={invoice} />
-          <div className="flex flex-wrap gap-2 border-t pt-4">
-            <Button
-              isDisabled={invoice.status === 'paid'}
-              onPress={() => markInvoicePaid(invoice.id)}
-            >
-              {invoice.status === 'paid' ? 'Cobrada' : 'Marcar como cobrada'}
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-destructive"
-              isDisabled={invoice.status === 'paid'}
-              onPress={() => {
-                deleteInvoice(invoice.id)
-                void navigate({ to: '/facturas' })
-              }}
-            >
-              Eliminar
-            </Button>
-          </div>
+          <InvoicePaymentHistory tenantId={invoice.tenantId} invoiceId={invoice.id} />
         </aside>
       </div>
     </div>
@@ -203,12 +211,15 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
 
 /** Registers a payment; the amount starts as everything still owed, so one click closes the invoice. */
 function PaymentForm({ invoice }: { invoice: Invoice }) {
+  const queryClient = useQueryClient()
   const owed = invoiceOutstandingCents(invoice)
   const [amount, setAmount] = useState((owed / 100).toFixed(2))
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [method, setMethod] = useState<PaymentMethod>('transfer')
+  const [busy, setBusy] = useState(false)
   if (invoice.status === 'paid') return null
   const cents = Math.round(Number(amount.replace(',', '.')) * 100)
-  const valid = Number.isFinite(cents) && cents > 0
+  const valid = Number.isSafeInteger(cents) && cents > 0 && cents <= owed
 
   return (
     <div className="space-y-2 border-t pt-4 text-sm">
@@ -232,8 +243,36 @@ function PaymentForm({ invoice }: { invoice: Invoice }) {
           className="border-input bg-background min-w-0 rounded-md border px-2 py-1.5"
         />
       </div>
-      <Button isDisabled={!valid} onPress={() => registerInvoicePayment(invoice.id, cents, date)}>
-        {cents >= owed ? 'Registrar cobro completo' : 'Registrar cobro parcial'}
+      <SelectField
+        label="Método de cobro"
+        value={method}
+        options={[
+          { value: 'transfer', label: 'Transferencia' },
+          { value: 'cash', label: 'Efectivo' },
+          { value: 'card', label: 'Tarjeta' },
+          { value: 'other', label: 'Otro' },
+        ]}
+        onChange={(value) => setMethod(value as PaymentMethod)}
+      />
+      <Button
+        isDisabled={!valid || busy}
+        onPress={() => {
+          setBusy(true)
+          void registerInvoicePayment(invoice.id, cents, method, date).then((result) => {
+            setBusy(false)
+            if (!result.ok) toast.error('No se registró el cobro', { description: result.error })
+            else
+              void queryClient.invalidateQueries({
+                queryKey: ['invoice-payment-history', invoice.tenantId, invoice.id],
+              })
+          })
+        }}
+      >
+        {busy
+          ? 'Registrando…'
+          : cents >= owed
+            ? 'Registrar cobro completo'
+            : 'Registrar cobro parcial'}
       </Button>
     </div>
   )

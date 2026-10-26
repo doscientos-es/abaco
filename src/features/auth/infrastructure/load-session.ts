@@ -9,7 +9,7 @@ export type Company = { id: string; name: string; role: Role }
 type MembershipRow = {
   tenant_id: string
   role: string
-  tenants: { name: string } | { name: string }[] | null
+  company_name: string
 }
 
 export type AuthSession = {
@@ -27,19 +27,15 @@ export type AuthSession = {
 }
 
 /** One row per company the user belongs to; the role can differ in each one. */
-async function fetchCompanies(userId: string): Promise<Company[]> {
-  const { data: memberships, error } = await createBrowserSupabaseClient()
-    .from('memberships')
-    .select('tenant_id, role, tenants(name)')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
+async function fetchCompanies(): Promise<Company[]> {
+  const { data: memberships, error } =
+    await createBrowserSupabaseClient().rpc('my_company_memberships')
   // A failed query must not look like "no companies", or the user lands on the no-company page.
   if (error) throw new Error(`memberships: ${error.message}`)
   const companies: Company[] = []
   for (const row of (memberships ?? []) as unknown as MembershipRow[]) {
     if (!isRole(row.role)) continue
-    const tenant = Array.isArray(row.tenants) ? row.tenants[0] : row.tenants
-    companies.push({ id: row.tenant_id, name: tenant?.name ?? 'Empresa', role: row.role })
+    companies.push({ id: row.tenant_id, name: row.company_name || 'Empresa', role: row.role })
   }
   return companies
 }
@@ -62,7 +58,6 @@ function createPendingCompany(name: unknown): Promise<boolean> {
   return pendingCompany
 }
 
-
 /** Current session plus the user's role. Returns null when nobody is signed in. */
 export async function loadSession(): Promise<AuthSession | null> {
   const supabase = createBrowserSupabaseClient()
@@ -70,15 +65,16 @@ export async function loadSession(): Promise<AuthSession | null> {
   const user = data.session?.user
   if (!user) return null
 
-  let companies = await fetchCompanies(user.id)
+  let companies = await fetchCompanies()
   // A person who just signed up and confirmed their email gets the company they named at signup.
   if (companies.length === 0 && (await createPendingCompany(user.user_metadata?.company_name))) {
-    companies = await fetchCompanies(user.id)
+    companies = await fetchCompanies()
   }
   // The last company used wins; otherwise the oldest membership.
   const preferred = getPreferredCompanyId(user)
   const active = companies.find((company) => company.id === preferred) ?? companies[0]
-  const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : ''
+  const fullName =
+    typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : ''
 
   return {
     userId: user.id,

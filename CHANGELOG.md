@@ -2,10 +2,16 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-10-14 — Sin publicar
+## 2026-10-15 — Sin publicar
 
 ### Nuevas funciones
 
+- Add reusable component for row action buttons
+- Add form limits validation and tests for catalog, client, and ledger
+- Add form limits validation for catalog, client, and ledger
+- Improve helper text for form fields and validations
+- Add form limits for various fields and improve validation
+- Implement fuzzy search across multiple fields
 - Update changelog with new features and improvements
 - Add settled status display for paid invoices
 - Add tests for invoice document rendering and printing

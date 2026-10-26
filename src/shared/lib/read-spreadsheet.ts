@@ -11,8 +11,10 @@ export async function readSpreadsheet(file: File): Promise<string[][]> {
   if (file.size > MAX_BYTES) throw new Error('El archivo pesa más de 5 MB.')
   const buffer = await file.arrayBuffer()
   const name = file.name.toLowerCase()
-  if (name.endsWith('.xls')) throw new Error('Los .xls antiguos no se pueden leer. Guárdalo como .xlsx o CSV.')
-  const isZip = new DataView(buffer).byteLength > 3 && new DataView(buffer).getUint32(0, true) === 0x04034b50
+  if (name.endsWith('.xls'))
+    throw new Error('Los .xls antiguos no se pueden leer. Guárdalo como .xlsx o CSV.')
+  const isZip =
+    new DataView(buffer).byteLength > 3 && new DataView(buffer).getUint32(0, true) === 0x04034b50
   if (name.endsWith('.xlsx') || isZip) return readXlsx(buffer)
   return parseDelimited(decodeText(buffer))
 }
@@ -97,7 +99,8 @@ async function readXlsx(buffer: ArrayBuffer): Promise<string[][]> {
       if (type === 's') value = shared[Number(raw)] ?? ''
       else if (type === 'inlineStr') value = cell.getElementsByTagName('t')[0]?.textContent ?? ''
       else if (type === 'b') value = raw === '1' ? 'Sí' : 'No'
-      else if (type !== 'str' && raw !== '' && Number.isFinite(Number(raw))) value = String(Number(raw))
+      else if (type !== 'str' && raw !== '' && Number.isFinite(Number(raw)))
+        value = String(Number(raw))
       while (cells.length < index) cells.push('')
       cells[index] = value
     }

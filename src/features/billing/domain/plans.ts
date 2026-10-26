@@ -24,9 +24,30 @@ export const TRIAL_DAYS = 14
 export const TRIAL_MEMBERS = 15
 
 export const planCatalog: readonly PlanInfo[] = [
-  { id: 'solo', name: 'Autónomo', members: 1, monthly: 20, yearly: 200, audience: 'Trabajas tú solo.' },
-  { id: 'team', name: 'Equipo', members: 5, monthly: 34, yearly: 340, audience: 'Tú y tu cuadrilla, hasta 5 personas.' },
-  { id: 'business', name: 'Empresa', members: 15, monthly: 54, yearly: 540, audience: 'Varias cuadrillas u oficina, hasta 15 personas.' },
+  {
+    id: 'solo',
+    name: 'Autónomo',
+    members: 1,
+    monthly: 20,
+    yearly: 200,
+    audience: 'Trabajas tú solo.',
+  },
+  {
+    id: 'team',
+    name: 'Equipo',
+    members: 5,
+    monthly: 34,
+    yearly: 340,
+    audience: 'Tú y tu cuadrilla, hasta 5 personas.',
+  },
+  {
+    id: 'business',
+    name: 'Empresa',
+    members: 15,
+    monthly: 54,
+    yearly: 540,
+    audience: 'Varias cuadrillas u oficina, hasta 15 personas.',
+  },
 ]
 
 export const includedInEveryPlan = [
@@ -56,5 +77,9 @@ export function perMonthWhenYearly(plan: PlanInfo): number {
 }
 
 export function formatEuros(value: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value)
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 2,
+  }).format(value)
 }
