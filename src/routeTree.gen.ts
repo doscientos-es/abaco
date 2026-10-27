@@ -10,26 +10,39 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as AjustesRouteImport } from './routes/ajustes'
 import { Route as BienvenidaRouteImport } from './routes/bienvenida'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
 import { Route as ContabilidadRouteImport } from './routes/contabilidad'
+import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
+import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as TrabajosRouteImport } from './routes/trabajos'
+import { Route as ClientesClientIdRouteImport } from './routes/clientes.$clientId'
+import { Route as ContratosContractIdRouteImport } from './routes/contratos.$contractId'
 import { Route as FacturasIndexRouteImport } from './routes/facturas.index'
 import { Route as FacturasInvoiceIdRouteImport } from './routes/facturas.$invoiceId'
+import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
+import { Route as TrabajosWorkOrderIdRouteImport } from './routes/trabajos.$workOrderId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendaRoute = AgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AjustesRoute = AjustesRouteImport.update({
@@ -62,6 +75,11 @@ const ContabilidadRoute = ContabilidadRouteImport.update({
   path: '/contabilidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContratosRoute = ContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
@@ -70,6 +88,11 @@ const EntrarRoute = EntrarRouteImport.update({
 const FacturasRoute = FacturasRouteImport.update({
   id: '/facturas',
   path: '/facturas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MiJornadaRoute = MiJornadaRouteImport.update({
+  id: '/mi-jornada',
+  path: '/mi-jornada',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
@@ -87,6 +110,21 @@ const RegistroRoute = RegistroRouteImport.update({
   path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrabajosRoute = TrabajosRouteImport.update({
+  id: '/trabajos',
+  path: '/trabajos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesClientIdRoute = ClientesClientIdRouteImport.update({
+  id: '/$clientId',
+  path: '/$clientId',
+  getParentRoute: () => ClientesRoute,
+} as any)
+const ContratosContractIdRoute = ContratosContractIdRouteImport.update({
+  id: '/$contractId',
+  path: '/$contractId',
+  getParentRoute: () => ContratosRoute,
+} as any)
 const FacturasIndexRoute = FacturasIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -96,6 +134,11 @@ const FacturasInvoiceIdRoute = FacturasInvoiceIdRouteImport.update({
   id: '/$invoiceId',
   path: '/$invoiceId',
   getParentRoute: () => FacturasRoute,
+} as any)
+const ITokenRoute = ITokenRouteImport.update({
+  id: '/i/$token',
+  path: '/i/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PTokenRoute = PTokenRouteImport.update({
   id: '/p/$token',
@@ -112,61 +155,90 @@ const PresupuestosEstimateIdRoute = PresupuestosEstimateIdRouteImport.update({
   path: '/presupuestos/$estimateId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrabajosWorkOrderIdRoute = TrabajosWorkOrderIdRouteImport.update({
+  id: '/$workOrderId',
+  path: '/$workOrderId',
+  getParentRoute: () => TrabajosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
+  '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
+  '/trabajos': typeof TrabajosRouteWithChildren
+  '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
+  '/trabajos': typeof TrabajosRouteWithChildren
+  '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas': typeof FacturasIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
+  '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
+  '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
+  '/trabajos': typeof TrabajosRouteWithChildren
+  '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
+  '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
 }
@@ -174,74 +246,103 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agenda'
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
     | '/contabilidad'
+    | '/contratos'
     | '/entrar'
     | '/facturas'
+    | '/mi-jornada'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
+    | '/trabajos'
+    | '/clientes/$clientId'
+    | '/contratos/$contractId'
     | '/facturas/$invoiceId'
+    | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/trabajos/$workOrderId'
     | '/facturas/'
     | '/presupuestos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agenda'
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
     | '/contabilidad'
+    | '/contratos'
     | '/entrar'
+    | '/mi-jornada'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
+    | '/trabajos'
+    | '/clientes/$clientId'
+    | '/contratos/$contractId'
     | '/facturas/$invoiceId'
+    | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/trabajos/$workOrderId'
     | '/facturas'
     | '/presupuestos'
   id:
     | '__root__'
     | '/'
+    | '/agenda'
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
     | '/clientes'
     | '/confirmar'
     | '/contabilidad'
+    | '/contratos'
     | '/entrar'
     | '/facturas'
+    | '/mi-jornada'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
+    | '/trabajos'
+    | '/clientes/$clientId'
+    | '/contratos/$contractId'
     | '/facturas/$invoiceId'
+    | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/trabajos/$workOrderId'
     | '/facturas/'
     | '/presupuestos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgendaRoute: typeof AgendaRoute
   AjustesRoute: typeof AjustesRoute
   BienvenidaRoute: typeof BienvenidaRoute
   CatalogoRoute: typeof CatalogoRoute
-  ClientesRoute: typeof ClientesRoute
+  ClientesRoute: typeof ClientesRouteWithChildren
   ConfirmarRoute: typeof ConfirmarRoute
   ContabilidadRoute: typeof ContabilidadRoute
+  ContratosRoute: typeof ContratosRouteWithChildren
   EntrarRoute: typeof EntrarRoute
   FacturasRoute: typeof FacturasRouteWithChildren
+  MiJornadaRoute: typeof MiJornadaRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
+  TrabajosRoute: typeof TrabajosRouteWithChildren
+  ITokenRoute: typeof ITokenRoute
   PTokenRoute: typeof PTokenRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
@@ -254,6 +355,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agenda': {
+      id: '/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ajustes': {
@@ -298,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContabilidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contratos': {
+      id: '/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entrar': {
       id: '/entrar'
       path: '/entrar'
@@ -310,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/facturas'
       fullPath: '/facturas'
       preLoaderRoute: typeof FacturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mi-jornada': {
+      id: '/mi-jornada'
+      path: '/mi-jornada'
+      fullPath: '/mi-jornada'
+      preLoaderRoute: typeof MiJornadaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nueva-contrasena': {
@@ -333,6 +455,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trabajos': {
+      id: '/trabajos'
+      path: '/trabajos'
+      fullPath: '/trabajos'
+      preLoaderRoute: typeof TrabajosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes/$clientId': {
+      id: '/clientes/$clientId'
+      path: '/$clientId'
+      fullPath: '/clientes/$clientId'
+      preLoaderRoute: typeof ClientesClientIdRouteImport
+      parentRoute: typeof ClientesRoute
+    }
+    '/contratos/$contractId': {
+      id: '/contratos/$contractId'
+      path: '/$contractId'
+      fullPath: '/contratos/$contractId'
+      preLoaderRoute: typeof ContratosContractIdRouteImport
+      parentRoute: typeof ContratosRoute
+    }
     '/facturas/': {
       id: '/facturas/'
       path: '/'
@@ -346,6 +489,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/facturas/$invoiceId'
       preLoaderRoute: typeof FacturasInvoiceIdRouteImport
       parentRoute: typeof FacturasRoute
+    }
+    '/i/$token': {
+      id: '/i/$token'
+      path: '/i/$token'
+      fullPath: '/i/$token'
+      preLoaderRoute: typeof ITokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/p/$token': {
       id: '/p/$token'
@@ -368,8 +518,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosEstimateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trabajos/$workOrderId': {
+      id: '/trabajos/$workOrderId'
+      path: '/$workOrderId'
+      fullPath: '/trabajos/$workOrderId'
+      preLoaderRoute: typeof TrabajosWorkOrderIdRouteImport
+      parentRoute: typeof TrabajosRoute
+    }
   }
 }
+
+interface ClientesRouteChildren {
+  ClientesClientIdRoute: typeof ClientesClientIdRoute
+}
+
+const ClientesRouteChildren: ClientesRouteChildren = {
+  ClientesClientIdRoute: ClientesClientIdRoute,
+}
+
+const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
+  ClientesRouteChildren,
+)
+
+interface ContratosRouteChildren {
+  ContratosContractIdRoute: typeof ContratosContractIdRoute
+}
+
+const ContratosRouteChildren: ContratosRouteChildren = {
+  ContratosContractIdRoute: ContratosContractIdRoute,
+}
+
+const ContratosRouteWithChildren = ContratosRoute._addFileChildren(
+  ContratosRouteChildren,
+)
 
 interface FacturasRouteChildren {
   FacturasInvoiceIdRoute: typeof FacturasInvoiceIdRoute
@@ -385,19 +566,36 @@ const FacturasRouteWithChildren = FacturasRoute._addFileChildren(
   FacturasRouteChildren,
 )
 
+interface TrabajosRouteChildren {
+  TrabajosWorkOrderIdRoute: typeof TrabajosWorkOrderIdRoute
+}
+
+const TrabajosRouteChildren: TrabajosRouteChildren = {
+  TrabajosWorkOrderIdRoute: TrabajosWorkOrderIdRoute,
+}
+
+const TrabajosRouteWithChildren = TrabajosRoute._addFileChildren(
+  TrabajosRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgendaRoute: AgendaRoute,
   AjustesRoute: AjustesRoute,
   BienvenidaRoute: BienvenidaRoute,
   CatalogoRoute: CatalogoRoute,
-  ClientesRoute: ClientesRoute,
+  ClientesRoute: ClientesRouteWithChildren,
   ConfirmarRoute: ConfirmarRoute,
   ContabilidadRoute: ContabilidadRoute,
+  ContratosRoute: ContratosRouteWithChildren,
   EntrarRoute: EntrarRoute,
   FacturasRoute: FacturasRouteWithChildren,
+  MiJornadaRoute: MiJornadaRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,
+  TrabajosRoute: TrabajosRouteWithChildren,
+  ITokenRoute: ITokenRoute,
   PTokenRoute: PTokenRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,

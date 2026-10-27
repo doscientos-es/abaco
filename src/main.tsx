@@ -4,7 +4,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { queryClient, router } from '@/app/router'
-
 import { sessionQuery } from '@/features/auth'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { resetStore, setRepository } from '@/shared/store/store'
@@ -23,8 +22,7 @@ supabase.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') {
       queryClient.clear()
       resetStore()
-    }
-    else void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+    } else void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
     void router.invalidate()
   }, 0)
 })

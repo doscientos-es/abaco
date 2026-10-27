@@ -1,110 +1,116 @@
-import { estimateTotalCents, milestoneAmounts, type MilestoneAmount } from '@/shared/domain/estimate'
-import type { Estimate, Invoice, InvoiceStatus, LedgerEntry } from '@/shared/domain/types'
-import { currentTenantData, newId, updateTenantData } from '@/shared/store/store'
+import type { Invoice } from '@/shared/domain/types'
+import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+import { currentTenantData, newId, refreshStore } from '@/shared/store/store'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export function formatInvoiceNumber(sequence: number, year: number): string {
-  return `F-${year}-${String(sequence).padStart(3, '0')}`
-}
-
-/** Creates the invoice for one milestone. Does nothing if that milestone is already invoiced. */
-export function generateInvoice(estimate: Estimate, milestone: MilestoneAmount): void {
-  updateTenantData((data) => {
-    if (data.invoices.some((i) => i.estimateId === estimate.id && i.milestoneId === milestone.id)) return data
-    const now = new Date()
-    const due = new Date(now.getTime() + 15 * 86_400_000).toISOString().slice(0, 10)
-    const invoice: Invoice = {
-      id: newId(),
-      tenantId: data.tenant.id,
-      number: formatInvoiceNumber(data.invoices.length + 1, now.getFullYear()),
-      estimateId: estimate.id,
-      milestoneId: milestone.id,
-      clientId: estimate.clientId,
-      concept: `${estimate.title} · ${milestone.label || 'Hito'}`,
-      totalCents: milestone.amountCents,
-      paidCents: 0,
-      vatRate: estimate.vatRate,
-      status: 'issued',
-      issuedAt: today(),
-      dueDate: due,
-    }
-    return { ...data, invoices: [invoice, ...data.invoices] }
-  })
-}
-
-/**
- * Issues the first-milestone invoice (usually the deposit) of every estimate the client accepted
- * through the public link and that has no invoice yet. Estimates accepted by hand are left alone.
- */
-export function invoiceNewlyAcceptedEstimates(): void {
-  const pending = (data: { estimates: Estimate[]; invoices: Invoice[] }) =>
-    data.estimates.filter(
-      (e) =>
-        e.status === 'accepted' &&
-        e.respondedAt &&
-        e.milestones.length > 0 &&
-        !data.invoices.some((i) => i.estimateId === e.id),
-    )
-  const data = currentTenantData()
-  if (!data) return
-  for (const estimate of pending(data)) {
-    const first = milestoneAmounts(estimate.milestones, estimateTotalCents(estimate))[0]
-    if (first && first.amountCents > 0) generateInvoice(estimate, first)
-  }
-}
-
-export function setInvoiceStatus(id: string, status: InvoiceStatus): void {
-  updateTenantData((data) => ({
-    ...data,
-    invoices: data.invoices.map((i) => (i.id === id ? { ...i, status } : i)),
-  }))
-}
-
-export function invoiceOutstandingCents(invoice: Pick<Invoice, 'totalCents' | 'paidCents'>): number {
+export function invoiceOutstandingCents(
+  invoice: Pick<Invoice, 'totalCents' | 'paidCents'>,
+): number {
   return Math.max(0, invoice.totalCents - invoice.paidCents)
 }
 
-/**
- * Records a payment (total or partial) as income in the ledger and adds it to the invoice.
- * The amount is capped at what is still owed; the invoice becomes paid when nothing is left.
- */
-export function registerInvoicePayment(id: string, amountCents: number, date = today()): void {
-  updateTenantData((data) => {
-    const invoice = data.invoices.find((i) => i.id === id)
-    if (!invoice || invoice.status === 'paid') return data
-    const amount = Math.min(Math.round(amountCents), invoiceOutstandingCents(invoice))
-    if (amount <= 0) return data
-    const paidCents = invoice.paidCents + amount
-    const complete = paidCents >= invoice.totalCents
-    const entry: LedgerEntry = {
-      id: newId(),
-      tenantId: data.tenant.id,
-      kind: 'income',
-      date,
-      concept: `${invoice.number} · ${complete && amount === invoice.totalCents ? '' : complete ? 'último cobro · ' : 'cobro parcial · '}${invoice.concept}`,
-      category: 'Cobro de presupuesto',
-      amountCents: amount,
-      vatRate: invoice.vatRate,
-      estimateId: invoice.estimateId,
-      milestoneId: invoice.milestoneId,
-    }
-    return {
-      ...data,
-      invoices: data.invoices.map((i) =>
-        i.id === id ? { ...i, paidCents, status: complete ? 'paid' : i.status } : i,
-      ),
-      ledger: [entry, ...data.ledger],
-    }
-  })
+export type PaymentResult = { ok: true } | { ok: false; error: string }
+export type PaymentMethod = 'transfer' | 'cash' | 'card' | 'other'
+const fallbackOperationIds = new Map<string, string>()
+
+/** A retry after a timeout reuses the same operation id, even across page reloads in this tab. */
+function paymentOperationId(key: string): string {
+  try {
+    const stored = sessionStorage.getItem(key)
+    if (stored) return stored
+    const id = newId()
+    sessionStorage.setItem(key, id)
+    return id
+  } catch {
+    const existing = fallbackOperationIds.get(key)
+    if (existing) return existing
+    const id = newId()
+    fallbackOperationIds.set(key, id)
+    return id
+  }
 }
 
-/** Marks the invoice as fully paid: registers whatever is still owed. */
-export function markInvoicePaid(id: string): void {
-  // The amount is capped at what is owed, so asking for "everything" pays exactly the remainder.
-  registerInvoicePayment(id, Number.MAX_SAFE_INTEGER)
+/** The database locks the invoice and records balance, ledger and operation in one transaction. */
+export async function registerInvoicePayment(
+  id: string,
+  amountCents: number,
+  method: PaymentMethod,
+  date = today(),
+): Promise<PaymentResult> {
+  const tenantId = currentTenantData()?.tenant.id
+  if (
+    !tenantId ||
+    !Number.isSafeInteger(amountCents) ||
+    amountCents <= 0 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(date)
+  ) {
+    return { ok: false, error: 'Comprueba el importe y la fecha del cobro.' }
+  }
+  const key = `abaco:invoice-payment:${tenantId}:${id}:${amountCents}:${date}:${method}`
+  const operationId = paymentOperationId(key)
+  try {
+    const { error } = await createBrowserSupabaseClient().rpc('record_invoice_payment', {
+      p_invoice_id: id,
+      p_amount_cents: amountCents,
+      p_payment_date: date,
+      p_operation_id: operationId,
+      p_payment_method: method,
+    })
+    if (error) return { ok: false, error: error.message }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo conectar.' }
+  }
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    /* Storage may be unavailable. */
+  }
+  fallbackOperationIds.delete(key)
+  await refreshStore()
+  return { ok: true }
 }
 
-export function deleteInvoice(id: string): void {
-  updateTenantData((data) => ({ ...data, invoices: data.invoices.filter((i) => i.id !== id) }))
+/** A refund reduces collected cash while leaving the issued document intact. */
+export async function refundInvoicePayment(
+  paymentId: string,
+  amountCents: number,
+  date: string,
+  reason: string,
+): Promise<PaymentResult> {
+  const tenantId = currentTenantData()?.tenant.id
+  const trimmedReason = reason.trim()
+  if (
+    !tenantId ||
+    !paymentId ||
+    !Number.isSafeInteger(amountCents) ||
+    amountCents <= 0 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    !trimmedReason ||
+    trimmedReason.length > 500
+  ) {
+    return { ok: false, error: 'Comprueba el importe, la fecha y el motivo del reembolso.' }
+  }
+  const key = `abaco:invoice-refund:${tenantId}:${paymentId}:${amountCents}:${date}:${trimmedReason}`
+  const operationId = paymentOperationId(key)
+  try {
+    const { error } = await createBrowserSupabaseClient().rpc('refund_invoice_payment', {
+      p_payment_id: paymentId,
+      p_amount_cents: amountCents,
+      p_refund_date: date,
+      p_reason: trimmedReason,
+      p_operation_id: operationId,
+    })
+    if (error) return { ok: false, error: error.message }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo conectar.' }
+  }
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    /* Storage may be unavailable. */
+  }
+  fallbackOperationIds.delete(key)
+  await refreshStore()
+  return { ok: true }
 }

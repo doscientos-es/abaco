@@ -41,19 +41,35 @@ describe('paymentsQuery', () => {
 
   it('maps payments and preserves their dates and status', async () => {
     request.abortSignal.mockResolvedValue({
-      data: [{
-        id: 'payment-1', merchant_order: '1234ABCD', kind: 'first', plan: 'solo',
-        period: 'month', amount_cents: 2420, status: 'succeeded',
-        created_at: '2026-10-14T10:00:00Z', settled_at: '2026-10-14T10:01:00Z',
-      }],
+      data: [
+        {
+          id: 'payment-1',
+          merchant_order: '1234ABCD',
+          kind: 'first',
+          plan: 'solo',
+          period: 'month',
+          amount_cents: 2420,
+          status: 'succeeded',
+          created_at: '2026-10-14T10:00:00Z',
+          settled_at: '2026-10-14T10:01:00Z',
+        },
+      ],
       error: null,
     })
 
-    await expect(client.fetchQuery(paymentsQuery('paid-company'))).resolves.toEqual([{
-      id: 'payment-1', order: '1234ABCD', kind: 'first', plan: 'solo', period: 'month',
-      amountCents: 2420, status: 'succeeded',
-      createdAt: new Date('2026-10-14T10:00:00Z'), settledAt: new Date('2026-10-14T10:01:00Z'),
-    }])
+    await expect(client.fetchQuery(paymentsQuery('paid-company'))).resolves.toEqual([
+      {
+        id: 'payment-1',
+        order: '1234ABCD',
+        kind: 'first',
+        plan: 'solo',
+        period: 'month',
+        amountCents: 2420,
+        status: 'succeeded',
+        createdAt: new Date('2026-10-14T10:00:00Z'),
+        settledAt: new Date('2026-10-14T10:01:00Z'),
+      },
+    ])
   })
 
   it('stops a stalled request after 15 seconds and permits a fresh retry', async () => {

@@ -11,9 +11,9 @@ import {
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import doscientosLogo from '@/assets/logo.svg'
 import { can, useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
+import doscientosLogo from '@/shared/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
 

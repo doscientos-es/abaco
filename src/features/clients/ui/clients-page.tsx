@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
@@ -23,7 +24,6 @@ import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
-import { TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
@@ -33,12 +33,15 @@ export function ClientsPage() {
   const { clients } = useTenantData()
   const [importOpen, setImportOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
-  const [toDelete, setToDelete] = useState<Client | null>(null)
+  const [toArchive, setToArchive] = useState<Client | null>(null)
 
-  const visible = clients.filter((client) =>
-    fuzzySearch(query, client.name, client.email, client.phone, client.taxId, client.address),
+  const visible = clients.filter(
+    (client) =>
+      Boolean(client.archivedAt) === showArchived &&
+      fuzzySearch(query, client.name, client.email, client.phone, client.taxId, client.address),
   )
   const pager = usePagination(visible, query)
 
@@ -97,10 +100,13 @@ export function ClientsPage() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+        <Button variant="outline" onPress={() => setShowArchived((current) => !current)}>
+          {showArchived ? 'Ver activos' : 'Ver archivados'}
+        </Button>
       </div>
 
       {visible.length === 0 ? (
-        clients.length === 0 ? (
+        clients.length === 0 && !showArchived ? (
           <EmptyPanel
             icon={fieldIcons.user}
             title="Aún no tienes clientes"
@@ -112,7 +118,11 @@ export function ClientsPage() {
           <EmptyPanel
             icon={fieldIcons.search}
             title="Sin resultados"
-            description="Ningún cliente coincide con tu búsqueda."
+            description={
+              showArchived
+                ? 'No hay clientes archivados que coincidan con tu búsqueda.'
+                : 'Ningún cliente coincide con tu búsqueda.'
+            }
           >
             <Button variant="outline" onPress={() => setQuery('')}>
               Limpiar búsqueda
@@ -128,7 +138,13 @@ export function ClientsPage() {
                 className="border-border bg-card space-y-3 rounded-lg border p-4 shadow-(--ui-shadow-hairline)"
               >
                 <div className="min-w-0">
-                  <p className="font-medium break-words">{client.name}</p>
+                  <Link
+                    to="/clientes/$clientId"
+                    params={{ clientId: client.id }}
+                    className="text-primary font-medium break-words hover:underline"
+                  >
+                    {client.name}
+                  </Link>
                   {client.phone ? (
                     <a
                       href={`tel:${client.phone}`}
@@ -147,16 +163,35 @@ export function ClientsPage() {
                   ) : null}
                 </div>
                 <div className="flex gap-2">
-                  <Button className="flex-1" variant="outline" onPress={() => edit(client)}>
-                    Editar
-                  </Button>
-                  <Button
-                    className="text-destructive flex-1"
-                    variant="ghost"
-                    onPress={() => setToDelete(client)}
-                  >
-                    Eliminar
-                  </Button>
+                  {showArchived ? (
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onPress={() =>
+                        updateTenantData((data) => ({
+                          ...data,
+                          clients: data.clients.map((item) =>
+                            item.id === client.id ? { ...item, archivedAt: null } : item,
+                          ),
+                        }))
+                      }
+                    >
+                      Restaurar
+                    </Button>
+                  ) : (
+                    <>
+                      <Button className="flex-1" variant="outline" onPress={() => edit(client)}>
+                        Editar
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        variant="ghost"
+                        onPress={() => setToArchive(client)}
+                      >
+                        Archivar
+                      </Button>
+                    </>
+                  )}
                 </div>
               </li>
             ))}
@@ -175,16 +210,47 @@ export function ClientsPage() {
             <TableBody>
               {pager.pageItems.map((client) => (
                 <TableRow key={client.id}>
-                  <TableCell className="font-medium break-words">{client.name}</TableCell>
+                  <TableCell className="font-medium break-words">
+                    <Link
+                      to="/clientes/$clientId"
+                      params={{ clientId: client.id }}
+                      className="text-primary hover:underline"
+                    >
+                      {client.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     {client.phone}
                     <div className="text-muted-foreground text-xs break-all">{client.email}</div>
                   </TableCell>
                   <TableCell className="break-words">{client.address}</TableCell>
-                  <TableRowActions
-                    onEdit={() => edit(client)}
-                    onDelete={() => setToDelete(client)}
-                  />
+                  <TableCell className="text-right whitespace-nowrap">
+                    {showArchived ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onPress={() =>
+                          updateTenantData((data) => ({
+                            ...data,
+                            clients: data.clients.map((item) =>
+                              item.id === client.id ? { ...item, archivedAt: null } : item,
+                            ),
+                          }))
+                        }
+                      >
+                        Restaurar
+                      </Button>
+                    ) : (
+                      <div className="inline-flex items-center gap-1">
+                        <Button size="sm" variant="outline" onPress={() => edit(client)}>
+                          Editar
+                        </Button>
+                        <Button size="sm" variant="ghost" onPress={() => setToArchive(client)}>
+                          Archivar
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -194,19 +260,26 @@ export function ClientsPage() {
       <TablePagination controller={pager} noun="clientes" />
 
       <ConfirmDialog
-        open={toDelete !== null}
+        open={toArchive !== null}
         onOpenChange={(open) => {
-          if (!open) setToDelete(null)
+          if (!open) setToArchive(null)
         }}
-        title="¿Eliminar cliente?"
-        description={toDelete ? `«${toDelete.name}» se eliminará de tu lista de clientes.` : null}
-        confirmLabel="Eliminar"
-        destructive
+        title="¿Archivar cliente?"
+        description={
+          toArchive
+            ? `«${toArchive.name}» se ocultará de la lista activa. Sus instalaciones y documentos se conservarán.`
+            : null
+        }
+        confirmLabel="Archivar"
         onConfirm={() => {
-          if (!toDelete) return
-          const id = toDelete.id
-          updateTenantData((d) => ({ ...d, clients: d.clients.filter((c) => c.id !== id) }))
-          setToDelete(null)
+          if (!toArchive) return
+          const id = toArchive.id
+          const archivedAt = new Date().toISOString()
+          updateTenantData((data) => ({
+            ...data,
+            clients: data.clients.map((item) => (item.id === id ? { ...item, archivedAt } : item)),
+          }))
+          setToArchive(null)
         }}
       />
     </div>

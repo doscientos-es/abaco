@@ -18,7 +18,12 @@ export function createBrowserSupabaseClient(): SupabaseClient {
 
   // Email links carry a token_hash that /confirmar verifies by hand, so the SDK must not parse the URL.
   browserClient = createClient(url, publishableKey, {
-    auth: { flowType: 'pkce', detectSessionInUrl: false, persistSession: true, autoRefreshToken: true },
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: false,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
   })
   return browserClient
 }

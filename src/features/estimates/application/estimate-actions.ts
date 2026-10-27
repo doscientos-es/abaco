@@ -14,6 +14,8 @@ export function createEstimate(clientId: string, title = 'Nueva reforma'): strin
       clientId,
       title: title.trim() || 'Nueva reforma',
       status: 'draft',
+      conversionDestination: 'work',
+      contractBillingFrequency: 'monthly',
       lines: [],
       discountType: 'none',
       discountValue: 0,
@@ -36,14 +38,16 @@ export function createEstimate(clientId: string, title = 'Nueva reforma'): strin
 export function patchEstimate(id: string, patch: Partial<Estimate>): void {
   updateTenantData((data) => ({
     ...data,
-    estimates: data.estimates.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+    estimates: data.estimates.map((e) =>
+      e.id === id && e.status === 'draft' ? { ...e, ...patch } : e,
+    ),
   }))
 }
 
 export function deleteEstimate(id: string): void {
   updateTenantData((data) => ({
     ...data,
-    estimates: data.estimates.filter((e) => e.id !== id),
+    estimates: data.estimates.filter((e) => e.id !== id || e.status !== 'draft'),
   }))
 }
 
@@ -54,7 +58,13 @@ export function duplicateEstimate(id: string): string | null {
     if (!source) return data
     created = newId()
     // The copy gets its own public link from the database, and nobody has answered it yet.
-    const { publicToken: _token, respondedAt: _at, respondedBy: _by, ...base } = source
+    const {
+      publicToken: _token,
+      respondedAt: _at,
+      respondedBy: _by,
+      emailSentAt: _emailSentAt,
+      ...base
+    } = source
     const copy: Estimate = {
       ...base,
       id: created,

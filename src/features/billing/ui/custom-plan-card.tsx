@@ -22,7 +22,8 @@ export function CustomPlanCard() {
       </div>
       <p className="text-2xl font-semibold">Hablemos</p>
       <p className="text-background/70 text-xs leading-relaxed">
-        ¿Más personas o una forma de trabajar diferente? Cuéntanos qué necesitas y vemos cómo ayudarte.
+        ¿Más personas o una forma de trabajar diferente? Cuéntanos qué necesitas y vemos cómo
+        ayudarte.
       </p>
       <div className="mt-auto space-y-2 pt-1">
         <LinkButton

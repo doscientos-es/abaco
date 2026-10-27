@@ -66,11 +66,17 @@ export function PublicEstimatePage({ token }: { token: string }) {
     )
   }
 
-  const { estimate, tenant, client } = state.data
+  const { estimate, tenant, client, publicationSource } = state.data
   const expired = estimate.validUntil < new Date().toISOString().slice(0, 10)
 
   return (
     <main className="bg-muted/30 min-h-screen space-y-6 p-4 sm:p-8">
+      {publicationSource === 'migration' ? (
+        <p className="border-warning/40 bg-warning/5 mx-auto max-w-3xl rounded-lg border p-3 text-sm">
+          Esta copia se reconstruyó con los datos disponibles durante una migración. Solicita a la
+          empresa el documento original si necesitas comprobar su contenido histórico.
+        </p>
+      ) : null}
       <EstimateDocument estimate={estimate} client={client} tenant={tenant} />
       <Card className="mx-auto max-w-3xl print:hidden">
         <CardContent className="space-y-4 pt-6">

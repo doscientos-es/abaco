@@ -16,7 +16,8 @@ const statusStyle = {
   pending: 'bg-muted text-muted-foreground',
 } as const
 
-const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 function concept(payment: Payment) {
   const name = planInfo(payment.plan)?.name ?? payment.plan
@@ -49,7 +50,13 @@ export function PaymentHistory({
   companyName: string
   subscription: Subscription | undefined
 }) {
-  const { data: payments, isPending, isError, fetchStatus, refetch } = useQuery(paymentsQuery(tenantId))
+  const {
+    data: payments,
+    isPending,
+    isError,
+    fetchStatus,
+    refetch,
+  } = useQuery(paymentsQuery(tenantId))
   const paid = (payments ?? []).filter((p) => p.status === 'succeeded')
   const totalPaid = paid.reduce((sum, p) => sum + p.amountCents, 0)
 
@@ -57,9 +64,14 @@ export function PaymentHistory({
   const active = subscription && ['active', 'past_due'].includes(subscription.status)
   const nextPlan = planInfo(subscription?.nextPlan ?? subscription?.plan ?? 'trial')
   const nextInterval = subscription?.nextInterval ?? subscription?.interval
-  const nextCents = nextPlan && nextInterval ? Math.round((nextInterval === 'year' ? nextPlan.yearly : nextPlan.monthly) * 121) : 0
+  const nextCents =
+    nextPlan && nextInterval
+      ? Math.round((nextInterval === 'year' ? nextPlan.yearly : nextPlan.monthly) * 121)
+      : 0
   const periodEnd = subscription?.currentPeriodEnd ?? null
-  const willRenew = Boolean(active && !subscription.cancelAtPeriodEnd && periodEnd && nextPlan && nextInterval)
+  const willRenew = Boolean(
+    active && !subscription.cancelAtPeriodEnd && periodEnd && nextPlan && nextInterval,
+  )
   const current = planCatalog.find((p) => p.id === subscription?.plan)
 
   return (
@@ -68,13 +80,18 @@ export function PaymentHistory({
         <div className="border-border rounded-lg border p-3">
           <dt className="text-muted-foreground text-xs">Plan contratado</dt>
           <dd className="font-medium">
-            {active && current ? `${current.name} · ${subscription.interval === 'year' ? 'anual' : 'mensual'}` : 'Ninguno todavía'}
+            {active && current
+              ? `${current.name} · ${subscription.interval === 'year' ? 'anual' : 'mensual'}`
+              : 'Ninguno todavía'}
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">
           <dt className="text-muted-foreground text-xs">Pagado hasta hoy (IVA incl.)</dt>
           <dd className="font-medium">
-            {cents(totalPaid)} <span className="text-muted-foreground text-xs">en {paid.length} {paid.length === 1 ? 'pago' : 'pagos'}</span>
+            {cents(totalPaid)}{' '}
+            <span className="text-muted-foreground text-xs">
+              en {paid.length} {paid.length === 1 ? 'pago' : 'pagos'}
+            </span>
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">
@@ -119,20 +136,33 @@ export function PaymentHistory({
         ) : isPending ? (
           <p className="text-muted-foreground text-sm">Cargando…</p>
         ) : !payments?.length ? (
-          <p className="text-muted-foreground text-sm">Todavía no has hecho ningún pago. Aquí aparecerán con su justificante.</p>
+          <p className="text-muted-foreground text-sm">
+            Todavía no has hecho ningún pago. Aquí aparecerán con su justificante.
+          </p>
         ) : (
           <ul className="divide-border border-border divide-y rounded-lg border text-sm">
             {payments.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+              >
                 <div>
                   <p className="font-medium">{concept(p)}</p>
-                  <p className="text-muted-foreground text-xs">{day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${statusStyle[p.status]}`}>{statusLabel[p.status]}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${statusStyle[p.status]}`}>
+                    {statusLabel[p.status]}
+                  </span>
                   <span className="w-24 text-right font-medium">{cents(p.amountCents)}</span>
                   {p.status === 'succeeded' ? (
-                    <Button variant="outline" size="sm" onPress={() => downloadReceipt(p, companyName)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onPress={() => downloadReceipt(p, companyName)}
+                    >
                       Justificante
                     </Button>
                   ) : null}

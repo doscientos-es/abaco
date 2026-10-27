@@ -78,8 +78,15 @@ export function parseDelimited(input: string): string[][] {
   return rows
 }
 
-export function planImport<T>(table: string[][], schema: ImportSchema<T>, existingKeys: Set<string>): ImportPlan<T> {
-  const lines = table.map((cells, index) => ({ cells: cells.map((c) => c.trim()), line: index + 1 }))
+export function planImport<T>(
+  table: string[][],
+  schema: ImportSchema<T>,
+  existingKeys: Set<string>,
+): ImportPlan<T> {
+  const lines = table.map((cells, index) => ({
+    cells: cells.map((c) => c.trim()),
+    line: index + 1,
+  }))
   const nonEmpty = lines.filter((l) => l.cells.some(Boolean))
   const header = nonEmpty[0]
   if (!header) return { fatal: 'El archivo está vacío.' }
@@ -93,12 +100,15 @@ export function planImport<T>(table: string[][], schema: ImportSchema<T>, existi
     else if (column.required) missing.push(column.label)
   }
   if (missing.length > 0) {
-    return { fatal: `Faltan columnas obligatorias: ${missing.join(', ')}. La primera fila debe tener las cabeceras.` }
+    return {
+      fatal: `Faltan columnas obligatorias: ${missing.join(', ')}. La primera fila debe tener las cabeceras.`,
+    }
   }
 
   const body = nonEmpty.slice(1)
   if (body.length === 0) return { fatal: 'El archivo solo tiene la fila de cabeceras, sin datos.' }
-  if (body.length > MAX_IMPORT_ROWS) return { fatal: `El archivo tiene más de ${MAX_IMPORT_ROWS} filas. Divídelo en varios.` }
+  if (body.length > MAX_IMPORT_ROWS)
+    return { fatal: `El archivo tiene más de ${MAX_IMPORT_ROWS} filas. Divídelo en varios.` }
 
   const seen = new Set(existingKeys)
   const valid: T[] = []
@@ -138,7 +148,10 @@ export function buildTemplateCsv(schema: ImportSchema<unknown>): string {
 /** Text to paste into ChatGPT together with the user's own Excel so it comes back in our format. */
 export function buildAiPrompt(schema: ImportSchema<unknown>): string {
   const columns = schema.columns
-    .map((c) => `- ${c.label} (${c.required ? 'obligatoria' : 'opcional'}): ${c.hint} Ejemplo: ${c.example}`)
+    .map(
+      (c) =>
+        `- ${c.label} (${c.required ? 'obligatoria' : 'opcional'}): ${c.hint} Ejemplo: ${c.example}`,
+    )
     .join('\n')
   const header = schema.columns.map((c) => c.label).join(';')
   const example = schema.columns.map((c) => c.example).join(';')

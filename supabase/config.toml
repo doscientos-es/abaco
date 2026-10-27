@@ -1,6 +1,24 @@
 # Configuración de Supabase. `project_id` es el nombre local; se enlaza al proyecto real con `supabase link`.
 project_id = "propuestas"
 
+# Puertos exclusivos del entorno local de Ábaco; otros proyectos Supabase
+# del equipo pueden permanecer activos en sus puertos habituales.
+[api]
+port = 60321
+
+[db]
+port = 60322
+shadow_port = 60320
+
+[studio]
+port = 60323
+
+[local_smtp]
+port = 60324
+
+[analytics]
+port = 60327
+
 # Estas funciones las llaman Redsys y el cron, no un usuario con sesión:
 # se protegen con la firma de Redsys y con CRON_SECRET respectivamente.
 [functions.redsys-webhook]
@@ -15,6 +33,15 @@ verify_jwt = false
 
 # Página pública del presupuesto: el cliente no tiene sesión; la credencial es el token del enlace.
 [functions.public-estimate]
+verify_jwt = false
+
+[functions.public-visit-report]
+verify_jwt = false
+
+[functions.visit-report-email-worker]
+verify_jwt = false
+
+[functions.visit-report-email-events]
 verify_jwt = false
 
 [functions.send-reminders]

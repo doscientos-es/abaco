@@ -8,7 +8,8 @@ import {
 export type { PublicEstimate, PublicResult }
 
 /** Loads the estimate behind a public link. */
-export const loadPublicEstimate = (token: string): Promise<PublicResult> => callPublicEstimate(token, 'view')
+export const loadPublicEstimate = (token: string): Promise<PublicResult> =>
+  callPublicEstimate(token, 'view')
 
 /** Records the client's answer. Accepting requires the client's name. */
 export const respondToPublicEstimate = (

@@ -31,7 +31,11 @@ export function ChartCard({
   return (
     <section className={`border-border bg-card rounded-xl border p-4 ${className}`}>
       <h2 className="text-sm font-semibold">{title}</h2>
-      {description ? <p className="text-muted-foreground mb-3 text-xs">{description}</p> : <div className="mb-3" />}
+      {description ? (
+        <p className="text-muted-foreground mb-3 text-xs">{description}</p>
+      ) : (
+        <div className="mb-3" />
+      )}
       {children}
     </section>
   )
@@ -61,7 +65,9 @@ export function EmptyHint({
         </IconContext.Provider>
       ) : null}
       <p className="text-sm font-medium">{title}</p>
-      {description ? <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">{description}</p> : null}
+      {description ? (
+        <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">{description}</p>
+      ) : null}
       {action ? <div className="mt-2 text-sm font-medium">{action}</div> : null}
     </div>
   )
@@ -117,16 +123,26 @@ export function MonthlyBars({
             aria-label={`${d.label}: ${incomeLabel} ${formatEuros(d.income)}, ${expenseLabel} ${formatEuros(d.expense)}`}
             className="group focus-visible:ring-ring relative flex h-full flex-1 items-end justify-center gap-1 rounded-md outline-none focus-visible:ring-2"
           >
-            <span className="bg-success/80 group-hover:bg-success block w-full max-w-6 rounded-t transition-all" style={{ height: pct(d.income) }} />
-            <span className="bg-destructive/70 group-hover:bg-destructive block w-full max-w-6 rounded-t transition-all" style={{ height: pct(d.expense) }} />
+            <span
+              className="bg-success/80 group-hover:bg-success block w-full max-w-6 rounded-t transition-all"
+              style={{ height: pct(d.income) }}
+            />
+            <span
+              className="bg-destructive/70 group-hover:bg-destructive block w-full max-w-6 rounded-t transition-all"
+              style={{ height: pct(d.expense) }}
+            />
             {isEmpty ? null : (
               <span
                 aria-hidden="true"
                 className="bg-popover text-popover-foreground border-border pointer-events-none absolute bottom-full z-10 mb-1 hidden w-max rounded-lg border px-2.5 py-1.5 text-left text-xs shadow-md group-hover:block group-focus-visible:block"
               >
                 <span className="block font-medium capitalize">{d.label}</span>
-                <span className="text-success block tabular-nums">{incomeLabel}: {formatEuros(d.income)}</span>
-                <span className="text-destructive block tabular-nums">{expenseLabel}: {formatEuros(d.expense)}</span>
+                <span className="text-success block tabular-nums">
+                  {incomeLabel}: {formatEuros(d.income)}
+                </span>
+                <span className="text-destructive block tabular-nums">
+                  {expenseLabel}: {formatEuros(d.expense)}
+                </span>
               </span>
             )}
           </button>
@@ -134,13 +150,24 @@ export function MonthlyBars({
       </div>
       <div className="mt-2 flex gap-2 sm:gap-4">
         {data.map((d) => (
-          <span key={d.label} className="text-muted-foreground flex-1 text-center text-xs capitalize">{d.label}</span>
+          <span
+            key={d.label}
+            className="text-muted-foreground flex-1 text-center text-xs capitalize"
+          >
+            {d.label}
+          </span>
         ))}
       </div>
       {isEmpty ? null : (
         <div className="text-muted-foreground mt-3 flex gap-4 text-xs">
-          <span className="flex items-center gap-1.5"><i className="bg-success size-2 rounded-full" />{incomeLabel}</span>
-          <span className="flex items-center gap-1.5"><i className="bg-destructive size-2 rounded-full" />{expenseLabel}</span>
+          <span className="flex items-center gap-1.5">
+            <i className="bg-success size-2 rounded-full" />
+            {incomeLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <i className="bg-destructive size-2 rounded-full" />
+            {expenseLabel}
+          </span>
         </div>
       )}
     </div>
@@ -172,7 +199,12 @@ export function Donut({
   const total = items.reduce((sum, d) => sum + d.value, 0)
   if (total === 0) {
     return (
-      <EmptyHint icon={emptyIcon} title={empty} description={emptyDescription} action={emptyAction} />
+      <EmptyHint
+        icon={emptyIcon}
+        title={empty}
+        description={emptyDescription}
+        action={emptyAction}
+      />
     )
   }
   const shown = active === null ? null : items[active]
@@ -189,7 +221,14 @@ export function Donut({
     <div className="flex flex-col items-center gap-4 sm:flex-row">
       <div className="relative size-36 shrink-0">
         <svg viewBox="0 0 42 42" className="size-full -rotate-90" aria-hidden="true">
-          <circle cx="21" cy="21" r="15.9155" fill="none" strokeWidth="5" className="stroke-muted" />
+          <circle
+            cx="21"
+            cy="21"
+            r="15.9155"
+            fill="none"
+            strokeWidth="5"
+            className="stroke-muted"
+          />
           {slices.map((d, index) => (
             <circle
               key={d.label}
@@ -207,9 +246,17 @@ export function Donut({
           ))}
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-muted-foreground max-w-20 truncate text-xs">{shown ? shown.label : centerLabel}</span>
-          <span className="text-sm font-semibold tabular-nums">{format(shown ? shown.value : total)}</span>
-          {shown ? <span className="text-muted-foreground text-xs">{Math.round((shown.value / total) * 100)}%</span> : null}
+          <span className="text-muted-foreground max-w-20 truncate text-xs">
+            {shown ? shown.label : centerLabel}
+          </span>
+          <span className="text-sm font-semibold tabular-nums">
+            {format(shown ? shown.value : total)}
+          </span>
+          {shown ? (
+            <span className="text-muted-foreground text-xs">
+              {Math.round((shown.value / total) * 100)}%
+            </span>
+          ) : null}
         </div>
       </div>
       <ul className="w-full min-w-0 flex-1 space-y-1">
@@ -221,7 +268,7 @@ export function Donut({
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(index)}
               onBlur={() => setActive(null)}
-              className={`focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs outline-none transition-colors focus-visible:ring-2 ${active === index ? 'bg-muted' : ''}`}
+              className={`focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs transition-colors outline-none focus-visible:ring-2 ${active === index ? 'bg-muted' : ''}`}
             >
               <i className={`${d.tone.bg} size-2 shrink-0 rounded-full`} />
               <span className="min-w-0 flex-1 truncate">{d.label}</span>

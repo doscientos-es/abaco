@@ -10,7 +10,11 @@ import {
 import { parseEuros } from './money'
 import type { EstimateLine, LedgerEntry } from './types'
 
-const line = (kind: EstimateLine['kind'], quantity: number, unitPriceCents: number): EstimateLine => ({
+const line = (
+  kind: EstimateLine['kind'],
+  quantity: number,
+  unitPriceCents: number,
+): EstimateLine => ({
   id: `${kind}-${quantity}`,
   catalogItemId: null,
   description: kind,

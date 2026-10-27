@@ -2,10 +2,21 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-10-14 — Sin publicar
+## 2026-10-27 — Sin publicar
 
 ### Nuevas funciones
 
+- Update changelog with recent merges and new features
+- Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
+- Merge: integrar rama gerard (operaciones, facturacion, informes)
+- Update plans and pricing details for clarity and accuracy
+- Add operations, billing flows, reports, and usage guide
+- Add reusable component for row action buttons
+- Add form limits validation and tests for catalog, client, and ledger
+- Add form limits validation for catalog, client, and ledger
+- Improve helper text for form fields and validations
+- Add form limits for various fields and improve validation
+- Implement fuzzy search across multiple fields
 - Update changelog with new features and improvements
 - Add settled status display for paid invoices
 - Add tests for invoice document rendering and printing

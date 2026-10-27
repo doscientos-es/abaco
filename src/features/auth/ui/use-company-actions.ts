@@ -17,11 +17,11 @@ export function useCompanyActions() {
   }
 
   return {
-    async switchTo(id: string): Promise<void> {
+    switchTo: async (id: string): Promise<void> => {
       await chooseCompany(id)
       await refresh()
     },
-    async create(name: string): Promise<ActionResult> {
+    create: async (name: string): Promise<ActionResult> => {
       const result = await createCompany(name)
       if (result.ok) {
         // The new company is not in the loaded data yet.

@@ -4,7 +4,15 @@
  * REDSYS_CURRENCY (opcional, 978) y REDSYS_REFERENCE_KEY (cifra la referencia de tarjeta guardada).
  */
 import { Buffer } from 'node:buffer'
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto'
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto'
 
 export type RedsysConfig = {
   currency: string
@@ -21,8 +29,20 @@ export function readRedsysConfig(): RedsysConfig | null {
   const merchantCode = Deno.env.get('REDSYS_MERCHANT_CODE')?.trim()
   const secretKey = Deno.env.get('REDSYS_SECRET_KEY')?.trim()
   const terminal = Deno.env.get('REDSYS_TERMINAL')?.trim()
-  if ((environment !== 'test' && environment !== 'prod') || !merchantCode || !secretKey || !terminal) return null
-  return { currency: Deno.env.get('REDSYS_CURRENCY')?.trim() || '978', environment, merchantCode, secretKey, terminal }
+  if (
+    (environment !== 'test' && environment !== 'prod') ||
+    !merchantCode ||
+    !secretKey ||
+    !terminal
+  )
+    return null
+  return {
+    currency: Deno.env.get('REDSYS_CURRENCY')?.trim() || '978',
+    environment,
+    merchantCode,
+    secretKey,
+    terminal,
+  }
 }
 
 /** 4 dígitos + 8 hexadecimales: único por operación y válido para Redsys. */
@@ -30,10 +50,15 @@ export function newMerchantOrder(): string {
   return `${randomInt(10_000).toString().padStart(4, '0')}${randomBytes(4).toString('hex').toUpperCase()}`
 }
 
-const encode = (value: Record<string, string>) => Buffer.from(JSON.stringify(value)).toString('base64url')
+const encode = (value: Record<string, string>) =>
+  Buffer.from(JSON.stringify(value)).toString('base64url')
 
 function orderKey(order: string, secretKey: string): string {
-  const cipher = createCipheriv('aes-128-cbc', Buffer.from(secretKey.slice(0, 16).padEnd(16, '0'), 'utf8'), Buffer.alloc(16, 0))
+  const cipher = createCipheriv(
+    'aes-128-cbc',
+    Buffer.from(secretKey.slice(0, 16).padEnd(16, '0'), 'utf8'),
+    Buffer.alloc(16, 0),
+  )
   return Buffer.concat([cipher.update(order, 'utf8'), cipher.final()]).toString('base64')
 }
 
@@ -112,20 +137,38 @@ export async function chargeReference(args: {
   if (!response.ok) throw new Error(`redsys_http_${response.status}`)
   const body = (await response.json()) as { Ds_MerchantParameters?: string }
   if (!body.Ds_MerchantParameters) return { ok: false, code: 'sin_respuesta' }
-  const decoded = JSON.parse(Buffer.from(body.Ds_MerchantParameters, 'base64').toString('utf8')) as Record<string, unknown>
-  const code = String(decoded.Ds_Response ?? 'sin_codigo')
+  const decoded = JSON.parse(
+    Buffer.from(body.Ds_MerchantParameters, 'base64').toString('utf8'),
+  ) as Record<string, unknown>
+  const code = typeof decoded.Ds_Response === 'string' ? decoded.Ds_Response : 'sin_codigo'
   return { ok: isSuccess(code), code }
 }
 
 export const isSuccess = (code: string) => /^\d{1,4}$/.test(code) && Number(code) <= 99
 
-export type Notification = { order: string; code: string; amountCents: number; merchantCode: string; terminal: string; currency: string; identifier?: string }
+export type Notification = {
+  order: string
+  code: string
+  amountCents: number
+  merchantCode: string
+  terminal: string
+  currency: string
+  identifier?: string
+}
 
 /** Comprueba la firma del aviso de Redsys y devuelve sus datos; null si no es válido. */
-export function readNotification(config: RedsysConfig, parameters: string, signature: string): Notification | null {
+export function readNotification(
+  config: RedsysConfig,
+  parameters: string,
+  signature: string,
+): Notification | null {
   try {
-    const d = JSON.parse(Buffer.from(parameters, 'base64').toString('utf8')) as Record<string, unknown>
-    const order = String(d.Ds_Order ?? d.DS_ORDER ?? '')
+    const d = JSON.parse(Buffer.from(parameters, 'base64').toString('utf8')) as Record<
+      string,
+      unknown
+    >
+    const order =
+      typeof d.Ds_Order === 'string' ? d.Ds_Order : typeof d.DS_ORDER === 'string' ? d.DS_ORDER : ''
     if (!orderPattern.test(order)) return null
     const expected = Buffer.from(sign(parameters, order, config.secretKey), 'base64url')
     const received = Buffer.from(signature.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
@@ -133,12 +176,13 @@ export function readNotification(config: RedsysConfig, parameters: string, signa
     const identifier = d.Ds_Merchant_Identifier
     return {
       order,
-      code: String(d.Ds_Response ?? ''),
+      code: typeof d.Ds_Response === 'string' ? d.Ds_Response : '',
       amountCents: Number(d.Ds_Amount),
-      merchantCode: String(d.Ds_MerchantCode ?? ''),
-      terminal: String(d.Ds_Terminal ?? ''),
-      currency: String(d.Ds_Currency ?? ''),
-      identifier: typeof identifier === 'string' && identifier.trim() ? identifier.trim() : undefined,
+      merchantCode: typeof d.Ds_MerchantCode === 'string' ? d.Ds_MerchantCode : '',
+      terminal: typeof d.Ds_Terminal === 'string' ? d.Ds_Terminal : '',
+      currency: typeof d.Ds_Currency === 'string' ? d.Ds_Currency : '',
+      identifier:
+        typeof identifier === 'string' && identifier.trim() ? identifier.trim() : undefined,
     }
   } catch {
     return null

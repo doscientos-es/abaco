@@ -3,7 +3,6 @@ import {
   Button,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
   PageHeader,
   PageHeaderDescription,
@@ -22,24 +21,22 @@ import { DotsThree } from '@phosphor-icons/react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { useSession } from '@/features/auth'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
-import { useTenantData } from '@/shared/store/store'
+import { refreshStore, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
-import {
-  deleteInvoice,
-  invoiceOutstandingCents,
-  markInvoicePaid,
-  setInvoiceStatus,
-} from '../application/invoice-actions'
+import { invoiceOutstandingCents } from '../application/invoice-actions'
+import { InvoiceDrafts } from './invoice-drafts'
+import { VisitBillingReviews } from './visit-billing-reviews'
 
 const statusConfig: Record<
   InvoiceStatus,
@@ -51,6 +48,7 @@ const statusConfig: Record<
 }
 
 export function InvoicesPage() {
+  const session = useSession()
   const { invoices, clients, estimates } = useTenantData()
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
@@ -58,7 +56,7 @@ export function InvoicesPage() {
   const query = useSearch({ from: '/facturas/' }).q ?? ''
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
-  const estimateOf = (id: string) => estimates.find((e) => e.id === id)
+  const estimateOf = (id: string | null) => (id ? estimates.find((e) => e.id === id) : undefined)
   const q = query.trim()
   const visible = invoices.filter(
     (i) =>
@@ -70,6 +68,8 @@ export function InvoicesPage() {
         i.concept,
         clientName(i.clientId),
         estimateOf(i.estimateId)?.number ?? '',
+        i.snapshot?.workTitle ?? '',
+        i.snapshot?.contractTitle ?? '',
       ),
   )
   const pager = usePagination(visible, `${status}|${clientId}|${q}`)
@@ -108,13 +108,13 @@ export function InvoicesPage() {
 
   function actions(invoice: Invoice) {
     return (
-      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-end gap-1.5">
         <Button
           size="sm"
-          isDisabled={invoice.status === 'paid'}
-          onPress={() => markInvoicePaid(invoice.id)}
+          isDisabled={invoiceOutstandingCents(invoice) === 0}
+          onPress={() => openInvoice(invoice.id)}
         >
-          {invoice.status === 'paid' ? 'Cobrada' : 'Cobrar'}
+          {invoiceOutstandingCents(invoice) === 0 ? 'Cobrada' : 'Registrar cobro'}
         </Button>
         <DropdownMenuTrigger>
           <Button size="sm" variant="outline" aria-label={`Más acciones de ${invoice.number}`}>
@@ -130,14 +130,6 @@ export function InvoicesPage() {
             <DropdownMenuItem onAction={() => void send(invoice)}>
               Enviar por email
             </DropdownMenuItem>
-            {invoice.status === 'paid' ? null : (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onAction={() => deleteInvoice(invoice.id)}>
-                  Eliminar
-                </DropdownMenuItem>
-              </>
-            )}
           </DropdownMenuContent>
         </DropdownMenuTrigger>
       </div>
@@ -163,7 +155,7 @@ export function InvoicesPage() {
       return
     }
     const sent = await sendDocument('invoice', invoice.id)
-    if (sent && invoice.status === 'issued') setInvoiceStatus(invoice.id, 'sent')
+    if (sent) await refreshStore()
   }
 
   return (
@@ -172,10 +164,17 @@ export function InvoicesPage() {
         <PageHeaderHeading>
           <PageHeaderTitle>Facturas</PageHeaderTitle>
           <PageHeaderDescription>
-            Se generan desde los hitos de pago de un presupuesto.
+            Prepara y revisa borradores antes de emitir facturas.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
+
+      {session?.tenantId && ['owner', 'admin'].includes(session.role ?? '') ? (
+        <>
+          <InvoiceDrafts tenantId={session.tenantId} />
+          <VisitBillingReviews tenantId={session.tenantId} />
+        </>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard
@@ -243,7 +242,7 @@ export function InvoicesPage() {
           }
           description={
             invoices.length === 0
-              ? 'Las facturas se crean desde un presupuesto: ábrelo, ve a «Hitos de pago» y pulsa «Generar factura».'
+              ? 'Las facturas se preparan como borradores desde un presupuesto aceptado y se emiten tras revisarlas.'
               : 'Prueba con otra búsqueda o quita los filtros.'
           }
         >
@@ -291,13 +290,19 @@ export function InvoicesPage() {
                       {clientName(invoice.clientId)}
                     </Link>
                     {' · '}
-                    <Link
-                      to="/presupuestos/$estimateId"
-                      params={{ estimateId: invoice.estimateId }}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      Presupuesto {estimateOf(invoice.estimateId)?.number ?? ''}
-                    </Link>
+                    {invoice.estimateId ? (
+                      <Link
+                        to="/presupuestos/$estimateId"
+                        params={{ estimateId: invoice.estimateId }}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        Presupuesto {estimateOf(invoice.estimateId)?.number ?? ''}
+                      </Link>
+                    ) : invoice.contractPeriodId ? (
+                      <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
+                    ) : (
+                      <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
+                    )}
                     {' · Vence '}
                     {dueLabel(invoice)}
                   </p>
@@ -312,7 +317,7 @@ export function InvoicesPage() {
                 <TableHead>Nº</TableHead>
                 <TableHead>Concepto</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Presupuesto</TableHead>
+                <TableHead>Origen</TableHead>
                 <TableHead>Vence</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -323,11 +328,7 @@ export function InvoicesPage() {
               {pager.pageItems.map((invoice) => {
                 const { label, variant } = statusConfig[invoice.status]
                 return (
-                  <TableRow
-                    key={invoice.id}
-                    className="cursor-pointer"
-                    onClick={() => openInvoice(invoice.id)}
-                  >
+                  <TableRow key={invoice.id}>
                     <TableCell className="whitespace-nowrap">
                       <Link
                         to="/facturas/$invoiceId"
@@ -338,21 +339,33 @@ export function InvoicesPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-64 truncate font-medium">
-                      {invoice.concept}
+                      <Link
+                        to="/facturas/$invoiceId"
+                        params={{ invoiceId: invoice.id }}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {invoice.concept}
+                      </Link>
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell>
                       <Link to="/clientes" className="underline-offset-4 hover:underline">
                         {clientName(invoice.clientId)}
                       </Link>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        to="/presupuestos/$estimateId"
-                        params={{ estimateId: invoice.estimateId }}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
-                      </Link>
+                    <TableCell className="whitespace-nowrap">
+                      {invoice.estimateId ? (
+                        <Link
+                          to="/presupuestos/$estimateId"
+                          params={{ estimateId: invoice.estimateId }}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
+                        </Link>
+                      ) : invoice.contractPeriodId ? (
+                        <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
+                      ) : (
+                        <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{dueLabel(invoice)}</TableCell>
                     <TableCell>

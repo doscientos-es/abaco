@@ -2,12 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 import type { TenantData } from '../domain/types'
 
-/**
- * Repository port. The Supabase adapter (supabase-repository.ts) is the only implementation,
- * filtered by RLS; `setRepository` must be called at startup.
- * `save` receives the previous and next state so adapters can write only the differences.
- * It may return a fresh state when the server changed data (e.g. assigned document numbers).
- */
+/** Repository operations are serialized; an adapter may return server-assigned values. */
 export type TenantRepository = {
   load(): Promise<AppState>
   save(previous: AppState, next: AppState): Promise<AppState | undefined>
@@ -18,6 +13,10 @@ export type AppState = {
   tenants: Record<string, TenantData>
 }
 
+export type SaveStatus = { state: 'saved' | 'saving' | 'error'; message?: string }
+
+type PendingChange = { previous: AppState; next: AppState; epoch: number }
+
 const unconfigured: TenantRepository = {
   load: () => Promise.reject(new Error('El almacén de datos no está configurado.')),
   save: () => Promise.reject(new Error('El almacén de datos no está configurado.')),
@@ -26,62 +25,87 @@ const unconfigured: TenantRepository = {
 let repository: TenantRepository = unconfigured
 let state: AppState | undefined
 let hydration: Promise<void> | undefined
-/** Saves run one after another so the server sees changes in the order they were made. */
-let saveQueue: Promise<unknown> = Promise.resolve()
-let pendingSaves = 0
+let epoch = 0
+let revision = 0
+let drainingEpoch: number | null = null
+let needsReload = false
+let queue: PendingChange[] = []
+let saveStatus: SaveStatus = { state: 'saved' }
 const listeners = new Set<() => void>()
+const statusListeners = new Set<() => void>()
 
-/** Chooses the data source. Call before `hydrateStore`; clears any loaded data. */
+function emit() {
+  for (const listener of listeners) listener()
+}
+
+function setSaveStatus(next: SaveStatus) {
+  saveStatus = next
+  for (const listener of statusListeners) listener()
+}
+
+/** Chooses the data source. Call before hydrateStore. */
 export function setRepository(next: TenantRepository): void {
+  epoch += 1
   repository = next
   state = undefined
   hydration = undefined
+  queue = []
+  needsReload = false
+  setSaveStatus({ state: 'saved' })
 }
 
-/**
- * Marks the data as outdated (sign-out, new company). The next `hydrateStore` loads again and
- * replaces it. The old data stays only until then: screens still mounted must not lose it mid-render,
- * and the root route does not show them without a session.
- */
+/** Invalidates in-flight responses and queued writes when the identity changes. */
 export function resetStore(): void {
+  epoch += 1
   hydration = undefined
+  queue = []
+  needsReload = false
+  setSaveStatus({ state: 'saved' })
 }
 
-/** Loads data once. Routes await this in `beforeLoad` so components can read the store synchronously. */
+/** Routes await this before rendering screens that read the store synchronously. */
 export function hydrateStore(): Promise<void> {
-  hydration ??= repository
-    .load()
-    .then((loaded) => {
-      state = loaded
-      emit()
-    })
-    .catch((error: unknown) => {
-      hydration = undefined
-      throw error
-    })
+  if (hydration) return hydration
+  const startedIn = epoch
+  const pending = repository.load().then((loaded) => {
+    if (startedIn !== epoch) return
+    state = loaded
+    revision += 1
+    emit()
+  })
+  hydration = pending.catch((error: unknown) => {
+    if (startedIn === epoch) hydration = undefined
+    throw error
+  })
   return hydration
 }
 
-/** Points the app at one of the loaded companies. Not saved: it is a view choice, not data. */
+/** The active company is a view choice, never persisted as part of a mutation. */
 export function setActiveTenantId(id: string): void {
   if (!state || state.activeTenantId === id || !state.tenants[id]) return
   state = { ...state, activeTenantId: id }
+  revision += 1
   emit()
 }
 
-/**
- * Reloads from the source so answers given elsewhere (e.g. a client accepting an estimate) show up.
- * Skipped while saves are pending, so it never overwrites edits that have not reached the server.
- */
+/** A reload only applies if the session, local edits and active company are still current. */
 export async function refreshStore(): Promise<void> {
-  if (!state || pendingSaves > 0) return
+  if (!state || queue.length || drainingEpoch === epoch) return
+  const startedIn = epoch
+  const startedAt = revision
+  const selected = state.activeTenantId
   try {
     const loaded = await repository.load()
-    if (pendingSaves > 0) return
-    state = { ...loaded, activeTenantId: state.tenants[state.activeTenantId] ? state.activeTenantId : loaded.activeTenantId }
+    if (startedIn !== epoch || startedAt !== revision || queue.length || drainingEpoch === epoch)
+      return
+    state = {
+      ...loaded,
+      activeTenantId: loaded.tenants[selected] ? selected : loaded.activeTenantId,
+    }
+    revision += 1
     emit()
   } catch {
-    // A failed refresh keeps the data already on screen.
+    // A background refresh never discards data already on screen.
   }
 }
 
@@ -90,41 +114,93 @@ function current(): AppState {
   return state
 }
 
-function emit() {
-  for (const listener of listeners) listener()
+/**
+ * A failed write stays in the queue with its original ids. Retrying cannot silently discard edits.
+ * A server reload runs only after every queued write succeeds and no newer edit has appeared.
+ */
+async function drainQueue(): Promise<void> {
+  if (drainingEpoch === epoch || saveStatus.state === 'error') return
+  drainingEpoch = epoch
+  const startedIn = epoch
+  try {
+    while (queue.length && startedIn === epoch) {
+      const change = queue[0]
+      if (!change || change.epoch !== epoch) break
+      try {
+        const fresh = await repository.save(change.previous, change.next)
+        if (startedIn !== epoch) return
+        queue.shift()
+        needsReload ||= Boolean(fresh)
+      } catch (error) {
+        if (startedIn !== epoch) return
+        setSaveStatus({
+          state: 'error',
+          message: error instanceof Error ? error.message : 'No se pudo guardar el cambio.',
+        })
+        return
+      }
+    }
+    if (startedIn !== epoch || queue.length) return
+    if (needsReload && state) {
+      const startedAt = revision
+      const selected = state.activeTenantId
+      try {
+        const loaded = await repository.load()
+        if (startedIn !== epoch) return
+        if (startedAt === revision && queue.length === 0) {
+          state = {
+            ...loaded,
+            activeTenantId: loaded.tenants[selected] ? selected : loaded.activeTenantId,
+          }
+          revision += 1
+          emit()
+          needsReload = false
+        }
+      } catch (error) {
+        if (startedIn !== epoch) return
+        setSaveStatus({
+          state: 'error',
+          message: error instanceof Error ? error.message : 'No se pudo comprobar el guardado.',
+        })
+        return
+      }
+    }
+    if (startedIn === epoch && queue.length === 0) setSaveStatus({ state: 'saved' })
+  } finally {
+    if (drainingEpoch === startedIn) drainingEpoch = null
+    if (startedIn === epoch && queue.length && getSaveStatus().state !== 'error') void drainQueue()
+  }
+}
+
+/** Retries the same pending changes after a recoverable network or server error. */
+export function retryStoreSaves(): void {
+  if (saveStatus.state !== 'error') return
+  setSaveStatus({ state: 'saving' })
+  void drainQueue()
 }
 
 export function updateState(mutator: (draft: AppState) => AppState): void {
   const previous = current()
   const next = mutator(previous)
   if (next === previous) return
-  // Optimistic: the UI updates now; a failed save rolls back to what the source holds.
   state = next
+  revision += 1
   emit()
-  pendingSaves += 1
-  saveQueue = saveQueue
-    .then(() => repository.save(previous, next))
-    .then((fresh) => {
-      if (!fresh) return
-      state = fresh
-      emit()
-    })
-    .catch(async (error: unknown) => {
-      // oxlint-disable-next-line no-console -- no error UI yet; this is the only trace of a failed save
-      console.error('No se pudo guardar el cambio; se recargan los datos.', error)
-      state = await repository.load()
-      emit()
-    })
-    .finally(() => {
-      pendingSaves -= 1
-    })
+  queue.push({ previous, next, epoch })
+  if (saveStatus.state !== 'error') {
+    setSaveStatus({ state: 'saving' })
+    void drainQueue()
+  }
 }
 
 export function updateTenantData(mutator: (data: TenantData) => TenantData): void {
   updateState((s) => {
-    const data = s.tenants[s.activeTenantId]
+    const tenantId = s.activeTenantId
+    const data = s.tenants[tenantId]
     if (!data) return s
-    return { ...s, tenants: { ...s.tenants, [s.activeTenantId]: mutator(data) } }
+    const next = mutator(data)
+    if (next === data) return s
+    return { ...s, tenants: { ...s.tenants, [tenantId]: next } }
   })
 }
 
@@ -133,25 +209,39 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener)
 }
 
+function subscribeStatus(listener: () => void) {
+  statusListeners.add(listener)
+  return () => statusListeners.delete(listener)
+}
+
+export function useSaveStatus(): SaveStatus {
+  return useSyncExternalStore(
+    subscribeStatus,
+    () => saveStatus,
+    () => saveStatus,
+  )
+}
+
+export function getSaveStatus(): SaveStatus {
+  return saveStatus
+}
+
 export function useAppState(): AppState {
   return useSyncExternalStore(subscribe, current, current)
 }
 
-/** Data of the active tenant. Components never see other tenants' rows. */
 export function useTenantData(): TenantData {
   const app = useAppState()
-  const data = app.tenants[app.activeTenantId] ?? Object.values(app.tenants)[0]
+  const data = app.tenants[app.activeTenantId]
   if (!data) throw new Error('No hay ninguna empresa configurada.')
   return data
 }
 
-/** Non-reactive read of the active tenant's data, for actions that decide what to do from it. */
 export function currentTenantData(): TenantData | undefined {
   if (!state) return undefined
   return state.tenants[state.activeTenantId]
 }
 
-/** Ids are uuid so the client can create rows with their final Postgres uuid primary key. */
 export function newId(): string {
   return crypto.randomUUID()
 }

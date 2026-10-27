@@ -36,7 +36,8 @@ export type FormProps = {
 export const hexColor = /^#[0-9a-fA-F]{6}$/
 export const defaultBrandColor = '#2a4227'
 
-export const isLogoOk = (logoUrl: string) => logoUrl.trim() === '' || /^https:\/\/\S+$/.test(logoUrl.trim())
+export const isLogoOk = (logoUrl: string) =>
+  logoUrl.trim() === '' || /^https:\/\/\S+$/.test(logoUrl.trim())
 export const isWebsiteOk = (website: string) =>
   website.trim() === '' || /^https?:\/\/[^\s./]+(?:\.[^\s/]+)+(?:\/[^\s]*)?$/i.test(website.trim())
 
@@ -71,7 +72,15 @@ export function percent(value: string, fallback: number) {
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback
 }
 
-export function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+export function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: ReactNode
+}) {
   return (
     <section className="border-border bg-card rounded-lg border">
       <div className="border-border border-b px-5 py-4">

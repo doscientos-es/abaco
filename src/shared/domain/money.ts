@@ -10,9 +10,7 @@ export function formatEuros(cents: Cents): string {
 export function parseEuros(input: string): Cents {
   const trimmed = input.trim().replace(/\s/g, '')
   if (!trimmed) return 0
-  const normalized = trimmed.includes(',')
-    ? trimmed.replace(/\./g, '').replace(',', '.')
-    : trimmed
+  const normalized = trimmed.includes(',') ? trimmed.replace(/\./g, '').replace(',', '.') : trimmed
   const value = Number(normalized)
   return Number.isFinite(value) ? Math.round(value * 100) : 0
 }

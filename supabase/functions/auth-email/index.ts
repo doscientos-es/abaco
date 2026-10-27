@@ -58,12 +58,20 @@ Deno.serve(async (request) => {
   const kind = data.email_action_type
   const messages = [{ to: user.email, tokenHash: data.token_hash, code: data.token }]
   if (kind === 'email_change' && user.new_email && data.token_hash_new) {
-    messages.push({ to: user.new_email, tokenHash: data.token_hash_new, code: data.token_new ?? '' })
+    messages.push({
+      to: user.new_email,
+      tokenHash: data.token_hash_new,
+      code: data.token_new ?? '',
+    })
   }
 
   try {
     for (const message of messages) {
-      const { subject, html, text } = renderEmail(kind, confirmLink(appUrl, message.tokenHash, kind), message.code)
+      const { subject, html, text } = renderEmail(
+        kind,
+        confirmLink(appUrl, message.tokenHash, kind),
+        message.code,
+      )
       await sendEmail({ to: message.to, subject, html, text })
     }
   } catch (error) {
@@ -72,5 +80,8 @@ Deno.serve(async (request) => {
     return hookError(500, 'No se pudo enviar el correo')
   }
 
-  return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 })
