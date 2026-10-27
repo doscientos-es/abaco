@@ -72,7 +72,7 @@
       ],
       "changes": [
         {
-          "sha": "1310e088aeb3eff6fc8bb08c81ec4ae2c723e12d",
+          "sha": "3e42b5e0fb9c4e579b28fd563328d93e28646c1b",
           "type": "fix",
           "scope": "db",
           "breaking": false,
