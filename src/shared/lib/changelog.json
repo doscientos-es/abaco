@@ -62,6 +62,7 @@
         {
           "title": "Correcciones",
           "items": [
+            "Evitar referencias ambiguas entre variables plpgsql y columnas",
             "Handle error in fetchCompanies to prevent no-company page",
             "Update search query initialization for invoices page",
             "Change message display to output element in team section",
@@ -70,6 +71,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "3e42b5e0fb9c4e579b28fd563328d93e28646c1b",
+          "type": "fix",
+          "scope": "db",
+          "breaking": false,
+          "description": "Evitar referencias ambiguas entre variables plpgsql y columnas"
+        },
         {
           "sha": "f6ac98e4fbee9b620b7fb93eb1cc94cb66bb5598",
           "type": "feat",
