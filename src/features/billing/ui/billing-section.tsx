@@ -24,11 +24,14 @@ import {
   type Interval,
   type PlanInfo,
 } from '../domain/plans'
-
 import { CustomPlanCard } from './custom-plan-card'
 import { PaymentHistory } from './payment-history'
 
-const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+const dateFormat = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
 
 function currentLine(sub: Subscription): string {
   const plan = planInfo(sub.plan)
@@ -36,15 +39,24 @@ function currentLine(sub: Subscription): string {
   if (sub.status === 'trialing' && sub.canWrite) {
     return `Prueba gratuita: te quedan ${sub.trialDaysLeft} ${sub.trialDaysLeft === 1 ? 'día' : 'días'}.`
   }
-  if (sub.status === 'trialing') return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
+  if (sub.status === 'trialing')
+    return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'canceled') return 'Sin plan activo. Tus datos están a salvo, solo en lectura.'
-  if (sub.status === 'past_due') return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Vuelve a elegir un plan para pagar con tarjeta.`
-  if (sub.cancelAtPeriodEnd) return `Plan ${plan?.name ?? ''}: se cancela el ${until}. Hasta entonces sigue todo igual.`
+  if (sub.status === 'past_due')
+    return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Vuelve a elegir un plan para pagar con tarjeta.`
+  if (sub.cancelAtPeriodEnd)
+    return `Plan ${plan?.name ?? ''}: se cancela el ${until}. Hasta entonces sigue todo igual.`
   return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
 }
 
 /** Plan and payment. Only rendered for the owner. */
-export function BillingSection({ tenantId, companyName }: { tenantId: string; companyName: string }) {
+export function BillingSection({
+  tenantId,
+  companyName,
+}: {
+  tenantId: string
+  companyName: string
+}) {
   const subscription = useQuery(subscriptionQuery(tenantId)).data
   const [interval, setInterval] = useState<Interval>('year')
   const [busy, setBusy] = useState<string | null>(null)
@@ -117,15 +129,22 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
 
       <div className="space-y-5 p-5">
         {returned === 'ok' ? (
-          <p role="status" className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
+          <p
+            role="status"
+            className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm"
+          >
             {activated
               ? 'Pago recibido. Tu plan ya está activo, gracias.'
               : 'Estamos confirmando el pago con el banco. En unos segundos verás tu plan activo; no hace falta repetir el pago.'}
           </p>
         ) : null}
         {returned === 'cancelado' ? (
-          <p role="status" className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
-            El pago no se ha completado y no se ha cobrado nada. Puedes volver a intentarlo cuando quieras.
+          <p
+            role="status"
+            className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm"
+          >
+            El pago no se ha completado y no se ha cobrado nada. Puedes volver a intentarlo cuando
+            quieras.
           </p>
         ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
@@ -139,18 +158,23 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
             </p>
             <p className="mt-1 text-xs">
               {needed
-                ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name} (${formatEuros(needed.monthly)} al mes). `
+                ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name}. `
                 : `Ahora sois ${members} personas, más de las que admite cualquier plan. `}
               Si prefieres uno más pequeño, quita el acceso a las personas que sobren en Equipo.
             </p>
           </div>
         ) : null}
 
+        <p className="text-muted-foreground text-sm">
+          Todas las funciones en todos los planes. Solo cambia el número de personas, incluido tú.
+        </p>
         <Tabs selectedKey={interval} onSelectionChange={(key) => setInterval(key as Interval)}>
           <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
             <TabsTrigger id="year" className="flex-1 sm:flex-none">
               Anual
-              <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">2 meses gratis</span>
+              <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
+                2 meses gratis
+              </span>
             </TabsTrigger>
             <TabsTrigger id="month" className="flex-1 sm:flex-none">
               Mensual
@@ -185,8 +209,9 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
           ))}
         </ul>
         <p className="text-muted-foreground text-xs">
-          Precios sin IVA (se añade el 21 %). Pago con tarjeta, renovación automática. Sin permanencia: cancelas
-          cuando quieras y sigues hasta el final del periodo pagado. Un cambio de plan se aplica en la próxima renovación.
+          Precios sin IVA (se añade el 21 %). Pago con tarjeta, renovación automática. Sin
+          permanencia: cancelas cuando quieras y sigues hasta el final del periodo pagado. Un cambio
+          de plan se aplica en la próxima renovación.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -195,9 +220,15 @@ export function BillingSection({ tenantId, companyName }: { tenantId: string; co
             <Button
               variant="outline"
               isDisabled={busy !== null}
-              onPress={() => void go('cancel', () => (subscription.cancelAtPeriodEnd ? resumePlan(tenantId) : cancelPlan(tenantId)))}
+              onPress={() =>
+                void go('cancel', () =>
+                  subscription.cancelAtPeriodEnd ? resumePlan(tenantId) : cancelPlan(tenantId),
+                )
+              }
             >
-              {subscription.cancelAtPeriodEnd ? 'Mantener mi plan' : 'Cancelar al final del periodo'}
+              {subscription.cancelAtPeriodEnd
+                ? 'Mantener mi plan'
+                : 'Cancelar al final del periodo'}
             </Button>
           ) : null}
         </div>
@@ -229,12 +260,22 @@ function PlanCard(props: {
         <h3 className="text-sm font-semibold">{plan.name}</h3>
         <p className="text-muted-foreground text-xs">{plan.audience}</p>
       </div>
+      <p className="text-xs font-medium">
+        {plan.members === 1
+          ? '1 persona: tú.'
+          : `Hasta ${plan.members} personas, incluyéndote a ti.`}
+      </p>
       <p>
         <span className="text-2xl font-semibold">{formatEuros(price)}</span>
         <span className="text-muted-foreground text-xs"> /mes</span>
       </p>
       <p className="text-muted-foreground text-xs">
-        {interval === 'year' ? `${formatEuros(plan.yearly)} al año` : 'Se cobra cada mes'}
+        {interval === 'year' ? 'Equivalente mensual · pago anual' : 'Pago mensual'}
+      </p>
+      <p className="text-muted-foreground text-xs">
+        {interval === 'year'
+          ? `Se cobra ${formatEuros(plan.yearly)} al año, sin IVA`
+          : 'Se cobra cada mes, sin IVA'}
       </p>
       <Button
         className="mt-auto"

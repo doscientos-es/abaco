@@ -4,6 +4,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
 import { formatEuros, planCatalog, TRIAL_DAYS } from '@/features/billing/domain/plans'
+import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
 
@@ -58,16 +59,25 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Crea tu cuenta"
-      description="Empieza gratis con tu empresa. Después podrás invitar a tu equipo."
+      title="Prueba Ábaco con tu próximo presupuesto"
+      description={brand.promise}
       footer={toLogin}
     >
+      <div className="text-muted-foreground space-y-2 text-sm">
+        <p>{brand.audience}</p>
+        <ul aria-label="Qué puedes hacer con Ábaco" className="list-disc space-y-1 pl-4">
+          <li>Materiales y mano de obra en un mismo presupuesto.</li>
+          <li>Aceptación o rechazo desde el enlace del cliente.</li>
+          <li>Facturas y seguimiento de cobros pendientes.</li>
+        </ul>
+      </div>
       <div className="bg-accent text-accent-foreground mb-4 rounded-lg px-4 py-3 text-sm">
         <p className="font-medium">{TRIAL_DAYS} días gratis con el plan Empresa completo</p>
         <p className="mt-1 text-xs">
-          Sin tarjeta. Al acabar, eliges el plan que encaje con tu equipo:{' '}
-          {planCatalog.map((p) => `${p.name} ${formatEuros(p.monthly)}/mes`).join(' · ')} (sin IVA,
-          y 2 meses gratis pagando al año). Si no eliges, tus datos siguen ahí en solo lectura.
+          Sin tarjeta. Todos los planes incluyen las mismas funciones; solo cambia el tamaño del
+          equipo: {planCatalog.map((p) => `${p.name} ${formatEuros(p.monthly)}/mes`).join(' · ')}{' '}
+          (sin IVA, y 2 meses gratis pagando al año). Si no eliges, tus datos siguen ahí en solo
+          lectura.
         </p>
       </div>
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
@@ -83,7 +93,7 @@ export function RegisterPage() {
           label="Nombre de la empresa"
           maxLength={120}
           minLength={1}
-          placeholder="Ej. Reformas García"
+          placeholder="Ej. Instalaciones García"
           value={companyName}
           onChange={setCompanyName}
         />
@@ -106,7 +116,7 @@ export function RegisterPage() {
         />
         <FormError message={error} />
         <Button type="submit" className="w-full" isDisabled={busy}>
-          {busy ? 'Creando cuenta…' : 'Crear cuenta'}
+          {busy ? 'Creando cuenta…' : `Crear cuenta y probar ${TRIAL_DAYS} días`}
         </Button>
       </form>
     </AuthLayout>

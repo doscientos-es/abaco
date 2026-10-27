@@ -39,9 +39,11 @@ export function WelcomePage() {
       }
       // Refresh before navigating so the root guard no longer sends us back to welcome.
       await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
-      await navigate(choice === 'plan'
-        ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
-        : { to: '/', replace: true })
+      await navigate(
+        choice === 'plan'
+          ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
+          : { to: '/', replace: true },
+      )
     } catch {
       setError('No se pudo continuar. Inténtalo de nuevo.')
     } finally {
@@ -52,9 +54,20 @@ export function WelcomePage() {
   return (
     <AuthLayout
       title="¿Cómo quieres empezar?"
-      description="Tu empresa ya está lista. Puedes probar Ábaco gratis o elegir un plan ahora."
+      description="Tu empresa ya está lista. Prueba Ábaco con un presupuesto real y sigue la respuesta de tu cliente."
     >
-      <section aria-label="Prueba gratuita" className="border-primary/30 bg-primary/5 space-y-3 rounded-xl border p-4">
+      <section aria-label="Tu primer presupuesto" className="space-y-2 text-sm">
+        <h2 className="font-semibold">Tu primer presupuesto, paso a paso</h2>
+        <ol className="text-muted-foreground list-decimal space-y-1 pl-4">
+          <li>Añade un cliente.</li>
+          <li>Prepara las partidas de materiales y mano de obra.</li>
+          <li>Envía el enlace por WhatsApp o correo y consulta la respuesta.</li>
+        </ol>
+      </section>
+      <section
+        aria-label="Prueba gratuita"
+        className="border-primary/30 bg-primary/5 space-y-3 rounded-xl border p-4"
+      >
         <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
           Sin tarjeta
         </span>
@@ -65,7 +78,8 @@ export function WelcomePage() {
           </p>
           {trialing ? (
             <p className="text-muted-foreground text-xs">
-              {expired ? 'Tu prueba terminó el' : 'Tu prueba termina el'} {day.format(subscription.trialEndsAt)}.
+              {expired ? 'Tu prueba terminó el' : 'Tu prueba termina el'}{' '}
+              {day.format(subscription.trialEndsAt)}.
             </p>
           ) : null}
         </div>
@@ -73,11 +87,15 @@ export function WelcomePage() {
           {busy === 'trial' ? 'Entrando…' : trialLabel}
         </Button>
       </section>
-      <section aria-label="Elegir un plan" className="border-border space-y-3 rounded-xl border p-4">
+      <section
+        aria-label="Elegir un plan"
+        className="border-border space-y-3 rounded-xl border p-4"
+      >
         <div className="space-y-1">
           <h2 className="font-semibold">¿Ya lo tienes claro?</h2>
           <p className="text-muted-foreground text-sm">
-            Elige el plan que encaje con tu equipo y paga con tarjeta.
+            Todas las funciones están incluidas. Elige según el número de personas de tu equipo y
+            paga con tarjeta.
           </p>
         </div>
         <Button
@@ -90,8 +108,8 @@ export function WelcomePage() {
         </Button>
       </section>
       <p className="text-muted-foreground text-xs leading-relaxed">
-        Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan.
-        Si no contratas, tus datos se conservan en modo lectura.
+        Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan. Si no
+        contratas, tus datos se conservan en modo lectura.
       </p>
       <FormError message={error} />
     </AuthLayout>

@@ -3,26 +3,35 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { BillingResult } from '../application/billing-actions'
-
+import { formatEuros, perMonthWhenYearly, planCatalog, type Interval } from '../domain/plans'
 import { BillingSection } from './billing-section'
 
-const { state, effect, button, checkout, submit, invalidate, setBusy, setError } = vi.hoisted(() => ({
-  state: vi.fn(), effect: vi.fn(), button: vi.fn(), checkout: vi.fn(), submit: vi.fn(),
-  invalidate: vi.fn(), setBusy: vi.fn(), setError: vi.fn(),
-}))
+const { state, effect, button, checkout, submit, invalidate, setBusy, setError } = vi.hoisted(
+  () => ({
+    state: vi.fn(),
+    effect: vi.fn(),
+    button: vi.fn(),
+    checkout: vi.fn(),
+    submit: vi.fn(),
+    invalidate: vi.fn(),
+    setBusy: vi.fn(),
+    setError: vi.fn(),
+  }),
+)
 
 // Exercise the component's handlers without adding a browser-testing dependency.
 vi.mock('react', async (importOriginal) => ({
-  ...await importOriginal<typeof React>(),
+  ...(await importOriginal<typeof React>()),
   useState: state,
   useEffect: effect,
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: invalidate }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
-    data: queryKey[0] === 'subscription'
-      ? { plan: 'trial', status: 'trialing', canWrite: true, trialDaysLeft: 14 }
-      : 1,
+    data:
+      queryKey[0] === 'subscription'
+        ? { plan: 'trial', status: 'trialing', canWrite: true, trialDaysLeft: 14 }
+        : 1,
   }),
 }))
 vi.mock('@doscientos/ui', () => ({
@@ -34,7 +43,9 @@ vi.mock('@doscientos/ui', () => ({
 vi.mock('../application/billing-actions', () => ({
   startCheckout: checkout,
   submitToRedsys: submit,
-  cancelPlan: vi.fn(), changePlan: vi.fn(), resumePlan: vi.fn(),
+  cancelPlan: vi.fn(),
+  changePlan: vi.fn(),
+  resumePlan: vi.fn(),
   subscriptionQuery: (id: string) => ({ queryKey: ['subscription', id] }),
   memberCountQuery: (id: string) => ({ queryKey: ['member-count', id] }),
 }))
@@ -42,12 +53,13 @@ vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
 vi.mock('./custom-plan-card', () => ({ CustomPlanCard: () => null }))
 
 const form = {
-  url: 'https://payments.example/checkout', signatureVersion: 'test-version',
-  merchantParameters: 'test-parameters', signature: 'test-signature',
+  url: 'https://payments.example/checkout',
+  signatureVersion: 'test-version',
+  merchantParameters: 'test-parameters',
+  signature: 'test-signature',
 }
-const render = () => renderToStaticMarkup(
-  <BillingSection tenantId="trial-company" companyName="Trial company" />,
-)
+const render = () =>
+  renderToStaticMarkup(<BillingSection tenantId="trial-company" companyName="Trial company" />)
 const choose = () => {
   const props = button.mock.calls.find(([props]) => props.children === 'Elegir Autónomo')?.[0]
   expect(props).toBeDefined()
@@ -56,26 +68,35 @@ const choose = () => {
 
 describe('BillingSection payment recovery', () => {
   let busy: string | null
+  let interval: Interval
   let error: string
   let page: EventTarget
 
   beforeEach(() => {
     vi.resetAllMocks()
     busy = null
+    interval = 'year'
     error = ''
     page = new EventTarget()
     vi.stubGlobal('window', page)
-    setBusy.mockImplementation((value: string | null) => { busy = value })
-    setError.mockImplementation((value: string) => { error = value })
+    setBusy.mockImplementation((value: string | null) => {
+      busy = value
+    })
+    setError.mockImplementation((value: string) => {
+      error = value
+    })
     state.mockImplementation((initial: unknown) => {
       if (initial === null) return [busy, setBusy]
       if (initial === '') return [error, setError]
+      if (initial === 'year') return [interval, vi.fn()]
       if (typeof initial === 'function') return [null, vi.fn()]
       return [initial, vi.fn()]
     })
-    button.mockImplementation(({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
-      <button disabled={isDisabled}>{children}</button>
-    ))
+    button.mockImplementation(
+      ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
+        <button disabled={isDisabled}>{children}</button>
+      ),
+    )
     invalidate.mockResolvedValue(undefined)
   })
 
@@ -83,9 +104,38 @@ describe('BillingSection payment recovery', () => {
     vi.unstubAllGlobals()
   })
 
+  it('explains feature parity, owner-inclusive limits and the annual amount charged', () => {
+    const html = render()
+
+    expect(html).toContain('Todas las funciones en todos los planes.')
+    expect(html).toContain('1 persona: tú.')
+    expect(html).toContain('Hasta 5 personas, incluyéndote a ti.')
+    expect(html).toContain('Hasta 15 personas, incluyéndote a ti.')
+    expect(html).toContain('Equivalente mensual · pago anual')
+    for (const plan of planCatalog) {
+      expect(html).toContain(formatEuros(perMonthWhenYearly(plan)))
+      expect(html).toContain(`Se cobra ${formatEuros(plan.yearly)} al año, sin IVA`)
+    }
+    expect(html).not.toContain('Se cobra cada mes')
+  })
+
+  it('distinguishes monthly billing from an annual equivalent', () => {
+    interval = 'month'
+    const html = render()
+
+    for (const plan of planCatalog) expect(html).toContain(formatEuros(plan.monthly))
+    expect(html).toContain('Se cobra cada mes, sin IVA')
+    expect(html).not.toContain('Equivalente mensual · pago anual')
+    expect(html).not.toContain('al año, sin IVA')
+  })
+
   it('disables the chosen plan during checkout and releases it after the payment handoff', async () => {
     let finish: (result: BillingResult) => void = () => { }
-    checkout.mockReturnValue(new Promise<BillingResult>((resolve) => { finish = resolve }))
+    checkout.mockReturnValue(
+      new Promise<BillingResult>((resolve) => {
+        finish = resolve
+      }),
+    )
     render()
     choose()
     expect(busy).toBe('solo')
@@ -113,7 +163,9 @@ describe('BillingSection payment recovery', () => {
 
   it('releases the button if submitting the payment form fails', async () => {
     checkout.mockResolvedValue({ ok: true, form })
-    submit.mockImplementation(() => { throw new Error('Navigation failed') })
+    submit.mockImplementation(() => {
+      throw new Error('Navigation failed')
+    })
     render()
     choose()
 

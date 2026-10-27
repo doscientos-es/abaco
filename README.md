@@ -1,101 +1,84 @@
-# Starter operativo React + Supabase
+# Ábaco
 
-Plantilla de referencia para que un agente inicie un CRM, portal autenticado,
-aplicación de facturación o demo operativa. No es un producto listo para
-producción ni un CRM genérico: demuestra una única feature de clientes con
-fixtures y los límites de arquitectura que deben conservarse al adaptar el
-dominio.
+Presupuestos y cobros para autónomos y pequeñas empresas de instalaciones.
+Un producto de Doscientos construido con React, Vite, TanStack Router y Supabase.
 
-## Uso
+## Enfoque del producto
 
-Genera un **repositorio nuevo**, no una carpeta dentro de `@doscientos/ui` ni
-de un cliente existente:
+Prepara presupuestos, facilita la respuesta de tu cliente y controla lo pendiente
+de cobrar. El primer resultado útil de la prueba es enviar un presupuesto real,
+no completar una configuración extensa.
 
-```bash
-pnpm dlx @doscientos/create-operational-app mi-crm --title "CRM Acme"
-```
+- Clientes y catálogo de materiales y mano de obra.
+- Presupuestos y facturas; envío por WhatsApp y correo.
+- Aceptación o rechazo desde el enlace del cliente, con nombre y fecha registrados.
+- Seguimiento de facturas y cobros pendientes; contabilidad básica.
 
-La CLI asigna el nombre del paquete desde el directorio y el título desde
-`--title`; usa `--name @acme/mi-crm` si necesitas un nombre de paquete distinto.
-No sobrescribe directorios no vacíos. Ejecuta `pnpm install` explícitamente con
-`--install`, o hazlo tras revisar el proyecto generado.
+El [plan comercial](docs/COMMERCIAL_PLAN.md) define el cliente inicial, los límites
+de la oferta, los escenarios económicos y el piloto de captación y retención.
+Las cifras de mercado y los tickets previstos son hipótesis, no resultados medidos.
 
-Después:
+## Oferta vigente
 
-1. Ejecuta `pnpm quality` y `pnpm build`.
-   Tras la primera instalación, revisa y versiona `pnpm-lock.yaml`: el workflow incluido
-   exige instalación congelada y ejecuta esos mismos comandos, sin credenciales reales.
-2. Sustituye la feature `customers` por el primer vertical aprobado.
-3. Mantén las fixtures mientras se valida el flujo. Cambia únicamente el
-   adaptador en `src/features/customers/infrastructure/list-customers.ts` al
-   conectar Supabase.
-4. Añade una migración y políticas RLS antes de leer datos reales, en un entorno
-   autorizado. Las mutaciones privilegiadas viven en un backend compatible;
-   `supabase/functions/` solo si Edge soporta esa operación y sus dependencias.
+Todos los planes incluyen las mismas funciones; solo cambia el tamaño del equipo,
+incluido el propietario. Precios sin IVA:
 
-No instales TanStack Start, Next.js, un servidor Node ni una librería de estado
-global por defecto. No reutilices las entidades, nombres, datos ni textos de
-este ejemplo como requisitos de un cliente.
+| Plan     | Personas | Mensual | Anual |
+| -------- | -------: | ------: | ----: |
+| Autónomo |        1 |    20 € | 200 € |
+| Equipo   |  Hasta 5 |    34 € | 340 € |
+| Empresa  | Hasta 15 |    54 € | 540 € |
 
-Esta plantilla es Vite/Router, no Start. Para servidor integrado, consultar la
-[decisión canónica](https://github.com/doscientos-es/skills/blob/main/skills/operational-react-supabase/references/stack-decision.md)
-y validar un piloto aprobado. El transporte fiscal actual no debe suponerse compatible
-con Edge. Instalar el preset operativo dentro del repositorio para conservar estas guías.
+Prueba de 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
+El pago anual se cobra de una vez. El catálogo se define en
+`src/features/billing/domain/plans.ts`; precios y límites deben mantenerse alineados
+con la base de datos. Redsys tramita el cobro de la suscripción de Ábaco.
 
-## Contrato de la plantilla
+## Desarrollo
 
-| Área                      | Propósito                                                                     |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| `src/app`                 | Inicialización de Query, router y shell; compone las features.                |
-| `src/routes`              | Rutas de TanStack Router y validación de URL; `routeTree.gen.ts` es generado. |
-| `src/features/customers`  | UI, aplicación e infraestructura del vertical de ejemplo.                     |
-| `src/shared/lib/supabase` | Constructor del cliente de navegador; no lo invoques desde componentes.       |
-| `src/demos`               | Fixtures sintéticas reutilizables por los adaptadores y tests.                |
-| `supabase/migrations`     | Migraciones pequeñas y versionadas, tras aprobar el modelo de datos.          |
-| `supabase/functions`      | Operaciones Edge cuando el runtime y el alcance lo permitan.                  |
+Desde este directorio, con las versiones de Node y pnpm indicadas en `package.json`:
+
+1. Instala las dependencias declaradas con `pnpm install --frozen-lockfile`.
+2. Configura las variables públicas de Supabase para conectar el entorno autorizado.
+3. Ejecuta `pnpm dev` para iniciar la aplicación.
+
+En una SPA de Vite, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` son
+visibles en el navegador. El acceso a los datos depende de autenticación y políticas
+RLS (seguridad por filas). Nunca añadas service role, certificados, claves de firma
+ni secretos de proveedores a una variable `VITE_*`.
+
+## Estructura
+
+| Área                  | Propósito                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `src/app`             | Inicialización de Query, router y shell; compone las features.                                |
+| `src/routes`          | Rutas y validación de URL; `routeTree.gen.ts` es generado.                                    |
+| `src/features`        | Auth, onboarding, clientes, catálogo, presupuestos, facturas, contabilidad, planes y ajustes. |
+| `src/shared`          | Dominio compartido, marca, store y adaptadores comunes.                                       |
+| `supabase/migrations` | Esquema, precios, permisos y políticas de acceso versionados.                                 |
+| `supabase/functions`  | Operaciones de backend, incluido el cobro de suscripciones.                                   |
 
 La URL pertenece a TanStack Router, la caché remota a TanStack Query y las
-primitivas visuales a `@doscientos/ui`. La feature conserva la lógica de
-filtrado y su adaptador; las rutas no conocen Supabase.
-
-## Variables de entorno
-
-`.env.example` sólo contiene nombres de variables públicas. En una SPA de Vite,
-`VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` son visibles en el
-navegador; es correcto porque RLS sigue siendo obligatoria. Nunca añadas service
-role, certificados, claves de firma ni secretos de proveedores a una variable
-`VITE_*`.
-
-El modo de fixtures no necesita variables de entorno. `createBrowserSupabaseClient`
-falla explícitamente si alguien intenta conectar datos reales sin configurarlas.
+primitivas visuales a `@doscientos/ui`. Mantener los permisos y límites de cada
+feature; no conectar operaciones privilegiadas directamente desde componentes.
 
 ## Validación
 
-El contrato completo es `pnpm quality`, también para agentes y CI. No sustituirlo por
-un lint aislado. El starter incluye un pre-commit nativo que ejecuta `pnpm quality:quick`
-(formato + lint, sin fixes). No añade dependencias, tests/build en cada commit ni pre-push.
-
-Tras generar e inicializar el repositorio propio, revisar `.githooks/` y ejecutar
-`pnpm hooks:install` una vez por clon. No se activa con `pnpm install` ni desde el repo
-de skills. Rehúsa reemplazar hooks existentes. Necesita Node/pnpm en PATH y comprueba
-el árbol de trabajo completo, sin tocar el staging parcial ni crear stash. CI verifica
-el contenido del commit; configurar required checks en GitHub requiere un paso aparte.
-
-Los tests de generación solo verifican la copia/personalización, no garantizan que estos
-comandos pasen. No eliminar un check para ocultar una incompatibilidad: aislarla, añadir
-una regresión en `@doscientos/configs` y corregir la regla o la plantilla deliberadamente.
+El contrato completo es `pnpm quality`, también para agentes y CI. No eliminar
+checks para ocultar incompatibilidades ni aplicar cambios a datos reales para validar copy.
 
 - `pnpm format:check`: formato compartido.
 - `pnpm lint`: reglas de React/Vite y capas de features.
 - `pnpm structure:check`: estructura y nombres.
 - `pnpm typecheck`: contrato TypeScript estricto.
-- `pnpm test`: pruebas de lógica de URL y dominio.
-- `pnpm quality`: todos los checks anteriores.
+- `pnpm test`: pruebas de dominio, aplicación y presentación.
+- `pnpm quality`: novedades y todos los checks anteriores.
 - `pnpm build`: compilación estática de Vite y generación del árbol de rutas.
 
-Antes de añadir una nueva feature, replica los escenarios `default`, `loading`,
-`empty`, `error` y contenido largo usando fixtures; conecta backend real sólo
-cuando modelo, tenant, permisos y políticas estén aprobados.
+Revisar `.githooks/` y ejecutar `pnpm hooks:install` una vez por clon para activar
+el pre-commit de `pnpm quality:quick` (formato y lint, sin fixes). Rehúsa reemplazar
+hooks existentes. CI verifica el contenido del commit; los required checks de
+GitHub se configuran aparte.
 
 ## Versiones y novedades de Ábaco
 

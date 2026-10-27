@@ -1,7 +1,8 @@
 /**
  * Planes. Todos incluyen lo mismo (presupuestos, facturas, clientes y catálogo ilimitados);
  * solo cambia cuántas personas forman el equipo. Precios sin IVA, en euros.
- * Los mismos números están en la base de datos (`plan_member_limit`) y en los precios de Stripe.
+ * Los límites y precios se reflejan en la base de datos (`plan_member_limit` y `plan_price_cents`);
+ * el cobro se tramita con Redsys.
  */
 export const paidPlans = ['solo', 'team', 'business'] as const
 export type PaidPlan = (typeof paidPlans)[number]
@@ -24,15 +25,38 @@ export const TRIAL_DAYS = 14
 export const TRIAL_MEMBERS = 15
 
 export const planCatalog: readonly PlanInfo[] = [
-  { id: 'solo', name: 'Autónomo', members: 1, monthly: 20, yearly: 200, audience: 'Trabajas tú solo.' },
-  { id: 'team', name: 'Equipo', members: 5, monthly: 34, yearly: 340, audience: 'Tú y tu cuadrilla, hasta 5 personas.' },
-  { id: 'business', name: 'Empresa', members: 15, monthly: 54, yearly: 540, audience: 'Varias cuadrillas u oficina, hasta 15 personas.' },
+  {
+    id: 'solo',
+    name: 'Autónomo',
+    members: 1,
+    monthly: 20,
+    yearly: 200,
+    audience: 'Gestionas tú los presupuestos y cobros.',
+  },
+  {
+    id: 'team',
+    name: 'Equipo',
+    members: 5,
+    monthly: 34,
+    yearly: 340,
+    audience: 'Trabajas con una cuadrilla.',
+  },
+  {
+    id: 'business',
+    name: 'Empresa',
+    members: 15,
+    monthly: 54,
+    yearly: 540,
+    audience: 'Coordinas varias cuadrillas y la oficina.',
+  },
 ]
 
 export const includedInEveryPlan = [
   'Presupuestos y facturas ilimitados',
   'Clientes y catálogo ilimitados',
   'Envío por WhatsApp y correo',
+  'Aceptación o rechazo desde el enlace del cliente',
+  'Seguimiento de facturas y cobros pendientes',
   'Contabilidad básica',
   'Soporte por correo',
 ]
@@ -56,5 +80,9 @@ export function perMonthWhenYearly(plan: PlanInfo): number {
 }
 
 export function formatEuros(value: number): string {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value)
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 2,
+  }).format(value)
 }
