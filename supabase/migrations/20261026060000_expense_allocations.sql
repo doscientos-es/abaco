@@ -55,7 +55,7 @@ declare
   cost_cents bigint;
   allocated_cents bigint;
   allocated_net_cents bigint;
-  net_cents bigint;
+  line_net_cents bigint;
   allocation_id uuid;
 begin
   if (select auth.uid()) is null or not public.has_role(
@@ -103,19 +103,19 @@ begin
   if p_gross_cents > expense.amount_cents - allocated_cents then
     raise exception 'La imputación supera el saldo del gasto' using errcode = '22003';
   end if;
-  net_cents := least(
+  line_net_cents := least(
     round(p_gross_cents * 100 / (100 + expense.vat_rate))::bigint,
     round(expense.amount_cents * 100 / (100 + expense.vat_rate))::bigint
       - allocated_net_cents
   );
-  if net_cents <= 0 then
+  if line_net_cents <= 0 then
     raise exception 'El importe neto debe ser positivo' using errcode = '22023';
   end if;
   if p_work_cost_entry_id is not null then
     select signed_total_cost_cents into cost_cents from public.work_cost_entries
     where id = p_work_cost_entry_id and tenant_id = p_tenant_id
       and work_order_id = p_work_order_id and reversal_of is null for update;
-    if not found or cost_cents <> net_cents or exists (
+    if not found or cost_cents <> line_net_cents or exists (
       select 1 from public.work_cost_entries where reversal_of = p_work_cost_entry_id
     ) or exists (
       select 1 from public.ledger_expense_allocations a
@@ -127,7 +127,7 @@ begin
     select signed_total_cost_cents into cost_cents from public.contract_cost_entries
     where id = p_contract_cost_entry_id and tenant_id = p_tenant_id
       and contract_id = p_contract_id and reversal_of is null for update;
-    if not found or cost_cents <> net_cents or exists (
+    if not found or cost_cents <> line_net_cents or exists (
       select 1 from public.contract_cost_entries where reversal_of = p_contract_cost_entry_id
     ) or exists (
       select 1 from public.ledger_expense_allocations a
@@ -140,7 +140,7 @@ begin
     contract_cost_entry_id, gross_cents, net_cents, operation_id
   ) values (
     p_tenant_id, p_ledger_entry_id, p_work_order_id, p_contract_id,
-    p_work_cost_entry_id, p_contract_cost_entry_id, p_gross_cents, net_cents, p_operation_id
+    p_work_cost_entry_id, p_contract_cost_entry_id, p_gross_cents, line_net_cents, p_operation_id
   ) returning id into allocation_id;
   return allocation_id;
 end;

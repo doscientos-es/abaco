@@ -44,7 +44,7 @@ as $$
 declare
   target public.service_contracts%rowtype;
   cycle_months integer;
-  cycle_index integer := 0;
+  cycle_no integer := 0;
   cycle_start date;
   next_start date;
   cycle_end date;
@@ -90,17 +90,17 @@ begin
     and e.payload->>'to' in ('expired', 'canceled');
 
   loop
-    if cycle_index >= 1200 then
+    if cycle_no >= 1200 then
       raise exception 'El contrato excede el límite de periodos' using errcode = '22003';
     end if;
     cycle_start := (target.starts_on + pg_catalog.make_interval(
-      months => cycle_index * cycle_months
+      months => cycle_no * cycle_months
     ))::date;
     exit when cycle_start > p_through_on
       or (target.ends_on is not null and cycle_start > target.ends_on)
       or (terminal_on is not null and cycle_start > terminal_on);
     next_start := (target.starts_on + pg_catalog.make_interval(
-      months => (cycle_index + 1) * cycle_months
+      months => (cycle_no + 1) * cycle_months
     ))::date;
     cycle_end := least(next_start - 1, coalesce(target.ends_on, next_start - 1),
       coalesce(terminal_on, next_start - 1));
@@ -132,7 +132,7 @@ begin
       tenant_id, contract_id, cycle_index, period_start_on, period_end_on,
       net_cents, vat_rate, pricing_status, review_reason
     ) values (
-      p_tenant_id, p_contract_id, cycle_index, cycle_start, cycle_end,
+      p_tenant_id, p_contract_id, cycle_no, cycle_start, cycle_end,
       case when reason is null then target.price_cents else null end,
       source_vat_rate,
       case when reason is null then 'priced' else 'requires_review' end,
@@ -140,7 +140,7 @@ begin
     ) on conflict (contract_id, cycle_index) do nothing returning id into inserted_id;
     if inserted_id is not null then generated_count := generated_count + 1; end if;
     inserted_id := null;
-    cycle_index := cycle_index + 1;
+    cycle_no := cycle_no + 1;
   end loop;
   return generated_count;
 end;
