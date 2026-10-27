@@ -2,12 +2,19 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-10-14",
+      "date": "2026-10-27",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update plans and pricing details for clarity and accuracy",
+            "Add reusable component for row action buttons",
+            "Add form limits validation and tests for catalog, client, and ledger",
+            "Add form limits validation for catalog, client, and ledger",
+            "Improve helper text for form fields and validations",
+            "Add form limits for various fields and improve validation",
+            "Implement fuzzy search across multiple fields",
             "Update changelog with new features and improvements",
             "Add settled status display for paid invoices",
             "Add tests for invoice document rendering and printing",
@@ -59,6 +66,55 @@
         }
       ],
       "changes": [
+        {
+          "sha": "deae241af2f6f3fb5c7f0a1060ca4aac09e415f1",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Update plans and pricing details for clarity and accuracy"
+        },
+        {
+          "sha": "a4397b055cd5149a60d2af197ad67ea24be1827c",
+          "type": "feat",
+          "scope": "table-row-actions",
+          "breaking": false,
+          "description": "Add reusable component for row action buttons"
+        },
+        {
+          "sha": "3450f5ed76dac3759fa5e09d235bf049c560a783",
+          "type": "feat",
+          "scope": "imports",
+          "breaking": false,
+          "description": "Add form limits validation and tests for catalog, client, and ledger"
+        },
+        {
+          "sha": "a5c01aa44f425bb29d9ad076fa32b60fb7ee8058",
+          "type": "feat",
+          "scope": "imports",
+          "breaking": false,
+          "description": "Add form limits validation for catalog, client, and ledger"
+        },
+        {
+          "sha": "1ae7464492f03178ec4c27e8bb59457ff7ce84ea",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Improve helper text for form fields and validations"
+        },
+        {
+          "sha": "cf84c0d23a116e6226540338943f7fd19dd38dcc",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add form limits for various fields and improve validation"
+        },
+        {
+          "sha": "1794f9f3e5efb3e166bcf9e2c8fa1737d55646b2",
+          "type": "feat",
+          "scope": "catalog, clients, estimates, invoices, ledger, settings",
+          "breaking": false,
+          "description": "Implement fuzzy search across multiple fields"
+        },
         {
           "sha": "1a14abdfdf7bddd06e4bb3b0a3a3ac78f9ee6112",
           "type": "feat",

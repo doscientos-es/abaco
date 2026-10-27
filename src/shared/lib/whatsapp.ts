@@ -6,7 +6,8 @@ export function whatsappNumber(phone: string, defaultCountry = '34'): string {
   const trimmed = phone.trim()
   let digits = trimmed.replace(/\D/g, '')
   if (trimmed.startsWith('00')) digits = digits.slice(2)
-  else if (!trimmed.startsWith('+') && digits.length <= 10) digits = defaultCountry + digits.replace(/^0+/, '')
+  else if (!trimmed.startsWith('+') && digits.length <= 10)
+    digits = defaultCountry + digits.replace(/^0+/, '')
   return digits
 }
 

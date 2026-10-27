@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import type { TenantData } from '../domain/types'
+import type { AppState, TenantRepository } from './store'
 import {
   catalogFromRow,
   catalogToRow,
@@ -18,13 +19,11 @@ import {
   tenantToRow,
   type EstimateRow,
 } from './supabase-mappers'
-import type { AppState, TenantRepository } from './store'
 
 type Row = Record<string, unknown> & { id: string }
 
 /**
- * Supabase adapter for the repository port. Row Level Security decides what each role can
- * read and write, so every query here is unfiltered; a role without access simply gets no rows.
+ * Supabase adapter for the repository port. RLS remains the authority for every row.
  */
 export function createSupabaseRepository(supabase: SupabaseClient): TenantRepository {
   async function select(table: string, columns = '*'): Promise<Record<string, unknown>[]> {
@@ -68,10 +67,48 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
     return { activeTenantId, tenants: data }
   }
 
-  async function upsert(table: string, rows: Row[]): Promise<void> {
-    if (rows.length === 0) return
-    const { error } = await supabase.from(table).upsert(rows)
-    if (error) throw new Error(`${table}: ${error.message}`)
+  async function write(table: string, rows: Row[], previous: Row[]): Promise<void> {
+    const existing = new Set(previous.map((row) => row.id))
+    for (const row of rows) {
+      const { id, ...values } = row
+      if (existing.has(id)) {
+        // Server-owned numbers and creation timestamps must never travel through an update.
+        const { number: _number, created_at: _createdAt, ...editable } = values
+        const { data, error } = await supabase
+          .from(table)
+          .update(editable)
+          .eq('id', id)
+          .select('id')
+        if (error) throw new Error(`${table}: ${error.message}`)
+        if (!data?.length)
+          throw new Error(`${table}: el registro ya no existe o no tienes permiso para editarlo.`)
+      } else {
+        const { number: _number, created_at: _createdAt, ...insertable } = values
+        const { error } = await supabase.from(table).insert({ id, ...insertable })
+        if (error?.code === '23505') {
+          // A preceding retry may have inserted this row before a later step failed.
+          // Reusing its stable id must preserve its server-assigned document number.
+          const { data, error: lookupError } = await supabase
+            .from(table)
+            .select('id, tenant_id')
+            .eq('id', id)
+            .maybeSingle()
+          if (lookupError || !data || data.tenant_id !== row.tenant_id)
+            throw new Error(`${table}: ${error.message}`)
+          const { data: updated, error: updateError } = await supabase
+            .from(table)
+            .update(insertable)
+            .eq('id', id)
+            .select('id')
+          if (updateError || !updated?.length)
+            throw new Error(
+              `${table}: ${updateError?.message ?? 'no se pudo reintentar el guardado.'}`,
+            )
+        } else if (error) {
+          throw new Error(`${table}: ${error.message}`)
+        }
+      }
+    }
   }
 
   async function remove(table: string, ids: string[]): Promise<void> {
@@ -95,7 +132,9 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
     catalog: data.catalog.map(catalogToRow) as Row[],
     estimates: data.estimates.map(estimateToRow) as Row[],
     lines: data.estimates.flatMap((e) => e.lines.map((l, i) => lineToRow(e, l, i))) as Row[],
-    milestones: data.estimates.flatMap((e) => e.milestones.map((m, i) => milestoneToRow(e, m, i))) as Row[],
+    milestones: data.estimates.flatMap((e) =>
+      e.milestones.map((m, i) => milestoneToRow(e, m, i)),
+    ) as Row[],
     ledger: data.ledger.map(ledgerToRow) as Row[],
     invoices: data.invoices.map(invoiceToRow) as Row[],
   })
@@ -112,6 +151,9 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
       ledger: diff(a.ledger, b.ledger),
       invoices: diff(a.invoices, b.invoices),
     }
+    if (d.clients.removed.length) {
+      throw new Error('Los clientes se archivan para conservar instalaciones y documentos.')
+    }
     // Children are deleted before parents and written after them (foreign keys).
     await remove('invoices', d.invoices.removed)
     await remove('ledger_entries', d.ledger.removed)
@@ -119,20 +161,22 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
     await remove('estimate_milestones', d.milestones.removed)
     await remove('estimates', d.estimates.removed)
     await remove('catalog_items', d.catalog.removed)
-    await remove('clients', d.clients.removed)
 
     if (JSON.stringify(tenantToRow(before.tenant)) !== JSON.stringify(tenantToRow(after.tenant))) {
       const { id, ...settings } = tenantToRow(after.tenant)
-      const { error } = await supabase.from('tenants').update(settings).eq('id', id as string)
+      const { error } = await supabase
+        .from('tenants')
+        .update(settings)
+        .eq('id', id as string)
       if (error) throw new Error(`tenants: ${error.message}`)
     }
-    await upsert('clients', d.clients.changed)
-    await upsert('catalog_items', d.catalog.changed)
-    await upsert('estimates', d.estimates.changed)
-    await upsert('estimate_milestones', d.milestones.changed)
-    await upsert('estimate_lines', d.lines.changed)
-    await upsert('ledger_entries', d.ledger.changed)
-    await upsert('invoices', d.invoices.changed)
+    await write('clients', d.clients.changed, a.clients)
+    await write('catalog_items', d.catalog.changed, a.catalog)
+    await write('estimates', d.estimates.changed, a.estimates)
+    await write('estimate_milestones', d.milestones.changed, a.milestones)
+    await write('estimate_lines', d.lines.changed, a.lines)
+    await write('ledger_entries', d.ledger.changed, a.ledger)
+    await write('invoices', d.invoices.changed, a.invoices)
 
     const inserted = (changed: Row[], previous: Row[]) =>
       changed.some((row) => !previous.some((p) => p.id === row.id))

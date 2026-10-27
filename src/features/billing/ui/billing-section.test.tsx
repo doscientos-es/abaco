@@ -130,7 +130,7 @@ describe('BillingSection payment recovery', () => {
   })
 
   it('disables the chosen plan during checkout and releases it after the payment handoff', async () => {
-    let finish: (result: BillingResult) => void = () => { }
+    let finish: (result: BillingResult) => void = () => {}
     checkout.mockReturnValue(
       new Promise<BillingResult>((resolve) => {
         finish = resolve

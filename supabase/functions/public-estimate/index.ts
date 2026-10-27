@@ -28,12 +28,15 @@ function reply(status: number, body: Record<string, unknown>) {
 
 const tenantColumns =
   'id, name, legal_name, tax_id, email, phone, address, postal_code, city, website, brand_color, logo_url, document_footer'
+const estimateColumns = `id, tenant_id, number, client_id, title, status, valid_until,
+  responded_at, responded_by, viewed_at`
 
 const escapeHtml = (value: string) =>
   value.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c,
   )
+const stringValue = (value: unknown): string => (typeof value === 'string' ? value : '')
 
 async function notifyViewed(
   estimate: Record<string, unknown>,
@@ -42,7 +45,7 @@ async function notifyViewed(
 ) {
   const to = typeof tenant?.email === 'string' ? tenant.email : ''
   if (!to) return
-  const who = String(client?.name ?? 'Tu cliente')
+  const who = stringValue(client?.name) || 'Tu cliente'
   const title = `${String(estimate.number)} · ${String(estimate.title)}`
   const appUrl = Deno.env.get('APP_URL')
   const link = appUrl ? `${appUrl.replace(/\/$/, '')}/presupuestos/${String(estimate.id)}` : ''
@@ -67,14 +70,12 @@ async function notifyOwner(
 ) {
   const to = typeof tenant?.email === 'string' ? tenant.email : ''
   if (!to) return
-  const who = String(estimate.responded_by ?? '') || String(client?.name ?? 'Tu cliente')
+  const who = stringValue(estimate.responded_by) || stringValue(client?.name) || 'Tu cliente'
   const verb = accepted ? 'ha aceptado' : 'ha rechazado'
   const title = `${String(estimate.number)} · ${String(estimate.title)}`
   const appUrl = Deno.env.get('APP_URL')
   const link = appUrl ? `${appUrl.replace(/\/$/, '')}/presupuestos/${String(estimate.id)}` : ''
-  const note = accepted
-    ? ' Ábaco creará la factura de la señal la próxima vez que abras la app.'
-    : ''
+  const note = accepted ? ' La aceptación ya está disponible en Ábaco.' : ''
   const text = `${who} ${verb} el presupuesto ${title}.${note}${link ? `\n\n${link}` : ''}`
   const html = `<p>${escapeHtml(who)} <strong>${verb}</strong> el presupuesto ${escapeHtml(title)}.${escapeHtml(note)}</p>${
     link ? `<p><a href="${escapeHtml(link)}">Abrir presupuesto</a></p>` : ''
@@ -109,13 +110,27 @@ Deno.serve(async (request) => {
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  const { data: estimate } = await admin
+  const { data: estimate, error: estimateError } = await admin
     .from('estimates')
-    .select('*, estimate_lines(*), estimate_milestones(*)')
+    .select(estimateColumns)
     .eq('public_token', token)
     .maybeSingle()
+  if (estimateError) return reply(500, { error: 'lookup_failed' })
   // Un borrador no es público: se responde igual que si el enlace no existiera.
   if (!estimate || estimate.status === 'draft') return reply(404, { error: 'not_found' })
+  const { data: publication, error: publicationError } = await admin
+    .from('estimate_publications')
+    .select('snapshot, source')
+    .eq('estimate_id', estimate.id)
+    .eq('tenant_id', estimate.tenant_id)
+    .maybeSingle()
+  if (publicationError || !publication) return reply(500, { error: 'publication_missing' })
+  const snapshot = publication.snapshot as Record<string, Record<string, unknown>>
+  const publishedEstimate = snapshot.estimate
+  const publishedTenant = snapshot.tenant
+  const publishedClient = snapshot.client
+  if (!publishedEstimate || !publishedTenant || !publishedClient)
+    return reply(500, { error: 'publication_invalid' })
 
   if (action !== 'view') {
     if (estimate.status !== 'sent')
@@ -125,20 +140,22 @@ Deno.serve(async (request) => {
     if (action === 'accept' && name.length < 2) return reply(422, { error: 'name_required' })
     if (name.length > 120) return reply(422, { error: 'name_too_long' })
 
-    const { data: updated } = await admin
+    const respondedAt = new Date().toISOString()
+    const { data: updated, error: updateError } = await admin
       .from('estimates')
       .update({
         status: action === 'accept' ? 'accepted' : 'rejected',
-        responded_at: new Date().toISOString(),
+        responded_at: respondedAt,
         responded_by: name || null,
       })
       .eq('id', estimate.id)
       .eq('status', 'sent')
       .select('id')
+    if (updateError) return reply(500, { error: 'response_failed' })
     // Si dos personas responden a la vez, solo gana la primera.
     if (!updated?.length) return reply(409, { error: 'already_responded' })
     estimate.status = action === 'accept' ? 'accepted' : 'rejected'
-    estimate.responded_at = new Date().toISOString()
+    estimate.responded_at = respondedAt
     estimate.responded_by = name || null
   }
 
@@ -182,7 +199,50 @@ Deno.serve(async (request) => {
     })
   }
 
-  // El token y los ids internos no hacen falta en la página.
-  const { public_token: _token, ...publicEstimate } = estimate
-  return reply(200, { estimate: publicEstimate, tenant, client })
+  // Explicit output contract: adding a database column can never expose it via the public link.
+  const publicEstimate = {
+    id: publishedEstimate.id,
+    tenant_id: publishedEstimate.tenant_id,
+    number: publishedEstimate.number,
+    client_id: publishedEstimate.client_id,
+    title: publishedEstimate.title,
+    status: estimate.status,
+    vat_rate: publishedEstimate.vat_rate,
+    discount_type: publishedEstimate.discount_type,
+    discount_value: publishedEstimate.discount_value,
+    clauses: publishedEstimate.clauses,
+    valid_until: publishedEstimate.valid_until,
+    created_at: publishedEstimate.created_at,
+    responded_at: estimate.responded_at,
+    responded_by: estimate.responded_by,
+    estimate_lines: publishedEstimate.estimate_lines,
+    estimate_milestones: publishedEstimate.estimate_milestones,
+  }
+  const publicTenant = {
+    id: publishedTenant.id,
+    name: publishedTenant.name,
+    legal_name: publishedTenant.legal_name,
+    tax_id: publishedTenant.tax_id,
+    email: publishedTenant.email,
+    phone: publishedTenant.phone,
+    address: publishedTenant.address,
+    postal_code: publishedTenant.postal_code,
+    city: publishedTenant.city,
+    website: publishedTenant.website,
+    brand_color: publishedTenant.brand_color,
+    logo_url: publishedTenant.logo_url,
+    document_footer: publishedTenant.document_footer,
+  }
+  const publicClient = {
+    id: publishedClient.id,
+    tenant_id: publishedClient.tenant_id,
+    name: publishedClient.name,
+    address: publishedClient.address,
+  }
+  return reply(200, {
+    estimate: publicEstimate,
+    tenant: publicTenant,
+    client: publicClient,
+    publicationSource: publication.source,
+  })
 })

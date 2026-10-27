@@ -35,20 +35,31 @@ export function describeSubscription(row: {
   next_plan: string | null
   next_interval: string | null
 }): Subscription {
-  const status = (statuses.includes(row.subscription_status) ? row.subscription_status : 'canceled') as SubscriptionStatus
+  const status = (
+    statuses.includes(row.subscription_status) ? row.subscription_status : 'canceled'
+  ) as SubscriptionStatus
   const trialEndsAt = new Date(row.trial_ends_at)
   const trialActive = status === 'trialing' && trialEndsAt.getTime() > Date.now()
   return {
     plan: (plans.includes(row.plan) ? row.plan : 'trial') as Plan,
     status,
     trialEndsAt,
-    interval: row.billing_interval === 'year' || row.billing_interval === 'month' ? row.billing_interval : null,
+    interval:
+      row.billing_interval === 'year' || row.billing_interval === 'month'
+        ? row.billing_interval
+        : null,
     currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
     cancelAtPeriodEnd: row.cancel_at_period_end,
-    nextPlan: row.next_plan === 'solo' || row.next_plan === 'team' || row.next_plan === 'business' ? row.next_plan : null,
-    nextInterval: row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
+    nextPlan:
+      row.next_plan === 'solo' || row.next_plan === 'team' || row.next_plan === 'business'
+        ? row.next_plan
+        : null,
+    nextInterval:
+      row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
     canWrite: trialActive || status === 'active' || status === 'past_due',
-    trialDaysLeft: trialActive ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000)) : 0,
+    trialDaysLeft: trialActive
+      ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
+      : 0,
   }
 }
 
@@ -59,7 +70,9 @@ export const subscriptionQuery = (tenantId: string) =>
     queryFn: async (): Promise<Subscription> => {
       const { data, error } = await createBrowserSupabaseClient()
         .from('tenants')
-        .select('plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval')
+        .select(
+          'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval',
+        )
         .eq('id', tenantId)
         .single()
       if (error) throw new Error('No se pudo cargar el plan.')
@@ -112,7 +125,9 @@ export const paymentsQuery = (tenantId: string) =>
         const { data, error } = await Promise.race([
           createBrowserSupabaseClient()
             .from('billing_payments')
-            .select('id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at')
+            .select(
+              'id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at',
+            )
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
             .abortSignal(AbortSignal.any([signal, controller.signal])),
@@ -141,12 +156,19 @@ export const paymentsQuery = (tenantId: string) =>
     },
   })
 
-type RedsysForm = { url: string; signatureVersion: string; merchantParameters: string; signature: string }
+type RedsysForm = {
+  url: string
+  signatureVersion: string
+  merchantParameters: string
+  signature: string
+}
 
 export type BillingResult = { ok: true; form?: RedsysForm } | { ok: false; message: string }
 
 async function call(body: Record<string, unknown>): Promise<BillingResult> {
-  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{ form?: RedsysForm }>('billing', { body })
+  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
+    form?: RedsysForm
+  }>('billing', { body })
   if (error) return { ok: false, message: 'No se pudo completar la operación. Inténtalo de nuevo.' }
   return data?.form ? { ok: true, form: data.form } : { ok: true }
 }

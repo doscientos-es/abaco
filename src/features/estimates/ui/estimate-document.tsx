@@ -16,13 +16,20 @@ export function EstimateDocument({
   const milestones = milestoneAmounts(estimate.milestones, totals.totalCents)
 
   return (
-    <article className="estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm sm:p-8 shadow-sm print:rounded-none print:border-0 print:p-0 print:shadow-none">
+    <article className="estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:gap-6">
         <div>
           {tenant.logoUrl ? (
-            <img src={tenant.logoUrl} alt={tenant.name} className="mb-3 max-h-14 max-w-44 object-contain" />
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.name}
+              className="mb-3 max-h-14 max-w-44 object-contain"
+            />
           ) : null}
-          <h2 className="text-xl font-semibold tracking-tight" style={tenant.brandColor ? { color: tenant.brandColor } : undefined}>
+          <h2
+            className="text-xl font-semibold tracking-tight"
+            style={tenant.brandColor ? { color: tenant.brandColor } : undefined}
+          >
             {tenant.name}
           </h2>
           <p className="text-muted-foreground">
@@ -37,7 +44,7 @@ export function EstimateDocument({
       </header>
 
       <section>
-        <p className="text-muted-foreground text-xs uppercase tracking-wider">Cliente</p>
+        <p className="text-muted-foreground text-xs tracking-wider uppercase">Cliente</p>
         <p className="font-medium">{client?.name ?? 'Sin cliente'}</p>
         <p className="text-muted-foreground">{client?.address}</p>
       </section>
@@ -68,7 +75,9 @@ export function EstimateDocument({
                   <td className="py-2 text-right tabular-nums">
                     {line.quantity} {line.unit}
                   </td>
-                  <td className="py-2 text-right tabular-nums">{formatEuros(line.unitPriceCents)}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {formatEuros(line.unitPriceCents)}
+                  </td>
                   <td className="py-2 text-right tabular-nums">
                     {formatEuros(lineNetCents(line))}
                   </td>
@@ -94,35 +103,48 @@ export function EstimateDocument({
           <Row label="Base imponible" value={totals.subtotalCents} />
           <Row label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
           <div className="flex justify-between border-t pt-2 text-base font-semibold">
-            <dt>Total</dt>
+            <dt>{estimate.conversionDestination === 'contract' ? 'Total por periodo' : 'Total'}</dt>
             <dd>{formatEuros(totals.totalCents)}</dd>
           </div>
         </dl>
+        {estimate.conversionDestination === 'contract' ? (
+          <p className="mt-3 text-sm font-medium">
+            Contrato recurrente · precio por periodo{' '}
+            {estimate.contractBillingFrequency === 'quarterly'
+              ? 'trimestral'
+              : estimate.contractBillingFrequency === 'yearly'
+                ? 'anual'
+                : 'mensual'}
+            . El inicio y la ubicación se concretarán al crear el contrato.
+          </p>
+        ) : null}
       </section>
 
-      <section>
-        <h3 className="mb-2 text-base font-semibold">Forma de pago</h3>
-        <ul className="space-y-1">
-          {milestones.map((m) => (
-            <li key={m.id} className="flex justify-between tabular-nums">
-              <span>
-                {m.label} ({m.percent}%)
-                {m.description ? (
-                  <span className="text-muted-foreground block text-xs">{m.description}</span>
-                ) : null}
-              </span>
-              <span>{formatEuros(m.amountCents)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {estimate.conversionDestination !== 'contract' ? (
+        <section>
+          <h3 className="mb-2 text-base font-semibold">Forma de pago</h3>
+          <ul className="space-y-1">
+            {milestones.map((m) => (
+              <li key={m.id} className="flex justify-between tabular-nums">
+                <span>
+                  {m.label} ({m.percent}%)
+                  {m.description ? (
+                    <span className="text-muted-foreground block text-xs">{m.description}</span>
+                  ) : null}
+                </span>
+                <span>{formatEuros(m.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section>
         <h3 className="mb-2 text-base font-semibold">Condiciones</h3>
         <p className="text-muted-foreground whitespace-pre-line">{estimate.clauses}</p>
       </section>
 
-      <footer className="grid grid-cols-2 gap-4 pt-10 sm:gap-10 text-xs">
+      <footer className="grid grid-cols-2 gap-4 pt-10 text-xs sm:gap-10">
         <div className="border-t pt-2">Firma de la empresa</div>
         <div className="border-t pt-2">Conforme del cliente</div>
       </footer>

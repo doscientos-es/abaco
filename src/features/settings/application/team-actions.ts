@@ -18,7 +18,14 @@ export const teamQuery = (tenantId: string) =>
       return data.flatMap((row) => {
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
         if (!profile || !isRole(row.role)) return []
-        return [{ userId: row.user_id, email: profile.email, fullName: profile.full_name, role: row.role }]
+        return [
+          {
+            userId: row.user_id,
+            email: profile.email,
+            fullName: profile.full_name,
+            role: row.role,
+          },
+        ]
       })
     },
   })
@@ -31,15 +38,19 @@ export async function inviteMember(input: {
   role: Role
   fullName: string
 }): Promise<TeamResult> {
-  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{ status?: 'invited' | 'added' }>(
-    'invite-member',
-    { body: input },
-  )
-  if (error) return { ok: false, message: 'No se pudo invitar. Comprueba el correo y tus permisos.' }
+  const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
+    status?: 'invited' | 'added'
+  }>('invite-member', { body: input })
+  if (error)
+    return { ok: false, message: 'No se pudo invitar. Comprueba el correo y tus permisos.' }
   return data?.status ? { ok: true, status: data.status } : { ok: true }
 }
 
-export async function changeMemberRole(tenantId: string, userId: string, role: Role): Promise<TeamResult> {
+export async function changeMemberRole(
+  tenantId: string,
+  userId: string,
+  role: Role,
+): Promise<TeamResult> {
   const { error } = await createBrowserSupabaseClient()
     .from('memberships')
     .update({ role })

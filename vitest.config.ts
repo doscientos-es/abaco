@@ -8,7 +8,11 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   test: createVitestConfig({
-    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'scripts/**/*.test.mjs',
+      'supabase/functions/_shared/**/*.test.ts',
+    ],
     coverage: { include: ['src/features/**/application/**/*.ts'] },
   }),
 })

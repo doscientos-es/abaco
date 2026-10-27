@@ -129,23 +129,17 @@ export function BillingSection({
 
       <div className="space-y-5 p-5">
         {returned === 'ok' ? (
-          <p
-            role="status"
-            className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm"
-          >
+          <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
             {activated
               ? 'Pago recibido. Tu plan ya está activo, gracias.'
               : 'Estamos confirmando el pago con el banco. En unos segundos verás tu plan activo; no hace falta repetir el pago.'}
-          </p>
+          </output>
         ) : null}
         {returned === 'cancelado' ? (
-          <p
-            role="status"
-            className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm"
-          >
+          <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
             El pago no se ha completado y no se ha cobrado nada. Puedes volver a intentarlo cuando
             quieras.
-          </p>
+          </output>
         ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
         <hr className="border-border" />

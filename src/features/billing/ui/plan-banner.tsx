@@ -9,7 +9,10 @@ import { subscriptionQuery } from '../application/billing-actions'
 export function PlanBanner() {
   const session = useSession()
   const tenantId = session?.tenantId ?? null
-  const { data: sub } = useQuery({ ...subscriptionQuery(tenantId ?? ''), enabled: tenantId !== null })
+  const { data: sub } = useQuery({
+    ...subscriptionQuery(tenantId ?? ''),
+    enabled: tenantId !== null,
+  })
   if (!sub || !session) return null
 
   const isOwner = session.role === 'owner'
@@ -27,8 +30,7 @@ export function PlanBanner() {
   if (!text) return null
 
   return (
-    <div
-      role="status"
+    <output
       className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm ${urgent ? 'bg-destructive/10 text-destructive' : 'bg-accent text-accent-foreground'}`}
     >
       <span>{text}</span>
@@ -39,6 +41,6 @@ export function PlanBanner() {
       ) : (
         <span className="text-xs">Pide al propietario que elija un plan.</span>
       )}
-    </div>
+    </output>
   )
 }

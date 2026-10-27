@@ -27,11 +27,21 @@ import {
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
 import { brand } from '@/shared/lib/brand'
-import { useTenantData } from '@/shared/store/store'
+import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
 
-type NavTo = '/' | '/presupuestos' | '/clientes' | '/catalogo' | '/facturas' | '/contabilidad' | '/ajustes'
+type NavTo =
+  | '/'
+  | '/presupuestos'
+  | '/clientes'
+  | '/trabajos'
+  | '/contratos'
+  | '/agenda'
+  | '/catalogo'
+  | '/facturas'
+  | '/contabilidad'
+  | '/ajustes'
 type NavItem = { to: NavTo; label: string; icon: ReactNode }
 type NavGroup = { label: string; items: NavItem[] }
 
@@ -46,6 +56,14 @@ const navGroups: NavGroup[] = [
       { to: '/presupuestos', label: 'Presupuestos', icon: navIcons.estimates },
       { to: '/clientes', label: 'Clientes', icon: navIcons.clients },
       { to: '/catalogo', label: 'Catálogo', icon: navIcons.catalog },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      { to: '/trabajos', label: 'Trabajos', icon: navIcons.work },
+      { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
+      { to: '/agenda', label: 'Agenda', icon: navIcons.visits },
     ],
   },
   {
@@ -64,11 +82,26 @@ const navGroups: NavGroup[] = [
 const MAX_TABS = 5
 
 /** Bottom bar on mobile, most used first. Ajustes lives in the user menu instead. */
-const bottomOrder: NavTo[] = ['/', '/presupuestos', '/clientes', '/facturas', '/catalogo', '/contabilidad']
-const flatItems = bottomOrder.flatMap((to) => navGroups.flatMap((group) => group.items).filter((item) => item.to === to))
+const bottomOrder: NavTo[] = [
+  '/',
+  '/presupuestos',
+  '/clientes',
+  '/trabajos',
+  '/contratos',
+  '/agenda',
+  '/facturas',
+  '/catalogo',
+  '/contabilidad',
+]
+const flatItems = bottomOrder.flatMap((to) =>
+  navGroups.flatMap((group) => group.items).filter((item) => item.to === to),
+)
 
 /** Pages each item needs; hidden from the menu when the role lacks it. RLS still enforces it. */
 const navPermission: Partial<Record<NavTo, Permission>> = {
+  '/trabajos': 'work:read',
+  '/contratos': 'contracts:read',
+  '/agenda': 'visits:read',
   '/facturas': 'invoices:read',
   '/contabilidad': 'ledger:read',
   '/ajustes': 'settings:write',
@@ -87,6 +120,7 @@ function initials(name: string) {
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const { tenant } = useTenantData()
+  const saveStatus = useSaveStatus()
   const session = useSession()
   const signOut = useSignOut()
   const navigate = useNavigate()
@@ -129,7 +163,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <DropdownMenuItem onAction={() => setCreatingCompany(true)}>Nueva empresa…</DropdownMenuItem>
       <DropdownMenuSeparator />
       {canSeeSettings ? (
-        <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>Ajustes y equipo</DropdownMenuItem>
+        <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
+          Ajustes y equipo
+        </DropdownMenuItem>
       ) : null}
       <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
         Cambiar contraseña
@@ -152,7 +188,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
               <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
             </span>
             <span className="min-w-0 leading-tight">
-              <span className="block truncate text-sm font-semibold tracking-tight">{tenant.name}</span>
+              <span className="block truncate text-sm font-semibold tracking-tight">
+                {tenant.name}
+              </span>
               <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
             </span>
           </Link>
@@ -196,10 +234,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <AppShellMobileHeader className="hidden max-md:flex">
           <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
-            <span className="block truncate text-sm font-semibold tracking-tight">{tenant.name}</span>
+            <span className="block truncate text-sm font-semibold tracking-tight">
+              {tenant.name}
+            </span>
           </Link>
           <DropdownMenuTrigger>
-            <Button variant="ghost" aria-label="Menú de usuario" className="ml-auto h-auto rounded-full p-1">
+            <Button
+              variant="ghost"
+              aria-label="Menú de usuario"
+              className="ml-auto h-auto rounded-full p-1"
+            >
               <Avatar>
                 <AvatarFallback>{initials(userName)}</AvatarFallback>
               </Avatar>
@@ -208,12 +252,31 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
         <PlanBanner />
-        <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">{children}</AppShellContent>
+        {saveStatus.state === 'error' ? (
+          <div
+            role="alert"
+            className="border-destructive bg-background mx-4 mt-3 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm sm:mx-10"
+          >
+            <span className="flex-1">Hay cambios sin guardar. {saveStatus.message}</span>
+            <Button type="button" variant="outline" onClick={retryStoreSaves}>
+              Reintentar guardado
+            </Button>
+          </div>
+        ) : saveStatus.state === 'saving' ? (
+          <output className="text-muted-foreground block px-4 pt-2 text-xs sm:px-10">
+            Guardando cambios…
+          </output>
+        ) : null}
+        <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">
+          {children}
+        </AppShellContent>
       </AppShellMain>
 
       <nav
         aria-label="Principal"
-        style={{ gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))`,
+        }}
         className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
       >
         {tabs.map((item) => (

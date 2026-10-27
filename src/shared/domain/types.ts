@@ -32,14 +32,19 @@ export type Tenant = {
   nextEstimateNumber: number
 }
 
+export type ClientKind = 'person' | 'community' | 'business'
+
 export type Client = {
   id: string
   tenantId: string
   name: string
+  kind?: ClientKind
   taxId: string
   email: string
   phone: string
   address: string
+  billingAddress?: string
+  archivedAt?: string | null
   notes: string
 }
 
@@ -84,6 +89,9 @@ export type Estimate = {
   clientId: string
   title: string
   status: EstimateStatus
+  /** Conversion route agreed in the published proposal. Legacy proposals use work. */
+  conversionDestination?: 'work' | 'contract'
+  contractBillingFrequency?: 'monthly' | 'quarterly' | 'yearly'
   lines: EstimateLine[]
   /** Whole-estimate discount: a percentage, or an amount in cents. */
   discountType: 'none' | 'percent' | 'amount'
@@ -98,6 +106,8 @@ export type Estimate = {
   /** Set when the client accepted or rejected through the public link. */
   respondedAt?: string
   respondedBy?: string
+  /** Recorded only after the email provider confirms an estimate send. */
+  emailSentAt?: string
 }
 
 export type LedgerKind = 'income' | 'expense'
@@ -118,13 +128,42 @@ export type LedgerEntry = {
 
 export type InvoiceStatus = 'issued' | 'sent' | 'paid'
 
-/** Invoice generated from one payment milestone of an estimate. */
+export type InvoiceSnapshot = {
+  source: 'issuance' | 'migration'
+  capturedAt: string
+  issuer: {
+    name: string
+    legalName: string
+    taxId: string
+    email: string
+    phone: string
+    address: string
+    postalCode: string
+    city: string
+    website: string
+    iban: string
+    brandColor: string
+    logoUrl: string
+    documentFooter: string
+  }
+  client: { name: string; taxId: string; address: string; email: string }
+  estimateNumber: string
+  workTitle?: string
+  extraDescription?: string
+  contractTitle?: string
+  contractPeriodStart?: string
+  contractPeriodEnd?: string
+}
+
+/** Issued invoice from one estimate milestone, approved work extra, or contract period. */
 export type Invoice = {
   id: string
   tenantId: string
   number: string
-  estimateId: string
-  milestoneId: string
+  estimateId: string | null
+  milestoneId: string | null
+  workExtraId: string | null
+  contractPeriodId?: string | null
   clientId: string
   concept: string
   /** Gross amount including VAT. */
@@ -132,9 +171,15 @@ export type Invoice = {
   /** Sum of the payments received so far (gross). The invoice is paid when it reaches the total. */
   paidCents: Cents
   vatRate: number
+  /** Display summary derived from payment balance and accepted email delivery. */
   status: InvoiceStatus
+  /** The legal document remains issued after delivery and settlement. */
+  documentStatus: 'issued'
+  emailAcceptedAt: string | null
   issuedAt: string
   dueDate: string
+  /** Issuer and recipient as captured at issuance; legacy rows are marked as migration reconstructions. */
+  snapshot?: InvoiceSnapshot
 }
 
 export type TenantData = {

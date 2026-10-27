@@ -33,7 +33,9 @@ export function categoryTotals(
     const label = entry.category.trim() || 'Sin categoría'
     totals.set(label, (totals.get(label) ?? 0) + entry.amountCents)
   }
-  const sorted = [...totals].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
+  const sorted = [...totals]
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
   if (sorted.length <= limit) return sorted
   const rest = sorted.slice(limit).reduce((sum, item) => sum + item.value, 0)
   return [...sorted.slice(0, limit), { label: 'Otros', value: rest }]

@@ -13,7 +13,8 @@ const DAY = 24 * 60 * 60 * 1000
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const euros = (cents: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+const euros = (cents: number) =>
+  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
 const isoDay = (date: Date) => date.toISOString().slice(0, 10)
 
 type Row = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -23,7 +24,8 @@ Deno.serve(async (request) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const cronSecret = Deno.env.get('CRON_SECRET')
   if (!url || !serviceKey || !cronSecret) return new Response('Sin configurar', { status: 500 })
-  if (request.headers.get('x-cron-secret') !== cronSecret) return new Response('No autorizado', { status: 401 })
+  if (request.headers.get('x-cron-secret') !== cronSecret)
+    return new Response('No autorizado', { status: 401 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const now = new Date()
@@ -34,15 +36,24 @@ Deno.serve(async (request) => {
   let sent = 0
   let failed = 0
 
-  const { data: tenants } = await admin.from('tenants').select('id, name, email').eq('weekly_summary', true)
+  const { data: tenants } = await admin
+    .from('tenants')
+    .select('id, name, email')
+    .eq('weekly_summary', true)
 
   for (const tenant of (tenants ?? []) as Row[]) {
     const to = String(tenant.email ?? '').trim()
     if (!emailPattern.test(to)) continue
 
     const [{ data: invoices }, { data: estimates }] = await Promise.all([
-      admin.from('invoices').select('total_cents, paid_cents, status, issued_at, due_date').eq('tenant_id', tenant.id),
-      admin.from('estimates').select('status, valid_until, responded_at').eq('tenant_id', tenant.id),
+      admin
+        .from('invoices')
+        .select('total_cents, paid_cents, status, issued_at, due_date')
+        .eq('tenant_id', tenant.id),
+      admin
+        .from('estimates')
+        .select('status, valid_until, responded_at')
+        .eq('tenant_id', tenant.id),
     ])
 
     let invoicedWeek = 0
@@ -61,7 +72,9 @@ Deno.serve(async (request) => {
         overdueCount += 1
       }
     }
-    const open = ((estimates ?? []) as Row[]).filter((e) => e.status === 'sent' && String(e.valid_until) >= today)
+    const open = ((estimates ?? []) as Row[]).filter(
+      (e) => e.status === 'sent' && String(e.valid_until) >= today,
+    )
     const expiring = open.filter((e) => String(e.valid_until) <= weekAhead).length
     const answered = ((estimates ?? []) as Row[]).filter(
       (e) => e.responded_at && String(e.responded_at).slice(0, 10) >= weekAgo,
@@ -77,17 +90,33 @@ Deno.serve(async (request) => {
       `Presupuestos esperando respuesta: ${open.length}${expiring ? ` (${expiring} caducan en 7 días)` : ''}`,
       `Respondidos esta semana: ${answered.length}${answered.length ? ` (${accepted} aceptados)` : ''}`,
     ]
-    const text = [`Resumen de la semana de ${tenant.name}`, '', ...lines, ...(appUrl ? ['', appUrl] : [])].join('\n')
+    const text = [
+      `Resumen de la semana de ${tenant.name}`,
+      '',
+      ...lines,
+      ...(appUrl ? ['', appUrl] : []),
+    ].join('\n')
     const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a"><h2 style="font-size:17px;margin:0 0 12px">Resumen de la semana</h2>${lines
       .map((line) => `<p style="margin:0 0 6px">${escapeHtml(line)}</p>`)
-      .join('')}${appUrl ? `<p style="margin-top:16px"><a href="${escapeHtml(appUrl)}">Abrir Ábaco</a></p>` : ''}</div>`
+      .join(
+        '',
+      )}${appUrl ? `<p style="margin-top:16px"><a href="${escapeHtml(appUrl)}">Abrir Ábaco</a></p>` : ''}</div>`
     try {
-      await sendEmail({ to, subject: `Tu resumen semanal · ${tenant.name}`, html, text, fromName: 'Ábaco' })
+      await sendEmail({
+        to,
+        subject: `Tu resumen semanal · ${tenant.name}`,
+        html,
+        text,
+        fromName: 'Ábaco',
+      })
       sent += 1
     } catch (error) {
       failed += 1
       // eslint-disable-next-line no-console -- único rastro del fallo de Resend en los logs de la función
-      console.error('weekly-summary: fallo de Resend', error instanceof Error ? error.message : 'desconocido')
+      console.error(
+        'weekly-summary: fallo de Resend',
+        error instanceof Error ? error.message : 'desconocido',
+      )
     }
   }
   return Response.json({ sent, failed })
