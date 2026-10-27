@@ -8,7 +8,10 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret",
+            "Merge: integrar rama gerard (operaciones, facturacion, informes)",
             "Update plans and pricing details for clarity and accuracy",
+            "Add operations, billing flows, reports, and usage guide",
             "Add reusable component for row action buttons",
             "Add form limits validation and tests for catalog, client, and ledger",
             "Add form limits validation for catalog, client, and ledger",
@@ -67,11 +70,32 @@
       ],
       "changes": [
         {
+          "sha": "a982e9c005fe94785d6f8b954bc3b73d129764b6",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret"
+        },
+        {
+          "sha": "6d3e0341c0508311df0eda6d8bcab4c052a4c6d7",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Merge: integrar rama gerard (operaciones, facturacion, informes)"
+        },
+        {
           "sha": "deae241af2f6f3fb5c7f0a1060ca4aac09e415f1",
           "type": "feat",
           "scope": "billing",
           "breaking": false,
           "description": "Update plans and pricing details for clarity and accuracy"
+        },
+        {
+          "sha": "af40073a398c114c913f8af80727d73c8b49a2a4",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add operations, billing flows, reports, and usage guide"
         },
         {
           "sha": "a4397b055cd5149a60d2af197ad67ea24be1827c",

@@ -6,7 +6,10 @@
 
 ### Nuevas funciones
 
+- Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
+- Merge: integrar rama gerard (operaciones, facturacion, informes)
 - Update plans and pricing details for clarity and accuracy
+- Add operations, billing flows, reports, and usage guide
 - Add reusable component for row action buttons
 - Add form limits validation and tests for catalog, client, and ledger
 - Add form limits validation for catalog, client, and ledger
