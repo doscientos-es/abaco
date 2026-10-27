@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Update changelog with recent merges and new features
 - Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
 - Merge: integrar rama gerard (operaciones, facturacion, informes)
 - Update plans and pricing details for clarity and accuracy

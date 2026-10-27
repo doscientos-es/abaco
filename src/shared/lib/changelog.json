@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update changelog with recent merges and new features",
             "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret",
             "Merge: integrar rama gerard (operaciones, facturacion, informes)",
             "Update plans and pricing details for clarity and accuracy",
@@ -69,6 +70,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "f6ac98e4fbee9b620b7fb93eb1cc94cb66bb5598",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with recent merges and new features"
+        },
         {
           "sha": "a982e9c005fe94785d6f8b954bc3b73d129764b6",
           "type": "feat",
