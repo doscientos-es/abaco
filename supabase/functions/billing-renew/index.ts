@@ -4,6 +4,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { isCronAuthorized } from '../_shared/cron-auth.ts'
 import {
   chargeReference,
   newMerchantOrder,
@@ -18,8 +19,7 @@ Deno.serve(async (request) => {
   const config = readRedsysConfig()
   if (!url || !serviceKey || !cronSecret || !config)
     return new Response('Sin configurar', { status: 500 })
-  if (request.headers.get('x-cron-secret') !== cronSecret)
-    return new Response('No autorizado', { status: 401 })
+  if (!isCronAuthorized(request, cronSecret)) return new Response('No autorizado', { status: 401 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   await admin.rpc('expire_subscriptions')
