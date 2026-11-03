@@ -10,6 +10,7 @@ import {
   useSession,
   type Role,
 } from '@/features/auth'
+import { WorkTeamsSection } from '@/features/work-teams'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 
@@ -44,6 +45,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
         : success,
     )
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
+    await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
   }
 
   const invite = async () => {
@@ -56,108 +58,119 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <section className="border-border bg-card rounded-lg border">
-      <div className="border-border border-b px-5 py-4">
-        <h2 className="text-sm font-semibold">Equipo</h2>
-        <p className="text-muted-foreground text-xs">Quién puede entrar y qué puede hacer.</p>
-      </div>
-
-      <ul className="divide-border divide-y">
-        {team.data?.map((member) => {
-          const isMe = member.userId === session?.userId
-          const editable = !isMe && member.role !== 'owner' && options.includes(member.role)
-          return (
-            <li key={member.userId} className="flex flex-wrap items-center gap-3 px-5 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {member.fullName || member.email}
-                  {isMe ? ' (tú)' : ''}
-                </p>
-                <p className="text-muted-foreground truncate text-xs">{member.email}</p>
-              </div>
-              {editable ? (
-                <>
-                  <SelectField
-                    hideLabel
-                    label={`Rol de ${member.email}`}
-                    value={member.role}
-                    className="w-40"
-                    options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
-                    onChange={(value) => {
-                      if (isRole(value))
-                        void run(
-                          () => changeMemberRole(tenantId, member.userId, value),
-                          'Rol actualizado.',
-                        )
-                    }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    isDisabled={busy}
-                    onPress={() =>
-                      void run(
-                        () => removeMember(tenantId, member.userId),
-                        'Persona quitada del equipo.',
-                      )
-                    }
-                  >
-                    Quitar
-                  </Button>
-                </>
-              ) : (
-                <span className="text-muted-foreground text-xs">{roleLabels[member.role]}</span>
-              )}
-            </li>
-          )
-        })}
-        {team.isError ? (
-          <li className="text-destructive px-5 py-3 text-sm">No se pudo cargar el equipo.</li>
-        ) : null}
-      </ul>
-
-      <div className="border-border grid gap-4 border-t p-5 sm:grid-cols-2">
-        <TextField
-          label="Nombre"
-          placeholder="Ana García"
-          minLength={2}
-          maxLength={120}
-          icon={fieldIcons.user}
-          value={fullName}
-          onChange={setFullName}
-        />
-        <TextField
-          label="Correo"
-          type="email"
-          placeholder="ana@empresa.es"
-          maxLength={254}
-          icon={fieldIcons.mail}
-          value={email}
-          onChange={setEmail}
-        />
-        <SelectField
-          label="Rol"
-          value={role}
-          options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
-          onChange={(value) => isRole(value) && setRole(value)}
-        />
-        <p className="text-muted-foreground self-end text-xs">{roleDescriptions[role]}</p>
-        <div className="flex items-center justify-end gap-3 sm:col-span-2">
-          {message ? <output className="text-muted-foreground text-sm">{message}</output> : null}
-          <Button
-            isDisabled={
-              busy ||
-              email.trim().length > 254 ||
-              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-              (fullName.trim() !== '' &&
-                (fullName.trim().length < 2 || fullName.trim().length > 120))
-            }
-            onPress={() => void invite()}
-          >
-            Invitar
-          </Button>
+    <div className="space-y-6">
+      <section className="border-border bg-card rounded-lg border">
+        <div className="border-border border-b px-5 py-4">
+          <h2 className="text-sm font-semibold">Personas y permisos</h2>
+          <p className="text-muted-foreground text-xs">Quién puede entrar y qué puede hacer.</p>
         </div>
-      </div>
-    </section>
+
+        <ul className="divide-border divide-y">
+          {team.data?.map((member) => {
+            const isMe = member.userId === session?.userId
+            const editable = !isMe && member.role !== 'owner' && options.includes(member.role)
+            return (
+              <li key={member.userId} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {member.fullName || member.email}
+                    {isMe ? ' (tú)' : ''}
+                  </p>
+                  <p className="text-muted-foreground truncate text-xs">{member.email}</p>
+                </div>
+                {editable ? (
+                  <>
+                    <SelectField
+                      hideLabel
+                      label={`Rol de ${member.email}`}
+                      value={member.role}
+                      className="w-40"
+                      options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
+                      onChange={(value) => {
+                        if (isRole(value))
+                          void run(
+                            () => changeMemberRole(tenantId, member.userId, value),
+                            'Rol actualizado.',
+                          )
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      isDisabled={busy}
+                      onPress={() =>
+                        void run(
+                          () => removeMember(tenantId, member.userId),
+                          'Persona quitada del equipo.',
+                        )
+                      }
+                    >
+                      Quitar
+                    </Button>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground text-xs">{roleLabels[member.role]}</span>
+                )}
+              </li>
+            )
+          })}
+          {team.isError ? (
+            <li className="text-destructive px-5 py-3 text-sm">No se pudo cargar el equipo.</li>
+          ) : null}
+        </ul>
+
+        <div className="border-border grid gap-4 border-t p-5 sm:grid-cols-2">
+          <TextField
+            label="Nombre"
+            placeholder="Ana García"
+            minLength={2}
+            maxLength={120}
+            icon={fieldIcons.user}
+            value={fullName}
+            onChange={setFullName}
+          />
+          <TextField
+            label="Correo"
+            type="email"
+            placeholder="ana@empresa.es"
+            maxLength={254}
+            icon={fieldIcons.mail}
+            value={email}
+            onChange={setEmail}
+          />
+          <SelectField
+            label="Rol"
+            value={role}
+            options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
+            onChange={(value) => isRole(value) && setRole(value)}
+          />
+          <p className="text-muted-foreground self-end text-xs">{roleDescriptions[role]}</p>
+          <div className="flex items-center justify-end gap-3 sm:col-span-2">
+            {message ? <output className="text-muted-foreground text-sm">{message}</output> : null}
+            <Button
+              isDisabled={
+                busy ||
+                email.trim().length > 254 ||
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+                (fullName.trim() !== '' &&
+                  (fullName.trim().length < 2 || fullName.trim().length > 120))
+              }
+              onPress={() => void invite()}
+            >
+              Invitar
+            </Button>
+          </div>
+        </div>
+      </section>
+      <WorkTeamsSection
+        key={tenantId}
+        tenantId={tenantId}
+        peopleReady={team.isSuccess}
+        people={(team.data ?? []).map((member) => ({
+          id: member.userId,
+          label: member.fullName || member.email,
+        }))}
+      />
+    </div>
   )
 }

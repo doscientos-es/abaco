@@ -2,6 +2,8 @@ import type { Estimate } from '@/shared/domain/types'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { estimateFromRow, type EstimateRow } from '@/shared/store/supabase-mappers'
 
+import type { WorkSearch } from '../domain/work-search'
+
 export type WorkOrderStatus = 'ready' | 'scheduled' | 'in_progress' | 'completed' | 'canceled'
 
 export type WorkOrder = {
@@ -14,6 +16,7 @@ export type WorkOrder = {
   title: string
   description: string
   responsible_user_id: string | null
+  work_team_id: string | null
   planned_start_at: string | null
   planned_end_at: string | null
   actual_start_at: string | null
@@ -57,14 +60,24 @@ export type WorkOrderDetail = WorkOrder & {
 }
 
 const workColumns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,description,responsible_user_id,planned_start_at,planned_end_at,actual_start_at,actual_end_at,kind,status,created_at,updated_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,description,responsible_user_id,work_team_id,planned_start_at,planned_end_at,actual_start_at,actual_end_at,kind,status,created_at,updated_at'
 
-export async function listWorkOrders(tenantId: string, page: number, pageSize = 20) {
-  const { data, count, error } = await createBrowserSupabaseClient()
+export async function listWorkOrders(
+  tenantId: string,
+  page: number,
+  pageSize = 20,
+  filters: WorkSearch = {},
+) {
+  let query = createBrowserSupabaseClient()
     .from('work_orders')
     .select(workColumns, { count: 'exact' })
     .eq('tenant_id', tenantId)
+  if (filters.equipo === 'unassigned') query = query.is('work_team_id', null)
+  else if (filters.equipo) query = query.eq('work_team_id', filters.equipo)
+  if (filters.estado) query = query.eq('status', filters.estado)
+  const { data, count, error } = await query
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1)
   if (error) throw new Error(error.message)
   return { items: (data ?? []) as WorkOrder[], count: count ?? 0, pageSize }
@@ -207,16 +220,18 @@ export async function updateWorkOrderPlan(input: {
   tenantId: string
   workOrder: WorkOrder
   responsibleUserId: string | null
+  workTeamId: string | null
   plannedStartAt: string | null
   plannedEndAt: string | null
   description: string
   operationId: string
 }): Promise<void> {
-  const { error } = await createBrowserSupabaseClient().rpc('update_work_order_plan', {
+  const { error } = await createBrowserSupabaseClient().rpc('plan_work_order', {
     p_tenant_id: input.tenantId,
     p_work_order_id: input.workOrder.id,
     p_expected_updated_at: input.workOrder.updated_at,
     p_responsible_user_id: input.responsibleUserId,
+    p_work_team_id: input.workTeamId,
     p_planned_start_at: input.plannedStartAt,
     p_planned_end_at: input.plannedEndAt,
     p_description: input.description.trim(),

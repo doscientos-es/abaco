@@ -16,6 +16,7 @@ import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { estimateTotals } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
@@ -64,6 +65,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
   const { tenant } = useTenantData()
   const session = useSession()
   const queryClient = useQueryClient()
+  const teams = useQuery(workTeamsQuery(tenant.id))
   const queryKey = ['work-order', tenant.id, workOrderId]
   const work = useQuery({ queryKey, queryFn: () => loadWorkOrder(tenant.id, workOrderId) })
   const members = useQuery({
@@ -110,6 +112,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
   }
 
   const order = work.data
+  const assignedTeam = teams.data?.find((team) => team.id === order.work_team_id)
   const totals = order.scope ? estimateTotals(order.scope) : null
   return (
     <div className="space-y-6">
@@ -207,9 +210,21 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Fechas y responsable</CardTitle>
+          <CardTitle>Equipo, responsable y fechas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
+          <p>
+            Equipo:{' '}
+            {order.work_team_id
+              ? teams.isPending
+                ? 'Cargando…'
+                : teams.isError
+                  ? 'No se pudo cargar el equipo'
+                  : assignedTeam
+                    ? workTeamLabel(assignedTeam)
+                    : 'Equipo no disponible'
+              : 'Sin equipo asignado'}
+          </p>
           <p>
             Responsable:{' '}
             {order.responsible_user_id
