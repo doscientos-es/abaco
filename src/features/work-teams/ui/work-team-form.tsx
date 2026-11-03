@@ -44,12 +44,12 @@ export function WorkTeamForm({
     operationId: identity.operationId,
   }
   const parsed = workTeamInput.safeParse(input)
-  const dirty = team ? (
-    name !== team.name ||
-    description !== team.description ||
-    archived !== team.archived ||
-    JSON.stringify([...memberIds].sort()) !== JSON.stringify([...team.memberIds].sort())
-  ) : Boolean(name || description || memberIds.length || archived)
+  const dirty = team
+    ? name !== team.name ||
+      description !== team.description ||
+      archived !== team.archived ||
+      JSON.stringify([...memberIds].sort()) !== JSON.stringify([...team.memberIds].sort())
+    : Boolean(name || description || memberIds.length || archived)
   const visiblePeople = people.filter((person) =>
     person.label.toLocaleLowerCase('es').includes(personSearch.trim().toLocaleLowerCase('es')),
   )
@@ -73,7 +73,9 @@ export function WorkTeamForm({
   return (
     <FormDialog
       open
-      onOpenChange={(open) => { if (!open) onCancel() }}
+      onOpenChange={(open) => {
+        if (!open) onCancel()
+      }}
       title={team ? 'Editar equipo' : 'Nuevo equipo'}
       description="Agrupa personas para asignarlas juntas a los trabajos. No cambia sus permisos ni añade plazas a tu plan."
       submitLabel={busy ? 'Guardando…' : 'Guardar equipo'}
@@ -103,7 +105,14 @@ export function WorkTeamForm({
         <p className="text-muted-foreground text-xs">
           Selecciona al menos una persona. Puede pertenecer a varios equipos.
         </p>
-        {people.length > 6 ? <TextField label="Buscar persona" value={personSearch} onChange={setPersonSearch} placeholder="Nombre o correo" /> : null}
+        {people.length > 6 ? (
+          <TextField
+            label="Buscar persona"
+            value={personSearch}
+            onChange={setPersonSearch}
+            placeholder="Nombre o correo"
+          />
+        ) : null}
         <div className="grid max-h-64 gap-2 overflow-y-auto p-1 sm:grid-cols-2">
           {visiblePeople.map((person) => (
             <label
@@ -126,9 +135,16 @@ export function WorkTeamForm({
             </label>
           ))}
         </div>
-        {!visiblePeople.length ? <p className="text-muted-foreground text-sm">{people.length ? 'No hay personas con ese nombre o correo.' : 'No hay personas disponibles. Añádelas al equipo de la empresa antes de crear un grupo.'}</p> : null}
+        {!visiblePeople.length ? (
+          <p className="text-muted-foreground text-sm">
+            {people.length
+              ? 'No hay personas con ese nombre o correo.'
+              : 'No hay personas disponibles. Añádelas al equipo de la empresa antes de crear un grupo.'}
+          </p>
+        ) : null}
         <output aria-live="polite" className="text-muted-foreground text-xs">
-          {memberIds.length} {memberIds.length === 1 ? 'persona seleccionada' : 'personas seleccionadas'}
+          {memberIds.length}{' '}
+          {memberIds.length === 1 ? 'persona seleccionada' : 'personas seleccionadas'}
         </output>
         {!memberIds.length && !archived ? (
           <p className="text-muted-foreground text-xs">Selecciona al menos una persona.</p>

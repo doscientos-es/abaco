@@ -54,11 +54,20 @@ export function WorkOrdersPage() {
         </PageHeaderHeading>
         {can(session?.role, 'work:write') ? (
           <PageHeaderActions>
-            <Button onPress={() => setShowManualForm(true)}><PlusIcon aria-hidden="true" />Nuevo trabajo</Button>
+            <Button onPress={() => setShowManualForm(true)}>
+              <PlusIcon aria-hidden="true" />
+              Nuevo trabajo
+            </Button>
           </PageHeaderActions>
         ) : null}
       </PageHeader>
-      {showManualForm ? <ManualWorkForm tenantId={tenant.id} clients={clients} onClose={() => setShowManualForm(false)} /> : null}
+      {showManualForm ? (
+        <ManualWorkForm
+          tenantId={tenant.id}
+          clients={clients}
+          onClose={() => setShowManualForm(false)}
+        />
+      ) : null}
       <Card>
         <CardContent className="space-y-3 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -96,9 +105,11 @@ export function WorkOrdersPage() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <output aria-live="polite" className="text-muted-foreground">
-              {orders.isError ? 'No se pudo actualizar el listado' : orders.data
-                ? `${orders.data.count} trabajos${filtered ? ' con estos filtros' : ''}`
-                : 'Cargando trabajos…'}
+              {orders.isError
+                ? 'No se pudo actualizar el listado'
+                : orders.data
+                  ? `${orders.data.count} trabajos${filtered ? ' con estos filtros' : ''}`
+                  : 'Cargando trabajos…'}
             </output>
             {filtered ? (
               <Button variant="ghost" onPress={() => setSearch({})}>
@@ -123,8 +134,12 @@ export function WorkOrdersPage() {
       </Card>
       {orders.isPending ? (
         <div aria-busy="true" className="space-y-2">
-          <span role="status" className="sr-only">Cargando trabajos…</span>
-          {[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-24 w-full rounded-xl" />)}
+          <span role="status" className="sr-only">
+            Cargando trabajos…
+          </span>
+          {[0, 1, 2, 3].map((index) => (
+            <Skeleton key={index} className="h-24 w-full rounded-xl" />
+          ))}
         </div>
       ) : null}
       {orders.isError ? (
@@ -138,21 +153,47 @@ export function WorkOrdersPage() {
       {orders.isSuccess && orders.data.items.length === 0 ? (
         <EmptyPanel
           icon={<ClipboardTextIcon />}
-          title={page > 0 ? 'No hay trabajos en esta página' : filtered ? 'Sin trabajos con estos filtros' : 'Todo empieza con un trabajo'}
-          description={page > 0 ? 'El listado ha cambiado. Vuelve al inicio para ver los trabajos disponibles.' : filtered ? 'Prueba otro equipo o estado, o limpia los filtros para ver todos los trabajos.' : 'Crea tu primer trabajo o parte de un presupuesto aceptado. Después podrás organizar equipo, fechas y tareas.'}
+          title={
+            page > 0
+              ? 'No hay trabajos en esta página'
+              : filtered
+                ? 'Sin trabajos con estos filtros'
+                : 'Todo empieza con un trabajo'
+          }
+          description={
+            page > 0
+              ? 'El listado ha cambiado. Vuelve al inicio para ver los trabajos disponibles.'
+              : filtered
+                ? 'Prueba otro equipo o estado, o limpia los filtros para ver todos los trabajos.'
+                : 'Crea tu primer trabajo o parte de un presupuesto aceptado. Después podrás organizar equipo, fechas y tareas.'
+          }
         >
           {page > 0 ? (
             <Button variant="outline" onPress={() => setSearch({ ...search, pagina: undefined })}>
               Volver a la primera página
             </Button>
-          ) : filtered ? <Button variant="outline" onPress={() => setSearch({})}>Limpiar filtros</Button> : can(session?.role, 'work:write') ? <Button onPress={() => setShowManualForm(true)}>Crear primer trabajo</Button> : null}
-          {!filtered && page === 0 ? <Link to="/presupuestos" className="text-primary text-sm underline">
-            Ver presupuestos
-          </Link> : null}
+          ) : filtered ? (
+            <Button variant="outline" onPress={() => setSearch({})}>
+              Limpiar filtros
+            </Button>
+          ) : can(session?.role, 'work:write') ? (
+            <Button onPress={() => setShowManualForm(true)}>Crear primer trabajo</Button>
+          ) : null}
+          {!filtered && page === 0 ? (
+            <Link to="/presupuestos" className="text-primary text-sm underline">
+              Ver presupuestos
+            </Link>
+          ) : null}
         </EmptyPanel>
       ) : null}
       {orders.data?.items.length ? (
-        <WorkOrdersList orders={orders.data.items} clients={clientById} teams={teamLabelById} teamsLoading={teams.isPending} teamsError={teams.isError} />
+        <WorkOrdersList
+          orders={orders.data.items}
+          clients={clientById}
+          teams={teamLabelById}
+          teamsLoading={teams.isPending}
+          teamsError={teams.isError}
+        />
       ) : null}
       {orders.data && (page > 0 || orders.data.count > orders.data.pageSize) ? (
         <div className="flex items-center justify-between gap-3 text-sm">

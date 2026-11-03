@@ -20,7 +20,11 @@ const kindOptions: Array<{ value: WorkOrder['kind']; label: string }> = [
   { value: 'other', label: 'Otro' },
 ]
 
-export function ManualWorkForm({ tenantId, clients, onClose }: {
+export function ManualWorkForm({
+  tenantId,
+  clients,
+  onClose,
+}: {
   tenantId: string
   clients: Client[]
   onClose: () => void
@@ -79,7 +83,9 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
   return (
     <FormDialog
       open
-      onOpenChange={(open) => { if (!open) onClose() }}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
       title="Nuevo trabajo"
       description="Indica qué hay que hacer y para quién. Después podrás asignar equipo, fechas y tareas."
       submitLabel={saving ? 'Creando…' : 'Crear trabajo'}
@@ -91,7 +97,9 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
       {!activeClients.length ? (
         <div className="bg-muted/50 rounded-lg p-3 text-sm sm:col-span-2">
           <p>Necesitas un cliente activo para crear un trabajo.</p>
-          <Link to="/clientes" className="text-primary font-medium underline">Ir a clientes</Link>
+          <Link to="/clientes" className="text-primary font-medium underline">
+            Ir a clientes
+          </Link>
         </div>
       ) : null}
       <TextField
@@ -110,8 +118,7 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
         label="Cliente"
         isDisabled={saving || !activeClients.length}
         value={clientId}
-        options={activeClients
-          .map((client) => ({ value: client.id, label: client.name }))}
+        options={activeClients.map((client) => ({ value: client.id, label: client.name }))}
         onChange={(value) => {
           setClientId(value)
           setLocationId('')
@@ -132,13 +139,28 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
       />
       {clientId ? (
         <details className="border-border rounded-lg border p-3 sm:col-span-2">
-          <summary className="cursor-pointer text-sm font-medium">Ubicación y activo · opcional</summary>
+          <summary className="cursor-pointer text-sm font-medium">
+            Ubicación y activo · opcional
+          </summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {targets.isPending ? <output className="text-muted-foreground text-sm sm:col-span-2">Cargando ubicaciones…</output> : null}
+            {targets.isPending ? (
+              <output className="text-muted-foreground text-sm sm:col-span-2">
+                Cargando ubicaciones…
+              </output>
+            ) : null}
             {targets.isError ? (
               <div role="alert" className="space-y-2 text-sm sm:col-span-2">
-                <p className="text-destructive">No se pudieron cargar las ubicaciones. Puedes crear el trabajo sin ellas o volver a intentarlo.</p>
-                <Button variant="outline" isDisabled={saving} onPress={() => void targets.refetch()}>Reintentar ubicaciones</Button>
+                <p className="text-destructive">
+                  No se pudieron cargar las ubicaciones. Puedes crear el trabajo sin ellas o volver
+                  a intentarlo.
+                </p>
+                <Button
+                  variant="outline"
+                  isDisabled={saving}
+                  onPress={() => void targets.refetch()}
+                >
+                  Reintentar ubicaciones
+                </Button>
               </div>
             ) : null}
             <SelectField
@@ -174,7 +196,12 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
                 changed()
               }}
             />
-            {targets.isSuccess && !locations.length ? <p className="text-muted-foreground text-xs sm:col-span-2">Este cliente no tiene ubicaciones registradas. Puedes añadirlas más adelante en su ficha.</p> : null}
+            {targets.isSuccess && !locations.length ? (
+              <p className="text-muted-foreground text-xs sm:col-span-2">
+                Este cliente no tiene ubicaciones registradas. Puedes añadirlas más adelante en su
+                ficha.
+              </p>
+            ) : null}
           </div>
         </details>
       ) : null}
@@ -189,7 +216,11 @@ export function ManualWorkForm({ tenantId, clients, onClose }: {
         maxLength={4000}
         className="sm:col-span-2"
       />
-      {error ? <p role="alert" className="text-destructive text-sm sm:col-span-2">No se pudo crear el trabajo: {error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-destructive text-sm sm:col-span-2">
+          No se pudo crear el trabajo: {error}
+        </p>
+      ) : null}
     </FormDialog>
   )
 }

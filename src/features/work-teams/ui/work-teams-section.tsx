@@ -52,8 +52,11 @@ export function WorkTeamsSection({
       </div>
       {teams.isPending ? (
         <div aria-busy="true" className="space-y-2">
-          <span role="status" className="sr-only">Cargando equipos…</span>
-          <Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" />
+          <span role="status" className="sr-only">
+            Cargando equipos…
+          </span>
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
         </div>
       ) : null}
       {teams.isError ? (
@@ -84,7 +87,10 @@ export function WorkTeamsSection({
       {teams.isSuccess ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-muted-foreground text-xs">{activeCount} {activeCount === 1 ? 'equipo activo' : 'equipos activos'} · {archivedCount} {archivedCount === 1 ? 'archivado' : 'archivados'}</p>
+            <p className="text-muted-foreground text-xs">
+              {activeCount} {activeCount === 1 ? 'equipo activo' : 'equipos activos'} ·{' '}
+              {archivedCount} {archivedCount === 1 ? 'archivado' : 'archivados'}
+            </p>
             <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -95,7 +101,11 @@ export function WorkTeamsSection({
               Mostrar archivados
             </label>
           </div>
-          {peopleReady && !people.length ? <p className="text-muted-foreground text-sm">Añade personas al equipo de la empresa para poder crear grupos de trabajo.</p> : null}
+          {peopleReady && !people.length ? (
+            <p className="text-muted-foreground text-sm">
+              Añade personas al equipo de la empresa para poder crear grupos de trabajo.
+            </p>
+          ) : null}
           {visible.length ? (
             <ul className="grid gap-3 xl:grid-cols-2">
               {visible.map((team) => (
@@ -103,14 +113,33 @@ export function WorkTeamsSection({
                   key={team.id}
                   className="border-border flex min-w-0 items-start gap-3 rounded-xl border p-4"
                 >
-                  <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg"><UsersThreeIcon aria-hidden="true" className="size-5" /></span>
+                  <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                    <UsersThreeIcon aria-hidden="true" className="size-5" />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold break-words">{team.name}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Badge variant={team.archived ? 'neutral' : team.memberIds.length ? 'success' : 'danger'}>{team.archived ? 'Archivado' : team.memberIds.length ? 'Activo' : 'Sin personas'}</Badge>
-                      <span className="text-muted-foreground self-center text-xs">{team.memberIds.length} {team.memberIds.length === 1 ? 'persona' : 'personas'}</span>
+                      <Badge
+                        variant={
+                          team.archived ? 'neutral' : team.memberIds.length ? 'success' : 'danger'
+                        }
+                      >
+                        {team.archived
+                          ? 'Archivado'
+                          : team.memberIds.length
+                            ? 'Activo'
+                            : 'Sin personas'}
+                      </Badge>
+                      <span className="text-muted-foreground self-center text-xs">
+                        {team.memberIds.length}{' '}
+                        {team.memberIds.length === 1 ? 'persona' : 'personas'}
+                      </span>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-xs break-words">{team.memberIds.map((id) => peopleById.get(id) ?? 'Miembro de la empresa').join(' · ') || 'Añade personas antes de asignar este equipo.'}</p>
+                    <p className="text-muted-foreground mt-2 text-xs break-words">
+                      {team.memberIds
+                        .map((id) => peopleById.get(id) ?? 'Miembro de la empresa')
+                        .join(' · ') || 'Añade personas antes de asignar este equipo.'}
+                    </p>
                     {team.description ? (
                       <p className="text-muted-foreground mt-2 line-clamp-2 text-xs break-words whitespace-pre-line">
                         {team.description}
@@ -129,8 +158,28 @@ export function WorkTeamsSection({
               ))}
             </ul>
           ) : (
-            <EmptyPanel icon={<UsersThreeIcon />} title={teams.data.length ? 'No hay equipos activos' : 'Organiza tu primer equipo'} description={teams.data.length ? 'Muestra los equipos archivados para revisarlos o reactivarlos.' : 'Agrupa a las personas que suelen trabajar juntas. También puedes seguir asignando un responsable individual.'}>
-              {teams.data.length ? <Button variant="outline" onPress={() => setShowArchived(true)}>Ver archivados</Button> : <Button variant="outline" isDisabled={!peopleReady || !people.length} onPress={() => setEditing('new')}>Crear primer equipo</Button>}
+            <EmptyPanel
+              icon={<UsersThreeIcon />}
+              title={teams.data.length ? 'No hay equipos activos' : 'Organiza tu primer equipo'}
+              description={
+                teams.data.length
+                  ? 'Muestra los equipos archivados para revisarlos o reactivarlos.'
+                  : 'Agrupa a las personas que suelen trabajar juntas. También puedes seguir asignando un responsable individual.'
+              }
+            >
+              {teams.data.length ? (
+                <Button variant="outline" onPress={() => setShowArchived(true)}>
+                  Ver archivados
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  isDisabled={!peopleReady || !people.length}
+                  onPress={() => setEditing('new')}
+                >
+                  Crear primer equipo
+                </Button>
+              )}
             </EmptyPanel>
           )}
         </>

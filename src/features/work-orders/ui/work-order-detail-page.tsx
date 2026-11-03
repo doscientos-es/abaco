@@ -30,9 +30,9 @@ import {
 } from '../application/work-order-actions'
 import { WorkCostsPanel } from './work-costs-panel'
 import { WorkExtrasPanel } from './work-extras-panel'
-import { WorkStatusBadge, workStatusLabels } from './work-status-badge'
 import { WorkPlanForm } from './work-plan-form'
 import { WorkProfitabilityPanel } from './work-profitability-panel'
+import { WorkStatusBadge, workStatusLabels } from './work-status-badge'
 import { WorkStructurePanel } from './work-structure-panel'
 
 const structureEventLabels = {
@@ -119,9 +119,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>{order.title}</PageHeaderTitle>
-          <PageHeaderDescription>
-            {order.customerName}
-          </PageHeaderDescription>
+          <PageHeaderDescription>{order.customerName}</PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <WorkStatusBadge status={order.status} />
@@ -277,8 +275,8 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       ) : null}
 
       {can(session?.role, 'work:write') &&
-        order.status !== 'completed' &&
-        order.status !== 'canceled' ? (
+      order.status !== 'completed' &&
+      order.status !== 'canceled' ? (
         <WorkPlanForm
           key={order.updated_at}
           tenantId={tenant.id}

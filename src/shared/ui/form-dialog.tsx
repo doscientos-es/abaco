@@ -59,15 +59,26 @@ export function FormDialog({
   return (
     <>
       <DialogRoot open={open} onOpenChange={requestOpenChange}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl" showCloseButton={!isSubmitting}>
+        <DialogContent
+          className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+          showCloseButton={!isSubmitting}
+        >
           <form onSubmit={handleSubmit} className="grid gap-5" aria-busy={isSubmitting}>
             <DialogHeader className="pr-8">
               <DialogTitle>{title}</DialogTitle>
               {description ? <DialogDescription>{description}</DialogDescription> : null}
             </DialogHeader>
-            <fieldset disabled={isSubmitting} className="grid min-w-0 gap-4 sm:grid-cols-2">{children}</fieldset>
+            <fieldset disabled={isSubmitting} className="grid min-w-0 gap-4 sm:grid-cols-2">
+              {children}
+            </fieldset>
             <DialogFooter className="border-border border-t pt-4">
-              <Button variant="outline" isDisabled={isSubmitting} onPress={() => requestOpenChange(false)}>Cancelar</Button>
+              <Button
+                variant="outline"
+                isDisabled={isSubmitting}
+                onPress={() => requestOpenChange(false)}
+              >
+                Cancelar
+              </Button>
               <Button type="submit" isDisabled={submitDisabled || isSubmitting}>
                 {submitLabel}
               </Button>
@@ -79,14 +90,21 @@ export function FormDialog({
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Descartar los cambios?</AlertDialogTitle>
-            <AlertDialogDescription>Los cambios de este formulario todavía no se han guardado.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Los cambios de este formulario todavía no se han guardado.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Seguir editando</AlertDialogCancel>
-            <Button variant="destructive" onPress={() => {
-              setDiscardOpen(false)
-              onOpenChange(false)
-            }}>Descartar cambios</Button>
+            <Button
+              variant="destructive"
+              onPress={() => {
+                setDiscardOpen(false)
+                onOpenChange(false)
+              }}
+            >
+              Descartar cambios
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
