@@ -3,10 +3,13 @@ import {
   Card,
   CardContent,
   PageHeader,
+  PageHeaderActions,
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
+  Skeleton,
 } from '@doscientos/ui'
+import { ClipboardTextIcon, PlusIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -15,18 +18,13 @@ import { can, useSession } from '@/features/auth'
 import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField } from '@/shared/ui/form'
+import { EmptyPanel } from '@/shared/ui/page-states'
 
-import { listWorkOrders, type WorkOrderStatus } from '../application/work-order-actions'
+import { listWorkOrders } from '../application/work-order-actions'
 import type { WorkSearch } from '../domain/work-search'
 import { ManualWorkForm } from './manual-work-form'
-
-export const workStatusLabels: Record<WorkOrderStatus, string> = {
-  ready: 'Pendiente de preparar',
-  scheduled: 'Programado',
-  in_progress: 'En curso',
-  completed: 'Completado',
-  canceled: 'Cancelado',
-}
+import { WorkOrdersList } from './work-orders-list'
+import { workStatusLabels } from './work-status-badge'
 
 export function WorkOrdersPage() {
   const { tenant, clients } = useTenantData()
@@ -54,18 +52,19 @@ export function WorkOrdersPage() {
             Organiza los trabajos de tus clientes, asigna equipos y sigue su ejecución.
           </PageHeaderDescription>
         </PageHeaderHeading>
+        {can(session?.role, 'work:write') ? (
+          <PageHeaderActions>
+            <Button onPress={() => setShowManualForm(true)}><PlusIcon aria-hidden="true" />Nuevo trabajo</Button>
+          </PageHeaderActions>
+        ) : null}
       </PageHeader>
-      {can(session?.role, 'work:write') ? (
-        <Button variant="outline" onPress={() => setShowManualForm((value) => !value)}>
-          {showManualForm ? 'Cerrar formulario' : 'Nuevo trabajo'}
-        </Button>
-      ) : null}
-      {showManualForm ? <ManualWorkForm tenantId={tenant.id} clients={clients} /> : null}
+      {showManualForm ? <ManualWorkForm tenantId={tenant.id} clients={clients} onClose={() => setShowManualForm(false)} /> : null}
       <Card>
         <CardContent className="space-y-3 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <SelectField
               label="Equipo de trabajo"
+              isDisabled={teams.isPending || teams.isError}
               value={search.equipo ?? ''}
               options={[
                 { value: '', label: 'Todos los equipos' },
@@ -97,7 +96,7 @@ export function WorkOrdersPage() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <output aria-live="polite" className="text-muted-foreground">
-              {orders.data
+              {orders.isError ? 'No se pudo actualizar el listado' : orders.data
                 ? `${orders.data.count} trabajos${filtered ? ' con estos filtros' : ''}`
                 : 'Cargando trabajos…'}
             </output>
@@ -122,7 +121,12 @@ export function WorkOrdersPage() {
           ) : null}
         </CardContent>
       </Card>
-      {orders.isPending ? <output>Cargando trabajos…</output> : null}
+      {orders.isPending ? (
+        <div aria-busy="true" className="space-y-2">
+          <span role="status" className="sr-only">Cargando trabajos…</span>
+          {[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-24 w-full rounded-xl" />)}
+        </div>
+      ) : null}
       {orders.isError ? (
         <div role="alert" className="border-destructive rounded-lg border p-4 text-sm">
           No se pudieron cargar los trabajos: {orders.error.message}
@@ -131,74 +135,24 @@ export function WorkOrdersPage() {
           </Button>
         </div>
       ) : null}
-      {orders.data?.items.length === 0 ? (
-        <Card>
-          <CardContent className="space-y-2 p-6 text-sm">
-            <p className="font-medium">
-              {filtered
-                ? 'No hay trabajos con estos filtros.'
-                : page > 0
-                  ? 'No hay trabajos en esta página.'
-                  : 'Aún no hay trabajos.'}
-            </p>
-            <p className="text-muted-foreground">
-              {filtered
-                ? 'Prueba otro equipo o estado para encontrar lo que buscas.'
-                : 'Crea uno manualmente o abre un presupuesto aceptado y elige «Crear trabajo».'}
-            </p>
-            {page > 0 ? (
-              <Button variant="outline" onPress={() => setSearch({ ...search, pagina: undefined })}>
-                Volver a la primera página
-              </Button>
-            ) : null}
-            <Link to="/presupuestos" className="text-primary underline">
-              Ver presupuestos
-            </Link>
-          </CardContent>
-        </Card>
+      {orders.isSuccess && orders.data.items.length === 0 ? (
+        <EmptyPanel
+          icon={<ClipboardTextIcon />}
+          title={page > 0 ? 'No hay trabajos en esta página' : filtered ? 'Sin trabajos con estos filtros' : 'Todo empieza con un trabajo'}
+          description={page > 0 ? 'El listado ha cambiado. Vuelve al inicio para ver los trabajos disponibles.' : filtered ? 'Prueba otro equipo o estado, o limpia los filtros para ver todos los trabajos.' : 'Crea tu primer trabajo o parte de un presupuesto aceptado. Después podrás organizar equipo, fechas y tareas.'}
+        >
+          {page > 0 ? (
+            <Button variant="outline" onPress={() => setSearch({ ...search, pagina: undefined })}>
+              Volver a la primera página
+            </Button>
+          ) : filtered ? <Button variant="outline" onPress={() => setSearch({})}>Limpiar filtros</Button> : can(session?.role, 'work:write') ? <Button onPress={() => setShowManualForm(true)}>Crear primer trabajo</Button> : null}
+          {!filtered && page === 0 ? <Link to="/presupuestos" className="text-primary text-sm underline">
+            Ver presupuestos
+          </Link> : null}
+        </EmptyPanel>
       ) : null}
       {orders.data?.items.length ? (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {orders.data.items.map((order) => (
-            <li key={order.id}>
-              <Card className="h-full">
-                <CardContent className="space-y-2 p-4">
-                  <Link
-                    to="/trabajos/$workOrderId"
-                    params={{ workOrderId: order.id }}
-                    className="text-primary font-semibold underline-offset-4 hover:underline"
-                  >
-                    {order.title}
-                  </Link>
-                  <p className="text-muted-foreground text-sm">
-                    {clientById.get(order.client_id) ?? 'Cliente'} ·{' '}
-                    {workStatusLabels[order.status]}
-                  </p>
-                  <p className="text-sm">
-                    {order.work_team_id
-                      ? (teamLabelById.get(order.work_team_id) ??
-                        (teams.isPending ? 'Cargando equipo…' : 'Equipo no disponible'))
-                      : 'Sin equipo asignado'}
-                  </p>
-                  {order.planned_start_at ? (
-                    <p className="text-muted-foreground text-xs">
-                      Previsto:{' '}
-                      <time dateTime={order.planned_start_at}>
-                        {new Date(order.planned_start_at).toLocaleDateString('es-ES')}
-                      </time>
-                      {order.planned_end_at
-                        ? ` → ${new Date(order.planned_end_at).toLocaleDateString('es-ES')}`
-                        : ''}
-                    </p>
-                  ) : null}
-                  <time className="text-muted-foreground text-xs" dateTime={order.created_at}>
-                    Creado el {new Date(order.created_at).toLocaleDateString('es-ES')}
-                  </time>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <WorkOrdersList orders={orders.data.items} clients={clientById} teams={teamLabelById} teamsLoading={teams.isPending} teamsError={teams.isError} />
       ) : null}
       {orders.data && (page > 0 || orders.data.count > orders.data.pageSize) ? (
         <div className="flex items-center justify-between gap-3 text-sm">

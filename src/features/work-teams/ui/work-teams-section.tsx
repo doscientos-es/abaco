@@ -1,9 +1,12 @@
-import { Button, toast } from '@doscientos/ui'
+import { Badge, Button, Skeleton, toast } from '@doscientos/ui'
+import { PlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { EmptyPanel } from '@/shared/ui/page-states'
+
 import { workTeamsQuery } from '../application/work-team-actions'
-import { workTeamLabel, type WorkTeam } from '../domain/work-team'
+import type { WorkTeam } from '../domain/work-team'
 import { WorkTeamForm, type TeamPerson } from './work-team-form'
 
 export function WorkTeamsSection({
@@ -21,6 +24,8 @@ export function WorkTeamsSection({
   const [showArchived, setShowArchived] = useState(false)
   const visible = teams.data?.filter((team) => showArchived || !team.archived) ?? []
   const peopleById = new Map(people.map((person) => [person.id, person.label]))
+  const activeCount = teams.data?.filter((team) => !team.archived).length ?? 0
+  const archivedCount = (teams.data?.length ?? 0) - activeCount
 
   return (
     <section
@@ -36,18 +41,20 @@ export function WorkTeamsSection({
             Agrupa personas para asignarlas a los trabajos sin repetir la selección.
           </p>
         </div>
-        {!editing ? (
-          <Button
-            variant="outline"
-            isDisabled={!peopleReady || teams.isPending || teams.isError}
-            onPress={() => setEditing('new')}
-          >
-            Crear equipo
-          </Button>
-        ) : null}
+        <Button
+          variant="outline"
+          isDisabled={!peopleReady || !people.length || teams.isPending || teams.isError}
+          onPress={() => setEditing('new')}
+        >
+          <PlusIcon aria-hidden="true" />
+          Crear equipo
+        </Button>
       </div>
       {teams.isPending ? (
-        <output className="text-muted-foreground text-sm">Cargando equipos…</output>
+        <div aria-busy="true" className="space-y-2">
+          <span role="status" className="sr-only">Cargando equipos…</span>
+          <Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" />
+        </div>
       ) : null}
       {teams.isError ? (
         <div role="alert" className="space-y-2 text-sm">
@@ -74,32 +81,38 @@ export function WorkTeamsSection({
           }}
         />
       ) : null}
-      {teams.isSuccess && !editing ? (
+      {teams.isSuccess ? (
         <>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            Mostrar archivados
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-xs">{activeCount} {activeCount === 1 ? 'equipo activo' : 'equipos activos'} · {archivedCount} {archivedCount === 1 ? 'archivado' : 'archivados'}</p>
+            <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-primary size-4"
+                checked={showArchived}
+                onChange={(event) => setShowArchived(event.target.checked)}
+              />
+              Mostrar archivados
+            </label>
+          </div>
+          {peopleReady && !people.length ? <p className="text-muted-foreground text-sm">Añade personas al equipo de la empresa para poder crear grupos de trabajo.</p> : null}
           {visible.length ? (
-            <ul className="divide-border divide-y">
+            <ul className="grid gap-3 xl:grid-cols-2">
               {visible.map((team) => (
                 <li
                   key={team.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  className="border-border flex min-w-0 items-start gap-3 rounded-xl border p-4"
                 >
+                  <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg"><UsersThreeIcon aria-hidden="true" className="size-5" /></span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium break-words">{workTeamLabel(team)}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {team.memberIds
-                        .map((id) => peopleById.get(id) ?? 'Miembro de la empresa')
-                        .join(' · ') || 'Añade personas antes de asignar este equipo.'}
-                    </p>
+                    <p className="text-sm font-semibold break-words">{team.name}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge variant={team.archived ? 'neutral' : team.memberIds.length ? 'success' : 'danger'}>{team.archived ? 'Archivado' : team.memberIds.length ? 'Activo' : 'Sin personas'}</Badge>
+                      <span className="text-muted-foreground self-center text-xs">{team.memberIds.length} {team.memberIds.length === 1 ? 'persona' : 'personas'}</span>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-xs break-words">{team.memberIds.map((id) => peopleById.get(id) ?? 'Miembro de la empresa').join(' · ') || 'Añade personas antes de asignar este equipo.'}</p>
                     {team.description ? (
-                      <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
+                      <p className="text-muted-foreground mt-2 line-clamp-2 text-xs break-words whitespace-pre-line">
                         {team.description}
                       </p>
                     ) : null}
@@ -116,11 +129,9 @@ export function WorkTeamsSection({
               ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              {teams.data.length
-                ? 'No hay equipos activos. Muestra los archivados para reactivarlos.'
-                : 'Aún no hay equipos. Puedes seguir asignando un responsable individual o crear tu primer grupo.'}
-            </p>
+            <EmptyPanel icon={<UsersThreeIcon />} title={teams.data.length ? 'No hay equipos activos' : 'Organiza tu primer equipo'} description={teams.data.length ? 'Muestra los equipos archivados para revisarlos o reactivarlos.' : 'Agrupa a las personas que suelen trabajar juntas. También puedes seguir asignando un responsable individual.'}>
+              {teams.data.length ? <Button variant="outline" onPress={() => setShowArchived(true)}>Ver archivados</Button> : <Button variant="outline" isDisabled={!peopleReady || !people.length} onPress={() => setEditing('new')}>Crear primer equipo</Button>}
+            </EmptyPanel>
           )}
         </>
       ) : null}

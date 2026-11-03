@@ -30,7 +30,7 @@ import {
 } from '../application/work-order-actions'
 import { WorkCostsPanel } from './work-costs-panel'
 import { WorkExtrasPanel } from './work-extras-panel'
-import { workStatusLabels } from './work-orders-page'
+import { WorkStatusBadge, workStatusLabels } from './work-status-badge'
 import { WorkPlanForm } from './work-plan-form'
 import { WorkProfitabilityPanel } from './work-profitability-panel'
 import { WorkStructurePanel } from './work-structure-panel'
@@ -120,10 +120,11 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
         <PageHeaderHeading>
           <PageHeaderTitle>{order.title}</PageHeaderTitle>
           <PageHeaderDescription>
-            {order.customerName} · {workStatusLabels[order.status]}
+            {order.customerName}
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
+          <WorkStatusBadge status={order.status} />
           <Link to="/trabajos" className="text-primary text-sm font-medium underline">
             Volver a trabajos
           </Link>
@@ -276,8 +277,8 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       ) : null}
 
       {can(session?.role, 'work:write') &&
-      order.status !== 'completed' &&
-      order.status !== 'canceled' ? (
+        order.status !== 'completed' &&
+        order.status !== 'canceled' ? (
         <WorkPlanForm
           key={order.updated_at}
           tenantId={tenant.id}
