@@ -68,13 +68,16 @@ export function WorkOrdersList({
               </div>
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <CalendarBlankIcon aria-hidden="true" className="size-4 shrink-0" />
-                {order.planned_start_at ? (
-                  <time dateTime={order.planned_start_at}>
-                    {dateFormat.format(new Date(order.planned_start_at))}
-                  </time>
-                ) : (
-                  <span>Sin fecha prevista</span>
-                )}
+                <span className="space-y-1">
+                  {order.planned_start_at ? (
+                    <time dateTime={order.planned_start_at} className="block">
+                      {dateFormat.format(new Date(order.planned_start_at))}
+                    </time>
+                  ) : <span className="block">Sin fecha de inicio</span>}
+                  {order.planned_end_at ? (
+                    <span className="block">Hasta <time dateTime={order.planned_end_at}>{dateFormat.format(new Date(order.planned_end_at))}</time></span>
+                  ) : null}
+                </span>
               </div>
               <CaretRightIcon
                 aria-hidden="true"

@@ -64,8 +64,8 @@ export function TextField({
   className?: string
   maxLength?: number
   minLength?: number
-  min?: number
-  max?: number
+  min?: number | string
+  max?: number | string
   step?: number | string
 }) {
   return (

@@ -1,4 +1,10 @@
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Button,
   Card,
   CardContent,
@@ -73,6 +79,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
     queryFn: () => loadWorkMemberOptions(tenant.id),
   })
   const [changing, setChanging] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const pendingOperation = useRef<{ status: WorkOrderStatus; id: string } | null>(null)
 
   async function changeStatus(status: WorkOrderStatus) {
@@ -85,6 +92,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
     setChanging(true)
     try {
       await transitionWorkOrder(tenant.id, work.data, status, operation.id)
+      setCancelOpen(false)
       pendingOperation.current = null
       await queryClient.invalidateQueries({ queryKey })
       await queryClient.invalidateQueries({ queryKey: ['work-orders', tenant.id] })
@@ -128,6 +136,19 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
           </Link>
         </PageHeaderActions>
       </PageHeader>
+
+      <AlertDialog open={cancelOpen} onOpenChange={(open) => { if (!changing) setCancelOpen(open) }}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar este trabajo?</AlertDialogTitle>
+            <AlertDialogDescription>«{order.title}» pasará a Cancelado. Su historial se conserva.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" isDisabled={changing} onPress={() => setCancelOpen(false)}>Volver</Button>
+            <Button variant="destructive" isDisabled={changing} onPress={() => void changeStatus('canceled')}>{changing ? 'Cancelando…' : 'Cancelar trabajo'}</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {order.publicationSource === 'migration' || order.acceptance?.mode === 'legacy_unverified' ? (
         <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
@@ -265,7 +286,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
                   key={action.status}
                   variant={action.status === 'canceled' ? 'outline' : 'default'}
                   isDisabled={changing}
-                  onPress={() => void changeStatus(action.status)}
+                  onPress={() => action.status === 'canceled' ? setCancelOpen(true) : void changeStatus(action.status)}
                 >
                   {action.label}
                 </Button>
@@ -275,8 +296,8 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       ) : null}
 
       {can(session?.role, 'work:write') &&
-      order.status !== 'completed' &&
-      order.status !== 'canceled' ? (
+        order.status !== 'completed' &&
+        order.status !== 'canceled' ? (
         <WorkPlanForm
           key={order.updated_at}
           tenantId={tenant.id}
