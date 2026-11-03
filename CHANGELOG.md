@@ -2,15 +2,21 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-10-27 — v0.0.2
+## 2026-11-03 — v0.0.3
 
 ### Nuevas funciones
 
+- Add cancel confirmation dialog and improve UI feedback
 - Add cancel confirmation dialog and improve UI feedback
 - Add work orders list and status badge components
 - Add discard confirmation for unsaved changes
 - Add team management functionality and related tests
 - Add team management functionality and related tests
+
+## 2026-10-27 — v0.0.2
+
+### Nuevas funciones
+
 - Update changelog with recent merges and new features
 - Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
 - Merge: integrar rama gerard (operaciones, facturacion, informes)

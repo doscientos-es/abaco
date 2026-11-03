@@ -1,24 +1,75 @@
 {
   "releases": [
     {
-<<<<<<< HEAD
-      "version": "0.0.2",
-      "date": "2026-10-27",
-      "title": "v0.0.2",
-=======
-      "version": null,
+      "version": "0.0.3",
       "date": "2026-11-03",
-      "title": "Sin publicar",
->>>>>>> 43954f7 (feat(work-teams): add team management functionality and related tests)
+      "title": "v0.0.3",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
             "Add cancel confirmation dialog and improve UI feedback",
+            "Add cancel confirmation dialog and improve UI feedback",
             "Add work orders list and status badge components",
             "Add discard confirmation for unsaved changes",
             "Add team management functionality and related tests",
-            "Add team management functionality and related tests",
+            "Add team management functionality and related tests"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "d73f9bcbc15e25d71fb88dc0ca27c1bb75f2cb65",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add cancel confirmation dialog and improve UI feedback"
+        },
+        {
+          "sha": "350be99edb9beab389936be9b5de00d18485450a",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add cancel confirmation dialog and improve UI feedback"
+        },
+        {
+          "sha": "02c3cddf84def057619b2251cd6610b2dedca3a7",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add work orders list and status badge components"
+        },
+        {
+          "sha": "c46002f6325863a523ebc7b6dd675aae458723b4",
+          "type": "feat",
+          "scope": "form-dialog",
+          "breaking": false,
+          "description": "Add discard confirmation for unsaved changes"
+        },
+        {
+          "sha": "a08288c69c7789a0d403dff36f4e98af0ca3b0fd",
+          "type": "feat",
+          "scope": "work-teams",
+          "breaking": false,
+          "description": "Add team management functionality and related tests"
+        },
+        {
+          "sha": "bc3243ca54f09be8abe8f1cd0f99c61ef98dd955",
+          "type": "feat",
+          "scope": "work-teams",
+          "breaking": false,
+          "description": "Add team management functionality and related tests"
+        }
+      ]
+    },
+    {
+      "version": "0.0.2",
+      "date": "2026-10-27",
+      "title": "v0.0.2",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
             "Update changelog with recent merges and new features",
             "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret",
             "Merge: integrar rama gerard (operaciones, facturacion, informes)",
@@ -83,41 +134,6 @@
         }
       ],
       "changes": [
-        {
-          "sha": "3da33439ffcafe3bde927bb252ae5c05592a3ca6",
-          "type": "feat",
-          "scope": "work-orders",
-          "breaking": false,
-          "description": "Add cancel confirmation dialog and improve UI feedback"
-        },
-        {
-          "sha": "748a93c6ecfea34d49c8e00f339eaff1fc5e49b4",
-          "type": "feat",
-          "scope": "work-orders",
-          "breaking": false,
-          "description": "Add work orders list and status badge components"
-        },
-        {
-          "sha": "0ffee58ebf559069780846a626eba8cbed78c662",
-          "type": "feat",
-          "scope": "form-dialog",
-          "breaking": false,
-          "description": "Add discard confirmation for unsaved changes"
-        },
-        {
-          "sha": "6c6a9d291e0e24d1e198177736bdec5cfaa14be9",
-          "type": "feat",
-          "scope": "work-teams",
-          "breaking": false,
-          "description": "Add team management functionality and related tests"
-        },
-        {
-          "sha": "43954f72f3de1a8eb11624e9151ae50aa68d5bd6",
-          "type": "feat",
-          "scope": "work-teams",
-          "breaking": false,
-          "description": "Add team management functionality and related tests"
-        },
         {
           "sha": "3e42b5e0fb9c4e579b28fd563328d93e28646c1b",
           "type": "fix",
