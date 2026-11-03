@@ -102,6 +102,7 @@ export type SelectOption = { value: string; label: string }
 export function SelectField({
   label,
   hideLabel = false,
+  isDisabled = false,
   value,
   options,
   onChange,
@@ -110,6 +111,7 @@ export function SelectField({
 }: {
   label: string
   hideLabel?: boolean
+  isDisabled?: boolean
   value: string
   options: SelectOption[]
   onChange: (value: string) => void
@@ -121,6 +123,7 @@ export function SelectField({
   const control = (
     <Select
       aria-label={label}
+      isDisabled={isDisabled}
       selectedKey={selectedKey}
       onSelectionChange={(key) => {
         if (key === null) return
