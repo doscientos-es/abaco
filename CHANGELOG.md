@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Add team management functionality and related tests
 - Update changelog with recent merges and new features
 - Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
 - Merge: integrar rama gerard (operaciones, facturacion, informes)

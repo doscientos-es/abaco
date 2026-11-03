@@ -14,6 +14,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add team management functionality and related tests",
             "Update changelog with recent merges and new features",
             "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret",
             "Merge: integrar rama gerard (operaciones, facturacion, informes)",
@@ -78,6 +79,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "43954f72f3de1a8eb11624e9151ae50aa68d5bd6",
+          "type": "feat",
+          "scope": "work-teams",
+          "breaking": false,
+          "description": "Add team management functionality and related tests"
+        },
         {
           "sha": "3e42b5e0fb9c4e579b28fd563328d93e28646c1b",
           "type": "fix",
