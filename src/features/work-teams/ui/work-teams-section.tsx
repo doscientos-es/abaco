@@ -52,9 +52,7 @@ export function WorkTeamsSection({
       </div>
       {teams.isPending ? (
         <div aria-busy="true" className="space-y-2">
-          <output className="sr-only">
-            Cargando equipos…
-          </output>
+          <output className="sr-only">Cargando equipos…</output>
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>

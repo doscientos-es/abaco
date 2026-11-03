@@ -14,6 +14,10 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add cancel confirmation dialog and improve UI feedback",
+            "Add work orders list and status badge components",
+            "Add discard confirmation for unsaved changes",
+            "Add team management functionality and related tests",
             "Add team management functionality and related tests",
             "Update changelog with recent merges and new features",
             "Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret",
@@ -79,6 +83,34 @@
         }
       ],
       "changes": [
+        {
+          "sha": "3da33439ffcafe3bde927bb252ae5c05592a3ca6",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add cancel confirmation dialog and improve UI feedback"
+        },
+        {
+          "sha": "748a93c6ecfea34d49c8e00f339eaff1fc5e49b4",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add work orders list and status badge components"
+        },
+        {
+          "sha": "0ffee58ebf559069780846a626eba8cbed78c662",
+          "type": "feat",
+          "scope": "form-dialog",
+          "breaking": false,
+          "description": "Add discard confirmation for unsaved changes"
+        },
+        {
+          "sha": "6c6a9d291e0e24d1e198177736bdec5cfaa14be9",
+          "type": "feat",
+          "scope": "work-teams",
+          "breaking": false,
+          "description": "Add team management functionality and related tests"
+        },
         {
           "sha": "43954f72f3de1a8eb11624e9151ae50aa68d5bd6",
           "type": "feat",

@@ -73,9 +73,16 @@ export function WorkOrdersList({
                     <time dateTime={order.planned_start_at} className="block">
                       {dateFormat.format(new Date(order.planned_start_at))}
                     </time>
-                  ) : <span className="block">Sin fecha de inicio</span>}
+                  ) : (
+                    <span className="block">Sin fecha de inicio</span>
+                  )}
                   {order.planned_end_at ? (
-                    <span className="block">Hasta <time dateTime={order.planned_end_at}>{dateFormat.format(new Date(order.planned_end_at))}</time></span>
+                    <span className="block">
+                      Hasta{' '}
+                      <time dateTime={order.planned_end_at}>
+                        {dateFormat.format(new Date(order.planned_end_at))}
+                      </time>
+                    </span>
                   ) : null}
                 </span>
               </div>

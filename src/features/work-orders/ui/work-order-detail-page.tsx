@@ -137,15 +137,30 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
         </PageHeaderActions>
       </PageHeader>
 
-      <AlertDialog open={cancelOpen} onOpenChange={(open) => { if (!changing) setCancelOpen(open) }}>
+      <AlertDialog
+        open={cancelOpen}
+        onOpenChange={(open) => {
+          if (!changing) setCancelOpen(open)
+        }}
+      >
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cancelar este trabajo?</AlertDialogTitle>
-            <AlertDialogDescription>«{order.title}» pasará a Cancelado. Su historial se conserva.</AlertDialogDescription>
+            <AlertDialogDescription>
+              «{order.title}» pasará a Cancelado. Su historial se conserva.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button variant="outline" isDisabled={changing} onPress={() => setCancelOpen(false)}>Volver</Button>
-            <Button variant="destructive" isDisabled={changing} onPress={() => void changeStatus('canceled')}>{changing ? 'Cancelando…' : 'Cancelar trabajo'}</Button>
+            <Button variant="outline" isDisabled={changing} onPress={() => setCancelOpen(false)}>
+              Volver
+            </Button>
+            <Button
+              variant="destructive"
+              isDisabled={changing}
+              onPress={() => void changeStatus('canceled')}
+            >
+              {changing ? 'Cancelando…' : 'Cancelar trabajo'}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -286,7 +301,11 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
                   key={action.status}
                   variant={action.status === 'canceled' ? 'outline' : 'default'}
                   isDisabled={changing}
-                  onPress={() => action.status === 'canceled' ? setCancelOpen(true) : void changeStatus(action.status)}
+                  onPress={() =>
+                    action.status === 'canceled'
+                      ? setCancelOpen(true)
+                      : void changeStatus(action.status)
+                  }
                 >
                   {action.label}
                 </Button>
@@ -296,8 +315,8 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       ) : null}
 
       {can(session?.role, 'work:write') &&
-        order.status !== 'completed' &&
-        order.status !== 'canceled' ? (
+      order.status !== 'completed' &&
+      order.status !== 'canceled' ? (
         <WorkPlanForm
           key={order.updated_at}
           tenantId={tenant.id}

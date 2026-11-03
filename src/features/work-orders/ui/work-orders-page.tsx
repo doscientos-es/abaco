@@ -134,9 +134,7 @@ export function WorkOrdersPage() {
       </Card>
       {orders.isPending ? (
         <div aria-busy="true" className="space-y-2">
-          <output className="sr-only">
-            Cargando trabajos…
-          </output>
+          <output className="sr-only">Cargando trabajos…</output>
           {[0, 1, 2, 3].map((index) => (
             <Skeleton key={index} className="h-24 w-full rounded-xl" />
           ))}

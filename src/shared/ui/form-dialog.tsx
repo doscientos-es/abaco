@@ -60,7 +60,7 @@ export function FormDialog({
     <>
       <DialogRoot open={open} onOpenChange={requestOpenChange}>
         <DialogContent
-          className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+          className="max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl"
           showCloseButton={!isSubmitting}
         >
           <form onSubmit={handleSubmit} className="grid gap-5" aria-busy={isSubmitting}>

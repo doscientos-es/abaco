@@ -1,4 +1,12 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  toast,
+} from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
@@ -50,12 +58,14 @@ export function WorkPlanForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const operationId = useRef(crypto.randomUUID())
-  const dirty = responsibleId !== (order.responsible_user_id ?? '') ||
+  const dirty =
+    responsibleId !== (order.responsible_user_id ?? '') ||
     workTeamId !== (order.work_team_id ?? '') ||
     startAt !== toLocalInput(order.planned_start_at) ||
-    endAt !== toLocalInput(order.planned_end_at) || description !== order.description
-  const dateError = startAt && endAt && endAt < startAt
-    ? 'El fin previsto no puede ser anterior al inicio.' : ''
+    endAt !== toLocalInput(order.planned_end_at) ||
+    description !== order.description
+  const dateError =
+    startAt && endAt && endAt < startAt ? 'El fin previsto no puede ser anterior al inicio.' : ''
   const optionsReady = members.isSuccess && teams.isSuccess
 
   function reset() {
@@ -104,16 +114,33 @@ export function WorkPlanForm({
     <Card>
       <CardHeader>
         <CardTitle>Planificación</CardTitle>
-        <CardDescription>Asigna quién coordina el trabajo y cuándo está previsto. Las fechas no crean visitas automáticamente.</CardDescription>
+        <CardDescription>
+          Asigna quién coordina el trabajo y cuándo está previsto. Las fechas no crean visitas
+          automáticamente.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={(event) => { event.preventDefault(); void save() }} aria-busy={saving}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            void save()
+          }}
+          aria-busy={saving}
+        >
           <fieldset disabled={saving} className="grid min-w-0 gap-4 sm:grid-cols-2">
-            {!optionsReady && !members.isError && !teams.isError ? <output className="text-muted-foreground text-sm sm:col-span-2">Cargando personas y equipos…</output> : null}
+            {!optionsReady && !members.isError && !teams.isError ? (
+              <output className="text-muted-foreground text-sm sm:col-span-2">
+                Cargando personas y equipos…
+              </output>
+            ) : null}
             {members.isError ? (
               <div role="alert" className="space-y-2 text-sm sm:col-span-2">
-                <p className="text-destructive">No se pudieron cargar las personas: {members.error.message}</p>
-                <Button variant="outline" onPress={() => void members.refetch()}>Reintentar personas</Button>
+                <p className="text-destructive">
+                  No se pudieron cargar las personas: {members.error.message}
+                </p>
+                <Button variant="outline" onPress={() => void members.refetch()}>
+                  Reintentar personas
+                </Button>
               </div>
             ) : null}
             {teams.isError ? (
@@ -130,7 +157,10 @@ export function WorkPlanForm({
               value={responsibleId}
               options={[
                 { value: '', label: 'Sin asignar' },
-                ...(members.data ?? []).map((member) => ({ value: member.id, label: member.label })),
+                ...(members.data ?? []).map((member) => ({
+                  value: member.id,
+                  label: member.label,
+                })),
               ]}
               onChange={(value) => {
                 setResponsibleId(value)
@@ -182,14 +212,18 @@ export function WorkPlanForm({
               label="Fin previsto"
               type="datetime-local"
               value={endAt}
-              min={startAt || undefined}
+              {...(startAt ? { min: startAt } : {})}
               onChange={(value) => {
                 setEndAt(value)
                 changed()
               }}
               placeholder="Fin previsto"
             />
-            {dateError ? <p role="alert" className="text-destructive text-sm sm:col-span-2">{dateError}</p> : null}
+            {dateError ? (
+              <p role="alert" className="text-destructive text-sm sm:col-span-2">
+                {dateError}
+              </p>
+            ) : null}
             <TextareaField
               label="Notas operativas"
               value={description}
@@ -201,16 +235,24 @@ export function WorkPlanForm({
               maxLength={4000}
               className="sm:col-span-2"
             />
-            {error ? <p role="alert" className="text-destructive text-sm sm:col-span-2">No se pudo guardar la planificación: {error}</p> : null}
+            {error ? (
+              <p role="alert" className="text-destructive text-sm sm:col-span-2">
+                No se pudo guardar la planificación: {error}
+              </p>
+            ) : null}
             <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-4 sm:col-span-2">
-              <output aria-live="polite" className="text-muted-foreground text-xs">{dirty ? 'Tienes cambios sin guardar' : 'Sin cambios pendientes'}</output>
+              <output aria-live="polite" className="text-muted-foreground text-xs">
+                {dirty ? 'Tienes cambios sin guardar' : 'Sin cambios pendientes'}
+              </output>
               <div className="flex flex-wrap gap-2">
-                {dirty ? <Button variant="outline" isDisabled={saving} onPress={reset}>Restablecer</Button> : null}
+                {dirty ? (
+                  <Button variant="outline" isDisabled={saving} onPress={reset}>
+                    Restablecer
+                  </Button>
+                ) : null}
                 <Button
                   type="submit"
-                  isDisabled={
-                    saving || !dirty || !optionsReady || Boolean(dateError)
-                  }
+                  isDisabled={saving || !dirty || !optionsReady || Boolean(dateError)}
                 >
                   {saving ? 'Guardando…' : 'Guardar planificación'}
                 </Button>

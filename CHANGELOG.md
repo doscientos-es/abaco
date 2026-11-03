@@ -6,6 +6,10 @@
 
 ### Nuevas funciones
 
+- Add cancel confirmation dialog and improve UI feedback
+- Add work orders list and status badge components
+- Add discard confirmation for unsaved changes
+- Add team management functionality and related tests
 - Add team management functionality and related tests
 - Update changelog with recent merges and new features
 - Merge: integrar rama gerard (operaciones, facturacion, informes) y endurecer cron secret
