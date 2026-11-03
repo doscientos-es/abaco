@@ -27,17 +27,20 @@ export function WorkTeamForm({
   const [archived, setArchived] = useState(team?.archived ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const id = useRef(team?.id ?? crypto.randomUUID())
-  const operation = useRef({ key: '', id: crypto.randomUUID() })
+  const [identity] = useState(() => ({
+    id: team?.id ?? crypto.randomUUID(),
+    operationId: crypto.randomUUID(),
+  }))
+  const operation = useRef({ key: '', id: identity.operationId })
   const input = {
     tenantId,
-    id: id.current,
+    id: identity.id,
     expectedUpdatedAt: team?.updatedAt ?? null,
     name,
     description,
     memberIds,
     archived,
-    operationId: operation.current.id,
+    operationId: identity.operationId,
   }
   const parsed = workTeamInput.safeParse(input)
   const dirty =

@@ -40,7 +40,7 @@ export function WorkOrdersPage() {
     queryKey: ['work-orders', tenant.id, search],
     queryFn: () => listWorkOrders(tenant.id, page, 20, search),
   })
-  const teamById = new Map((teams.data ?? []).map((team) => [team.id, team]))
+  const teamLabelById = new Map((teams.data ?? []).map((team) => [team.id, workTeamLabel(team)]))
   const clientById = new Map(clients.map((client) => [client.id, client.name]))
   const filtered = Boolean(search.equipo || search.estado)
   const setSearch = (next: WorkSearch) => void navigate({ to: '/trabajos', search: next })
@@ -176,11 +176,8 @@ export function WorkOrdersPage() {
                   </p>
                   <p className="text-sm">
                     {order.work_team_id
-                      ? teamById.has(order.work_team_id)
-                        ? workTeamLabel(teamById.get(order.work_team_id)!)
-                        : teams.isPending
-                          ? 'Cargando equipo…'
-                          : 'Equipo no disponible'
+                      ? (teamLabelById.get(order.work_team_id) ??
+                        (teams.isPending ? 'Cargando equipo…' : 'Equipo no disponible'))
                       : 'Sin equipo asignado'}
                   </p>
                   {order.planned_start_at ? (

@@ -70,7 +70,7 @@ declare
   prior public.work_team_operations%rowtype;
   members uuid[];
   requested jsonb;
-  result_version timestamptz;
+  saved_version timestamptz;
   conflict_constraint text;
 begin
   if (select auth.uid()) is null or not public.has_role(
@@ -132,10 +132,10 @@ begin
   insert into public.work_team_members(tenant_id, team_id, user_id)
     select p_tenant_id, p_team_id, member_id from unnest(members) member_id
     on conflict (team_id, user_id) do nothing;
-  select updated_at into result_version from public.work_teams where id = p_team_id;
-  update public.work_team_operations set result_version = save_work_team.result_version
+  select updated_at into saved_version from public.work_teams where id = p_team_id;
+  update public.work_team_operations set result_version = saved_version
     where operation_id = p_operation_id;
-  return result_version;
+  return saved_version;
 exception when unique_violation then
   get stacked diagnostics conflict_constraint = constraint_name;
   if conflict_constraint = 'work_teams_active_name_idx' then

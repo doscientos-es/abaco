@@ -45,7 +45,8 @@ Tras aceptar, la oficina convierte la propuesta una sola vez al destino que se p
 ## 4. Gestionar trabajos y extras
 
 - **Trabajos** permite crear un trabajo manual o consultar uno convertido desde un presupuesto o una incidencia.
-- En la ficha puedes planificar fechas y responsable, añadir fases, tareas y comprobaciones, y cambiar el estado. Para cerrar el trabajo hay que terminar o descartar las tareas abiertas.
+- En la ficha puedes planificar fechas, responsable y equipo de trabajo, añadir fases, tareas y comprobaciones, y cambiar el estado. Para cerrar el trabajo hay que terminar o descartar las tareas abiertas.
+- Filtra el listado por equipo o estado, o elige **Sin equipo asignado**. Los filtros y la página se conservan en la dirección para compartir la vista o volver a ella.
 - **Costes reales** registra horas, materiales, productos, desplazamientos, subcontratas y otros costes con su tarifa histórica. Una corrección se hace mediante anulación trazable.
 - **Extras del trabajo** permite proponer un alcance adicional. Registra la decisión y su evidencia; solo un extra aprobado puede prepararse como borrador de factura.
 - **Rentabilidad del trabajo** separa venta aprobada, facturación sin IVA, efectivo cobrado con IVA y costes registrados. El margen es provisional si faltan costes o gastos por imputar.
@@ -116,12 +117,21 @@ Los CSV de clientes, facturas, cobros y gastos están disponibles para propietar
 
 En **Ajustes** se configuran los datos de la empresa que aparecen en documentos, la marca, valores por defecto, miembros e invitaciones. Solo propietario y administrador pueden gestionar las opciones autorizadas; el propietario puede nombrar administradores. Revisa especialmente la identificación fiscal, contacto, dirección, cuenta bancaria e IVA antes de emitir documentos.
 
+### Equipos de trabajo
+
+1. En **Ajustes → Equipo**, **Personas y permisos** controla las cuentas que acceden a la empresa. En **Equipos de trabajo**, pulsa **Crear equipo** para agrupar esas personas.
+2. Escribe un nombre y selecciona al menos una persona. Una persona puede estar en varios equipos; no se crean cuentas ni plazas adicionales.
+3. En la **Planificación** de un trabajo, elige el equipo y, por separado, la persona responsable. Fechas, notas y asignaciones se guardan juntas. Puedes trabajar solo con un responsable, sin crear equipos.
+4. Para dejar de usar un equipo, edítalo y marca **Archivar equipo**. Conserva sus trabajos existentes, pero no se ofrece para nuevas asignaciones. **Mostrar archivados** permite volver a editarlo y reactivarlo.
+
+Los equipos son agrupaciones de planificación, no permisos ni reservas de disponibilidad. No asignan visitas a sus integrantes, no habilitan partes colectivos ni comprueban solapamientos entre trabajos. La jornada del técnico sigue dependiendo de sus visitas individuales. Cambiar la composición del equipo cambia su agrupación actual; no constituye un registro histórico de quién trabajó en cada fecha. Al quitar una cuenta de la empresa, se retira también de sus equipos; un equipo vacío requiere añadir personas antes de recibir nuevos trabajos.
+
 ## 11. Cómo saber si un cambio quedó guardado
 
 La aplicación muestra el estado de guardado. Si aparece **Guardando**, espera antes de salir o iniciar otra acción dependiente. Si aparece un **error**, el cambio puede seguir visible en pantalla sin estar confirmado en el servidor: usa el reintento ofrecido y comprueba el resultado. No interpretes una vista local como prueba de que un cobro, documento o envío se haya completado.
 
 ## 12. Límites de esta entrega
 
-Esta guía corresponde al **estado del repositorio**, no acredita que todas las migraciones o servicios estén desplegados. Antes de operar en producción, el responsable técnico debe aplicar las migraciones pendientes en un entorno de pruebas, ejecutar las pruebas de base de datos, verificar permisos y saldos, y configurar los trabajadores de PDF y correo. Las migraciones recientes de facturación, imputaciones y reembolsos aún no tienen validación de base de datos confirmada en esta copia.
+Esta guía corresponde al **estado del repositorio**, no acredita que todas las migraciones o servicios estén desplegados. Antes de operar en producción, el responsable técnico debe aplicar las migraciones pendientes en un entorno de pruebas, ejecutar las pruebas de base de datos, verificar permisos y saldos, y configurar los trabajadores de PDF y correo. Las migraciones recientes de facturación, imputaciones, reembolsos y equipos de trabajo aún no tienen validación de base de datos confirmada en esta copia.
 
 Todavía no están completos, entre otros, el portal del cliente, inventario y compras, documentos rectificativos, facturación con líneas y anticipos generales, conectores bancarios/fiscales, pagos del cliente final, API pública, automatizaciones amplias y todos los paquetes verticales previstos en el [plan de desarrollo integral](../10-plan-desarrollo-integral.md). No se deben ofrecer como funciones disponibles.

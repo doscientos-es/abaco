@@ -1,9 +1,15 @@
 {
   "releases": [
     {
+<<<<<<< HEAD
       "version": "0.0.2",
       "date": "2026-10-27",
       "title": "v0.0.2",
+=======
+      "version": null,
+      "date": "2026-11-03",
+      "title": "Sin publicar",
+>>>>>>> 43954f7 (feat(work-teams): add team management functionality and related tests)
       "sections": [
         {
           "title": "Nuevas funciones",
