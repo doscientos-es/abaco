@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.4",
+      "date": "2026-11-04",
+      "title": "v0.0.4",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add scheduled payments management and UI integration"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "b36f9bb633e6cf361036dd2d59bd02bebaf29ac9",
+          "type": "feat",
+          "scope": "payment-calendar",
+          "breaking": false,
+          "description": "Add scheduled payments management and UI integration"
+        }
+      ]
+    },
+    {
       "version": "0.0.3",
       "date": "2026-11-03",
       "title": "v0.0.3",

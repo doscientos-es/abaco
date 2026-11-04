@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-04 — v0.0.4
+
+### Nuevas funciones
+
+- Add scheduled payments management and UI integration
+
 ## 2026-11-03 — v0.0.3
 
 ### Nuevas funciones
