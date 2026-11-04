@@ -57,6 +57,7 @@ import { loadAccountingExport } from '../application/accounting-export-actions'
 import { hasProtectedLedgerHistory } from '../application/expense-allocation-actions'
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 import { ExpenseAllocationDialog } from './expense-allocation-dialog'
+import { PaymentCalendar } from './payment-calendar'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -247,6 +248,12 @@ export function LedgerPage() {
           </DropdownMenuTrigger>
         </PageHeaderActions>
       </PageHeader>
+
+      <PaymentCalendar
+        key={tenant.id}
+        tenantId={tenant.id}
+        defaultVatRate={tenant.defaultVatRate}
+      />
 
       <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
         <div className="min-w-0 flex-1">

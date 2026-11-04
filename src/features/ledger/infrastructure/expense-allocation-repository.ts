@@ -61,7 +61,19 @@ export async function hasProtectedLedgerHistory(
   ledgerEntryId: string,
   kind: 'income' | 'expense',
 ) {
-  if (kind === 'expense') return hasExpenseAllocationHistory(tenantId, ledgerEntryId)
+  if (kind === 'expense') {
+    const [allocated, scheduled] = await Promise.all([
+      hasExpenseAllocationHistory(tenantId, ledgerEntryId),
+      createBrowserSupabaseClient()
+        .from('scheduled_payments')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('ledger_entry_id', ledgerEntryId)
+        .limit(1),
+    ])
+    if (scheduled.error) throw new Error(scheduled.error.message)
+    return allocated || (scheduled.data?.length ?? 0) > 0
+  }
   const db = createBrowserSupabaseClient()
   const [payments, refunds] = await Promise.all([
     db
