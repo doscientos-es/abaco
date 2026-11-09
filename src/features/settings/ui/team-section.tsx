@@ -38,7 +38,10 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
     setBusy(true)
     const result = await action()
     setBusy(false)
-    if (!result.ok) return setMessage(result.message)
+    if (!result.ok) {
+      setMessage(result.message)
+      return false
+    }
     setMessage(
       result.status === 'added'
         ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.'
@@ -46,15 +49,18 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
     )
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
     await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
+    return true
   }
 
   const invite = async () => {
-    await run(
+    const succeeded = await run(
       () => inviteMember({ tenantId, email: email.trim(), fullName: fullName.trim(), role }),
       'Invitación enviada por correo.',
     )
-    setEmail('')
-    setFullName('')
+    if (succeeded) {
+      setEmail('')
+      setFullName('')
+    }
   }
 
   return (

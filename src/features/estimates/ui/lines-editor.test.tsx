@@ -44,7 +44,7 @@ describe('LinesEditor', () => {
     const markup = renderToStaticMarkup(<LinesEditor estimate={estimate} catalog={[]} />)
 
     expect(markup).toContain(
-      'md:grid-cols-[minmax(0,1fr)_4.5rem_4rem_7rem_minmax(11rem,13rem)_2.5rem]',
+      'lg:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_8rem]',
     )
     expect(markup).toContain('aria-label="Quitar Pintura de paredes"')
     expect(markup).toContain('<svg')

@@ -159,10 +159,10 @@ export function InvoicesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader>
+    <div className="space-y-5">
+      <PageHeader className="py-0">
         <PageHeaderHeading>
-          <PageHeaderTitle>Facturas</PageHeaderTitle>
+          <PageHeaderTitle className="text-xl md:text-2xl">Facturas</PageHeaderTitle>
           <PageHeaderDescription>
             Prepara y revisa borradores antes de emitir facturas.
           </PageHeaderDescription>
@@ -261,15 +261,15 @@ export function InvoicesPage() {
         </EmptyPanel>
       ) : (
         <>
-          <ul className="space-y-3 md:hidden">
+          <ul className="space-y-2 xl:hidden">
             {pager.pageItems.map((invoice) => {
               const { label, variant } = statusConfig[invoice.status]
               return (
                 <li
                   key={invoice.id}
-                  className="border-border bg-card space-y-3 rounded-lg border p-4"
+                  className="border-border bg-card space-y-2 rounded-lg border p-3 md:flex md:items-center md:gap-4 md:space-y-0 md:px-4 md:py-3"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-3 md:min-w-0 md:flex-1">
                     <div className="min-w-0">
                       <p className="text-muted-foreground text-xs">{invoice.number}</p>
                       <Link
@@ -282,10 +282,10 @@ export function InvoicesPage() {
                     </div>
                     <Badge variant={variant}>{label}</Badge>
                   </div>
-                  <p className="text-xl font-semibold tabular-nums">
+                  <p className="text-xl font-semibold tabular-nums md:shrink-0 md:text-base">
                     {formatEuros(invoice.totalCents)}
                   </p>
-                  <p className="text-xs">
+                  <p className="text-xs md:w-48 md:shrink-0">
                     <Link to="/clientes" className="underline-offset-4 hover:underline">
                       {clientName(invoice.clientId)}
                     </Link>
@@ -306,12 +306,12 @@ export function InvoicesPage() {
                     {' · Vence '}
                     {dueLabel(invoice)}
                   </p>
-                  {actions(invoice)}
+                  <div className="md:shrink-0">{actions(invoice)}</div>
                 </li>
               )
             })}
           </ul>
-          <Table containerClassName="hidden md:block">
+          <Table containerClassName="hidden xl:block">
             <TableHeader>
               <TableRow>
                 <TableHead>Nº</TableHead>
