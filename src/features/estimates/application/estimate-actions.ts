@@ -20,7 +20,10 @@ export function createEstimate(clientId: string, title = 'Nueva reforma'): strin
       discountType: 'none',
       discountValue: 0,
       vatRate: data.tenant.defaultVatRate,
-      milestones: defaultMilestones(data.tenant.defaultDepositPercent),
+      milestones: defaultMilestones(data.tenant.defaultDepositPercent).map((milestone) => ({
+        ...milestone,
+        id: newId(),
+      })),
       clauses:
         'Validez de 30 días. Los cambios sobre lo presupuestado se facturan aparte. Los plazos dependen de la disponibilidad de materiales.',
       validUntil,
