@@ -118,8 +118,10 @@ export function MyVacationRequestsPage() {
           />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Hasta, incluido (opcional si no se conoce)
+          Hasta, incluido
+          {absenceType === 'vacation' ? '' : ' (opcional si no se conoce)'}
           <input
+            required={absenceType === 'vacation'}
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
