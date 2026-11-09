@@ -16,8 +16,8 @@ import {
 import {
   formatEuros,
   includedInEveryPlan,
+  MAX_SCALE_PLAN_MEMBERS,
   perMonthWhenYearly,
-  planCatalog,
   planInfo,
   smallestPlanFor,
   TRIAL_DAYS,
@@ -59,6 +59,7 @@ export function BillingSection({
 }) {
   const subscription = useQuery(subscriptionQuery(tenantId)).data
   const [interval, setInterval] = useState<Interval>('year')
+  const [selectedMembers, setSelectedMembers] = useState<number | undefined>(undefined)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -113,7 +114,14 @@ export function BillingSection({
   }
 
   const subscribed = subscription && ['active', 'past_due'].includes(subscription.status)
-  const members = useQuery(memberCountQuery(tenantId)).data ?? 1
+  const members = Math.max(1, useQuery(memberCountQuery(tenantId)).data ?? 1)
+  const minimumMembers = Math.min(members, MAX_SCALE_PLAN_MEMBERS)
+  const selectedMemberCount = Math.min(
+    MAX_SCALE_PLAN_MEMBERS,
+    Math.max(minimumMembers, selectedMembers ?? members),
+  )
+  const selectedPlan =
+    members <= MAX_SCALE_PLAN_MEMBERS ? smallestPlanFor(selectedMemberCount) : null
   const needed = smallestPlanFor(members)
   const onTrial = subscription?.status === 'trialing'
   const recommended = onTrial ? needed?.id : undefined
@@ -153,49 +161,117 @@ export function BillingSection({
             <p className="mt-1 text-xs">
               {needed
                 ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name}. `
-                : `Ahora sois ${members} personas, más de las que admite cualquier plan. `}
+                : members <= 100
+                  ? `Ahora sois ${members} personas: podéis pedir una propuesta de Ábaco Escala. `
+                  : `Ahora sois más de 100 personas: podemos preparar un plan personalizado. `}
               Si prefieres uno más pequeño, quita el acceso a las personas que sobren en Equipo.
             </p>
           </div>
         ) : null}
 
         <p className="text-muted-foreground text-sm">
-          Todas las funciones en todos los planes. Solo cambia el número de personas, incluido tú.
+          En los planes actuales, todas las funciones están incluidas; solo cambia el número de
+          personas. El total incluye a quien administra la cuenta.
         </p>
-        <Tabs selectedKey={interval} onSelectionChange={(key) => setInterval(key as Interval)}>
-          <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
-            <TabsTrigger id="year" className="flex-1 sm:flex-none">
-              Anual
-              <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
-                2 meses gratis
-              </span>
-            </TabsTrigger>
-            <TabsTrigger id="month" className="flex-1 sm:flex-none">
-              Mensual
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {planCatalog.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              interval={interval}
-              recommended={recommended === plan.id}
-              current={subscribed === true && subscription?.plan === plan.id}
-              busy={busy === plan.id}
-              onChoose={() =>
-                void go(plan.id, () =>
-                  subscription?.status === 'active'
-                    ? changePlan(tenantId, plan.id, interval)
-                    : startCheckout(tenantId, plan.id, interval),
-                )
-              }
-            />
-          ))}
-          <CustomPlanCard />
-        </div>
+        {members <= MAX_SCALE_PLAN_MEMBERS ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label htmlFor="billing-member-count" className="text-sm font-medium">
+                  Personas con acceso
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="billing-member-count"
+                    type="number"
+                    min={minimumMembers}
+                    max={MAX_SCALE_PLAN_MEMBERS}
+                    step={1}
+                    value={selectedMemberCount}
+                    onChange={(event) => {
+                      const value = event.currentTarget.valueAsNumber
+                      if (Number.isFinite(value))
+                        setSelectedMembers(
+                          Math.max(
+                            minimumMembers,
+                            Math.min(MAX_SCALE_PLAN_MEMBERS, Math.round(value)),
+                          ),
+                        )
+                    }}
+                    className="border-border bg-background h-10 w-20 rounded-md border px-3 text-center text-sm"
+                  />
+                  <span className="text-muted-foreground text-sm">personas</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                aria-label="Ajustar el número de personas"
+                aria-describedby="billing-member-count-help"
+                min={minimumMembers}
+                max={MAX_SCALE_PLAN_MEMBERS}
+                step={1}
+                value={selectedMemberCount}
+                onChange={(event) => setSelectedMembers(Number(event.currentTarget.value))}
+                className="accent-primary w-full cursor-pointer"
+              />
+              <div
+                className="text-muted-foreground flex justify-between text-xs"
+                aria-hidden="true"
+              >
+                <span>{minimumMembers} personas</span>
+                <span>{MAX_SCALE_PLAN_MEMBERS} personas</span>
+              </div>
+              <p id="billing-member-count-help" className="text-muted-foreground text-xs">
+                El mínimo corresponde a las personas que ya tienen acceso. Para reducirlo, primero
+                tendrás que quitar accesos del equipo.
+              </p>
+            </div>
+
+            <div aria-live="polite" aria-atomic="true">
+              {selectedPlan ? (
+                <div className="space-y-3">
+                  <Tabs
+                    selectedKey={interval}
+                    onSelectionChange={(key) => setInterval(key as Interval)}
+                  >
+                    <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
+                      <TabsTrigger id="year" className="flex-1 sm:flex-none">
+                        Anual
+                        <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
+                          2 meses gratis
+                        </span>
+                      </TabsTrigger>
+                      <TabsTrigger id="month" className="flex-1 sm:flex-none">
+                        Mensual
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <PlanCard
+                    plan={selectedPlan}
+                    interval={interval}
+                    members={selectedMemberCount}
+                    recommended={recommended === selectedPlan.id}
+                    current={subscribed === true && subscription?.plan === selectedPlan.id}
+                    busy={busy === selectedPlan.id}
+                    onChoose={() =>
+                      void go(selectedPlan.id, () =>
+                        subscription?.status === 'active'
+                          ? changePlan(tenantId, selectedPlan.id, interval)
+                          : startCheckout(tenantId, selectedPlan.id, interval),
+                      )
+                    }
+                  />
+                  <CustomPlanCard />
+                </div>
+              ) : (
+                <CustomPlanCard members={selectedMemberCount} />
+              )}
+            </div>
+          </div>
+        ) : (
+          <CustomPlanCard members={members} />
+        )}
 
         <ul className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2">
           {includedInEveryPlan.map((item) => (
@@ -234,12 +310,13 @@ export function BillingSection({
 function PlanCard(props: {
   plan: PlanInfo
   interval: Interval
+  members: number
   current: boolean
   recommended: boolean
   busy: boolean
   onChoose: () => void
 }) {
-  const { plan, interval, current, recommended, busy, onChoose } = props
+  const { plan, interval, members, current, recommended, busy, onChoose } = props
   const price = interval === 'year' ? perMonthWhenYearly(plan) : plan.monthly
   return (
     <div
@@ -255,9 +332,10 @@ function PlanCard(props: {
         <p className="text-muted-foreground text-xs">{plan.audience}</p>
       </div>
       <p className="text-xs font-medium">
-        {plan.members === 1
-          ? '1 persona: tú.'
-          : `Hasta ${plan.members} personas, incluyéndote a ti.`}
+        {members === 1 ? '1 persona: tú.' : `Para ${members} personas, incluyéndote a ti.`}
+      </p>
+      <p className="text-muted-foreground text-xs">
+        Incluye hasta {plan.members} {plan.members === 1 ? 'persona' : 'personas'} en total.
       </p>
       <p>
         <span className="text-2xl font-semibold">{formatEuros(price)}</span>
