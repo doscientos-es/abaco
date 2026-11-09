@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
 import { formatEuros, parseEuros } from '@/shared/domain/money'
+import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
+import { EmptyPanel } from '@/shared/ui/page-states'
 
 import type { ContractVisit } from '../application/contract-actions'
 import {
@@ -224,7 +226,7 @@ export function ContractCostsPanel({
         </Button>
         {list.isError ? <p role="alert">{list.error.message}</p> : null}
         {list.isPending ? <output>Cargando movimientos…</output> : null}
-        {list.data ? (
+        {list.data?.entries.length ? (
           <>
             <ul className="divide-y rounded-lg border">
               {list.data.entries.map((entry) => {
@@ -276,6 +278,23 @@ export function ContractCostsPanel({
               </Button>
             </div>
           </>
+        ) : null}
+        {list.data && list.data.entries.length === 0 ? (
+          <EmptyPanel
+            icon={fieldIcons.euro}
+            title={page > 0 ? 'No hay costes en esta página' : 'Aún no hay costes registrados'}
+            description={
+              page > 0
+                ? 'Vuelve a la primera página para consultar los costes disponibles.'
+                : 'Registra los costes reales del contrato para completar el seguimiento de su rentabilidad.'
+            }
+          >
+            {page > 0 ? (
+              <Button variant="outline" onPress={() => setPage(0)}>
+                Volver a la primera página
+              </Button>
+            ) : null}
+          </EmptyPanel>
         ) : null}
       </CardContent>
     </Card>

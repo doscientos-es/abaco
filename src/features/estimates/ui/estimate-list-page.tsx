@@ -212,6 +212,7 @@ export function EstimateListPage() {
       <FormDialog
         open={creating && !creatingClient}
         onOpenChange={setCreating}
+        compact
         title="Nuevo presupuesto"
         description="Elige el cliente y la obra. Después añades partidas desde el catálogo."
         submitLabel="Crear y añadir partidas"

@@ -54,27 +54,34 @@ export type SignUpResult = { ok: true; needsConfirmation: boolean } | { ok: fals
  * on the first session (right away, or after the person confirms their email).
  */
 export async function signUp(input: SignUpInput): Promise<SignUpResult> {
-  const { data, error } = await createBrowserSupabaseClient().auth.signUp({
-    email: input.email,
-    password: input.password,
-    options: {
-      data: {
-        full_name: input.fullName,
-        company_name: input.companyName,
-        [welcomePendingField]: true,
+  try {
+    const { data, error } = await createBrowserSupabaseClient().auth.signUp({
+      email: input.email,
+      password: input.password,
+      options: {
+        data: {
+          full_name: input.fullName,
+          company_name: input.companyName,
+          [welcomePendingField]: true,
+        },
       },
-    },
-  })
-  if (error) {
-    const exists = /already registered|already exists/i.test(error.message)
+    })
+    if (error) {
+      const exists = /already registered|already exists/i.test(error.message)
+      return {
+        ok: false,
+        message: exists
+          ? 'Ya existe una cuenta con ese correo. Entra o recupera la contraseña.'
+          : translateAuthError(error.message),
+      }
+    }
+    return { ok: true, needsConfirmation: !data.session }
+  } catch {
     return {
       ok: false,
-      message: exists
-        ? 'Ya existe una cuenta con ese correo. Entra o recupera la contraseña.'
-        : translateAuthError(error.message),
+      message: 'No se pudo crear la cuenta. Revisa tu conexión e inténtalo de nuevo.',
     }
   }
-  return { ok: true, needsConfirmation: !data.session }
 }
 
 /** Always reports success so the form never reveals whether an email has an account. */

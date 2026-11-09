@@ -7,7 +7,9 @@ import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
+import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
+import { EmptyPanel } from '@/shared/ui/page-states'
 
 import {
   createManualServiceContract,
@@ -240,53 +242,73 @@ export function ContractsPage() {
           No se pudieron cargar los contratos: {query.error.message}
         </p>
       ) : null}
-      {query.data?.items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Aún no hay contratos.</p>
+      {query.isSuccess && query.data.items.length === 0 ? (
+        <EmptyPanel
+          icon={fieldIcons.file}
+          title={page > 0 ? 'No hay contratos en esta página' : 'Aún no hay contratos'}
+          description={
+            page > 0
+              ? 'El listado ha cambiado. Vuelve al inicio para consultar los contratos disponibles.'
+              : 'Registra el acuerdo, su precio y las visitas recurrentes para organizar el mantenimiento de tus clientes.'
+          }
+        >
+          {page > 0 ? (
+            <Button variant="outline" onPress={() => setPage(0)}>
+              Volver a la primera página
+            </Button>
+          ) : !showForm ? (
+            <Button onPress={() => setShowForm(true)}>Crear primer contrato</Button>
+          ) : null}
+        </EmptyPanel>
       ) : null}
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {query.data?.items.map((contract) => (
-          <li key={contract.id}>
-            <Card className="h-full">
-              <CardContent className="space-y-2 p-4">
-                <Link
-                  to="/contratos/$contractId"
-                  params={{ contractId: contract.id }}
-                  className="text-primary font-semibold underline-offset-4 hover:underline"
-                >
-                  {contract.title}
-                </Link>
-                <p className="text-muted-foreground text-sm">
-                  {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'} ·{' '}
-                  {statusLabels[contract.status]}
-                </p>
-                <p className="text-sm">
-                  {formatEuros(contract.price_cents)} /{' '}
-                  {contract.billing_frequency === 'monthly'
-                    ? 'mes'
-                    : contract.billing_frequency === 'quarterly'
-                      ? 'trimestre'
-                      : 'año'}
-                </p>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
-      <div className="flex items-center justify-between text-sm">
-        <span>{query.data?.count ?? 0} contratos</span>
-        <div className="flex gap-2">
-          <Button variant="outline" isDisabled={page === 0} onPress={() => setPage(page - 1)}>
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            isDisabled={!query.data || (page + 1) * query.data.pageSize >= query.data.count}
-            onPress={() => setPage(page + 1)}
-          >
-            Siguiente
-          </Button>
+      {query.data?.items.length ? (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {query.data.items.map((contract) => (
+            <li key={contract.id}>
+              <Card className="h-full">
+                <CardContent className="space-y-2 p-4">
+                  <Link
+                    to="/contratos/$contractId"
+                    params={{ contractId: contract.id }}
+                    className="text-primary font-semibold underline-offset-4 hover:underline"
+                  >
+                    {contract.title}
+                  </Link>
+                  <p className="text-muted-foreground text-sm">
+                    {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}{' '}
+                    · {statusLabels[contract.status]}
+                  </p>
+                  <p className="text-sm">
+                    {formatEuros(contract.price_cents)} /{' '}
+                    {contract.billing_frequency === 'monthly'
+                      ? 'mes'
+                      : contract.billing_frequency === 'quarterly'
+                        ? 'trimestre'
+                        : 'año'}
+                  </p>
+                </CardContent>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {query.data && query.data.count > 0 ? (
+        <div className="flex items-center justify-between text-sm">
+          <span>{query.data.count} contratos</span>
+          <div className="flex gap-2">
+            <Button variant="outline" isDisabled={page === 0} onPress={() => setPage(page - 1)}>
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              isDisabled={(page + 1) * query.data.pageSize >= query.data.count}
+              onPress={() => setPage(page + 1)}
+            >
+              Siguiente
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

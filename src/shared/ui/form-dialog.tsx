@@ -29,6 +29,7 @@ export function FormDialog({
   submitDisabled = false,
   isSubmitting = false,
   isDirty = false,
+  compact = false,
   onSubmit,
   children,
 }: {
@@ -40,6 +41,7 @@ export function FormDialog({
   submitDisabled?: boolean
   isSubmitting?: boolean
   isDirty?: boolean
+  compact?: boolean
   onSubmit: () => void
   children: ReactNode
 }) {
@@ -60,7 +62,11 @@ export function FormDialog({
     <>
       <DialogRoot open={open} onOpenChange={requestOpenChange}>
         <DialogContent
-          className="max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl"
+          className={
+            compact
+              ? 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-lg'
+              : 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl'
+          }
           showCloseButton={!isSubmitting}
         >
           <form onSubmit={handleSubmit} className="grid gap-5" aria-busy={isSubmitting}>
