@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.6",
+      "date": "2026-11-09",
+      "title": "v0.0.6",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add personalization page and update navigation",
+            "Implement vacation requests and approvals"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "f575ddb96324077b0571d695aa6224244088d75b",
+          "type": "feat",
+          "scope": "personalization",
+          "breaking": false,
+          "description": "Add personalization page and update navigation"
+        },
+        {
+          "sha": "3e2db9a657ba9eea1cbf555ad7d4a6c850747a98",
+          "type": "feat",
+          "scope": "DEV-7",
+          "breaking": false,
+          "description": "Implement vacation requests and approvals"
+        }
+      ]
+    },
+    {
       "version": "0.0.5",
       "date": "2026-11-09",
       "title": "v0.0.5",

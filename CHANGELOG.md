@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-09 — v0.0.6
+
+### Nuevas funciones
+
+- Add personalization page and update navigation
+- Implement vacation requests and approvals
+
 ## 2026-11-09 — v0.0.5
 
 ### Nuevas funciones
