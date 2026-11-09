@@ -6,6 +6,7 @@ import {
   Handshake,
   House,
   Package,
+  Palette,
   Receipt,
   UsersThree,
   Wallet,
@@ -26,5 +27,6 @@ export const navIcons = {
   visits: <CalendarBlank aria-hidden="true" className={cls} />,
   contracts: <Handshake aria-hidden="true" className={cls} />,
   settings: <GearSix aria-hidden="true" className={cls} />,
+  personalize: <Palette aria-hidden="true" className={cls} />,
   more: <DotsThreeCircle aria-hidden="true" className={cls} />,
 } as const

@@ -22,6 +22,7 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
 import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
+import { Route as PersonalizarRouteImport } from './routes/personalizar'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as TrabajosRouteImport } from './routes/trabajos'
@@ -100,6 +101,11 @@ const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
   path: '/nueva-contrasena',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PersonalizarRoute = PersonalizarRouteImport.update({
+  id: '/personalizar',
+  path: '/personalizar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecuperarRoute = RecuperarRouteImport.update({
   id: '/recuperar',
   path: '/recuperar',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/facturas': typeof FacturasRouteWithChildren
   '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/personalizar': typeof PersonalizarRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/personalizar': typeof PersonalizarRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/facturas': typeof FacturasRouteWithChildren
   '/mi-jornada': typeof MiJornadaRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
+  '/personalizar': typeof PersonalizarRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/facturas'
     | '/mi-jornada'
     | '/nueva-contrasena'
+    | '/personalizar'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/mi-jornada'
     | '/nueva-contrasena'
+    | '/personalizar'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '/facturas'
     | '/mi-jornada'
     | '/nueva-contrasena'
+    | '/personalizar'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
@@ -339,6 +351,7 @@ export interface RootRouteChildren {
   FacturasRoute: typeof FacturasRouteWithChildren
   MiJornadaRoute: typeof MiJornadaRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
+  PersonalizarRoute: typeof PersonalizarRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
   TrabajosRoute: typeof TrabajosRouteWithChildren
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/nueva-contrasena'
       fullPath: '/nueva-contrasena'
       preLoaderRoute: typeof NuevaContrasenaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personalizar': {
+      id: '/personalizar'
+      path: '/personalizar'
+      fullPath: '/personalizar'
+      preLoaderRoute: typeof PersonalizarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recuperar': {
@@ -592,6 +612,7 @@ const rootRouteChildren: RootRouteChildren = {
   FacturasRoute: FacturasRouteWithChildren,
   MiJornadaRoute: MiJornadaRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
+  PersonalizarRoute: PersonalizarRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,
   TrabajosRoute: TrabajosRouteWithChildren,

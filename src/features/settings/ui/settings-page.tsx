@@ -25,11 +25,11 @@ import { CompanyTab } from './company-tab'
 import { hexColor, isLogoOk, isWebsiteOk, percent, toForm, type Form } from './settings-form'
 import { TeamSection } from './team-section'
 
-export type SettingsTab = 'empresa' | 'marca' | 'equipo' | 'plan' | 'novedades'
+export type SettingsTab = 'empresa' | 'documentos' | 'equipo' | 'plan' | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
-  marca: 'Marca y documentos',
+  documentos: 'Documentos y correos',
   equipo: 'Equipo',
   plan: 'Plan y facturación',
   novedades: 'Novedades',
@@ -45,12 +45,12 @@ export function SettingsPage() {
 
   const canTeam = Boolean(session?.tenantId && can(session.role, 'team:manage'))
   const canPlan = Boolean(session?.tenantId && session.role === 'owner')
-  const allowed: SettingsTab[] = ['empresa', 'marca']
+  const allowed: SettingsTab[] = ['empresa', 'documentos']
   if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
   const tab = requested && allowed.includes(requested) ? requested : 'empresa'
-  const editsCompany = tab === 'empresa' || tab === 'marca'
+  const editsCompany = tab === 'empresa' || tab === 'documentos'
 
   const set = (key: keyof Form) => (value: string) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -140,7 +140,7 @@ export function SettingsPage() {
       </Tabs>
 
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
-      {tab === 'marca' ? <BrandTab form={form} set={set} tenant={tenant} /> : null}
+      {tab === 'documentos' ? <BrandTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />

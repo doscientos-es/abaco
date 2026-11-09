@@ -14,7 +14,7 @@ import {
   AppShellSidebar,
 } from '@doscientos/ui'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 
 import {
   can,
@@ -42,6 +42,7 @@ type NavTo =
   | '/facturas'
   | '/contabilidad'
   | '/ajustes'
+  | '/personalizar'
 type NavItem = { to: NavTo; label: string; icon: ReactNode }
 type NavGroup = { label: string; items: NavItem[] }
 
@@ -75,7 +76,10 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Cuenta',
-    items: [{ to: '/ajustes', label: 'Ajustes', icon: navIcons.settings }],
+    items: [
+      { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
+      { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
+    ],
   },
 ]
 
@@ -105,6 +109,7 @@ const navPermission: Partial<Record<NavTo, Permission>> = {
   '/facturas': 'invoices:read',
   '/contabilidad': 'ledger:read',
   '/ajustes': 'settings:write',
+  '/personalizar': 'settings:write',
 }
 
 function initials(name: string) {
@@ -116,6 +121,18 @@ function initials(name: string) {
       .map((word) => word[0]?.toUpperCase())
       .join('') || '?'
   )
+}
+
+function readableTextColor(hex: string) {
+  const channels = hex.match(/[a-f\d]{2}/gi)?.map((value) => Number.parseInt(value, 16) / 255)
+  if (!channels || channels.length !== 3) return '#ffffff'
+  const linear = channels.map((channel) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  )
+  const [red, green, blue] = linear
+  if (red === undefined || green === undefined || blue === undefined) return '#ffffff'
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+  return luminance > 0.42 ? '#171717' : '#ffffff'
 }
 
 export function AppFrame({ children }: { children: ReactNode }) {
@@ -163,9 +180,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <DropdownMenuItem onAction={() => setCreatingCompany(true)}>Nueva empresa…</DropdownMenuItem>
       <DropdownMenuSeparator />
       {canSeeSettings ? (
-        <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
-          Ajustes y equipo
-        </DropdownMenuItem>
+        <>
+          <DropdownMenuItem onAction={() => void navigate({ to: '/personalizar' })}>
+            Personalizar Ábaco
+          </DropdownMenuItem>
+          <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
+            Ajustes y equipo
+          </DropdownMenuItem>
+        </>
       ) : null}
       <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
         Cambiar contraseña
@@ -176,7 +198,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
   )
 
   return (
-    <AppShell className="flex h-svh flex-col overflow-hidden md:flex-row">
+    <AppShell
+      className="flex h-svh flex-col overflow-hidden md:flex-row"
+      style={
+        tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
+          ? ({
+              '--primary': tenant.brandColor,
+              '--primary-foreground': readableTextColor(tenant.brandColor),
+              '--ring': tenant.brandColor,
+            } as CSSProperties)
+          : undefined
+      }
+    >
       <AppShellSidebar className="hidden h-full w-64 shrink-0 flex-col md:flex">
         <div className="shrink-0 px-3 pt-4 pb-3">
           <Link
@@ -185,7 +218,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
             className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
           >
             <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
-              <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+              {tenant.logoUrl ? (
+                <img
+                  src={tenant.logoUrl}
+                  alt={tenant.name}
+                  className="max-h-8 max-w-12 object-contain"
+                />
+              ) : (
+                <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+              )}
             </span>
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-sm font-semibold tracking-tight">
@@ -234,6 +275,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <AppShellMobileHeader className="hidden max-md:flex">
           <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
+            {tenant.logoUrl ? (
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.name}
+                className="mr-2 inline-block max-h-7 max-w-10 object-contain align-middle"
+              />
+            ) : null}
             <span className="block truncate text-sm font-semibold tracking-tight">
               {tenant.name}
             </span>
