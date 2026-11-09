@@ -15,6 +15,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   toast,
 } from '@doscientos/ui'
 import { DotsThree } from '@phosphor-icons/react'
@@ -36,6 +39,7 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { invoiceOutstandingCents } from '../application/invoice-actions'
 import { InvoiceDrafts } from './invoice-drafts'
+import { invoiceTabs, type InvoiceTab } from './invoices-tabs'
 import { VisitBillingReviews } from './visit-billing-reviews'
 
 const statusConfig: Record<
@@ -51,9 +55,13 @@ export function InvoicesPage() {
   const session = useSession()
   const { invoices, clients, estimates } = useTenantData()
   const navigate = useNavigate()
+  const requestedTab = useSearch({ from: '/facturas/' }).tab
+  const query = useSearch({ from: '/facturas/' }).q ?? ''
+  const tenantId = session?.role === 'admin' ? session.tenantId : undefined
+  const canReviewBilling = Boolean(tenantId)
+  const tab = canReviewBilling ? (requestedTab ?? 'emitidas') : 'emitidas'
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
   const [clientId, setClientId] = useState('all')
-  const query = useSearch({ from: '/facturas/' }).q ?? ''
   const today = new Date().toISOString().slice(0, 10)
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
   const estimateOf = (id: string | null) => (id ? estimates.find((e) => e.id === id) : undefined)
@@ -90,8 +98,21 @@ export function InvoicesPage() {
   function setQuery(value: string) {
     void navigate({
       to: '/facturas',
-      search: value ? { q: value } : {},
+      search: {
+        ...(tab === 'emitidas' ? {} : { tab }),
+        ...(value ? { q: value } : {}),
+      },
       replace: true,
+    })
+  }
+
+  function selectTab(nextTab: InvoiceTab) {
+    void navigate({
+      to: '/facturas',
+      search: {
+        ...(nextTab === 'emitidas' ? {} : { tab: nextTab }),
+        ...(query ? { q: query } : {}),
+      },
     })
   }
 
@@ -159,230 +180,246 @@ export function InvoicesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader>
+    <div className="space-y-5">
+      <PageHeader className="py-0">
         <PageHeaderHeading>
-          <PageHeaderTitle>Facturas</PageHeaderTitle>
+          <PageHeaderTitle className="text-xl md:text-2xl">Facturas</PageHeaderTitle>
           <PageHeaderDescription>
-            Prepara y revisa borradores antes de emitir facturas.
+            Consulta las facturas emitidas y gestiona el trabajo pendiente de facturación.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
 
-      {session?.tenantId && session.role === 'admin' ? (
-        <>
-          <InvoiceDrafts tenantId={session.tenantId} />
-          <VisitBillingReviews tenantId={session.tenantId} />
-        </>
+      <Tabs selectedKey={tab} onSelectionChange={(key) => selectTab(key as InvoiceTab)}>
+        <TabsList aria-label="Secciones de facturación" className="w-full overflow-x-auto sm:w-fit">
+          {(canReviewBilling ? invoiceTabs : ['emitidas']).map((id) => (
+            <TabsTrigger key={id} id={id}>
+              {id === 'emitidas'
+                ? 'Emitidas'
+                : id === 'borradores'
+                  ? 'Borradores'
+                  : 'Visitas pendientes'}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {tab === 'emitidas' ? (
+        <section className="space-y-4" aria-label="Facturas emitidas">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatCard
+              label="Pendiente de cobro"
+              value={formatEuros(pendingCents)}
+              tone="warning"
+              icon={fieldIcons.euro}
+            />
+            <StatCard
+              label="Vencido"
+              value={formatEuros(overdueCents)}
+              tone={overdueCents > 0 ? 'danger' : 'default'}
+              icon={fieldIcons.bank}
+            />
+            <StatCard label="Facturas" value={String(invoices.length)} icon={fieldIcons.file} />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Input
+              type="search"
+              maxLength={formLimits.searchQuery}
+              aria-label="Buscar facturas"
+              className="sm:w-72"
+              placeholder="Buscar por nº, concepto, cliente…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <SelectField
+              label="Filtrar por estado"
+              hideLabel
+              className="sm:w-44"
+              value={status}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                ...Object.entries(statusConfig).map(([value, c]) => ({ value, label: c.label })),
+              ]}
+              onChange={(v) => setStatus(v as 'all' | InvoiceStatus)}
+            />
+            <SelectField
+              label="Filtrar por cliente"
+              hideLabel
+              className="sm:w-48"
+              value={clientId}
+              options={[
+                { value: 'all', label: 'Todos los clientes' },
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              onChange={setClientId}
+            />
+            {filtered ? (
+              <Button variant="ghost" size="sm" onPress={clearFilters}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+            <p className="text-muted-foreground text-sm tabular-nums sm:ml-auto">
+              {visible.length} {visible.length === 1 ? 'factura' : 'facturas'}
+            </p>
+          </div>
+
+          {visible.length === 0 ? (
+            <EmptyPanel
+              icon={invoices.length === 0 ? fieldIcons.file : fieldIcons.search}
+              title={
+                invoices.length === 0
+                  ? 'Aún no has hecho ninguna factura'
+                  : 'Ninguna factura coincide'
+              }
+              description={
+                invoices.length === 0
+                  ? 'Las facturas se preparan como borradores desde un presupuesto aceptado y se emiten tras revisarlas.'
+                  : 'Prueba con otra búsqueda o quita los filtros.'
+              }
+            >
+              {invoices.length === 0 ? (
+                <Link
+                  to="/presupuestos"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium"
+                >
+                  Ir a mis presupuestos
+                </Link>
+              ) : (
+                <Button variant="outline" onPress={clearFilters}>
+                  Limpiar filtros
+                </Button>
+              )}
+            </EmptyPanel>
+          ) : (
+            <>
+              <ul className="space-y-2 xl:hidden">
+                {pager.pageItems.map((invoice) => {
+                  const { label, variant } = statusConfig[invoice.status]
+                  return (
+                    <li
+                      key={invoice.id}
+                      className="border-border bg-card space-y-2 rounded-lg border p-3 md:flex md:items-center md:gap-4 md:space-y-0 md:px-4 md:py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3 md:min-w-0 md:flex-1">
+                        <div className="min-w-0">
+                          <p className="text-muted-foreground text-xs">{invoice.number}</p>
+                          <Link
+                            to="/facturas/$invoiceId"
+                            params={{ invoiceId: invoice.id }}
+                            className="font-medium underline-offset-4 hover:underline"
+                          >
+                            {invoice.concept}
+                          </Link>
+                        </div>
+                        <Badge variant={variant}>{label}</Badge>
+                      </div>
+                      <p className="text-xl font-semibold tabular-nums md:shrink-0 md:text-base">
+                        {formatEuros(invoice.totalCents)}
+                      </p>
+                      <p className="text-xs md:w-48 md:shrink-0">
+                        <Link to="/clientes" className="underline-offset-4 hover:underline">
+                          {clientName(invoice.clientId)}
+                        </Link>
+                        {' · '}
+                        {invoice.estimateId ? (
+                          <Link
+                            to="/presupuestos/$estimateId"
+                            params={{ estimateId: invoice.estimateId }}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            Presupuesto {estimateOf(invoice.estimateId)?.number ?? ''}
+                          </Link>
+                        ) : invoice.contractPeriodId ? (
+                          <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
+                        ) : (
+                          <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
+                        )}
+                        {' · Vence '}
+                        {dueLabel(invoice)}
+                      </p>
+                      <div className="md:shrink-0">{actions(invoice)}</div>
+                    </li>
+                  )
+                })}
+              </ul>
+              <Table containerClassName="hidden xl:block">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nº</TableHead>
+                    <TableHead>Concepto</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Origen</TableHead>
+                    <TableHead>Vence</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pager.pageItems.map((invoice) => {
+                    const { label, variant } = statusConfig[invoice.status]
+                    return (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="whitespace-nowrap">
+                          <Link
+                            to="/facturas/$invoiceId"
+                            params={{ invoiceId: invoice.id }}
+                            className="text-muted-foreground underline-offset-4 hover:underline"
+                          >
+                            {invoice.number}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="max-w-64 truncate font-medium">
+                          <Link
+                            to="/facturas/$invoiceId"
+                            params={{ invoiceId: invoice.id }}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {invoice.concept}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link to="/clientes" className="underline-offset-4 hover:underline">
+                            {clientName(invoice.clientId)}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {invoice.estimateId ? (
+                            <Link
+                              to="/presupuestos/$estimateId"
+                              params={{ estimateId: invoice.estimateId }}
+                              className="underline-offset-4 hover:underline"
+                            >
+                              {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
+                            </Link>
+                          ) : invoice.contractPeriodId ? (
+                            <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
+                          ) : (
+                            <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{dueLabel(invoice)}</TableCell>
+                        <TableCell>
+                          <Badge variant={variant}>{label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatEuros(invoice.totalCents)}
+                        </TableCell>
+                        <TableCell>{actions(invoice)}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </>
+          )}
+          <TablePagination controller={pager} noun="facturas" />
+        </section>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Pendiente de cobro"
-          value={formatEuros(pendingCents)}
-          tone="warning"
-          icon={fieldIcons.euro}
-        />
-        <StatCard
-          label="Vencido"
-          value={formatEuros(overdueCents)}
-          tone={overdueCents > 0 ? 'danger' : 'default'}
-          icon={fieldIcons.bank}
-        />
-        <StatCard label="Facturas" value={String(invoices.length)} icon={fieldIcons.file} />
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Input
-          type="search"
-          maxLength={formLimits.searchQuery}
-          aria-label="Buscar facturas"
-          className="sm:w-72"
-          placeholder="Buscar por nº, concepto, cliente…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <SelectField
-          label="Filtrar por estado"
-          hideLabel
-          className="sm:w-44"
-          value={status}
-          options={[
-            { value: 'all', label: 'Todos los estados' },
-            ...Object.entries(statusConfig).map(([value, c]) => ({ value, label: c.label })),
-          ]}
-          onChange={(v) => setStatus(v as 'all' | InvoiceStatus)}
-        />
-        <SelectField
-          label="Filtrar por cliente"
-          hideLabel
-          className="sm:w-48"
-          value={clientId}
-          options={[
-            { value: 'all', label: 'Todos los clientes' },
-            ...clients.map((c) => ({ value: c.id, label: c.name })),
-          ]}
-          onChange={setClientId}
-        />
-        {filtered ? (
-          <Button variant="ghost" size="sm" onPress={clearFilters}>
-            Limpiar filtros
-          </Button>
-        ) : null}
-        <p className="text-muted-foreground text-sm tabular-nums sm:ml-auto">
-          {visible.length} {visible.length === 1 ? 'factura' : 'facturas'}
-        </p>
-      </div>
-
-      {visible.length === 0 ? (
-        <EmptyPanel
-          icon={invoices.length === 0 ? fieldIcons.file : fieldIcons.search}
-          title={
-            invoices.length === 0 ? 'Aún no has hecho ninguna factura' : 'Ninguna factura coincide'
-          }
-          description={
-            invoices.length === 0
-              ? 'Las facturas se preparan como borradores desde un presupuesto aceptado y se emiten tras revisarlas.'
-              : 'Prueba con otra búsqueda o quita los filtros.'
-          }
-        >
-          {invoices.length === 0 ? (
-            <Link
-              to="/presupuestos"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center rounded-md px-3 text-sm font-medium"
-            >
-              Ir a mis presupuestos
-            </Link>
-          ) : (
-            <Button variant="outline" onPress={clearFilters}>
-              Limpiar filtros
-            </Button>
-          )}
-        </EmptyPanel>
-      ) : (
-        <>
-          <ul className="space-y-3 md:hidden">
-            {pager.pageItems.map((invoice) => {
-              const { label, variant } = statusConfig[invoice.status]
-              return (
-                <li
-                  key={invoice.id}
-                  className="border-border bg-card space-y-3 rounded-lg border p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-muted-foreground text-xs">{invoice.number}</p>
-                      <Link
-                        to="/facturas/$invoiceId"
-                        params={{ invoiceId: invoice.id }}
-                        className="font-medium underline-offset-4 hover:underline"
-                      >
-                        {invoice.concept}
-                      </Link>
-                    </div>
-                    <Badge variant={variant}>{label}</Badge>
-                  </div>
-                  <p className="text-xl font-semibold tabular-nums">
-                    {formatEuros(invoice.totalCents)}
-                  </p>
-                  <p className="text-xs">
-                    <Link to="/clientes" className="underline-offset-4 hover:underline">
-                      {clientName(invoice.clientId)}
-                    </Link>
-                    {' · '}
-                    {invoice.estimateId ? (
-                      <Link
-                        to="/presupuestos/$estimateId"
-                        params={{ estimateId: invoice.estimateId }}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        Presupuesto {estimateOf(invoice.estimateId)?.number ?? ''}
-                      </Link>
-                    ) : invoice.contractPeriodId ? (
-                      <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
-                    ) : (
-                      <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
-                    )}
-                    {' · Vence '}
-                    {dueLabel(invoice)}
-                  </p>
-                  {actions(invoice)}
-                </li>
-              )
-            })}
-          </ul>
-          <Table containerClassName="hidden md:block">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nº</TableHead>
-                <TableHead>Concepto</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Vence</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pager.pageItems.map((invoice) => {
-                const { label, variant } = statusConfig[invoice.status]
-                return (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="whitespace-nowrap">
-                      <Link
-                        to="/facturas/$invoiceId"
-                        params={{ invoiceId: invoice.id }}
-                        className="text-muted-foreground underline-offset-4 hover:underline"
-                      >
-                        {invoice.number}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="max-w-64 truncate font-medium">
-                      <Link
-                        to="/facturas/$invoiceId"
-                        params={{ invoiceId: invoice.id }}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {invoice.concept}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link to="/clientes" className="underline-offset-4 hover:underline">
-                        {clientName(invoice.clientId)}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {invoice.estimateId ? (
-                        <Link
-                          to="/presupuestos/$estimateId"
-                          params={{ estimateId: invoice.estimateId }}
-                          className="underline-offset-4 hover:underline"
-                        >
-                          {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
-                        </Link>
-                      ) : invoice.contractPeriodId ? (
-                        <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
-                      ) : (
-                        <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">{dueLabel(invoice)}</TableCell>
-                    <TableCell>
-                      <Badge variant={variant}>{label}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatEuros(invoice.totalCents)}
-                    </TableCell>
-                    <TableCell>{actions(invoice)}</TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </>
-      )}
-      <TablePagination controller={pager} noun="facturas" />
+      {tenantId && tab === 'borradores' ? <InvoiceDrafts tenantId={tenantId} /> : null}
+      {tenantId && tab === 'visitas' ? <VisitBillingReviews tenantId={tenantId} /> : null}
     </div>
   )
 }

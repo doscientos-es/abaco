@@ -32,6 +32,21 @@ export const teamQuery = (tenantId: string) =>
 
 export type TeamResult = { ok: true; status?: 'invited' | 'added' } | { ok: false; message: string }
 
+async function inviteErrorMessage(context: unknown): Promise<string> {
+  const fallback = 'No se pudo invitar. Inténtalo de nuevo.'
+  if (!(context instanceof Response)) return fallback
+  if (context.status === 401) return 'Tu sesión ha caducado. Inicia sesión de nuevo.'
+  if (context.status === 403) return 'No tienes permiso para invitar a esta persona.'
+  if (context.status === 400) return 'Revisa el correo y el rol de la persona.'
+  if (context.status === 409) {
+    const body: unknown = await context.json().catch(() => null)
+    if (body && typeof body === 'object' && 'error' in body && body.error === 'plan_limit') {
+      return 'Has alcanzado el límite de personas de tu plan.'
+    }
+  }
+  return fallback
+}
+
 export async function inviteMember(input: {
   tenantId: string
   email: string
@@ -41,8 +56,7 @@ export async function inviteMember(input: {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
     status?: 'invited' | 'added'
   }>('invite-member', { body: input })
-  if (error)
-    return { ok: false, message: 'No se pudo invitar. Comprueba el correo y tus permisos.' }
+  if (error) return { ok: false, message: await inviteErrorMessage(error.context) }
   return data?.status ? { ok: true, status: data.status } : { ok: true }
 }
 

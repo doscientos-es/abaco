@@ -4,6 +4,8 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formatEuros, parseEuros } from '@/shared/domain/money'
+import { fieldIcons } from '@/shared/ui/field-icons'
+import { EmptyPanel } from '@/shared/ui/page-states'
 
 import {
   createContractPeriodInvoiceDraft,
@@ -254,27 +256,45 @@ export function ContractBillingPanel({
                 })}
               </ul>
             ) : (
-              <p>No hay periodos generados.</p>
+              <EmptyPanel
+                icon={fieldIcons.calendar}
+                title={
+                  page > 0 ? 'No hay periodos en esta página' : 'Aún no hay periodos facturables'
+                }
+                description={
+                  page > 0
+                    ? 'Vuelve a la primera página para consultar los periodos disponibles.'
+                    : 'Cuando haya periodos generados, podrás revisar aquí los importes y preparar sus borradores de factura.'
+                }
+              >
+                {page > 0 ? (
+                  <Button variant="outline" onPress={() => setPage(0)}>
+                    Volver a la primera página
+                  </Button>
+                ) : null}
+              </EmptyPanel>
             )}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => setPage(page - 1)}
-                isDisabled={page === 0}
-              >
-                Anterior
-              </Button>
-              <span>Página {page + 1}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => setPage(page + 1)}
-                isDisabled={(page + 1) * query.data.pageSize >= query.data.count}
-              >
-                Siguiente
-              </Button>
-            </div>
+            {query.data.count > 0 ? (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => setPage(page - 1)}
+                  isDisabled={page === 0}
+                >
+                  Anterior
+                </Button>
+                <span>Página {page + 1}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => setPage(page + 1)}
+                  isDisabled={(page + 1) * query.data.pageSize >= query.data.count}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            ) : null}
           </>
         ) : null}
       </CardContent>

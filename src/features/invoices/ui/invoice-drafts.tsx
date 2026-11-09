@@ -197,10 +197,10 @@ export function InvoiceDrafts({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <section className="space-y-3" aria-label="Borradores de factura">
+    <section className="space-y-2" aria-label="Borradores de factura">
       <div>
-        <h2 className="text-lg font-semibold">Borradores de factura</h2>
-        <p className="text-muted-foreground text-sm">
+        <h2 className="text-base font-semibold">Borradores de factura</h2>
+        <p className="text-muted-foreground text-xs sm:text-sm">
           Revisa el concepto y el vencimiento antes de emitir. El borrador no tiene número de
           factura.
         </p>

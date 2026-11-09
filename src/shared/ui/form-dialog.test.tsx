@@ -25,11 +25,13 @@ vi.mock('@doscientos/ui', () => {
     },
     DialogContent: ({
       children,
+      className,
     }: {
       children: ReactElement<{ onSubmit: typeof handlers.submit }>
+      className?: string
     }) => {
       handlers.submit = children.props.onSubmit
-      return children
+      return <div className={className}>{children}</div>
     },
     DialogHeader: Container,
     DialogFooter: Container,
@@ -64,7 +66,12 @@ describe('FormDialog interaction guards', () => {
   const onSubmit = vi.fn()
   const event = { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>
   const render = (
-    props: { isSubmitting?: boolean; isDirty?: boolean; submitDisabled?: boolean } = {},
+    props: {
+      isSubmitting?: boolean
+      isDirty?: boolean
+      submitDisabled?: boolean
+      compact?: boolean
+    } = {},
   ) =>
     renderToStaticMarkup(
       <FormDialog
@@ -116,5 +123,14 @@ describe('FormDialog interaction guards', () => {
     expect(html).toContain('aria-busy="true"')
     expect(html).toContain('<fieldset disabled=""')
     expect(html.match(/<button disabled=""/g)).toHaveLength(2)
+  })
+
+  it('preserves the default width and allows a compact dialog', () => {
+    const defaultMarkup = render()
+    expect(defaultMarkup).toContain('sm:max-w-xl')
+
+    const compactMarkup = render({ compact: true })
+    expect(compactMarkup).toContain('sm:max-w-lg')
+    expect(compactMarkup).not.toContain('sm:max-w-xl')
   })
 })

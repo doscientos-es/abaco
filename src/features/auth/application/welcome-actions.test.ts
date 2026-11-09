@@ -72,6 +72,22 @@ describe('welcome persistence', () => {
     )
   })
 
+  it('returns a recoverable error when signup throws', async () => {
+    signup.mockRejectedValue(new Error('Network unavailable'))
+
+    await expect(
+      signUp({
+        fullName: 'Demo admin',
+        companyName: 'Demo company',
+        email: 'admin@example.test',
+        password: 'test-only-password',
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'No se pudo crear la cuenta. Revisa tu conexión e inténtalo de nuevo.',
+    })
+  })
+
   it('completes welcome without starting checkout or changing trial dates', async () => {
     updateUser.mockResolvedValue({ error: null })
 

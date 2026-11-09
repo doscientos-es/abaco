@@ -10,6 +10,7 @@ import {
   vacationRequestStatusLabels,
   type VacationRequestStatus,
 } from '../domain/vacation-request'
+import { VacationCoverage } from './vacation-coverage'
 import { VacationRequestCard } from './vacation-request-card'
 
 type StatusFilter = 'all' | VacationRequestStatus
@@ -40,7 +41,15 @@ export function VacationManagementPage() {
     },
     onSuccess: async (_, input) => {
       await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
-      toast.success(input.decision === 'approved' ? 'Vacaciones aprobadas' : 'Solicitud rechazada')
+      if (input.decision === 'approved' && tenantId) {
+        setFilter('approved')
+        await queryClient.invalidateQueries({ queryKey: ['vacation-coverage', tenantId] })
+      }
+      toast.success(
+        input.decision === 'approved'
+          ? 'Vacaciones aprobadas · revisa los servicios afectados'
+          : 'Solicitud rechazada',
+      )
     },
     onError: (error: Error) =>
       toast.error('No se pudo guardar la decisión', { description: error.message }),
@@ -59,8 +68,9 @@ export function VacationManagementPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Solicitudes de vacaciones</h1>
         <p className="text-muted-foreground text-sm">
-          Revisa cada solicitud y deja constancia de la decisión. Aprobar no cambia la
-          planificación.
+          Revisa cada solicitud y deja constancia de la decisión. Las vacaciones aprobadas
+          bloquearán nuevas visitas en esas fechas; revisa los servicios afectados para organizar su
+          cobertura.
         </p>
       </header>
 
@@ -93,6 +103,13 @@ export function VacationManagementPage() {
       <div className="space-y-3">
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
+            {request.status !== 'rejected' && tenantId ? (
+              <VacationCoverage
+                tenantId={tenantId}
+                requestId={request.id}
+                approved={request.status === 'approved'}
+              />
+            ) : null}
             {request.status === 'pending' ? (
               <DecisionForm
                 disabled={decide.isPending}
