@@ -43,9 +43,7 @@ describe('LinesEditor', () => {
   it('shows a compact desktop row and an accessible icon-only remove button', () => {
     const markup = renderToStaticMarkup(<LinesEditor estimate={estimate} catalog={[]} />)
 
-    expect(markup).toContain(
-      'lg:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_8rem]',
-    )
+    expect(markup).toContain('lg:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_8rem]')
     expect(markup).toContain('aria-label="Quitar Pintura de paredes"')
     expect(markup).toContain('<svg')
     expect(markup).toContain('aria-hidden="true"')
