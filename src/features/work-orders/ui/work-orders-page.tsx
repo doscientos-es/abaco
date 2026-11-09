@@ -1,7 +1,5 @@
 import {
   Button,
-  Card,
-  CardContent,
   PageHeader,
   PageHeaderActions,
   PageHeaderDescription,
@@ -68,70 +66,68 @@ export function WorkOrdersPage() {
           onClose={() => setShowManualForm(false)}
         />
       ) : null}
-      <Card>
-        <CardContent className="space-y-3 p-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              label="Equipo de trabajo"
-              isDisabled={teams.isPending || teams.isError}
-              value={search.equipo ?? ''}
-              options={[
-                { value: '', label: 'Todos los equipos' },
-                { value: 'unassigned', label: 'Sin equipo asignado' },
-                ...(teams.data ?? []).map((team) => ({
-                  value: team.id,
-                  label: workTeamLabel(team),
-                })),
-              ]}
-              onChange={(value) =>
-                setSearch({ ...search, equipo: value || undefined, pagina: undefined })
-              }
-            />
-            <SelectField
-              label="Estado"
-              value={search.estado ?? ''}
-              options={[
-                { value: '', label: 'Todos los estados' },
-                ...Object.entries(workStatusLabels).map(([value, label]) => ({ value, label })),
-              ]}
-              onChange={(value) =>
-                setSearch({
-                  ...search,
-                  estado: (value || undefined) as WorkSearch['estado'],
-                  pagina: undefined,
-                })
-              }
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <output aria-live="polite" className="text-muted-foreground">
-              {orders.isError
-                ? 'No se pudo actualizar el listado'
-                : orders.data
-                  ? `${orders.data.count} trabajos${filtered ? ' con estos filtros' : ''}`
-                  : 'Cargando trabajos…'}
-            </output>
-            {filtered ? (
-              <Button variant="ghost" onPress={() => setSearch({})}>
-                Limpiar filtros
-              </Button>
-            ) : null}
-            {can(session?.role, 'team:manage') ? (
-              <Link to="/ajustes" search={{ tab: 'equipo' }} className="text-primary underline">
-                Gestionar equipos
-              </Link>
-            ) : null}
-          </div>
-          {teams.isError ? (
-            <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
-              <p className="text-destructive">{teams.error.message}</p>
-              <Button variant="outline" onPress={() => void teams.refetch()}>
-                Reintentar equipos
-              </Button>
-            </div>
+      <section aria-label="Filtros de trabajos" className="space-y-2">
+        <div className="grid gap-2 sm:max-w-2xl sm:grid-cols-2">
+          <SelectField
+            label="Equipo de trabajo"
+            isDisabled={teams.isPending || teams.isError}
+            value={search.equipo ?? ''}
+            options={[
+              { value: '', label: 'Todos los equipos' },
+              { value: 'unassigned', label: 'Sin equipo asignado' },
+              ...(teams.data ?? []).map((team) => ({
+                value: team.id,
+                label: workTeamLabel(team),
+              })),
+            ]}
+            onChange={(value) =>
+              setSearch({ ...search, equipo: value || undefined, pagina: undefined })
+            }
+          />
+          <SelectField
+            label="Estado"
+            value={search.estado ?? ''}
+            options={[
+              { value: '', label: 'Todos los estados' },
+              ...Object.entries(workStatusLabels).map(([value, label]) => ({ value, label })),
+            ]}
+            onChange={(value) =>
+              setSearch({
+                ...search,
+                estado: (value || undefined) as WorkSearch['estado'],
+                pagina: undefined,
+              })
+            }
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <output aria-live="polite" className="text-muted-foreground">
+            {orders.isError
+              ? 'No se pudo actualizar el listado'
+              : orders.data
+                ? `${orders.data.count} trabajos${filtered ? ' con estos filtros' : ''}`
+                : 'Cargando trabajos…'}
+          </output>
+          {filtered ? (
+            <Button variant="ghost" onPress={() => setSearch({})}>
+              Limpiar filtros
+            </Button>
           ) : null}
-        </CardContent>
-      </Card>
+          {can(session?.role, 'team:manage') ? (
+            <Link to="/ajustes" search={{ tab: 'equipo' }} className="text-primary underline">
+              Gestionar equipos
+            </Link>
+          ) : null}
+        </div>
+        {teams.isError ? (
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+            <p className="text-destructive">{teams.error.message}</p>
+            <Button variant="outline" onPress={() => void teams.refetch()}>
+              Reintentar equipos
+            </Button>
+          </div>
+        ) : null}
+      </section>
       {orders.isPending ? (
         <div aria-busy="true" className="space-y-2">
           <output className="sr-only">Cargando trabajos…</output>

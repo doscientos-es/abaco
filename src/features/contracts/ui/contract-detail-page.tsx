@@ -7,6 +7,7 @@ import { can, useSession } from '@/features/auth'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
+import { FormDialog } from '@/shared/ui/form-dialog'
 
 import {
   addContractVisitRule,
@@ -51,6 +52,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const { tenant, clients } = useTenantData()
   const session = useSession()
   const queryClient = useQueryClient()
+  const [ruleOpen, setRuleOpen] = useState(false)
   const [season, setSeason] = useState<ContractVisitRule['season']>('high')
   const [months, setMonths] = useState<number[]>([6, 7, 8, 9])
   const [weekday, setWeekday] = useState('1')
@@ -75,6 +77,25 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     Number(duration) >= 15 &&
     Number(duration) <= 720 &&
     /^\d{2}:\d{2}$/.test(localStart)
+  const ruleDirty =
+    season !== 'high' ||
+    months.length !== 4 ||
+    [6, 7, 8, 9].some((month) => !months.includes(month)) ||
+    weekday !== '1' ||
+    everyNWeeks !== '1' ||
+    localStart !== '09:00' ||
+    duration !== '60' ||
+    Boolean(ruleTitle)
+
+  function resetRule() {
+    setSeason('high')
+    setMonths([6, 7, 8, 9])
+    setWeekday('1')
+    setEveryNWeeks('1')
+    setLocalStart('09:00')
+    setDuration('60')
+    setRuleTitle('')
+  }
 
   async function refresh() {
     await Promise.all([
@@ -112,8 +133,9 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     try {
       await addContractVisitRule({ ...payload, operationId })
       operationIds.current.delete(key)
-      setRuleTitle('')
       await refresh()
+      resetRule()
+      setRuleOpen(false)
       toast.success('Frecuencia añadida')
     } catch (error) {
       toast.error('No se pudo añadir la frecuencia', {
@@ -268,9 +290,23 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             </p>
           )}
           {contract.status === 'draft' ? (
-            <div className="space-y-3 border-t pt-4">
-              <h2 className="font-medium">Añadir frecuencia</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <>
+              <Button variant="outline" onPress={() => setRuleOpen(true)}>
+                Añadir frecuencia
+              </Button>
+              <FormDialog
+                open={ruleOpen}
+                onOpenChange={(open) => {
+                  setRuleOpen(open)
+                  if (!open) resetRule()
+                }}
+                title="Añadir frecuencia"
+                submitLabel={busy === 'rule' ? 'Guardando…' : 'Añadir frecuencia'}
+                submitDisabled={Boolean(busy) || !validRule}
+                isSubmitting={busy === 'rule'}
+                isDirty={ruleDirty}
+                onSubmit={() => void addRule()}
+              >
                 <SelectField
                   label="Temporada"
                   value={season}
@@ -325,35 +361,32 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                   min={15}
                   max={720}
                 />
-              </div>
-              <fieldset>
-                <legend className="text-sm font-medium">Meses de aplicación</legend>
-                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {monthNames.map((name, index) => {
-                    const month = index + 1
-                    return (
-                      <label key={month} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={months.includes(month)}
-                          onChange={(event) =>
-                            setMonths((current) =>
-                              event.target.checked
-                                ? [...current, month]
-                                : current.filter((value) => value !== month),
-                            )
-                          }
-                        />
-                        {name}
-                      </label>
-                    )
-                  })}
-                </div>
-              </fieldset>
-              <Button isDisabled={Boolean(busy) || !validRule} onPress={() => void addRule()}>
-                {busy === 'rule' ? 'Guardando…' : 'Añadir frecuencia'}
-              </Button>
-            </div>
+                <fieldset className="sm:col-span-2">
+                  <legend className="text-sm font-medium">Meses de aplicación</legend>
+                  <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {monthNames.map((name, index) => {
+                      const month = index + 1
+                      return (
+                        <label key={month} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={months.includes(month)}
+                            onChange={(event) =>
+                              setMonths((current) =>
+                                event.target.checked
+                                  ? [...current, month]
+                                  : current.filter((value) => value !== month),
+                              )
+                            }
+                          />
+                          {name}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </fieldset>
+              </FormDialog>
+            </>
           ) : null}
         </CardContent>
       </Card>

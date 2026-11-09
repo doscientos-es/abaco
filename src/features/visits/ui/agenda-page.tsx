@@ -1,4 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import { PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
@@ -6,6 +7,7 @@ import { useSession } from '@/features/auth'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
+import { FormDialog } from '@/shared/ui/form-dialog'
 
 import {
   createServiceVisit,
@@ -47,12 +49,14 @@ export function AgendaPage() {
   const [view, setView] = useState<'day' | 'week'>('day')
   const [filterTechnicianId, setFilterTechnicianId] = useState('')
   const [page, setPage] = useState(0)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [initialLocalStart, setInitialLocalStart] = useState(() => `${todayInMadrid()}T09:00`)
   const [clientId, setClientId] = useState('')
   const [locationId, setLocationId] = useState('')
   const [assetId, setAssetId] = useState('')
   const [title, setTitle] = useState('')
   const [assignedUserId, setAssignedUserId] = useState('')
-  const [localStart, setLocalStart] = useState(`${todayInMadrid()}T09:00`)
+  const [localStart, setLocalStart] = useState(initialLocalStart)
   const [duration, setDuration] = useState('60')
   const [priority, setPriority] = useState<VisitPriority>('normal')
   const [notes, setNotes] = useState('')
@@ -85,6 +89,31 @@ export function AgendaPage() {
     Number.isInteger(durationMinutes) &&
     durationMinutes >= 15 &&
     durationMinutes <= 720
+  const isDirty = Boolean(
+    clientId ||
+    locationId ||
+    assetId ||
+    title ||
+    assignedUserId ||
+    localStart !== initialLocalStart ||
+    duration !== '60' ||
+    priority !== 'normal' ||
+    notes,
+  )
+
+  function resetCreateForm() {
+    const nextLocalStart = `${todayInMadrid()}T09:00`
+    setInitialLocalStart(nextLocalStart)
+    setClientId('')
+    setLocationId('')
+    setAssetId('')
+    setTitle('')
+    setAssignedUserId('')
+    setLocalStart(nextLocalStart)
+    setDuration('60')
+    setPriority('normal')
+    setNotes('')
+  }
 
   async function createVisit() {
     if (busy || !validForm) return
@@ -112,10 +141,10 @@ export function AgendaPage() {
     try {
       await createServiceVisit({ ...payload, operationId })
       operations.current.delete(key)
-      setTitle('')
-      setNotes('')
       setPage(0)
       await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
+      resetCreateForm()
+      setCreateOpen(false)
       toast.success('Visita planificada')
     } catch (error) {
       toast.error('No se pudo planificar la visita', {
@@ -128,124 +157,129 @@ export function AgendaPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Agenda de visitas</h1>
-        <p className="text-muted-foreground text-sm">
-          Planifica una jornada y consulta las visitas por día, semana o técnico.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Agenda de visitas</h1>
+          <p className="text-muted-foreground text-sm">
+            Planifica una jornada y consulta las visitas por día, semana o técnico.
+          </p>
+        </div>
+        <Button onPress={() => setCreateOpen(true)}>
+          <PlusIcon aria-hidden="true" />
+          Nueva visita
+        </Button>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Nueva visita</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              label="Cliente"
-              value={clientId}
-              options={[
-                { value: '', label: 'Selecciona un cliente' },
-                ...clients.map((client) => ({ value: client.id, label: client.name })),
-              ]}
-              onChange={(value) => {
-                setClientId(value)
-                setLocationId('')
-                setAssetId('')
-              }}
-            />
-            <SelectField
-              label="Ubicación"
-              value={locationId}
-              options={[
-                { value: '', label: 'Sin ubicación' },
-                ...(targets.data?.locations ?? []).map((location) => ({
-                  value: location.id,
-                  label: location.name,
-                })),
-              ]}
-              onChange={(value) => {
-                setLocationId(value)
-                setAssetId('')
-              }}
-            />
-            <SelectField
-              label="Activo"
-              value={assetId}
-              options={[
-                { value: '', label: 'Sin activo' },
-                ...(targets.data?.assets ?? [])
-                  .filter((asset) => asset.location_id === locationId)
-                  .map((asset) => ({ value: asset.id, label: asset.name })),
-              ]}
-              onChange={setAssetId}
-            />
-            <SelectField
-              label="Técnico"
-              value={assignedUserId}
-              options={[
-                { value: '', label: 'Pendiente de asignar' },
-                ...(technicians.data ?? []).map((person) => ({
-                  value: person.id,
-                  label: person.label,
-                })),
-              ]}
-              onChange={setAssignedUserId}
-            />
-            <TextField
-              label="Asunto"
-              value={title}
-              onChange={setTitle}
-              placeholder="Ejemplo: revisión de piscina"
-              maxLength={200}
-              className="sm:col-span-2"
-            />
-            <TextField
-              label="Inicio local"
-              type="datetime-local"
-              value={localStart}
-              onChange={setLocalStart}
-              placeholder="Fecha y hora"
-              helper={`Zona horaria: ${timezone}`}
-            />
-            <SelectField
-              label="Duración"
-              value={duration}
-              options={[
-                { value: '30', label: '30 minutos' },
-                { value: '60', label: '1 hora' },
-                { value: '90', label: '1 hora y media' },
-                { value: '120', label: '2 horas' },
-              ]}
-              onChange={setDuration}
-            />
-            <SelectField
-              label="Prioridad"
-              value={priority}
-              options={[
-                { value: 'low', label: 'Baja' },
-                { value: 'normal', label: 'Normal' },
-                { value: 'high', label: 'Alta' },
-                { value: 'urgent', label: 'Urgente' },
-              ]}
-              onChange={(value) => setPriority(value as VisitPriority)}
-            />
-            <TextField
-              label="Indicaciones"
-              value={notes}
-              onChange={setNotes}
-              placeholder="Instrucciones necesarias para la visita"
-              maxLength={2000}
-              className="sm:col-span-2"
-            />
-          </div>
-          <Button
-            isDisabled={busy || !validForm || !session?.tenantId}
-            onPress={() => void createVisit()}
-          >
-            {busy ? 'Guardando…' : 'Planificar visita'}
-          </Button>
-        </CardContent>
-      </Card>
+      <FormDialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) resetCreateForm()
+        }}
+        title="Nueva visita"
+        submitLabel={busy ? 'Guardando…' : 'Planificar visita'}
+        submitDisabled={!validForm || !session?.tenantId}
+        isSubmitting={busy}
+        isDirty={isDirty}
+        onSubmit={() => void createVisit()}
+      >
+        <SelectField
+          label="Cliente"
+          value={clientId}
+          options={[
+            { value: '', label: 'Selecciona un cliente' },
+            ...clients.map((client) => ({ value: client.id, label: client.name })),
+          ]}
+          onChange={(value) => {
+            setClientId(value)
+            setLocationId('')
+            setAssetId('')
+          }}
+        />
+        <SelectField
+          label="Ubicación"
+          value={locationId}
+          options={[
+            { value: '', label: 'Sin ubicación' },
+            ...(targets.data?.locations ?? []).map((location) => ({
+              value: location.id,
+              label: location.name,
+            })),
+          ]}
+          onChange={(value) => {
+            setLocationId(value)
+            setAssetId('')
+          }}
+        />
+        <SelectField
+          label="Activo"
+          value={assetId}
+          options={[
+            { value: '', label: 'Sin activo' },
+            ...(targets.data?.assets ?? [])
+              .filter((asset) => asset.location_id === locationId)
+              .map((asset) => ({ value: asset.id, label: asset.name })),
+          ]}
+          onChange={setAssetId}
+        />
+        <SelectField
+          label="Técnico"
+          value={assignedUserId}
+          options={[
+            { value: '', label: 'Pendiente de asignar' },
+            ...(technicians.data ?? []).map((person) => ({
+              value: person.id,
+              label: person.label,
+            })),
+          ]}
+          onChange={setAssignedUserId}
+        />
+        <TextField
+          label="Asunto"
+          value={title}
+          onChange={setTitle}
+          placeholder="Ejemplo: revisión de piscina"
+          maxLength={200}
+          className="sm:col-span-2"
+        />
+        <TextField
+          label="Inicio local"
+          type="datetime-local"
+          value={localStart}
+          onChange={setLocalStart}
+          placeholder="Fecha y hora"
+          helper={`Zona horaria: ${timezone}`}
+        />
+        <SelectField
+          label="Duración"
+          value={duration}
+          options={[
+            { value: '30', label: '30 minutos' },
+            { value: '60', label: '1 hora' },
+            { value: '90', label: '1 hora y media' },
+            { value: '120', label: '2 horas' },
+          ]}
+          onChange={setDuration}
+        />
+        <SelectField
+          label="Prioridad"
+          value={priority}
+          options={[
+            { value: 'low', label: 'Baja' },
+            { value: 'normal', label: 'Normal' },
+            { value: 'high', label: 'Alta' },
+            { value: 'urgent', label: 'Urgente' },
+          ]}
+          onChange={(value) => setPriority(value as VisitPriority)}
+        />
+        <TextField
+          label="Indicaciones"
+          value={notes}
+          onChange={setNotes}
+          placeholder="Instrucciones necesarias para la visita"
+          maxLength={2000}
+          className="sm:col-span-2"
+        />
+      </FormDialog>
 
       <Card>
         <CardHeader>
