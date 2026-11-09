@@ -30,7 +30,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
   const options = assignableRoles(session?.role)
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<Role>('editor')
+  const [role, setRole] = useState<Role>('user')
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -68,7 +68,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
         <ul className="divide-border divide-y">
           {team.data?.map((member) => {
             const isMe = member.userId === session?.userId
-            const editable = !isMe && member.role !== 'owner' && options.includes(member.role)
+            const editable = !isMe && options.includes(member.role)
             return (
               <li key={member.userId} className="flex flex-wrap items-center gap-3 px-5 py-3">
                 <div className="min-w-0 flex-1">

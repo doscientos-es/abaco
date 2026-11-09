@@ -1,7 +1,9 @@
 import {
   Field,
+  FieldLabel,
   FieldTitle,
   Input,
+  PasswordInput,
   Select,
   SelectContent,
   SelectItem,
@@ -10,7 +12,7 @@ import {
   SelectValue,
   Textarea,
 } from '@doscientos/ui'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 
 function Helper({ children }: { children: ReactNode }) {
   return <span className="text-muted-foreground/80 text-xs font-normal">{children}</span>
@@ -47,6 +49,8 @@ export function TextField({
   icon,
   helper,
   className,
+  name,
+  autoComplete,
   maxLength,
   minLength,
   min,
@@ -62,6 +66,8 @@ export function TextField({
   icon?: ReactNode
   helper?: string
   className?: string
+  name?: string
+  autoComplete?: string
   maxLength?: number
   minLength?: number
   min?: number | string
@@ -78,6 +84,8 @@ export function TextField({
         ) : null}
         <Input
           type={type}
+          name={name}
+          autoComplete={autoComplete}
           value={value}
           placeholder={placeholder}
           {...(maxLength === undefined ? {} : { maxLength })}
@@ -91,6 +99,48 @@ export function TextField({
         />
       </div>
     </FormField>
+  )
+}
+
+/** Password input with an explicit label, visibility toggle and optional helper text. */
+export function PasswordField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  helper,
+  className,
+  name,
+  autoComplete,
+  maxLength,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  helper?: string
+  className?: string
+  name?: string
+  autoComplete?: string
+  maxLength?: number
+}) {
+  const id = useId()
+  return (
+    <Field className={`gap-1.5 ${className ?? ''}`}>
+      <FieldLabel htmlFor={id} className="text-muted-foreground text-xs font-medium">
+        {label}
+      </FieldLabel>
+      <PasswordInput
+        id={id}
+        name={name}
+        autoComplete={autoComplete}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {helper ? <Helper>{helper}</Helper> : null}
+    </Field>
   )
 }
 

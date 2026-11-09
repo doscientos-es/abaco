@@ -75,8 +75,7 @@ Deno.serve(async (request) => {
     .eq('tenant_id', tenantId)
     .eq('user_id', caller.user.id)
     .maybeSingle()
-  if (!membership || !['owner', 'admin'].includes(membership.role))
-    return reply(403, { error: 'forbidden' })
+  if (!membership || membership.role !== 'admin') return reply(403, { error: 'forbidden' })
 
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
   const tokenHash = [...new Uint8Array(digest)]

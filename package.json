@@ -20,6 +20,7 @@
     "changelog:check": "changelog generate src/shared/lib/changelog.json --md CHANGELOG.md --check"
   },
   "dependencies": {
+    "@dnd-kit/react": "^0.5.3",
     "@doscientos/ui": "^0.1.43",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.112.4",

@@ -34,7 +34,7 @@ vi.mock('@/features/billing', () => ({
 }))
 vi.mock('@/features/auth', () => ({
   sessionQuery: { queryKey: ['auth', 'session'] },
-  useSession: () => ({ tenantId: 'company-1', role: 'owner', needsWelcome: true }),
+  useSession: () => ({ tenantId: 'company-1', role: 'admin', needsWelcome: true }),
   completeWelcome: complete,
   AuthLayout: ({
     title,

@@ -117,6 +117,13 @@ h3 {
   background: var(--card);
 }
 
+/* The expired-trial notice is repeated in the desktop sidebar; keep the top copy for mobile. */
+@media (min-width: 48rem) {
+  .plan-banner-expired-top {
+    display: none;
+  }
+}
+
 [data-slot='table-head'] {
   height: 2.5rem;
   background: var(--surface-subtle);

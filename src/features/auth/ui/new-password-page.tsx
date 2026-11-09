@@ -2,7 +2,7 @@ import { Button } from '@doscientos/ui'
 import { useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
-import { TextField } from '@/shared/ui/form'
+import { PasswordField } from '@/shared/ui/form'
 
 import { updatePassword, useSession } from '../application/auth-actions'
 import { firstError, newPasswordSchema, passwordRules } from '../domain/credentials'
@@ -32,21 +32,29 @@ export function NewPasswordPage({ invite }: { invite: boolean }) {
   return (
     <AuthLayout
       title={invite ? 'Crea tu contraseña' : 'Elige una nueva contraseña'}
-      description={session ? `Cuenta: ${session.email}` : undefined}
+      description={
+        invite
+          ? `Invitación para ${session?.email ?? 'tu cuenta'}. Esta contraseña te servirá para volver a entrar.`
+          : session
+            ? `Cuenta: ${session.email}`
+            : undefined
+      }
     >
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
-        <TextField
+        <PasswordField
           label="Contraseña"
-          type="password"
+          name="password"
+          autoComplete="new-password"
           maxLength={256}
           placeholder="Nueva contraseña"
           helper={passwordRules}
           value={password}
           onChange={setPassword}
         />
-        <TextField
+        <PasswordField
           label="Repite la contraseña"
-          type="password"
+          name="confirm"
+          autoComplete="new-password"
           maxLength={256}
           placeholder="Repítela"
           value={confirm}

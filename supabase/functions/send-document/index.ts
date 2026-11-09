@@ -1,7 +1,7 @@
 /**
  * Envía por email (Resend) una factura o un presupuesto al cliente. Lee el documento de la base de datos,
  * nunca del body: el navegador solo dice qué documento y la función decide destinatario y contenido.
- * Valida sesión y rol (owner/admin/editor) y conserva el evento de aceptación de Resend.
+ * Valida sesión y rol de administrador y conserva el evento de aceptación de Resend.
  *
  * Body: { kind: 'invoice' | 'estimate', id: uuid }
  * Respuesta: 200 { to } | 4xx/5xx { error: 'no_client_email' | 'forbidden' | 'not_found' | ... }
@@ -12,7 +12,7 @@ import { sendEmail } from '../_shared/resend.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const writers = ['owner', 'admin', 'editor']
+const writers = ['admin']
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('APP_URL') ?? '',

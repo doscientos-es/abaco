@@ -1,4 +1,5 @@
 import { AutocompleteCombobox, Button, HighlightMatch, Input } from '@doscientos/ui'
+import { Trash } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { clampPercent, lineNetCents } from '@/shared/domain/estimate'
@@ -11,11 +12,12 @@ import { patchEstimate } from '../application/estimate-actions'
 import { PriceInput } from './price-input'
 
 const FREE_KEY = '__free__'
-const gridCols = 'grid grid-cols-2 items-center gap-2 sm:grid-cols-[1fr_5rem_5rem_8rem_14rem_4rem]'
+const gridCols =
+  'grid grid-cols-2 items-center gap-2 md:grid-cols-[minmax(0,1fr)_4.5rem_4rem_7rem_minmax(11rem,13rem)_2.5rem]'
 
 /** Visible field label on phones, where the column header row is hidden. */
 function MobileLabel({ children }: { children: string }) {
-  return <span className="text-muted-foreground mb-1 block text-xs sm:hidden">{children}</span>
+  return <span className="text-muted-foreground mb-1 block text-xs md:hidden">{children}</span>
 }
 
 type PickerItem = { key: string; label: string; meta?: string; free?: boolean }
@@ -86,14 +88,14 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
       {estimate.lines.length > 0 ? (
         <div className="space-y-2">
           <div
-            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium sm:grid`}
+            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium md:grid`}
           >
             <span>Descripción</span>
             <span className="text-right">Cant.</span>
             <span>Unidad</span>
             <span className="text-right">Precio (sin IVA)</span>
             <span className="text-right">Descuento e importe</span>
-            <span className="w-16" />
+            <span className="w-10" />
           </div>
           {estimate.lines.map((line) => (
             <div
@@ -104,7 +106,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                 aria-label="Descripción"
                 maxLength={formLimits.estimateLineDescription}
                 placeholder="Describe el trabajo o material"
-                className="col-span-2 sm:col-span-1"
+                className="col-span-2 md:col-span-1"
                 value={line.description}
                 onChange={(event) => updateLine(line.id, { description: event.target.value })}
               />
@@ -142,7 +144,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                   onChange={(event) => updateLine(line.id, { unit: event.target.value })}
                 />
               </div>
-              <div className="col-span-2 sm:col-span-1">
+              <div className="col-span-2 md:col-span-1">
                 <MobileLabel>Precio unitario (sin IVA, €)</MobileLabel>
                 <PriceInput
                   label="Precio unitario"
@@ -150,7 +152,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                   onCommit={(unitPriceCents) => updateLine(line.id, { unitPriceCents })}
                 />
               </div>
-              <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+              <div className="col-span-2 flex items-center justify-between gap-2 md:col-span-1 md:justify-end">
                 <div className="text-muted-foreground flex items-center gap-1 text-xs">
                   Dto.
                   <Input
@@ -183,13 +185,13 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                 </p>
               </div>
               <Button
-                size="sm"
+                size="icon-sm"
                 variant="ghost"
-                className="text-destructive col-span-2 w-full sm:col-span-1 sm:w-16"
-                aria-label="Quitar línea"
+                className="text-destructive col-span-2 justify-self-end md:col-span-1"
+                aria-label={`Quitar ${line.description || 'partida'}`}
                 onPress={() => setLines(estimate.lines.filter((l) => l.id !== line.id))}
               >
-                Quitar
+                <Trash aria-hidden="true" className="size-4" />
               </Button>
             </div>
           ))}

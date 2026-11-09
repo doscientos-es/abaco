@@ -13,7 +13,7 @@ vi.mock('@/shared/lib/supabase/client', () => ({
   createBrowserSupabaseClient: () => ({ auth: { getSession, updateUser }, rpc }),
 }))
 
-const membership = { tenant_id: 'company-1', role: 'owner', company_name: 'Demo company' }
+const membership = { tenant_id: 'company-1', role: 'admin', company_name: 'Demo company' }
 
 describe('welcome state in the session', () => {
   beforeEach(() => {
@@ -25,8 +25,8 @@ describe('welcome state in the session', () => {
       data: {
         session: {
           user: {
-            id: 'owner-1',
-            email: 'owner@example.test',
+            id: 'admin-1',
+            email: 'admin@example.test',
             user_metadata: { company_name: 'Demo company', [welcomePendingField]: true },
           },
         },
@@ -42,7 +42,7 @@ describe('welcome state in the session', () => {
     updateUser.mockResolvedValue({ error: null })
 
     await expect(loadSession()).resolves.toMatchObject({
-      role: 'owner',
+      role: 'admin',
       tenantId: 'company-1',
       needsWelcome: true,
     })
@@ -61,8 +61,8 @@ describe('welcome state in the session', () => {
       data: {
         session: {
           user: {
-            id: 'owner-1',
-            email: 'owner@example.test',
+            id: 'admin-1',
+            email: 'admin@example.test',
             user_metadata: metadata,
           },
         },

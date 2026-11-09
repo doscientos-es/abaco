@@ -1,6 +1,12 @@
 /** Money is always stored as integer cents to avoid floating point drift. */
 export type Cents = number
 
+/** Company-wide dashboard composition; widgets are resolved against the current registry. */
+export type DashboardConfig = {
+  version: 1
+  widgets: string[]
+}
+
 export type Tenant = {
   id: string
   /** Trade name shown in the app and in messages. */
@@ -18,6 +24,7 @@ export type Tenant = {
   /** Branding applied to documents and emails. Empty means the Ábaco default look. */
   brandColor?: string
   logoUrl?: string
+  dashboardConfig?: DashboardConfig
   emailFromName?: string
   emailSignature?: string
   invoiceEmailIntro?: string

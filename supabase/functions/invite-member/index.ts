@@ -2,13 +2,13 @@
  * Invita a una persona a una empresa. Necesita service role, por eso vive aquí y no en el
  * navegador. Valida sesión, pertenencia y rol de quien invita antes de actuar.
  *
- * Body: { tenantId: uuid, email: string, role: 'admin' | 'editor' | 'viewer' | 'technician', fullName?: string }
+ * Body: { tenantId: uuid, email: string, role: 'admin' | 'user', fullName?: string }
  * El correo lo envía el hook auth-email (Resend) al llamar a inviteUserByEmail.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-type Role = 'owner' | 'admin' | 'editor' | 'viewer' | 'technician'
-const invitable: Role[] = ['admin', 'editor', 'viewer', 'technician']
+type Role = 'admin' | 'user'
+const invitable: Role[] = ['admin', 'user']
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -54,7 +54,7 @@ Deno.serve(async (request) => {
     return reply(400, { error: 'Datos no válidos' })
   }
 
-  // 3. Permiso: owner/admin de esa empresa; solo el owner puede dar el rol admin.
+  // 3. Cualquier administrador puede invitar administradores o usuarios.
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { data: mine } = await admin
     .from('memberships')
@@ -62,10 +62,7 @@ Deno.serve(async (request) => {
     .eq('tenant_id', tenantId)
     .eq('user_id', caller.user.id)
     .maybeSingle()
-  if (!mine || !['owner', 'admin'].includes(mine.role))
-    return reply(403, { error: 'No tienes permiso para invitar' })
-  if (role === 'admin' && mine.role !== 'owner')
-    return reply(403, { error: 'Solo el propietario puede nombrar administradores' })
+  if (!mine || mine.role !== 'admin') return reply(403, { error: 'No tienes permiso para invitar' })
 
   // 3b. Plan: antes de enviar ningún correo, comprobar que caben más personas.
   const [{ data: tenant }, { count: members }] = await Promise.all([

@@ -3,9 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
-import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
-import { TextField } from '@/shared/ui/form'
+import { PasswordField, TextField } from '@/shared/ui/form'
 
 import { sessionQuery, signIn } from '../application/auth-actions'
 import { firstError, loginSchema } from '../domain/credentials'
@@ -28,7 +27,7 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
     try {
       const result = await signIn(parsed.data.email, parsed.data.password)
       if (!result.ok) return setError(result.message)
-      // The cached "no session" is still fresh; without this the root guard bounces us back to /entrar.
+      // Mark the cached "no session" stale so the root guard reloads it before redirecting.
       await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
       // Only same-site paths are honoured, so the link can't send people elsewhere.
       const target =
@@ -46,14 +45,15 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
   return (
     <AuthLayout
       title="Entrar"
-      description="Accede con tu correo y contraseña."
+      description="Accede al espacio de trabajo de tu empresa."
       footer={
         <span>
-          ¿Aún no tienes cuenta?{' '}
+          ¿Primera vez? Si te han invitado, abre el enlace del correo para aceptar la invitación y
+          crear tu contraseña. ¿Vas a empezar con tu empresa?{' '}
           <Link to="/registro" className="hover:text-foreground underline">
-            Crea la de tu empresa
+            Crea una cuenta
           </Link>
-          . Si tu empresa ya usa {brand.name}, pide una invitación.
+          .
         </span>
       }
     >
@@ -61,15 +61,18 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
         <TextField
           label="Correo"
           type="email"
+          name="username"
+          autoComplete="username"
           maxLength={254}
           placeholder="nombre@empresa.es"
           icon={fieldIcons.mail}
           value={email}
           onChange={setEmail}
         />
-        <TextField
+        <PasswordField
           label="Contraseña"
-          type="password"
+          name="password"
+          autoComplete="current-password"
           maxLength={256}
           placeholder="Tu contraseña"
           value={password}

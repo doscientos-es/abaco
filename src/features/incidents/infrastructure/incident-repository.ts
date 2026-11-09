@@ -207,7 +207,7 @@ export async function listIncidentAssignees(tenantId: string) {
     .from('memberships')
     .select('user_id,role,profiles(email,full_name)')
     .eq('tenant_id', tenantId)
-    .in('role', ['owner', 'admin', 'editor', 'technician'])
+    .in('role', ['admin', 'user'])
     .order('created_at')
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => {

@@ -16,6 +16,10 @@ describe('settings route search', () => {
     expect(validate({ tab: 'novedades' })).toEqual({ tab: 'novedades' })
   })
 
+  it('supports direct links to the plan tab', () => {
+    expect(validate({ tab: 'plan' })).toEqual({ tab: 'plan' })
+  })
+
   it('rejects unknown tabs', () => {
     expect(validate({ tab: 'unknown' })).toEqual({})
   })

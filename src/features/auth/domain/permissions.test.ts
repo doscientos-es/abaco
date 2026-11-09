@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
-import { can } from './permissions'
+import { assignableRoles, can } from './permissions'
 
-describe('vacation permissions', () => {
-  it('lets technicians request their own vacation but not decide requests', () => {
-    expect(can('technician', 'vacations:request')).toBe(true)
-    expect(can('technician', 'vacations:manage')).toBe(false)
+describe('role permissions', () => {
+  it('lets users request their own vacation but not decide requests', () => {
+    expect(can('user', 'vacations:request')).toBe(true)
+    expect(can('user', 'vacations:manage')).toBe(false)
+    expect(can('user', 'visits:assigned')).toBe(true)
+    expect(can('user', 'work:read')).toBe(false)
   })
 
-  it('lets owners and admins manage requests, not editors or viewers', () => {
-    expect(can('owner', 'vacations:manage')).toBe(true)
+  it('lets admins manage requests and hand out only admin/user roles', () => {
     expect(can('admin', 'vacations:manage')).toBe(true)
-    expect(can('editor', 'vacations:manage')).toBe(false)
-    expect(can('viewer', 'vacations:manage')).toBe(false)
+    expect(can('admin', 'work:read')).toBe(true)
+    expect(assignableRoles('admin')).toEqual(['admin', 'user'])
+    expect(assignableRoles('user')).toEqual([])
   })
 })

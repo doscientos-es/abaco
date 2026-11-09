@@ -111,7 +111,7 @@ export type Payment = {
   settledAt: Date | null
 }
 
-/** Every charge attempt of the company, newest first. Only the owner can read them (RLS). */
+/** Every charge attempt of the company, newest first. Only admins can read them (RLS). */
 export const paymentsQuery = (tenantId: string) =>
   queryOptions({
     queryKey: ['billing-payments', tenantId],

@@ -15,21 +15,18 @@ vi.mock('@/shared/lib/supabase/client', () => ({
 }))
 
 describe('welcome eligibility and routing', () => {
-  it('welcomes only new signup owners with an explicit pending marker', () => {
-    expect(needsWelcome('owner', { [welcomePendingField]: true })).toBe(true)
-    expect(needsWelcome('owner', {})).toBe(false)
-    expect(needsWelcome('owner', { [welcomePendingField]: false })).toBe(false)
-    expect(needsWelcome('owner', { [welcomePendingField]: 'true' })).toBe(false)
+  it('welcomes only new signup admins with an explicit pending marker', () => {
+    expect(needsWelcome('admin', { [welcomePendingField]: true })).toBe(true)
+    expect(needsWelcome('admin', {})).toBe(false)
+    expect(needsWelcome('admin', { [welcomePendingField]: false })).toBe(false)
+    expect(needsWelcome('admin', { [welcomePendingField]: 'true' })).toBe(false)
   })
 
-  it.each<Role | null>(['admin', 'editor', 'viewer', null])(
-    'does not gate a %s account',
-    (role) => {
-      expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
-    },
-  )
+  it.each<Role | null>(['user', null])('does not gate a %s account', (role) => {
+    expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
+  })
 
-  it('routes a pending owner to welcome without a redirect loop', () => {
+  it('routes a pending admin to welcome without a redirect loop', () => {
     expect(welcomeRedirect(true, '/')).toBe('/bienvenida')
     expect(welcomeRedirect(true, '/ajustes')).toBe('/bienvenida')
     expect(welcomeRedirect(true, '/bienvenida')).toBeNull()
@@ -56,9 +53,9 @@ describe('welcome persistence', () => {
 
     await expect(
       signUp({
-        fullName: 'Demo owner',
+        fullName: 'Demo admin',
         companyName: 'Demo company',
-        email: 'owner@example.test',
+        email: 'admin@example.test',
         password: 'test-only-password',
       }),
     ).resolves.toEqual({ ok: true, needsConfirmation: true })
@@ -66,7 +63,7 @@ describe('welcome persistence', () => {
       expect.objectContaining({
         options: {
           data: {
-            full_name: 'Demo owner',
+            full_name: 'Demo admin',
             company_name: 'Demo company',
             [welcomePendingField]: true,
           },
@@ -83,7 +80,7 @@ describe('welcome persistence', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('reports a save failure so the owner can retry', async () => {
+  it('reports a save failure so the admin can retry', async () => {
     updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
 
     await expect(completeWelcome()).resolves.toEqual({

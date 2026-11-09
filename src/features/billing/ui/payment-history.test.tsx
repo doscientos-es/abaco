@@ -61,6 +61,15 @@ describe('PaymentHistory', () => {
     expect(html).not.toContain('Próximo cobro')
   })
 
+  it('keeps lifetime paid totals out of the plan summary', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+
+    const html = render()
+
+    expect(html).not.toContain('Pagado hasta hoy')
+    expect(html).toContain('Pagos realizados')
+  })
+
   it('keeps the end date visible for an expired trial', () => {
     query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
 

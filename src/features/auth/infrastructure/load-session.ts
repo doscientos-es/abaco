@@ -22,7 +22,7 @@ export type AuthSession = {
   role: Role | null
   /** Every company the user belongs to, to switch between them. */
   companies: Company[]
-  /** New signup owners see the trial/payment choice once. Existing and invited accounts do not. */
+  /** New signup admins see the trial/payment choice once. Existing and invited accounts do not. */
   needsWelcome: boolean
 }
 

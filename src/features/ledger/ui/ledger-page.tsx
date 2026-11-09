@@ -106,12 +106,7 @@ export function LedgerPage() {
   const expenseByCategory = categoryTotals(monthEntries, 'expense')
 
   async function exportDataset(dataset: 'clients' | 'invoices' | 'payments' | 'expenses') {
-    if (
-      exportBusy ||
-      session?.tenantId !== tenant.id ||
-      !['owner', 'admin'].includes(session?.role ?? '')
-    )
-      return
+    if (exportBusy || session?.tenantId !== tenant.id || session?.role !== 'admin') return
     setExportBusy(true)
     try {
       const data = await loadAccountingExport(tenant.id, dataset)
@@ -221,8 +216,7 @@ export function LedgerPage() {
                 <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
                 <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
               </DropdownMenuItem>
-              {session?.tenantId === tenant.id &&
-              ['owner', 'admin'].includes(session?.role ?? '') ? (
+              {session?.tenantId === tenant.id && session?.role === 'admin' ? (
                 <>
                   {(['clients', 'invoices', 'payments', 'expenses'] as const).map((dataset) => (
                     <DropdownMenuItem
@@ -549,7 +543,7 @@ export function LedgerPage() {
                     : 'Ingreso'
                   : 'Gasto'}
               </Badge>
-              {entry.kind === 'expense' && ['owner', 'admin'].includes(session?.role ?? '') ? (
+              {entry.kind === 'expense' && session?.role === 'admin' ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -610,7 +604,7 @@ export function LedgerPage() {
                 {formatEuros(entry.amountCents)}
               </TableCell>
               <TableCell className="text-right">
-                {entry.kind === 'expense' && ['owner', 'admin'].includes(session?.role ?? '') ? (
+                {entry.kind === 'expense' && session?.role === 'admin' ? (
                   <Button
                     size="sm"
                     variant="outline"
