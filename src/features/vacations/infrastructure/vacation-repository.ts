@@ -45,6 +45,23 @@ export type VacationAffectedVisit = {
   candidates: VacationCoverageCandidate[]
 }
 
+type VacationCoverageRow = {
+  visit_id: string
+  title: string
+  client_name: string
+  location_name: string
+  address: string
+  timezone: string
+  assigned_user_id: string
+  assigned_user_name: string
+  scheduled_start_at: string
+  scheduled_end_at: string
+  status: 'scheduled' | 'in_progress'
+  updated_at: string
+  work_team_name: string | null
+  candidates: unknown
+}
+
 function toVacationRequest(row: VacationRequestRow): VacationRequest {
   return {
     id: row.id,
@@ -102,7 +119,8 @@ export async function listVacationCoverage(
     p_request_id: requestId,
   })
   if (error) throw new Error('No se pudieron cargar los servicios afectados.')
-  return (data ?? []).map((row) => ({
+  const rows = (data ?? []) as unknown as VacationCoverageRow[]
+  return rows.map((row) => ({
     visitId: row.visit_id,
     title: row.title,
     clientName: row.client_name,
