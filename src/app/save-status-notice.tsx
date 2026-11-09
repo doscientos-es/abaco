@@ -30,14 +30,9 @@ export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRe
             para seguir editando.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/ajustes" search={{ tab: 'plan' }} className={buttonVariants({ size: 'sm' })}>
-            Elegir plan
-          </Link>
-          <Button type="button" size="sm" variant="ghost" onClick={onRetry}>
-            Reintentar guardado
-          </Button>
-        </div>
+        <Link to="/ajustes" search={{ tab: 'plan' }} className={buttonVariants({ size: 'sm' })}>
+          Elegir plan
+        </Link>
       </section>
     )
   }
