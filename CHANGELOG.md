@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-09 — v0.0.5
+
+### Nuevas funciones
+
+- Add team size management and custom plan options
+
 ## 2026-11-04 — v0.0.4
 
 ### Nuevas funciones

@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.5",
+      "date": "2026-11-09",
+      "title": "v0.0.5",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add team size management and custom plan options"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "bc1f65da9e7067383b6496bf100bbde81186303b",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add team size management and custom plan options"
+        }
+      ]
+    },
+    {
       "version": "0.0.4",
       "date": "2026-11-04",
       "title": "v0.0.4",
