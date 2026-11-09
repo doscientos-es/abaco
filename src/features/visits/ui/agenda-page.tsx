@@ -10,7 +10,7 @@ import {
 } from '@doscientos/ui'
 import { PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
@@ -18,6 +18,10 @@ import {
   RelatedCreateButton,
   useRelatedRecordCreation,
 } from '@/features/clients/ui/related-record-creation'
+import {
+  listApprovedVacationRanges,
+  visitOverlapsVacation,
+} from '@/features/vacations/application/vacation-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -126,6 +130,11 @@ export function AgendaPage() {
         ? listAllOfficeVisits(tenant.id, from, to, filterTechnicianId || null)
         : listOfficeVisits(tenant.id, from, to, filterTechnicianId || null, page),
   })
+  const approvedVacations = useQuery({
+    queryKey: ['approved-vacations', tenant.id, date, to],
+    enabled: session?.role === 'admin',
+    queryFn: () => listApprovedVacationRanges(tenant.id, date, to),
+  })
   const technicians = useQuery({
     queryKey: ['technicians', tenant.id],
     queryFn: () => listTechnicians(tenant.id),
@@ -225,6 +234,21 @@ export function AgendaPage() {
 
   function updateSearch(update: { view?: AgendaView; date?: string; period?: AgendaPeriod }) {
     void navigate({ to: '/agenda', search: (previous) => ({ ...previous, ...update }) })
+  }
+
+  function hasApprovedVacationConflict(visit: VisitSummary) {
+    if (session?.role !== 'admin') return false
+    return (approvedVacations.data ?? []).some((vacation) =>
+      visitOverlapsVacation(
+        {
+          assignedUserId: visit.assigned_user_id ?? null,
+          startAt: visit.scheduled_start_at,
+          endAt: visit.scheduled_end_at,
+          timezone: visit.timezone,
+        },
+        vacation,
+      ),
+    )
   }
 
   function renderVisitActions(visit: VisitSummary) {
@@ -547,6 +571,11 @@ export function AgendaPage() {
               No se pudo cargar la agenda: {visits.error.message}
             </p>
           ) : null}
+          {approvedVacations.isError ? (
+            <p role="alert" className="text-destructive text-sm">
+              No se pudieron comprobar las vacaciones aprobadas: {approvedVacations.error.message}
+            </p>
+          ) : null}
 
           {view === 'calendar' ? (
             <>
@@ -622,6 +651,14 @@ export function AgendaPage() {
                         {statusLabels[selectedCalendarVisit.status]}
                         {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
                       </p>
+                      {hasApprovedVacationConflict(selectedCalendarVisit) ? (
+                        <p className="text-destructive text-sm font-medium">
+                          Vacaciones aprobadas · revisar cobertura en{' '}
+                          <Link to="/vacaciones" className="underline">
+                            Vacaciones
+                          </Link>
+                        </p>
+                      ) : null}
                     </div>
                     {renderVisitActions(selectedCalendarVisit)}
                   </div>
@@ -640,6 +677,14 @@ export function AgendaPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{visit.title}</p>
+                        {hasApprovedVacationConflict(visit) ? (
+                          <p className="text-destructive font-medium">
+                            Vacaciones aprobadas · revisar cobertura en{' '}
+                            <Link to="/vacaciones" className="underline">
+                              Vacaciones
+                            </Link>
+                          </p>
+                        ) : null}
                         <p className="text-muted-foreground">
                           {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
                             timeZone: visit.timezone,
