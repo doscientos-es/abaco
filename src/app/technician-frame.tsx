@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 import { useSession, useSignOut } from '@/features/auth'
 import { brand } from '@/shared/lib/brand'
 
-/** Technician pages never hydrate the office store or expose its financial data. */
-export function TechnicianFrame({ children }: { children: ReactNode }) {
+/** User pages never hydrate the office store or expose its financial data. */
+export function UserFrame({ children }: { children: ReactNode }) {
   const session = useSession()
   const signOut = useSignOut()
   const company = session?.companies.find((item) => item.id === session.tenantId)
@@ -18,7 +18,7 @@ export function TechnicianFrame({ children }: { children: ReactNode }) {
           <div>
             <p className="text-primary text-lg font-semibold">{brand.name}</p>
             <p className="text-muted-foreground text-xs">
-              {company?.name ?? 'Mi empresa'} · Técnico
+              {company?.name ?? 'Mi empresa'} · Usuario
             </p>
           </div>
           <div className="flex items-center gap-2">

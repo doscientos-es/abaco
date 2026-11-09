@@ -31,7 +31,7 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
         if (!next) onClose()
       }}
       title="Nueva empresa"
-      description="Tendrá sus propios clientes, presupuestos y equipo. Tú serás el propietario."
+      description="Tendrá sus propios clientes, presupuestos y equipo. Tú serás administrador."
       submitLabel="Crear empresa"
       submitDisabled={!name.trim()}
       onSubmit={() => void submit()}

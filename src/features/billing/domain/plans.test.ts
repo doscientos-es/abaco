@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   memberLimit,
   paidPlans,
+  perMonthWhenYearlyAmount,
   perMonthWhenYearly,
   planCatalog,
   planInfo,
+  scalePlanMonthlyPrice,
   smallestPlanFor,
   TRIAL_DAYS,
   TRIAL_MEMBERS,
@@ -26,6 +28,16 @@ describe('current commercial offer', () => {
   it('shows annual prices as monthly equivalents, not monthly charges', () => {
     expect(planCatalog.map(perMonthWhenYearly)).toEqual([16.67, 28.33, 45])
     for (const plan of planCatalog) expect(plan.yearly).toBe(plan.monthly * 10)
+    expect(perMonthWhenYearlyAmount(570)).toBe(47.5)
+  })
+
+  it('calculates the indicative Escala price only for teams from 16 to 100', () => {
+    expect(scalePlanMonthlyPrice(15)).toBeNull()
+    expect(scalePlanMonthlyPrice(16)).toBe(57)
+    expect(scalePlanMonthlyPrice(17)).toBe(60)
+    expect(scalePlanMonthlyPrice(100)).toBe(309)
+    expect(scalePlanMonthlyPrice(101)).toBeNull()
+    expect(scalePlanMonthlyPrice(16.5)).toBeNull()
   })
 
   it.each([

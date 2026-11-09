@@ -30,6 +30,7 @@ import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
 import { navIcons } from './nav-icons'
+import { SaveStatusNotice } from './save-status-notice'
 
 type NavTo =
   | '/'
@@ -254,6 +255,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
+        <PlanBanner placement="sidebar" />
+
         <div className="border-border mt-auto shrink-0 border-t p-3">
           <DropdownMenuTrigger>
             <Button
@@ -304,21 +307,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
         <PlanBanner />
-        {saveStatus.state === 'error' ? (
-          <div
-            role="alert"
-            className="border-destructive bg-background mx-4 mt-3 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm sm:mx-10"
-          >
-            <span className="flex-1">Hay cambios sin guardar. {saveStatus.message}</span>
-            <Button type="button" variant="outline" onClick={retryStoreSaves}>
-              Reintentar guardado
-            </Button>
-          </div>
-        ) : saveStatus.state === 'saving' ? (
-          <output className="text-muted-foreground block px-4 pt-2 text-xs sm:px-10">
-            Guardando cambios…
-          </output>
-        ) : null}
+        <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
         <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">
           {children}
         </AppShellContent>

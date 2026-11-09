@@ -6,7 +6,7 @@ import { useState, type FormEvent } from 'react'
 import { formatEuros, planCatalog, TRIAL_DAYS } from '@/features/billing/domain/plans'
 import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
-import { TextField } from '@/shared/ui/form'
+import { PasswordField, TextField } from '@/shared/ui/form'
 
 import { sessionQuery, signUp } from '../application/auth-actions'
 import { firstError, passwordRules, signupSchema } from '../domain/credentials'
@@ -83,6 +83,8 @@ export function RegisterPage() {
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         <TextField
           label="Tu nombre"
+          name="name"
+          autoComplete="name"
           placeholder="Nombre y apellidos"
           maxLength={120}
           minLength={2}
@@ -100,15 +102,18 @@ export function RegisterPage() {
         <TextField
           label="Correo"
           type="email"
+          name="email"
+          autoComplete="email"
           maxLength={254}
           placeholder="nombre@empresa.es"
           icon={fieldIcons.mail}
           value={email}
           onChange={setEmail}
         />
-        <TextField
+        <PasswordField
           label="Contraseña"
-          type="password"
+          name="password"
+          autoComplete="new-password"
           placeholder="Elige una contraseña"
           helper={passwordRules}
           value={password}

@@ -14,18 +14,18 @@ import {
   type Subscription,
 } from '../application/billing-actions'
 import {
-  formatEuros,
   includedInEveryPlan,
   MAX_SCALE_PLAN_MEMBERS,
-  perMonthWhenYearly,
+  planCatalog,
   planInfo,
   smallestPlanFor,
   TRIAL_DAYS,
   type Interval,
-  type PlanInfo,
 } from '../domain/plans'
 import { CustomPlanCard } from './custom-plan-card'
 import { PaymentHistory } from './payment-history'
+import { PlanOptionCard } from './plan-option-card'
+import { ScalePlanCard } from './scale-plan-card'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', {
   day: 'numeric',
@@ -49,7 +49,7 @@ function currentLine(sub: Subscription): string {
   return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
 }
 
-/** Plan and payment. Only rendered for the owner. */
+/** Plan and payment. Only rendered for admins. */
 export function BillingSection({
   tenantId,
   companyName,
@@ -124,7 +124,8 @@ export function BillingSection({
     members <= MAX_SCALE_PLAN_MEMBERS ? smallestPlanFor(selectedMemberCount) : null
   const needed = smallestPlanFor(members)
   const onTrial = subscription?.status === 'trialing'
-  const recommended = onTrial ? needed?.id : undefined
+  const recommended = onTrial ? selectedPlan?.id : undefined
+  const recommendedScale = onTrial && selectedPlan === null
 
   return (
     <section className="border-border bg-card rounded-xl border">
@@ -161,18 +162,21 @@ export function BillingSection({
             <p className="mt-1 text-xs">
               {needed
                 ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name}. `
-                : members <= 100
-                  ? `Ahora sois ${members} personas: podéis pedir una propuesta de Ábaco Escala. `
+                : members <= MAX_SCALE_PLAN_MEMBERS
+                  ? `Ahora sois ${members} personas: os encaja Ábaco Escala. `
                   : `Ahora sois más de 100 personas: podemos preparar un plan personalizado. `}
               Si prefieres uno más pequeño, quita el acceso a las personas que sobren en Equipo.
             </p>
           </div>
         ) : null}
 
-        <p className="text-muted-foreground text-sm">
-          En los planes actuales, todas las funciones están incluidas; solo cambia el número de
-          personas. El total incluye a quien administra la cuenta.
-        </p>
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">Elige según el tamaño y la forma de trabajar</h3>
+          <p className="text-muted-foreground text-sm">
+            Todos los planes incluyen las mismas funciones; cada tramo orienta sobre la capacidad
+            adecuada. El total cuenta a quien administra la empresa.
+          </p>
+        </div>
 
         {members <= MAX_SCALE_PLAN_MEMBERS ? (
           <div className="space-y-4">
@@ -228,49 +232,53 @@ export function BillingSection({
               </p>
             </div>
 
-            <div aria-live="polite" aria-atomic="true">
-              {selectedPlan ? (
-                <div className="space-y-3">
-                  <Tabs
-                    selectedKey={interval}
-                    onSelectionChange={(key) => setInterval(key as Interval)}
-                  >
-                    <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
-                      <TabsTrigger id="year" className="flex-1 sm:flex-none">
-                        Anual
-                        <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
-                          2 meses gratis
-                        </span>
-                      </TabsTrigger>
-                      <TabsTrigger id="month" className="flex-1 sm:flex-none">
-                        Mensual
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                  <PlanCard
-                    plan={selectedPlan}
+            <div className="space-y-4">
+              <Tabs
+                selectedKey={interval}
+                onSelectionChange={(key) => setInterval(key as Interval)}
+              >
+                <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
+                  <TabsTrigger id="year" className="flex-1 sm:flex-none">
+                    Anual
+                    <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
+                      2 meses gratis
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger id="month" className="flex-1 sm:flex-none">
+                    Mensual
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {planCatalog.map((plan) => (
+                  <PlanOptionCard
+                    key={plan.id}
+                    plan={plan}
                     interval={interval}
                     members={selectedMemberCount}
-                    recommended={recommended === selectedPlan.id}
-                    current={subscribed === true && subscription?.plan === selectedPlan.id}
-                    busy={busy === selectedPlan.id}
+                    recommended={recommended === plan.id}
+                    current={subscribed === true && subscription?.plan === plan.id}
+                    busy={busy !== null}
                     onChoose={() =>
-                      void go(selectedPlan.id, () =>
+                      void go(plan.id, () =>
                         subscription?.status === 'active'
-                          ? changePlan(tenantId, selectedPlan.id, interval)
-                          : startCheckout(tenantId, selectedPlan.id, interval),
+                          ? changePlan(tenantId, plan.id, interval)
+                          : startCheckout(tenantId, plan.id, interval),
                       )
                     }
                   />
-                  <CustomPlanCard />
-                </div>
-              ) : (
-                <CustomPlanCard members={selectedMemberCount} />
-              )}
+                ))}
+                <ScalePlanCard
+                  members={selectedMemberCount}
+                  interval={interval}
+                  recommended={recommendedScale}
+                />
+                <CustomPlanCard />
+              </div>
             </div>
           </div>
         ) : (
-          <CustomPlanCard members={members} />
+          <CustomPlanCard />
         )}
 
         <ul className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2">
@@ -304,59 +312,5 @@ export function BillingSection({
         </div>
       </div>
     </section>
-  )
-}
-
-function PlanCard(props: {
-  plan: PlanInfo
-  interval: Interval
-  members: number
-  current: boolean
-  recommended: boolean
-  busy: boolean
-  onChoose: () => void
-}) {
-  const { plan, interval, members, current, recommended, busy, onChoose } = props
-  const price = interval === 'year' ? perMonthWhenYearly(plan) : plan.monthly
-  return (
-    <div
-      className={`flex flex-col gap-3 rounded-lg border p-4 ${current || recommended ? 'border-primary ring-primary/20 ring-2' : 'border-border'}`}
-    >
-      {recommended ? (
-        <span className="bg-primary text-primary-foreground w-fit rounded-full px-2 py-0.5 text-[11px] font-medium">
-          Te encaja
-        </span>
-      ) : null}
-      <div>
-        <h3 className="text-sm font-semibold">{plan.name}</h3>
-        <p className="text-muted-foreground text-xs">{plan.audience}</p>
-      </div>
-      <p className="text-xs font-medium">
-        {members === 1 ? '1 persona: tú.' : `Para ${members} personas, incluyéndote a ti.`}
-      </p>
-      <p className="text-muted-foreground text-xs">
-        Incluye hasta {plan.members} {plan.members === 1 ? 'persona' : 'personas'} en total.
-      </p>
-      <p>
-        <span className="text-2xl font-semibold">{formatEuros(price)}</span>
-        <span className="text-muted-foreground text-xs"> /mes</span>
-      </p>
-      <p className="text-muted-foreground text-xs">
-        {interval === 'year' ? 'Equivalente mensual · pago anual' : 'Pago mensual'}
-      </p>
-      <p className="text-muted-foreground text-xs">
-        {interval === 'year'
-          ? `Se cobra ${formatEuros(plan.yearly)} al año, sin IVA`
-          : 'Se cobra cada mes, sin IVA'}
-      </p>
-      <Button
-        className="mt-auto"
-        variant={current ? 'outline' : 'default'}
-        isDisabled={current || busy}
-        onPress={onChoose}
-      >
-        {current ? 'Tu plan' : `Elegir ${plan.name}`}
-      </Button>
-    </div>
   )
 }

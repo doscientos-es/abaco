@@ -198,7 +198,7 @@ export function MilestonesEditor({
                       >
                         Ver y enviar {invoice.number}
                       </Link>
-                    ) : session?.role === 'owner' || session?.role === 'admin' ? (
+                    ) : session?.role === 'admin' ? (
                       <Button
                         size="sm"
                         variant="outline"

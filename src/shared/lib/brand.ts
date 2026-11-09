@@ -3,7 +3,7 @@ export const brand = {
   name: 'Ábaco',
   maker: 'Doscientos',
   makerUrl: 'https://doscientos.es',
-  tagline: 'Presupuestos y cobros para instaladores',
+  tagline: 'Gestión unificada para servicios',
   audience: 'Para autónomos y pequeñas empresas de instalaciones.',
   promise:
     'Prepara presupuestos, facilita la respuesta de tu cliente y controla lo pendiente de cobrar.',

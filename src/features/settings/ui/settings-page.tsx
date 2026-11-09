@@ -44,7 +44,7 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false)
 
   const canTeam = Boolean(session?.tenantId && can(session.role, 'team:manage'))
-  const canPlan = Boolean(session?.tenantId && session.role === 'owner')
+  const canPlan = Boolean(session?.tenantId && session.role === 'admin')
   const allowed: SettingsTab[] = ['empresa', 'documentos']
   if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')

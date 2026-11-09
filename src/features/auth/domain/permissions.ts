@@ -2,24 +2,18 @@
  * Roles and what each one may do. This only drives the UI (menus, buttons, route guards).
  * The real authority is Postgres RLS, which must repeat these rules for every table.
  */
-export type Role = 'owner' | 'admin' | 'editor' | 'viewer' | 'technician'
+export type Role = 'admin' | 'user'
 
-export const roles: readonly Role[] = ['owner', 'admin', 'editor', 'viewer', 'technician']
+export const roles: readonly Role[] = ['admin', 'user']
 
 export const roleLabels: Record<Role, string> = {
-  owner: 'Propietario',
   admin: 'Administrador',
-  editor: 'Editor',
-  viewer: 'Solo lectura',
-  technician: 'Técnico',
+  user: 'Usuario',
 }
 
 export const roleDescriptions: Record<Role, string> = {
-  owner: 'Control total, incluido el equipo y los ajustes.',
   admin: 'Gestiona el equipo, los ajustes y todo el negocio.',
-  editor: 'Crea y edita presupuestos, clientes y catálogo. No ve contabilidad ni ajustes.',
-  viewer: 'Solo puede consultar presupuestos, clientes y catálogo.',
-  technician: 'Consulta únicamente sus visitas y datos necesarios para realizarlas.',
+  user: 'Consulta sus visitas asignadas y puede solicitar vacaciones.',
 }
 
 export type Permission =
@@ -71,36 +65,17 @@ const everything: readonly Permission[] = [
 ]
 
 const matrix: Record<Role, readonly Permission[]> = {
-  owner: everything,
   admin: everything,
-  editor: [
-    'estimates:read',
-    'estimates:write',
-    'clients:read',
-    'clients:write',
-    'catalog:read',
-    'catalog:write',
-    'work:read',
-    'work:write',
-    'contracts:read',
-    'contracts:write',
-    'visits:read',
-    'visits:write',
-    'invoices:read',
-  ],
-  viewer: ['estimates:read', 'clients:read', 'catalog:read', 'work:read'],
-  technician: ['visits:assigned', 'vacations:request'],
+  user: ['visits:assigned', 'vacations:request'],
 }
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   return role ? matrix[role].includes(permission) : false
 }
 
-/** Roles that `inviter` may hand out. Only the owner can appoint admins; nobody invites owners. */
+/** Roles that an admin may hand out. */
 export function assignableRoles(inviter: Role | null | undefined): Role[] {
-  if (inviter === 'owner') return ['admin', 'editor', 'viewer', 'technician']
-  if (inviter === 'admin') return ['editor', 'viewer', 'technician']
-  return []
+  return inviter === 'admin' ? ['admin', 'user'] : []
 }
 
 export function isRole(value: string): value is Role {

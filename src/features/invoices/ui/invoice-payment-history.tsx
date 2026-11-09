@@ -35,8 +35,7 @@ export function InvoicePaymentHistory({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
-  const canManage =
-    session?.tenantId === tenantId && ['owner', 'admin'].includes(session.role ?? '')
+  const canManage = session?.tenantId === tenantId && session.role === 'admin'
   const query = useQuery({
     queryKey: ['invoice-payment-history', tenantId, invoiceId],
     queryFn: () => loadInvoicePaymentHistory(tenantId, invoiceId),

@@ -6,19 +6,19 @@ insert into public.tenants (id, name) values
   ('67000000-0000-4000-8000-000000000001', 'Empresa vacaciones'),
   ('67000000-0000-4000-8000-000000000002', 'Otra empresa');
 insert into auth.users (id, email, raw_user_meta_data) values
-  ('67000000-0000-4000-8000-000000000003', 'owner-vac@example.test', '{"full_name":"Olga Propietaria"}'),
+  ('67000000-0000-4000-8000-000000000003', 'alicia-vac@example.test', '{"full_name":"Alicia Administradora"}'),
   ('67000000-0000-4000-8000-000000000004', 'admin-vac@example.test', '{"full_name":"Adrián Administración"}'),
-  ('67000000-0000-4000-8000-000000000005', 'tech-vac@example.test', '{"full_name":"Toni Técnico"}'),
-  ('67000000-0000-4000-8000-000000000006', 'tech2-vac@example.test', '{"full_name":"Tere Técnica"}'),
-  ('67000000-0000-4000-8000-000000000007', 'editor-vac@example.test', '{"full_name":"Eva Editora"}'),
+  ('67000000-0000-4000-8000-000000000005', 'user-vac@example.test', '{"full_name":"Toni Usuario"}'),
+  ('67000000-0000-4000-8000-000000000006', 'user2-vac@example.test', '{"full_name":"Tere Usuaria"}'),
+  ('67000000-0000-4000-8000-000000000007', 'user3-vac@example.test', '{"full_name":"Ursula Usuaria"}'),
   ('67000000-0000-4000-8000-000000000008', 'foreign-vac@example.test', '{"full_name":"Félix Ajeno"}');
 insert into public.memberships (tenant_id, user_id, role) values
-  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000003', 'owner'),
+  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000003', 'admin'),
   ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000004', 'admin'),
-  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000005', 'technician'),
-  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000006', 'technician'),
-  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000007', 'editor'),
-  ('67000000-0000-4000-8000-000000000002', '67000000-0000-4000-8000-000000000008', 'owner');
+  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000005', 'user'),
+  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000006', 'user'),
+  ('67000000-0000-4000-8000-000000000001', '67000000-0000-4000-8000-000000000007', 'user'),
+  ('67000000-0000-4000-8000-000000000002', '67000000-0000-4000-8000-000000000008', 'admin');
 
 set local role authenticated;
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000005';
@@ -26,15 +26,15 @@ select set_config('test.vacation_one', public.submit_vacation_request(
   '67000000-0000-4000-8000-000000000001', '2026-12-24', '2026-12-26', 'Viaje familiar'
 )::text, true);
 select ok(current_setting('test.vacation_one')::uuid is not null,
-  'Technician can submit a vacation request');
+  'User can submit a vacation request');
 select is((select count(*) from public.vacation_requests), 1::bigint,
-  'Technician can read their own request');
+  'User can read their own request');
 select is((select requester_id from public.vacation_requests
   where id = current_setting('test.vacation_one')::uuid),
   '67000000-0000-4000-8000-000000000005'::uuid,
   'Requester identity comes from the authenticated session');
 select is((select requester_name from public.vacation_requests
-  where id = current_setting('test.vacation_one')::uuid), 'Toni Técnico',
+  where id = current_setting('test.vacation_one')::uuid), 'Toni Usuario',
   'Requester display name is recorded from the trusted profile');
 select is((select start_date from public.vacation_requests
   where id = current_setting('test.vacation_one')::uuid), '2026-12-24'::date,
@@ -56,29 +56,28 @@ select throws_ok(
 select throws_ok(
   $$insert into public.vacation_requests (tenant_id, requester_id, requester_name, start_date, end_date)
     values ('67000000-0000-4000-8000-000000000001',
-      '67000000-0000-4000-8000-000000000005', 'Toni Técnico', current_date, current_date)$$,
+      '67000000-0000-4000-8000-000000000005', 'Toni Usuario', current_date, current_date)$$,
   '42501', null, 'Direct table writes are denied');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000006';
 select is((select count(*) from public.vacation_requests), 0::bigint,
-  'A technician cannot read a colleague request');
+  'A user cannot read a colleague request');
 select set_config('test.vacation_two', public.submit_vacation_request(
   '67000000-0000-4000-8000-000000000001', '2027-01-04', '2027-01-04', ''
 )::text, true);
 select is((select count(*) from public.vacation_requests), 1::bigint,
-  'Second technician sees only their own request');
+  'Second user sees only their own request');
 select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_one')::uuid, 'approved', '')$$,
   '42501', 'No tienes permiso para gestionar vacaciones',
-  'Technician cannot decide vacation requests');
+  'User cannot decide vacation requests');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000007';
-select throws_ok(
-  $$select public.submit_vacation_request(
-    '67000000-0000-4000-8000-000000000001', '2027-01-04', '2027-01-04', '')$$,
-  '42501', 'No tienes permiso para solicitar vacaciones', 'Editor cannot submit as a technician');
+select ok(public.submit_vacation_request(
+  '67000000-0000-4000-8000-000000000001', '2027-01-04', '2027-01-04', '') is not null,
+  'Another user can submit a vacation request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000008';
 select is((select count(*) from public.vacation_requests), 0::bigint,
@@ -91,13 +90,13 @@ select throws_ok(
   'Another company cannot decide a request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000003';
-select is((select count(*) from public.vacation_requests), 2::bigint,
-  'Owner can review company request history');
+select is((select count(*) from public.vacation_requests), 3::bigint,
+  'Admin can review company request history');
 select is(public.decide_vacation_request(
   '67000000-0000-4000-8000-000000000001',
   current_setting('test.vacation_one')::uuid, 'approved', 'Cobertura confirmada'
 ), current_setting('test.vacation_one')::uuid,
-  'Owner can approve a pending request');
+  'Admin can approve a pending request');
 select is((select status from public.vacation_requests
   where id = current_setting('test.vacation_one')::uuid), 'approved',
   'Approval is visible in request history');
@@ -106,7 +105,7 @@ select is((select decided_by from public.vacation_requests
   '67000000-0000-4000-8000-000000000003'::uuid,
   'Decision author is recorded');
 select is((select decided_by_name from public.vacation_requests
-  where id = current_setting('test.vacation_one')::uuid), 'Olga Propietaria',
+  where id = current_setting('test.vacation_one')::uuid), 'Alicia Administradora',
   'Decision author display name is captured');
 select ok((select decided_at is not null from public.vacation_requests
   where id = current_setting('test.vacation_one')::uuid), 'Decision timestamp is recorded');
@@ -150,7 +149,7 @@ select is((select status from public.vacation_requests
   where id = current_setting('test.vacation_one')::uuid), 'approved',
   'Worker can consult their decision');
 select is((select decided_by_name from public.vacation_requests
-  where id = current_setting('test.vacation_one')::uuid), 'Olga Propietaria',
+  where id = current_setting('test.vacation_one')::uuid), 'Alicia Administradora',
   'Worker can identify who decided their request');
 select is((select count(*) from public.vacation_requests), 1::bigint,
   'Worker history remains limited to their own requests');
@@ -158,7 +157,7 @@ select set_config('test.vacation_pending', public.submit_vacation_request(
   '67000000-0000-4000-8000-000000000001', '2027-02-01', '2027-02-02', ''
 )::text, true);
 select ok(current_setting('test.vacation_pending')::uuid is not null,
-  'Technician can submit a new request before the company becomes inactive');
+  'User can submit a new request before the company becomes inactive');
 
 set local role postgres;
 update public.tenants set subscription_status = 'canceled'

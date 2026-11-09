@@ -9,7 +9,7 @@ import {
 import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
-import { TechnicianFrame } from '@/app/technician-frame'
+import { UserFrame } from '@/app/technician-frame'
 import { NoCompanyPage, sessionQuery, welcomeRedirect } from '@/features/auth'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
@@ -24,14 +24,15 @@ const isPublicPath = (path: string) =>
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ context, location }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQuery)
+    // Invalidated sessions must be refreshed before deciding whether to redirect.
+    const session = await context.queryClient.fetchQuery(sessionQuery)
     const path = location.pathname
     if (!session && !isPublicPath(path)) {
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })
     }
     if (session && guestOnlyPaths.includes(path)) throw redirect({ to: '/', replace: true })
     if (
-      session?.role === 'technician' &&
+      session?.role === 'user' &&
       !isPublicPath(path) &&
       path !== '/mi-jornada' &&
       path !== '/mis-vacaciones' &&
@@ -44,7 +45,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       if (destination) throw redirect({ to: destination, replace: true })
     }
     // Screens read the store synchronously, so the data must be loaded before they render.
-    if (session?.role && session.role !== 'technician' && !isPublicPath(path)) {
+    if (session?.role === 'admin' && !isPublicPath(path)) {
       await hydrateStore()
       // Follows the company chosen in the session.
       if (session.tenantId) setActiveTenantId(session.tenantId)
@@ -60,7 +61,7 @@ function RootLayout() {
   const { session } = Route.useRouteContext()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isPublic = isPublicPath(pathname) || pathname === '/nueva-contrasena'
-  const signedIn = Boolean(session?.role && session.role !== 'technician') && !isPublic
+  const signedIn = session?.role === 'admin' && !isPublic
 
   // Picks up changes made elsewhere (a client accepting an estimate) when the user comes back to the tab.
   useEffect(() => {
@@ -81,11 +82,11 @@ function RootLayout() {
   if (isPublic || !session) return <Outlet />
   if (!session.role) return <NoCompanyPage />
   if (pathname === '/bienvenida') return <Outlet />
-  if (session.role === 'technician') {
+  if (session.role === 'user') {
     return (
-      <TechnicianFrame>
+      <UserFrame>
         <Outlet />
-      </TechnicianFrame>
+      </UserFrame>
     )
   }
   return (

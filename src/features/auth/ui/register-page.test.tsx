@@ -31,6 +31,20 @@ vi.mock('@/shared/ui/form', () => ({
       <input placeholder={placeholder} />
     </label>
   ),
+  PasswordField: ({
+    label,
+    placeholder,
+    autoComplete,
+  }: {
+    label: string
+    placeholder?: string
+    autoComplete?: string
+  }) => (
+    <label>
+      {label}
+      <input placeholder={placeholder} autoComplete={autoComplete} />
+    </label>
+  ),
 }))
 
 describe('RegisterPage positioning', () => {
@@ -63,5 +77,6 @@ describe('RegisterPage positioning', () => {
     expect(html).toContain('2 meses gratis pagando al año')
     expect(html).toContain('tus datos siguen ahí en solo lectura')
     expect(html).toContain(`Crear cuenta y probar ${TRIAL_DAYS} días`)
+    expect(html).toContain('autoComplete="new-password"')
   })
 })

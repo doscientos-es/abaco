@@ -1,5 +1,5 @@
 /**
- * Pagos con Redsys. Solo el propietario de la empresa puede usarla.
+ * Pagos con Redsys. Solo los administradores de la empresa pueden usarla.
  *
  * Body: { action: 'checkout', tenantId, plan, interval }  -> { form } (el navegador lo envía a Redsys)
  *    o: { action: 'change', tenantId, plan, interval }    -> cambio de plan en la próxima renovación
@@ -59,8 +59,8 @@ Deno.serve(async (request) => {
     .eq('tenant_id', tenantId)
     .eq('user_id', caller.user.id)
     .maybeSingle()
-  if (mine?.role !== 'owner')
-    return reply(403, { error: 'Solo el propietario puede gestionar el plan' })
+  if (mine?.role !== 'admin')
+    return reply(403, { error: 'Solo un administrador puede gestionar el plan' })
 
   const { data: tenant } = await admin
     .from('tenants')

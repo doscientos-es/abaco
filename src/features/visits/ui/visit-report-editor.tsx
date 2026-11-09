@@ -348,7 +348,7 @@ export function VisitReportEditor({
           closed={closed}
         />
         <VisitPhotosPanel tenantId={tenantId} visitId={visit.id} userId={userId} closed={closed} />
-        {visit.status === 'completed' && ['owner', 'admin'].includes(session?.role ?? '') ? (
+        {visit.status === 'completed' && session?.role === 'admin' ? (
           <VisitReportShares tenantId={tenantId} visitId={visit.id} />
         ) : null}
         <VisitFieldEntriesPanel

@@ -4,5 +4,5 @@ import type { Role } from './permissions'
 export const welcomePendingField = 'welcome_pending'
 
 export function needsWelcome(role: Role | null, metadata: Record<string, unknown>): boolean {
-  return role === 'owner' && metadata[welcomePendingField] === true
+  return role === 'admin' && metadata[welcomePendingField] === true
 }

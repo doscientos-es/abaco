@@ -169,7 +169,7 @@ export function InvoicesPage() {
         </PageHeaderHeading>
       </PageHeader>
 
-      {session?.tenantId && ['owner', 'admin'].includes(session.role ?? '') ? (
+      {session?.tenantId && session.role === 'admin' ? (
         <>
           <InvoiceDrafts tenantId={session.tenantId} />
           <VisitBillingReviews tenantId={session.tenantId} />

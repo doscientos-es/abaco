@@ -34,7 +34,7 @@ vi.mock('@/features/billing', () => ({
 }))
 vi.mock('@/features/auth', () => ({
   sessionQuery: { queryKey: ['auth', 'session'] },
-  useSession: () => ({ tenantId: 'company-1', role: 'owner', needsWelcome: true }),
+  useSession: () => ({ tenantId: 'company-1', role: 'admin', needsWelcome: true }),
   completeWelcome: complete,
   AuthLayout: ({
     title,
@@ -154,7 +154,7 @@ describe('WelcomePage', () => {
   })
 
   it('disables both choices while saving and re-enables them on failure', async () => {
-    let finish: (result: ActionResult) => void = () => {}
+    let finish: (result: ActionResult) => void = () => { }
     complete.mockReturnValue(
       new Promise<ActionResult>((resolve) => {
         finish = resolve
