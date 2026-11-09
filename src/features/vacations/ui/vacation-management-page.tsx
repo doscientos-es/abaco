@@ -192,6 +192,7 @@ export function VacationManagementPage() {
             ) : null}
             {request.status === 'pending' || request.status === 'needs_info' ? (
               <DecisionForm
+                awaitingWorkerInformation={request.status === 'needs_info'}
                 disabled={decide.isPending || requestInfo.isPending}
                 onDecide={(decision, comment) =>
                   decide.mutate({ requestId: request.id, decision, comment })
@@ -207,10 +208,12 @@ export function VacationManagementPage() {
 }
 
 function DecisionForm({
+  awaitingWorkerInformation,
   disabled,
   onDecide,
   onRequestInfo,
 }: {
+  awaitingWorkerInformation: boolean
   disabled: boolean
   onDecide: (decision: 'approved' | 'rejected', comment: string) => void
   onRequestInfo: (comment: string) => void
@@ -220,7 +223,11 @@ function DecisionForm({
   return (
     <div className="border-border space-y-3 border-t pt-3">
       <label htmlFor={commentId} className="grid gap-1.5 text-sm font-medium">
-        <span>Comentario o información que falta</span>
+        <span>
+          {awaitingWorkerInformation
+            ? 'Información adicional que falta'
+            : 'Comentario o información que falta'}
+        </span>
         <Textarea
           id={commentId}
           value={comment}
@@ -229,17 +236,27 @@ function DecisionForm({
           onChange={(event) => setComment(event.target.value)}
         />
       </label>
+      {awaitingWorkerInformation ? (
+        <p className="text-muted-foreground text-sm">
+          La solicitud está esperando respuesta del trabajador. Podrás aprobarla o rechazarla cuando
+          responda.
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
-        <Button isDisabled={disabled} onPress={() => onDecide('approved', comment)}>
-          Aprobar
-        </Button>
-        <Button
-          variant="outline"
-          isDisabled={disabled}
-          onPress={() => onDecide('rejected', comment)}
-        >
-          Rechazar
-        </Button>
+        {!awaitingWorkerInformation ? (
+          <>
+            <Button isDisabled={disabled} onPress={() => onDecide('approved', comment)}>
+              Aprobar
+            </Button>
+            <Button
+              variant="outline"
+              isDisabled={disabled}
+              onPress={() => onDecide('rejected', comment)}
+            >
+              Rechazar
+            </Button>
+          </>
+        ) : null}
         <Button
           variant="outline"
           isDisabled={disabled || !comment.trim()}
