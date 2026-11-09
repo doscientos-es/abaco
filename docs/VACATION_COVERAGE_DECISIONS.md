@@ -1,7 +1,9 @@
 # Validación de reglas de vacaciones y cobertura
 
-Ficha de trabajo para cerrar con el cliente las decisiones necesarias antes de
-automatizar la cobertura de servicios. No completar las respuestas por inferencia.
+Propuesta de valores predeterminados para los casos habituales de vacaciones y
+cobertura en Ábaco. Son recomendaciones para validar con el cliente, no acuerdos
+ni reglas laborales asumidas. Las opciones avanzadas deben ser configurables sin
+hacer más difícil el flujo común.
 
 ## Base confirmada
 
@@ -13,37 +15,55 @@ automatizar la cobertura de servicios. No completar las respuestas por inferenci
 - Las ausencias aprobadas deben considerarse al planificar nuevas asignaciones.
 - Los servicios sin cobertura y las excepciones deben quedar visibles para administración.
 
-## Decisiones que debe responder el cliente
+## Valores predeterminados recomendados para Ábaco
 
-Registrar cada respuesta como **pendiente**, **acordada** o **no aplica**. Añadir
-responsable y fecha cuando se acuerde; dejar la respuesta vacía mientras no se valide.
+| Caso                 | Comportamiento inicial recomendado                                                                                                                                                                            | Motivo                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Fechas solicitadas   | Tratar el intervalo como fechas locales inclusivas para detectar servicios afectados.                                                                                                                         | Evita dudas sobre si el último día solicitado está incluido. No calcula saldo legal de vacaciones. |
+| Solicitud pendiente  | No bloquea la planificación; muestra un aviso de posible ausencia.                                                                                                                                            | Evita reservar personal por solicitudes que aún pueden rechazarse.                                 |
+| Vacaciones aprobadas | Bloquean nuevas asignaciones incompatibles y aparecen en la disponibilidad del trabajador.                                                                                                                    | Evita crear conflictos que la oficina tendría que corregir después.                                |
+| Servicio ya asignado | Al aprobarse la ausencia, se crea un pendiente de cobertura por cada servicio afectado.                                                                                                                       | Hace visible el trabajo que queda por resolver sin confundirlo con una incidencia técnica.         |
+| Candidatos           | Excluir personal inactivo, ausente o con un conflicto confirmado; exigir las competencias marcadas como obligatorias. Si faltan datos de disponibilidad, ubicación o requisitos, mostrar “requiere revisión”. | No presentar como segura una cobertura basada en información incompleta.                           |
+| Orden de propuestas  | Mostrar primero los candidatos elegibles; ordenar de forma informativa por menor carga planificada y explicar los motivos. Administración elige y confirma; el orden nunca asigna por sí solo.                | Ayuda a repartir el trabajo sin convertir una puntuación opaca en una decisión automática.         |
+| Confirmación         | Reasignación manual por administración. Revalidar conflictos y disponibilidad justo antes de guardar.                                                                                                         | Evita asignaciones dobles cuando otras propuestas o cambios se han producido entretanto.           |
+| Sin sustituto        | Mantener la ausencia y dejar el servicio como excepción abierta, visible y asignada a revisión administrativa. No cancelar ni marcar como cubierto automáticamente.                                           | Separa el derecho/decisión de ausencia de la resolución operativa y evita ocultar el riesgo.       |
+| Servicio recurrente  | Si está habilitado, afectar solo las ocurrencias dentro del periodo de ausencia; conservar intacto el resto de la serie.                                                                                      | Limita el cambio a lo solicitado y evita efectos laterales.                                        |
+| Avisos e historial   | Avisar al trabajador de la decisión, al sustituto solo tras confirmar y a administración de excepciones. Preferir aviso dentro de Ábaco; usar correo si está configurado. Registrar autor, fecha y cambios.   | Mantiene a cada persona informada sin exigir que use un teléfono personal.                         |
 
-| Tema                 | Pregunta para validar                                                                                                                                          | Respuesta acordada |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| Aprobación           | ¿Se puede aprobar una solicitud antes de resolver la cobertura? ¿Se permiten aprobaciones parciales o condicionadas?                                           | Pendiente          |
-| Elegibilidad         | ¿Qué requisitos hacen que una persona sea candidata? Confirmar competencias/habilitaciones, disponibilidad y ubicación aplicables.                             | Pendiente          |
-| Horarios             | ¿Cómo se computan duración, desplazamientos, descansos, solapamientos y disponibilidad entre servicios?                                                        | Pendiente          |
-| Carga y prioridad    | ¿Hay límites de carga diaria/semanal? ¿Cómo se priorizan solicitudes o servicios cuando compiten por la misma persona?                                         | Pendiente          |
-| Confirmación         | ¿Administración confirma siempre cada propuesta o se permiten casos de asignación automática? Si se permite, especificar exactamente las reglas y excepciones. | Pendiente          |
-| Sin candidato        | ¿Quién resuelve un servicio sin cobertura y a quién se escala? ¿Qué plazos y estados se requieren?                                                             | Pendiente          |
-| Recurrencia          | ¿Cómo tratar una ausencia que coincide con parte de un servicio recurrente y qué ocurrencias se pueden modificar?                                              | Pendiente          |
-| Permisos e historial | ¿Qué roles pueden solicitar, decidir, confirmar cambios y consultar el historial? ¿Qué comentarios y estados se necesitan?                                     | Pendiente          |
-| Notificaciones       | ¿Quién recibe avisos por solicitud, decisión, sustitución y excepción, y por qué canal?                                                                        | Pendiente          |
+Las fechas se interpretan en la zona horaria de la empresa. No calcular cumplimiento
+de jornada, descansos legales ni desplazamientos hasta que el cliente confirme los
+datos y reglas aplicables. Si no hay información suficiente para descartar un conflicto,
+no presentar al candidato como disponible automáticamente.
+
+## Validaciones que siguen siendo del cliente
+
+Registrar cada respuesta como **pendiente**, **acordada** o **no aplica**, junto con
+responsable y fecha. Los defaults anteriores se mantienen si el cliente no solicita
+un comportamiento distinto y no hay un requisito laboral que lo contradiga.
+
+| Tema                          | Recomendación inicial                                                                                                         | Confirmación necesaria                                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Aprobación frente a cobertura | No rechazar automáticamente una solicitud por falta de sustituto; abrir una excepción para administración.                    | ¿La empresa acepta separar ambas decisiones? Por defecto, la solicitud completa se aprueba o rechaza; ¿necesita aprobación parcial? |
+| Requisitos del puesto         | Solo tratar como obligatorias las competencias configuradas como requisito del servicio.                                      | ¿Qué competencias, habilitaciones y restricciones de ubicación son imprescindibles?                                                 |
+| Horarios y carga              | No inventar límites. Si faltan horas de trabajo, descansos o desplazamientos, señalar que hace falta revisión administrativa. | ¿Qué jornada, descansos, tiempos de desplazamiento y límites máximos deben aplicarse?                                               |
+| Prioridad                     | Orden informativo por menor carga planificada; no asignar automáticamente al primer candidato.                                | ¿Hay reglas de prioridad o reparto distintas para ciertos equipos/servicios?                                                        |
+| Recurrencia                   | Si se incluye en el alcance, cambiar solo las ocurrencias que coinciden con la ausencia.                                      | ¿Hay tipos de servicio recurrente que necesiten otro tratamiento?                                                                   |
+| Escalado y permisos           | Avisar a administración y dejar la excepción abierta; sin plazos ficticios.                                                   | ¿Quién es responsable de resolverla y qué roles pueden aprobar y confirmar?                                                         |
+| Normativa y privacidad        | No asumir cumplimiento legal a partir de esta propuesta de producto.                                                          | Validar con el cliente los requisitos laborales, de privacidad y conservación aplicables.                                           |
 
 ## Registro de acuerdos
 
-| Fecha     | Participantes | Decisiones cerradas | Pendientes / responsable |
-| --------- | ------------- | ------------------- | ------------------------ |
-| Pendiente | Pendiente     | Pendiente           | Pendiente                |
+| Fecha     | Participantes | Defaults aceptados o cambios acordados | Pendientes / responsable |
+| --------- | ------------- | -------------------------------------- | ------------------------ |
+| Pendiente | Pendiente     | Pendiente                              | Pendiente                |
 
 ## Criterio para pasar a implementación
 
-- Las reglas que afectan a la elegibilidad, prioridad y carga están acordadas o
-  explícitamente fuera del primer alcance.
-- Está definido quién confirma una sustitución y quién resuelve los casos sin cobertura.
-- Si se aprueba automatización, sus condiciones y excepciones están escritas y aprobadas.
-- Mientras falte cualquiera de estas aprobaciones, el producto solo presenta propuestas
-  revisables y no modifica asignaciones automáticamente.
+- El cliente ha aceptado estos defaults o ha indicado los cambios que necesita.
+- Se ha definido quién aprueba las vacaciones, confirma sustituciones y resuelve excepciones.
+- Los requisitos legales y laborales aplicables se han validado por separado.
+- La reasignación automática sigue desactivada salvo aprobación expresa de sus criterios,
+  límites y excepciones; el MVP conserva propuestas revisables por administración.
 
 Fichaje, firmas y uso obligatorio de teléfonos personales son decisiones separadas;
 esta ficha no los aprueba ni los incorpora al alcance.
