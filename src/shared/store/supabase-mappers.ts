@@ -2,6 +2,7 @@ import type {
   CatalogItem,
   Client,
   ClientKind,
+  DashboardConfig,
   Estimate,
   EstimateLine,
   Invoice,
@@ -51,6 +52,7 @@ export function tenantFromRow(row: Row): Tenant {
     ...present('iban', row.iban),
     ...present('brandColor', row.brand_color),
     ...present('logoUrl', row.logo_url),
+    ...(isDashboardConfig(row.dashboard_config) ? { dashboardConfig: row.dashboard_config } : {}),
     ...present('emailFromName', row.email_from_name),
     ...present('emailSignature', row.email_signature),
     ...present('invoiceEmailIntro', row.invoice_email_intro),
@@ -77,6 +79,7 @@ export function tenantToRow(tenant: Tenant): Row {
     iban: tenant.iban ?? null,
     brand_color: tenant.brandColor || null,
     logo_url: tenant.logoUrl || null,
+    dashboard_config: tenant.dashboardConfig ?? null,
     email_from_name: tenant.emailFromName || null,
     email_signature: tenant.emailSignature || null,
     invoice_email_intro: tenant.invoiceEmailIntro || null,
@@ -87,6 +90,16 @@ export function tenantToRow(tenant: Tenant): Row {
     default_vat_rate: tenant.defaultVatRate,
     default_deposit_percent: tenant.defaultDepositPercent,
   }
+}
+
+function isDashboardConfig(value: unknown): value is DashboardConfig {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const config = value as Record<string, unknown>
+  return (
+    config.version === 1 &&
+    Array.isArray(config.widgets) &&
+    config.widgets.every((id) => typeof id === 'string')
+  )
 }
 
 export function clientFromRow(row: Row): Client {
