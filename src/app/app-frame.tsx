@@ -38,6 +38,7 @@ type NavTo =
   | '/trabajos'
   | '/contratos'
   | '/agenda'
+  | '/vacaciones'
   | '/catalogo'
   | '/facturas'
   | '/contabilidad'
@@ -65,6 +66,7 @@ const navGroups: NavGroup[] = [
       { to: '/trabajos', label: 'Trabajos', icon: navIcons.work },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
       { to: '/agenda', label: 'Agenda', icon: navIcons.visits },
+      { to: '/vacaciones', label: 'Vacaciones', icon: navIcons.visits },
     ],
   },
   {
@@ -93,6 +95,7 @@ const bottomOrder: NavTo[] = [
   '/trabajos',
   '/contratos',
   '/agenda',
+  '/vacaciones',
   '/facturas',
   '/catalogo',
   '/contabilidad',
@@ -106,6 +109,7 @@ const navPermission: Partial<Record<NavTo, Permission>> = {
   '/trabajos': 'work:read',
   '/contratos': 'contracts:read',
   '/agenda': 'visits:read',
+  '/vacaciones': 'vacations:manage',
   '/facturas': 'invoices:read',
   '/contabilidad': 'ledger:read',
   '/ajustes': 'settings:write',

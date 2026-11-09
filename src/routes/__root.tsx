@@ -34,6 +34,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       session?.role === 'technician' &&
       !isPublicPath(path) &&
       path !== '/mi-jornada' &&
+      path !== '/mis-vacaciones' &&
       path !== '/nueva-contrasena'
     ) {
       throw redirect({ to: '/mi-jornada', replace: true })
