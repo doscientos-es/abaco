@@ -56,8 +56,7 @@ export async function inviteMember(input: {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
     status?: 'invited' | 'added'
   }>('invite-member', { body: input })
-  if (error)
-    return { ok: false, message: await inviteErrorMessage(error.context) }
+  if (error) return { ok: false, message: await inviteErrorMessage(error.context) }
   return data?.status ? { ok: true, status: data.status } : { ok: true }
 }
 
