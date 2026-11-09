@@ -25,10 +25,10 @@ export type NewItem =
   | { kind: 'editContact'; contact: ClientPassport['contacts'][number] }
   | { kind: 'editLocation'; location: ClientPassport['locations'][number] }
   | {
-    kind: 'editPool'
-    asset: ClientPassport['assets'][number]
-    profile: ClientPassport['pools'][number]
-  }
+      kind: 'editPool'
+      asset: ClientPassport['assets'][number]
+      profile: ClientPassport['pools'][number]
+    }
   | { kind: 'editEquipment'; equipment: ClientPassport['equipment'][number] }
   | { kind: 'replaceEquipment'; equipment: ClientPassport['equipment'][number] }
 
@@ -280,7 +280,11 @@ export function CreatePassportItem({
           <SelectField
             label="Uso"
             value={locationKind}
-            options={serviceLocationOnly ? locationKinds.filter((kind) => kind.value !== 'billing') : locationKinds}
+            options={
+              serviceLocationOnly
+                ? locationKinds.filter((kind) => kind.value !== 'billing')
+                : locationKinds
+            }
             onChange={(value) =>
               setLocationKind(value as ClientPassport['locations'][number]['kind'])
             }

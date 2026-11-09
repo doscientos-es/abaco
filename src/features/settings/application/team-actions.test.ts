@@ -7,7 +7,12 @@ vi.mock('@/shared/lib/supabase/client', () => ({
   createBrowserSupabaseClient: () => ({ functions: { invoke } }),
 }))
 
-const input = { tenantId: 'tenant', email: 'ana@example.com', role: 'user' as const, fullName: 'Ana' }
+const input = {
+  tenantId: 'tenant',
+  email: 'ana@example.com',
+  role: 'user' as const,
+  fullName: 'Ana',
+}
 
 describe('inviteMember', () => {
   beforeEach(() => invoke.mockReset())
