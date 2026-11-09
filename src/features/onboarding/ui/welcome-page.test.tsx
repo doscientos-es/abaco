@@ -154,7 +154,7 @@ describe('WelcomePage', () => {
   })
 
   it('disables both choices while saving and re-enables them on failure', async () => {
-    let finish: (result: ActionResult) => void = () => { }
+    let finish: (result: ActionResult) => void = () => {}
     complete.mockReturnValue(
       new Promise<ActionResult>((resolve) => {
         finish = resolve

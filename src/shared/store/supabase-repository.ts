@@ -166,7 +166,8 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
     const nextTenant = tenantToRow(after.tenant)
     const changedSettings = Object.fromEntries(
       Object.entries(nextTenant).filter(
-        ([key, value]) => key !== 'id' && JSON.stringify(previousTenant[key]) !== JSON.stringify(value),
+        ([key, value]) =>
+          key !== 'id' && JSON.stringify(previousTenant[key]) !== JSON.stringify(value),
       ),
     )
     if (Object.keys(changedSettings).length > 0) {

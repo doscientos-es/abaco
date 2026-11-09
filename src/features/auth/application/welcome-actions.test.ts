@@ -22,12 +22,9 @@ describe('welcome eligibility and routing', () => {
     expect(needsWelcome('admin', { [welcomePendingField]: 'true' })).toBe(false)
   })
 
-  it.each<Role | null>(['user', null])(
-    'does not gate a %s account',
-    (role) => {
-      expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
-    },
-  )
+  it.each<Role | null>(['user', null])('does not gate a %s account', (role) => {
+    expect(needsWelcome(role, { [welcomePendingField]: true })).toBe(false)
+  })
 
   it('routes a pending admin to welcome without a redirect loop', () => {
     expect(welcomeRedirect(true, '/')).toBe('/bienvenida')

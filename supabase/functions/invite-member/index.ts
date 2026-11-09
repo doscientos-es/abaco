@@ -62,8 +62,7 @@ Deno.serve(async (request) => {
     .eq('tenant_id', tenantId)
     .eq('user_id', caller.user.id)
     .maybeSingle()
-  if (!mine || mine.role !== 'admin')
-    return reply(403, { error: 'No tienes permiso para invitar' })
+  if (!mine || mine.role !== 'admin') return reply(403, { error: 'No tienes permiso para invitar' })
 
   // 3b. Plan: antes de enviar ningún correo, comprobar que caben más personas.
   const [{ data: tenant }, { count: members }] = await Promise.all([
