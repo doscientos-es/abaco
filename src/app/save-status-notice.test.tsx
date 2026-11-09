@@ -28,6 +28,8 @@ describe('SaveStatusNotice', () => {
     expect(html).toContain('Tus datos guardados siguen a salvo.')
     expect(html).toContain('Este último cambio no se ha guardado')
     expect(html).toContain('href="/ajustes?tab=plan"')
+    expect(html).toContain('Elegir plan')
+    expect(html).not.toContain('Reintentar guardado')
     expect(html).not.toContain('estimate_lines')
     expect(html).not.toContain('border-destructive')
   })

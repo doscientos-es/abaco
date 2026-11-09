@@ -240,16 +240,22 @@ export async function createLocation(input: {
   kind: ServiceLocation['kind']
   address: string
   city: string
-}): Promise<void> {
-  const { error } = await createBrowserSupabaseClient().from('service_locations').insert({
-    tenant_id: input.tenantId,
-    client_id: input.clientId,
-    name: input.name.trim(),
-    kind: input.kind,
-    address: input.address.trim(),
-    city: input.city.trim(),
-  })
-  if (error) throw new Error(error.message)
+}): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('service_locations')
+    .insert({
+      tenant_id: input.tenantId,
+      client_id: input.clientId,
+      name: input.name.trim(),
+      kind: input.kind,
+      address: input.address.trim(),
+      city: input.city.trim(),
+    })
+    .select('id')
+    .single()
+  if (error || typeof data?.id !== 'string')
+    throw new Error(error?.message ?? 'No se pudo obtener la ubicación creada.')
+  return data.id
 }
 
 export async function createPool(
@@ -257,8 +263,8 @@ export async function createPool(
     tenantId: string
     locationId: string
   },
-): Promise<void> {
-  const { error } = await createBrowserSupabaseClient().rpc('create_pool_asset', {
+): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('create_pool_asset', {
     p_tenant_id: input.tenantId,
     p_location_id: input.locationId,
     p_name: input.name.trim(),
@@ -272,7 +278,9 @@ export async function createPool(
     p_lining: input.lining.trim(),
     p_season_notes: input.seasonNotes.trim(),
   })
-  if (error) throw new Error(error.message)
+  if (error || typeof data !== 'string')
+    throw new Error(error?.message ?? 'No se pudo obtener la piscina creada.')
+  return data
 }
 
 export async function createEquipment(

@@ -25,10 +25,10 @@ export type NewItem =
   | { kind: 'editContact'; contact: ClientPassport['contacts'][number] }
   | { kind: 'editLocation'; location: ClientPassport['locations'][number] }
   | {
-      kind: 'editPool'
-      asset: ClientPassport['assets'][number]
-      profile: ClientPassport['pools'][number]
-    }
+    kind: 'editPool'
+    asset: ClientPassport['assets'][number]
+    profile: ClientPassport['pools'][number]
+  }
   | { kind: 'editEquipment'; equipment: ClientPassport['equipment'][number] }
   | { kind: 'replaceEquipment'; equipment: ClientPassport['equipment'][number] }
 
@@ -62,13 +62,15 @@ export function CreatePassportItem({
   onClose,
   onCreated,
   onError,
+  serviceLocationOnly = false,
 }: {
   item: NewItem
   tenantId: string
   clientId: string
   onClose: () => void
-  onCreated: () => void
+  onCreated: (id?: string) => void
   onError: () => void
+  serviceLocationOnly?: boolean
 }) {
   const contact = item.kind === 'editContact' ? item.contact : undefined
   const location = item.kind === 'editLocation' ? item.location : undefined
@@ -146,6 +148,7 @@ export function CreatePassportItem({
     if (invalid || saving) return
     setSaving(true)
     try {
+      let createdId: string | undefined
       if (item.kind === 'editContact') {
         await updateContact(tenantId, item.contact, {
           name,
@@ -176,7 +179,7 @@ export function CreatePassportItem({
           phone,
         })
       } else if (item.kind === 'location') {
-        await createLocation({
+        createdId = await createLocation({
           tenantId,
           clientId,
           name,
@@ -185,7 +188,7 @@ export function CreatePassportItem({
           city,
         })
       } else if (item.kind === 'pool') {
-        await createPool({
+        createdId = await createPool({
           tenantId,
           locationId: item.locationId,
           ...poolFields,
@@ -202,7 +205,7 @@ export function CreatePassportItem({
           ? 'Equipo sustituido; el anterior permanece en el historial'
           : `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} ${editing ? 'actualizado' : 'añadido'}`,
       )
-      onCreated()
+      onCreated(createdId)
     } catch (error) {
       toast.error(
         `No se pudo ${item.kind === 'replaceEquipment' ? 'sustituir' : editing ? 'actualizar' : 'añadir'} el ${label}`,
@@ -277,7 +280,7 @@ export function CreatePassportItem({
           <SelectField
             label="Uso"
             value={locationKind}
-            options={locationKinds}
+            options={serviceLocationOnly ? locationKinds.filter((kind) => kind.value !== 'billing') : locationKinds}
             onChange={(value) =>
               setLocationKind(value as ClientPassport['locations'][number]['kind'])
             }
