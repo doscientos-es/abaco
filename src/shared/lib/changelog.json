@@ -1,6 +1,97 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-09",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add related record creation for clients and locations",
+            "Add vacation notification worker function",
+            "Add unique IDs to milestones in estimate creation",
+            "Add related record creation functionality in contracts page",
+            "Add related record creation functionality in agenda page",
+            "Add related record creation functionality in forms",
+            "Add vacation decision notifications and related UI"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Use UUIDs for default milestones",
+            "Use UUIDs for default milestones"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "5ba754e921d7b36d3e2e18d7cf479164a9cdd6df",
+          "type": "feat",
+          "scope": "agenda",
+          "breaking": false,
+          "description": "Add related record creation for clients and locations"
+        },
+        {
+          "sha": "8052b5a5dd1bf2fe13f85cc46718d466dbe79595",
+          "type": "feat",
+          "scope": "vacation-notification",
+          "breaking": false,
+          "description": "Add vacation notification worker function"
+        },
+        {
+          "sha": "257fde556fe7859caeb3c350fc8284fbebdab2b5",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add unique IDs to milestones in estimate creation"
+        },
+        {
+          "sha": "fed4ece0c8706115250b730a6f0887dc77c1999b",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add related record creation functionality in contracts page"
+        },
+        {
+          "sha": "4308c675bbbcb85dfa4d5e179c2c0a0f909c5dcc",
+          "type": "fix",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Use UUIDs for default milestones"
+        },
+        {
+          "sha": "1c83c038c3d16c2042dd80d96b18edd3cd24bef7",
+          "type": "fix",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Use UUIDs for default milestones"
+        },
+        {
+          "sha": "cbeb35c8f8dba5d001d200905777f8ec8ba1a819",
+          "type": "feat",
+          "scope": "agenda",
+          "breaking": false,
+          "description": "Add related record creation functionality in agenda page"
+        },
+        {
+          "sha": "653266eab9502b345e7b47be891a2472f24f497b",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add related record creation functionality in forms"
+        },
+        {
+          "sha": "e38bb1df142b0a1773c8be7423af43335760dc0c",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add vacation decision notifications and related UI"
+        }
+      ]
+    },
+    {
       "version": "0.0.8",
       "date": "2026-11-09",
       "title": "v0.0.8",

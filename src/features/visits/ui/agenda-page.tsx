@@ -4,7 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
-import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
+import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -213,7 +216,9 @@ export function AgendaPage() {
               setAssetId('')
             }}
           />
-          {related.allowed ? <RelatedCreateButton label="Crear cliente" onPress={() => related.start('client')} /> : null}
+          {related.allowed ? (
+            <RelatedCreateButton label="Crear cliente" onPress={() => related.start('client')} />
+          ) : null}
         </div>
         <div className="flex flex-col gap-1.5">
           <SelectField
@@ -231,7 +236,13 @@ export function AgendaPage() {
               setAssetId('')
             }}
           />
-          {related.allowed && clientId ? <RelatedCreateButton label="Crear ubicación" disabled={related.pending} onPress={() => related.start('location')} /> : null}
+          {related.allowed && clientId ? (
+            <RelatedCreateButton
+              label="Crear ubicación"
+              disabled={related.pending}
+              onPress={() => related.start('location')}
+            />
+          ) : null}
         </div>
         <div className="flex flex-col gap-1.5">
           <SelectField
@@ -245,7 +256,13 @@ export function AgendaPage() {
             ]}
             onChange={setAssetId}
           />
-          {related.allowed && locationId ? <RelatedCreateButton label="Crear piscina" disabled={related.pending} onPress={() => related.start('pool')} /> : null}
+          {related.allowed && locationId ? (
+            <RelatedCreateButton
+              label="Crear piscina"
+              disabled={related.pending}
+              onPress={() => related.start('pool')}
+            />
+          ) : null}
         </div>
         <SelectField
           label="Técnico"

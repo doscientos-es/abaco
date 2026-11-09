@@ -2,6 +2,23 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-09 — Sin publicar
+
+### Nuevas funciones
+
+- Add related record creation for clients and locations
+- Add vacation notification worker function
+- Add unique IDs to milestones in estimate creation
+- Add related record creation functionality in contracts page
+- Add related record creation functionality in agenda page
+- Add related record creation functionality in forms
+- Add vacation decision notifications and related UI
+
+### Correcciones
+
+- Use UUIDs for default milestones
+- Use UUIDs for default milestones
+
 ## 2026-11-09 — v0.0.8
 
 ### Nuevas funciones

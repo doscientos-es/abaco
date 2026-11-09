@@ -22,18 +22,27 @@ Deno.serve(async (request) => {
     if (!job) break
     let channel: 'push' | 'email' | 'skipped' | null = null
     try {
-      const notice = await admin.from('vacation_decision_notifications')
-        .select('recipient_id, tenant_id').eq('id', job.notification_id).maybeSingle()
+      const notice = await admin
+        .from('vacation_decision_notifications')
+        .select('recipient_id, tenant_id')
+        .eq('id', job.notification_id)
+        .maybeSingle()
       if (notice.error) throw notice.error
       if (!notice.data) throw new Error('notice_missing')
-      const membership = await admin.from('memberships').select('user_id')
-        .eq('tenant_id', notice.data.tenant_id).eq('user_id', notice.data.recipient_id).maybeSingle()
+      const membership = await admin
+        .from('memberships')
+        .select('user_id')
+        .eq('tenant_id', notice.data.tenant_id)
+        .eq('user_id', notice.data.recipient_id)
+        .maybeSingle()
       if (membership.error) throw membership.error
       if (!membership.data) {
         channel = 'skipped'
       } else {
         const [subscriptions, profile] = await Promise.all([
-          admin.from('vacation_push_subscriptions').select('id, endpoint, p256dh, auth_key')
+          admin
+            .from('vacation_push_subscriptions')
+            .select('id, endpoint, p256dh, auth_key')
             .eq('user_id', notice.data.recipient_id),
           admin.from('profiles').select('email').eq('id', notice.data.recipient_id).single(),
         ])
@@ -72,10 +81,13 @@ Deno.serve(async (request) => {
       // Do not log recipients, endpoints, payloads or provider responses.
     }
     const finished = await admin.rpc('finish_vacation_notification_job', {
-      p_id: job.notification_id, p_token: job.lease_token, p_channel: channel,
+      p_id: job.notification_id,
+      p_token: job.lease_token,
+      p_channel: channel,
       p_error: channel ? null : 'delivery_failed',
     })
-    if (finished.error || !finished.data) return Response.json({ processed, error: 'finish_failed' }, { status: 502 })
+    if (finished.error || !finished.data)
+      return Response.json({ processed, error: 'finish_failed' }, { status: 502 })
     processed++
   }
   return Response.json({ processed })

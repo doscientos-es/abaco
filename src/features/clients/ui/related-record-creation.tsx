@@ -74,10 +74,14 @@ export function useRelatedRecordCreation({
               else onPoolCreated(id)
             }
             setCreating(null)
-            void queryClient.invalidateQueries({ queryKey: ['work-target-options', tenantId, clientId] })
+            void queryClient.invalidateQueries({
+              queryKey: ['work-target-options', tenantId, clientId],
+            })
           }}
           onError={() => {
-            void queryClient.invalidateQueries({ queryKey: ['work-target-options', tenantId, clientId] })
+            void queryClient.invalidateQueries({
+              queryKey: ['work-target-options', tenantId, clientId],
+            })
           }}
         />
       ) : null}
