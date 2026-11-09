@@ -17,6 +17,94 @@ alter table public.absence_requests
   add constraint absence_requests_date_range_check
     check (end_date is null or start_date <= end_date);
 
+-- The existing visit trigger calls this function. Recreate it after the table
+-- rename so future trigger executions query the new relation and absence types.
+create or replace function app_private.reject_visit_during_approved_vacation() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  visit_timezone text := 'Europe/Madrid';
+  local_start date;
+  local_end date;
+begin
+  if tg_op = 'UPDATE' then
+    if old.assigned_user_id is not null and (
+      new.assigned_user_id is distinct from old.assigned_user_id
+      or new.tenant_id is distinct from old.tenant_id
+    ) then
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended(old.tenant_id::text || ':' || old.assigned_user_id::text, 2)
+      );
+    end if;
+    if new.assigned_user_id is not null and (
+      new.assigned_user_id is distinct from old.assigned_user_id
+      or new.tenant_id is distinct from old.tenant_id
+    ) then
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended(new.tenant_id::text || ':' || new.assigned_user_id::text, 2)
+      );
+    end if;
+    if new.assigned_user_id is not distinct from old.assigned_user_id
+      and new.scheduled_start_at = old.scheduled_start_at
+      and new.scheduled_end_at = old.scheduled_end_at
+      and new.location_id is not distinct from old.location_id then
+      return new;
+    end if;
+  end if;
+  if new.assigned_user_id is null then return new; end if;
+
+  if tg_op = 'INSERT' and new.contract_id is not null then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(new.tenant_id::text, 31)
+    );
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(new.tenant_id::text || ':' || new.assigned_user_id::text, 2)
+  );
+  select coalesce(l.timezone, 'Europe/Madrid') into visit_timezone
+  from public.service_locations l
+  where l.id = new.location_id and l.tenant_id = new.tenant_id;
+  visit_timezone := coalesce(visit_timezone, 'Europe/Madrid');
+  local_start := (new.scheduled_start_at at time zone visit_timezone)::date;
+  local_end := ((new.scheduled_end_at - interval '1 microsecond')
+    at time zone visit_timezone)::date;
+
+  if new.contract_id is not null and exists (
+    select 1 from public.service_contracts sc
+    where sc.id = new.contract_id and sc.tenant_id = new.tenant_id
+      and sc.default_assigned_user_id = new.assigned_user_id
+  ) and exists (
+    select 1 from public.absence_requests r
+    where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
+      and r.status = 'approved' and r.absence_type in ('vacation', 'sick_leave')
+      and r.start_date <= local_end and coalesce(r.end_date, 'infinity'::date) >= local_start
+  ) then
+    -- Contract generation is best-effort per occurrence: keep the occurrence
+    -- and its idempotent issue record, but leave assignment for an admin.
+    insert into public.service_contract_generation_issues (
+      tenant_id, contract_id, rule_id, occurrence_on,
+      schedule_version, kind, detail
+    ) values (
+      new.tenant_id, new.contract_id, new.contract_rule_id,
+      new.contract_occurrence_on, new.contract_schedule_version,
+      'assignment_conflict',
+      'Se ha generado pendiente de asignar: el técnico tiene una ausencia aprobada'
+    ) on conflict do nothing;
+    new.assigned_user_id := null;
+  elsif exists (
+    select 1 from public.absence_requests r
+    where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
+      and r.status = 'approved' and r.absence_type in ('vacation', 'sick_leave')
+      and r.start_date <= local_end and coalesce(r.end_date, 'infinity'::date) >= local_start
+  ) then
+    raise exception 'La persona tiene una ausencia aprobada durante la visita'
+      using errcode = 'P0411';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function app_private.reject_visit_during_approved_vacation()
+  from public, anon, authenticated, service_role;
+
 drop function if exists public.submit_vacation_request(uuid, date, date, text);
 alter table public.vacation_decision_notifications
   drop constraint vacation_decision_notifications_request_id_tenant_id_fkey;
