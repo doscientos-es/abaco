@@ -36,8 +36,8 @@ select is((select end_date from public.absence_requests
 select is((select absence_type from public.absence_requests
   where id = current_setting('test.absence_open')::uuid), 'sick_leave',
   'The requested absence type is recorded');
-select is((select count(*) from public.absence_requests), 1::bigint,
-  'User can read their own request');
+select is((select count(*) from public.absence_requests), 2::bigint,
+  'User can read their vacation and open-ended sick leave requests');
 select is((select requester_id from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid),
   '67000000-0000-4000-8000-000000000005'::uuid,
@@ -99,7 +99,7 @@ select throws_ok(
   'Another company cannot decide a request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000003';
-select is((select count(*) from public.absence_requests), 3::bigint,
+select is((select count(*) from public.absence_requests), 4::bigint,
   'Admin can review company request history');
 select is(public.decide_vacation_request(
   '67000000-0000-4000-8000-000000000001',
@@ -160,7 +160,7 @@ select is((select status from public.absence_requests
 select is((select decided_by_name from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Alicia Administradora',
   'Worker can identify who decided their request');
-select is((select count(*) from public.absence_requests), 1::bigint,
+select is((select count(*) from public.absence_requests), 2::bigint,
   'Worker history remains limited to their own requests');
 select set_config('test.vacation_pending', public.submit_absence_request(
   '67000000-0000-4000-8000-000000000001', 'vacation', '2027-02-01', '2027-02-02', ''
