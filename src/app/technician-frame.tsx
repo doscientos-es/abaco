@@ -1,4 +1,5 @@
 import { Button, Toaster } from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { useSession, useSignOut } from '@/features/auth'
@@ -20,9 +21,17 @@ export function TechnicianFrame({ children }: { children: ReactNode }) {
               {company?.name ?? 'Mi empresa'} · Técnico
             </p>
           </div>
-          <Button variant="outline" onPress={() => void signOut()}>
-            Cerrar sesión
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/mis-vacaciones"
+              className="text-primary rounded-md px-2 py-2 text-sm font-medium underline"
+            >
+              Mis vacaciones
+            </Link>
+            <Button variant="outline" onPress={() => void signOut()}>
+              Cerrar sesión
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>

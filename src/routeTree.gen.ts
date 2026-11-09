@@ -21,10 +21,12 @@ import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
 import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
+import { Route as MisVacacionesRouteImport } from './routes/mis-vacaciones'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as TrabajosRouteImport } from './routes/trabajos'
+import { Route as VacacionesRouteImport } from './routes/vacaciones'
 import { Route as ClientesClientIdRouteImport } from './routes/clientes.$clientId'
 import { Route as ContratosContractIdRouteImport } from './routes/contratos.$contractId'
 import { Route as FacturasIndexRouteImport } from './routes/facturas.index'
@@ -95,6 +97,11 @@ const MiJornadaRoute = MiJornadaRouteImport.update({
   path: '/mi-jornada',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MisVacacionesRoute = MisVacacionesRouteImport.update({
+  id: '/mis-vacaciones',
+  path: '/mis-vacaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
   id: '/nueva-contrasena',
   path: '/nueva-contrasena',
@@ -113,6 +120,11 @@ const RegistroRoute = RegistroRouteImport.update({
 const TrabajosRoute = TrabajosRouteImport.update({
   id: '/trabajos',
   path: '/trabajos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VacacionesRoute = VacacionesRouteImport.update({
+  id: '/vacaciones',
+  path: '/vacaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesClientIdRoute = ClientesClientIdRouteImport.update({
@@ -174,10 +186,12 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
   '/mi-jornada': typeof MiJornadaRoute
+  '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
+  '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
@@ -200,10 +214,12 @@ export interface FileRoutesByTo {
   '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/mi-jornada': typeof MiJornadaRoute
+  '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
+  '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
@@ -228,10 +244,12 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
   '/mi-jornada': typeof MiJornadaRoute
+  '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/trabajos': typeof TrabajosRouteWithChildren
+  '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
@@ -257,10 +275,12 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/facturas'
     | '/mi-jornada'
+    | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
+    | '/vacaciones'
     | '/clientes/$clientId'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
@@ -283,10 +303,12 @@ export interface FileRouteTypes {
     | '/contratos'
     | '/entrar'
     | '/mi-jornada'
+    | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
+    | '/vacaciones'
     | '/clientes/$clientId'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
@@ -310,10 +332,12 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/facturas'
     | '/mi-jornada'
+    | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/recuperar'
     | '/registro'
     | '/trabajos'
+    | '/vacaciones'
     | '/clientes/$clientId'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
@@ -338,10 +362,12 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   FacturasRoute: typeof FacturasRouteWithChildren
   MiJornadaRoute: typeof MiJornadaRoute
+  MisVacacionesRoute: typeof MisVacacionesRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
   TrabajosRoute: typeof TrabajosRouteWithChildren
+  VacacionesRoute: typeof VacacionesRoute
   ITokenRoute: typeof ITokenRoute
   PTokenRoute: typeof PTokenRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
@@ -434,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MiJornadaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mis-vacaciones': {
+      id: '/mis-vacaciones'
+      path: '/mis-vacaciones'
+      fullPath: '/mis-vacaciones'
+      preLoaderRoute: typeof MisVacacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nueva-contrasena': {
       id: '/nueva-contrasena'
       path: '/nueva-contrasena'
@@ -460,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/trabajos'
       fullPath: '/trabajos'
       preLoaderRoute: typeof TrabajosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vacaciones': {
+      id: '/vacaciones'
+      path: '/vacaciones'
+      fullPath: '/vacaciones'
+      preLoaderRoute: typeof VacacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes/$clientId': {
@@ -591,10 +631,12 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   FacturasRoute: FacturasRouteWithChildren,
   MiJornadaRoute: MiJornadaRoute,
+  MisVacacionesRoute: MisVacacionesRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,
   TrabajosRoute: TrabajosRouteWithChildren,
+  VacacionesRoute: VacacionesRoute,
   ITokenRoute: ITokenRoute,
   PTokenRoute: PTokenRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,

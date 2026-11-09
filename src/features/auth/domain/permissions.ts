@@ -43,6 +43,8 @@ export type Permission =
   | 'visits:read'
   | 'visits:write'
   | 'visits:assigned'
+  | 'vacations:request'
+  | 'vacations:manage'
 
 const everything: readonly Permission[] = [
   'estimates:read',
@@ -64,6 +66,8 @@ const everything: readonly Permission[] = [
   'team:manage',
   'visits:read',
   'visits:write',
+  'vacations:request',
+  'vacations:manage',
 ]
 
 const matrix: Record<Role, readonly Permission[]> = {
@@ -85,7 +89,7 @@ const matrix: Record<Role, readonly Permission[]> = {
     'invoices:read',
   ],
   viewer: ['estimates:read', 'clients:read', 'catalog:read', 'work:read'],
-  technician: ['visits:assigned'],
+  technician: ['visits:assigned', 'vacations:request'],
 }
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
