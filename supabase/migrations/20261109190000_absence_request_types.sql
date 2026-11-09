@@ -2,9 +2,12 @@
 alter table public.vacation_requests
   rename to absence_requests;
 alter table public.absence_requests
-  rename constraint vacation_requests_pkey to absence_requests_pkey,
-  rename constraint vacation_requests_requester_id_fkey to absence_requests_requester_id_fkey,
-  rename constraint vacation_requests_decided_by_fkey to absence_requests_decided_by_fkey,
+  rename constraint vacation_requests_pkey to absence_requests_pkey;
+alter table public.absence_requests
+  rename constraint vacation_requests_requester_id_fkey to absence_requests_requester_id_fkey;
+alter table public.absence_requests
+  rename constraint vacation_requests_decided_by_fkey to absence_requests_decided_by_fkey;
+alter table public.absence_requests
   rename constraint vacation_requests_id_tenant_id_key to absence_requests_id_tenant_id_key;
 alter table public.absence_requests
   add column absence_type text not null default 'vacation'
