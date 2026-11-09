@@ -118,10 +118,10 @@ export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <section className="space-y-3" aria-label="Visitas pendientes de facturación">
+    <section className="space-y-2" aria-label="Visitas pendientes de facturación">
       <div>
-        <h2 className="text-lg font-semibold">Visitas pendientes de facturación</h2>
-        <p className="text-muted-foreground text-sm">
+        <h2 className="text-base font-semibold">Visitas pendientes de facturación</h2>
+        <p className="text-muted-foreground text-xs sm:text-sm">
           Decide si la visita está incluida en un contrato o trabajo, o si necesita una factura
           aparte. Esta decisión no emite una factura.
         </p>

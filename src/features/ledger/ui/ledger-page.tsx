@@ -17,9 +17,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   toast,
 } from '@doscientos/ui'
 import { DotsThree, DownloadSimple, Plus, UploadSimple } from '@phosphor-icons/react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
@@ -57,13 +61,54 @@ import { loadAccountingExport } from '../application/accounting-export-actions'
 import { hasProtectedLedgerHistory } from '../application/expense-allocation-actions'
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 import { ExpenseAllocationDialog } from './expense-allocation-dialog'
+import { ledgerTabs, type LedgerTab } from './ledger-tabs'
 import { PaymentCalendar } from './payment-calendar'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const ledgerTabLabels: Record<LedgerTab, string> = {
+  resumen: 'Resumen',
+  apuntes: 'Apuntes',
+  iva: 'IVA trimestral',
+  calendario: 'Cobros y pagos',
+}
+
+function MonthFilter({
+  month,
+  description,
+  onChange,
+}: {
+  month: string
+  description: string
+  onChange: (month: string) => void
+}) {
+  return (
+    <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">Periodo</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
+      </div>
+      <Input
+        type="month"
+        aria-label="Filtrar por mes"
+        className="w-44"
+        value={month}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {month ? (
+        <Button variant="ghost" size="sm" onPress={() => onChange('')}>
+          Ver todos
+        </Button>
+      ) : null}
+    </div>
+  )
+}
 
 export function LedgerPage() {
   const session = useSession()
   const { ledger, tenant } = useTenantData()
+  const navigate = useNavigate()
+  const requestedTab = useSearch({ from: '/contabilidad' }).tab
+  const tab = requestedTab ?? 'resumen'
   const saveStatus = useSaveStatus()
   const [month, setMonth] = useState('')
   const [query, setQuery] = useState('')
@@ -181,12 +226,12 @@ export function LedgerPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Contabilidad</PageHeaderTitle>
           <PageHeaderDescription>
-            Ingresos, gastos e IVA listos para tu gestoría.
+            Ingresos, gastos, IVA y vencimientos en un solo lugar.
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions className="shrink-0">
@@ -243,185 +288,218 @@ export function LedgerPage() {
         </PageHeaderActions>
       </PageHeader>
 
-      <PaymentCalendar
-        key={tenant.id}
-        tenantId={tenant.id}
-        defaultVatRate={tenant.defaultVatRate}
-      />
-
-      <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Periodo</p>
-          <p className="text-muted-foreground text-xs">Filtra indicadores y apuntes por mes</p>
-        </div>
-        <Input
-          type="month"
-          aria-label="Filtrar por mes"
-          className="w-44"
-          value={month}
-          onChange={(event) => setMonth(event.target.value)}
-        />
-        {month ? (
-          <Button variant="ghost" size="sm" onPress={() => setMonth('')}>
-            Ver todos
-          </Button>
-        ) : null}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Ingresos"
-          value={formatEuros(income)}
-          tone="success"
-          icon={fieldIcons.euro}
-          trend={months.map((m) => m.income)}
-        />
-        <StatCard
-          label="Gastos"
-          value={formatEuros(expense)}
-          tone="danger"
-          icon={fieldIcons.tag}
-          trend={months.map((m) => m.expense)}
-        />
-        <StatCard
-          label="Resultado"
-          value={formatEuros(income - expense)}
-          tone={income - expense < 0 ? 'danger' : 'default'}
-          icon={fieldIcons.bank}
-          trend={months.map((m) => m.income - m.expense)}
-        />
-        <StatCard
-          label="IVA a ingresar"
-          value={formatEuros(vat.collected - vat.paid)}
-          hint={`Repercutido ${formatEuros(vat.collected)} · Soportado ${formatEuros(vat.paid)}`}
-          icon={fieldIcons.percent}
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-5">
-        <ChartCard
-          className="lg:col-span-3"
-          title="Ingresos y gastos por mes"
-          description="Últimos 6 meses. Pasa el ratón por un mes para ver el detalle."
+      <Tabs
+        selectedKey={tab}
+        onSelectionChange={(key) =>
+          void navigate({ to: '/contabilidad', search: { tab: key as LedgerTab } })
+        }
+      >
+        <TabsList
+          aria-label="Secciones de contabilidad"
+          className="w-full overflow-x-auto sm:w-fit"
         >
-          <MonthlyBars data={months} />
-        </ChartCard>
-        <ChartCard
-          className="lg:col-span-2"
-          title="En qué gastas"
-          description={month ? 'Gastos del mes elegido.' : 'Gastos por categoría.'}
-        >
-          <Donut
-            data={expenseByCategory}
-            centerLabel="Gastos"
-            empty="Aún no hay gastos"
-            emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
-            emptyIcon={fieldIcons.euro}
+          {ledgerTabs.map((id) => (
+            <TabsTrigger key={id} id={id}>
+              {ledgerTabLabels[id]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {tab === 'calendario' ? (
+        <PaymentCalendar
+          key={tenant.id}
+          tenantId={tenant.id}
+          defaultVatRate={tenant.defaultVatRate}
+        />
+      ) : null}
+
+      {tab === 'resumen' ? (
+        <div className="space-y-5">
+          <MonthFilter
+            month={month}
+            description="Filtra ingresos, gastos e IVA por mes."
+            onChange={setMonth}
           />
-        </ChartCard>
-      </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Ingresos"
+              value={formatEuros(income)}
+              tone="success"
+              icon={fieldIcons.euro}
+              trend={months.map((m) => m.income)}
+            />
+            <StatCard
+              label="Gastos"
+              value={formatEuros(expense)}
+              tone="danger"
+              icon={fieldIcons.tag}
+              trend={months.map((m) => m.expense)}
+            />
+            <StatCard
+              label="Resultado"
+              value={formatEuros(income - expense)}
+              tone={income - expense < 0 ? 'danger' : 'default'}
+              icon={fieldIcons.bank}
+              trend={months.map((m) => m.income - m.expense)}
+            />
+            <StatCard
+              label="IVA a ingresar"
+              value={formatEuros(vat.collected - vat.paid)}
+              hint={`Repercutido ${formatEuros(vat.collected)} · Soportado ${formatEuros(vat.paid)}`}
+              icon={fieldIcons.percent}
+            />
+          </div>
 
-      {quarters.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-5">
+            <ChartCard
+              className="lg:col-span-3"
+              title="Ingresos y gastos por mes"
+              description="Últimos 6 meses. Pasa el ratón por un mes para ver el detalle."
+            >
+              <MonthlyBars data={months} />
+            </ChartCard>
+            <ChartCard
+              className="lg:col-span-2"
+              title="En qué gastas"
+              description={month ? 'Gastos del mes elegido.' : 'Gastos por categoría.'}
+            >
+              <Donut
+                data={expenseByCategory}
+                centerLabel="Gastos"
+                empty="Aún no hay gastos"
+                emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
+                emptyIcon={fieldIcons.euro}
+              />
+            </ChartCard>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === 'iva' ? (
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold">IVA por trimestre (modelo 303)</h2>
               <p className="text-muted-foreground text-sm">
-                Con todos los apuntes, sin filtrar por mes. Un resultado negativo es IVA a
-                compensar.
+                Cálculo con todos los apuntes, independiente del periodo seleccionado en el libro.
+                Un resultado negativo es IVA a compensar.
               </p>
             </div>
-            <Button
-              variant="outline"
-              onPress={() =>
-                downloadTextFile(
-                  `iva-trimestral-${tenant.name.toLowerCase().replace(/\W+/g, '-')}.csv`,
-                  buildQuarterlyVatCsv(quarters),
-                )
-              }
-            >
-              Exportar IVA trimestral
-            </Button>
+            {quarters.length ? (
+              <Button
+                variant="outline"
+                onPress={() =>
+                  downloadTextFile(
+                    `iva-trimestral-${tenant.name.toLowerCase().replace(/\W+/g, '-')}.csv`,
+                    buildQuarterlyVatCsv(quarters),
+                  )
+                }
+              >
+                Exportar IVA trimestral
+              </Button>
+            ) : null}
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Trimestre</TableHead>
-                <TableHead className="text-right">Repercutido</TableHead>
-                <TableHead className="text-right">Soportado</TableHead>
-                <TableHead className="text-right">A ingresar</TableHead>
-                <TableHead className="text-right">Para la gestoría</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quarters.map((q) => (
-                <TableRow key={q.key}>
-                  <TableCell>{q.key}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatEuros(q.collected)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatEuros(q.paid)}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {formatEuros(q.toPay)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      onPress={() =>
-                        downloadTextFile(
-                          `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${q.key}.csv`,
-                          buildLedgerCsv(ledger.filter((e) => quarterKey(e.date) === q.key)),
-                        )
-                      }
-                    >
-                      Libro del trimestre
-                    </Button>
-                  </TableCell>
+          {quarters.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Trimestre</TableHead>
+                  <TableHead className="text-right">Repercutido</TableHead>
+                  <TableHead className="text-right">Soportado</TableHead>
+                  <TableHead className="text-right">A ingresar</TableHead>
+                  <TableHead className="text-right">Para la gestoría</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {quarters.map((q) => (
+                  <TableRow key={q.key}>
+                    <TableCell>{q.key}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatEuros(q.collected)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatEuros(q.paid)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {formatEuros(q.toPay)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        onPress={() =>
+                          downloadTextFile(
+                            `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${q.key}.csv`,
+                            buildLedgerCsv(ledger.filter((e) => quarterKey(e.date) === q.key)),
+                          )
+                        }
+                      >
+                        Libro del trimestre
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="border-border bg-card rounded-xl border p-6 text-center">
+              <p className="font-medium">Aún no hay datos de IVA trimestral</p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Cuando registres ingresos o gastos con IVA aparecerán aquí los trimestres y el CSV
+                para tu gestoría.
+              </p>
+            </div>
+          )}
         </section>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Input
-          type="search"
-          aria-label="Buscar apuntes"
-          maxLength={formLimits.searchQuery}
-          placeholder="Buscar concepto, categoría o fecha…"
-          className="sm:max-w-sm sm:flex-1"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <SelectField
-          label="Filtrar por tipo"
-          hideLabel
-          className="sm:w-44"
-          value={kindFilter}
-          options={[
-            { value: 'all', label: 'Todos los tipos' },
-            { value: 'income', label: 'Ingresos' },
-            { value: 'expense', label: 'Gastos' },
-          ]}
-          onChange={(value) => setKindFilter(value as 'all' | LedgerKind)}
-        />
-        {query || kindFilter !== 'all' ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => {
-              setQuery('')
-              setKindFilter('all')
-            }}
-          >
-            Limpiar filtros
-          </Button>
-        ) : null}
-        <p className="text-muted-foreground text-sm tabular-nums sm:ml-auto">
-          {visible.length} {visible.length === 1 ? 'apunte' : 'apuntes'}
-        </p>
-      </div>
+      {tab === 'apuntes' ? (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-base font-semibold">Libro de apuntes</h2>
+              <p className="text-muted-foreground text-sm">Consulta y filtra ingresos y gastos.</p>
+            </div>
+            <p className="text-muted-foreground text-sm tabular-nums">
+              {visible.length} {visible.length === 1 ? 'apunte' : 'apuntes'}
+            </p>
+          </div>
+          <MonthFilter month={month} description="Filtra el libro por mes." onChange={setMonth} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Input
+              type="search"
+              aria-label="Buscar apuntes"
+              maxLength={formLimits.searchQuery}
+              placeholder="Buscar concepto, categoría o fecha…"
+              className="sm:max-w-sm sm:flex-1"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <SelectField
+              label="Filtrar por tipo"
+              hideLabel
+              className="sm:w-44"
+              value={kindFilter}
+              options={[
+                { value: 'all', label: 'Todos los tipos' },
+                { value: 'income', label: 'Ingresos' },
+                { value: 'expense', label: 'Gastos' },
+              ]}
+              onChange={(value) => setKindFilter(value as 'all' | LedgerKind)}
+            />
+            {query || kindFilter !== 'all' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  setQuery('')
+                  setKindFilter('all')
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <ImportDialog
         open={importOpen}
@@ -512,117 +590,142 @@ export function LedgerPage() {
         />
       </FormDialog>
 
-      <ul className="space-y-3 md:hidden">
-        {pager.pageItems.map((entry) => (
-          <li
-            key={entry.id}
-            className="border-border bg-card space-y-3 rounded-lg border p-4 shadow-(--ui-shadow-hairline)"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-medium">{entry.concept}</p>
-                <p className="text-muted-foreground text-xs">
-                  {entry.date} · {entry.category}
-                </p>
-              </div>
-              <p className="shrink-0 text-right font-semibold tabular-nums">
-                {entry.kind === 'income' && entry.amountCents > 0 ? '+' : '−'}
-                {formatEuros(Math.abs(entry.amountCents))}
-                <span className="text-muted-foreground block text-xs font-normal">
-                  Base {formatEuros(ledgerNetCents(entry))}
-                </span>
-              </p>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <Badge
-                variant={entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'}
-              >
-                {entry.kind === 'income'
-                  ? entry.amountCents < 0
-                    ? 'Reembolso'
-                    : 'Ingreso'
-                  : 'Gasto'}
-              </Badge>
-              {entry.kind === 'expense' && session?.role === 'admin' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  isDisabled={saveStatus.state !== 'saved'}
-                  onPress={() => setToAllocate(entry)}
+      {tab === 'apuntes' ? (
+        visible.length === 0 ? (
+          <div className="border-border bg-card rounded-xl border p-6 text-center" role="status">
+            <p className="font-medium">
+              {ledger.length === 0 ? 'Aún no hay apuntes' : 'No hay apuntes para estos filtros'}
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {ledger.length === 0
+                ? 'Añade un ingreso o gasto para empezar tu libro.'
+                : 'Prueba con otro periodo o limpia la búsqueda y el tipo seleccionado.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <ul className="space-y-3 md:hidden">
+              {pager.pageItems.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="border-border bg-card space-y-3 rounded-lg border p-4 shadow-(--ui-shadow-hairline)"
                 >
-                  Imputar
-                </Button>
-              ) : null}
-              <Button
-                className="text-destructive"
-                variant="ghost"
-                onPress={() => void confirmDeletion(entry)}
-              >
-                Eliminar
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{entry.concept}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {entry.date} · {entry.category}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-right font-semibold tabular-nums">
+                      {entry.kind === 'income' && entry.amountCents > 0 ? '+' : '−'}
+                      {formatEuros(Math.abs(entry.amountCents))}
+                      <span className="text-muted-foreground block text-xs font-normal">
+                        Base {formatEuros(ledgerNetCents(entry))}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge
+                      variant={
+                        entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'
+                      }
+                    >
+                      {entry.kind === 'income'
+                        ? entry.amountCents < 0
+                          ? 'Reembolso'
+                          : 'Ingreso'
+                        : 'Gasto'}
+                    </Badge>
+                    {entry.kind === 'expense' && session?.role === 'admin' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        isDisabled={saveStatus.state !== 'saved'}
+                        onPress={() => setToAllocate(entry)}
+                      >
+                        Imputar
+                      </Button>
+                    ) : null}
+                    <Button
+                      className="text-destructive"
+                      variant="ghost"
+                      onPress={() => void confirmDeletion(entry)}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-      <Table containerClassName="hidden md:block">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Fecha</TableHead>
-            <TableHead>Concepto</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead className="text-right">Base</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-            <TableHead>
-              <span className="sr-only">Acciones</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pager.pageItems.map((entry) => (
-            <TableRow key={entry.id}>
-              <TableCell className="tabular-nums">{entry.date}</TableCell>
-              <TableCell>
-                {entry.concept}
-                <div className="text-muted-foreground text-xs">{entry.category}</div>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant={entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'}
-                >
-                  {entry.kind === 'income'
-                    ? entry.amountCents < 0
-                      ? 'Reembolso'
-                      : 'Ingreso'
-                    : 'Gasto'}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatEuros(ledgerNetCents(entry))}
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
-                {formatEuros(entry.amountCents)}
-              </TableCell>
-              <TableCell className="text-right">
-                {entry.kind === 'expense' && session?.role === 'admin' ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    isDisabled={saveStatus.state !== 'saved'}
-                    onPress={() => setToAllocate(entry)}
-                  >
-                    Imputar
-                  </Button>
-                ) : null}{' '}
-                <Button size="sm" variant="destructive" onPress={() => void confirmDeletion(entry)}>
-                  Eliminar
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <TablePagination controller={pager} noun="apuntes" />
+            <Table containerClassName="hidden md:block">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Concepto</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Base</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Acciones</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pager.pageItems.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="tabular-nums">{entry.date}</TableCell>
+                    <TableCell>
+                      {entry.concept}
+                      <div className="text-muted-foreground text-xs">{entry.category}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'
+                        }
+                      >
+                        {entry.kind === 'income'
+                          ? entry.amountCents < 0
+                            ? 'Reembolso'
+                            : 'Ingreso'
+                          : 'Gasto'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatEuros(ledgerNetCents(entry))}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {formatEuros(entry.amountCents)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.kind === 'expense' && session?.role === 'admin' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          isDisabled={saveStatus.state !== 'saved'}
+                          onPress={() => setToAllocate(entry)}
+                        >
+                          Imputar
+                        </Button>
+                      ) : null}{' '}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onPress={() => void confirmDeletion(entry)}
+                      >
+                        Eliminar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination controller={pager} noun="apuntes" />
+          </>
+        )
+      ) : null}
 
       <ExpenseAllocationDialog entry={toAllocate} onClose={() => setToAllocate(null)} />
 

@@ -11,10 +11,12 @@ export function PriceInput({
   cents,
   onCommit,
   label,
+  className,
 }: {
   cents: number
   onCommit: (cents: number) => void
   label: string
+  className?: string
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   return (
@@ -22,7 +24,7 @@ export function PriceInput({
       aria-label={label}
       maxLength={18}
       inputMode="decimal"
-      className="text-right tabular-nums"
+      className={`text-right tabular-nums ${className ?? ''}`}
       value={draft ?? centsToInput(cents)}
       onFocus={() => setDraft(centsToInput(cents))}
       onChange={(event) => setDraft(event.target.value)}
