@@ -78,7 +78,7 @@ begin
     select 1 from public.vacation_requests r
     where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
       and r.status = 'approved'
-      and r.start_date <= local_end and r.end_date >= local_start
+      and r.start_date <= local_end and coalesce(r.end_date, 'infinity'::date) >= local_start
   ) then
     -- Contract generation is best-effort per occurrence: keep the occurrence
     -- and its idempotent issue record, but leave assignment for an admin.
@@ -96,7 +96,7 @@ begin
     select 1 from public.vacation_requests r
     where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
       and r.status = 'approved'
-      and r.start_date <= local_end and r.end_date >= local_start
+      and r.start_date <= local_end and coalesce(r.end_date, 'infinity'::date) >= local_start
   ) then
     raise exception 'La persona tiene vacaciones aprobadas durante la visita'
       using errcode = 'P0411';
@@ -197,7 +197,7 @@ begin
             and absence.status = 'approved'
             and absence.start_date <= ((v.scheduled_end_at - interval '1 microsecond')
               at time zone coalesce(l.timezone, 'Europe/Madrid'))::date
-            and absence.end_date >= (v.scheduled_start_at
+            and coalesce(absence.end_date, 'infinity'::date) >= (v.scheduled_start_at
               at time zone coalesce(l.timezone, 'Europe/Madrid'))::date
         )
     ), '[]'::jsonb)
@@ -215,7 +215,7 @@ begin
     and v.status in ('scheduled', 'in_progress')
     and v.scheduled_end_at > pg_catalog.now()
     and (v.scheduled_start_at at time zone coalesce(l.timezone, 'Europe/Madrid'))::date
-      <= target.end_date
+      <= coalesce(target.end_date, 'infinity'::date)
     and ((v.scheduled_end_at - interval '1 microsecond')
       at time zone coalesce(l.timezone, 'Europe/Madrid'))::date >= target.start_date
   order by v.scheduled_start_at, v.id;

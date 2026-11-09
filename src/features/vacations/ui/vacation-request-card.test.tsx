@@ -8,6 +8,7 @@ const request: VacationRequest = {
   id: 'request-1',
   requesterId: 'technician-1',
   requesterName: 'Ana Técnica',
+  absenceType: 'vacation',
   startDate: '2026-11-09',
   endDate: '2026-11-10',
   comment: '<script>contenido</script>',

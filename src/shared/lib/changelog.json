@@ -1,6 +1,121 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-09",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Handle signup errors and improve user feedback messages",
+            "Implement listing all office visits with pagination feat(visits): add calendar view for agenda with date navigation feat(visits): validate search parameters for agenda and invoices test(visits): add tests for listing all office visits functionality test(visits): add tests for agenda calendar helpers and search validation",
+            "Show coverage and prevent schedule conflicts",
+            "Add ledger tabs and validation for search parameters",
+            "Improve UI spacing and text styles in invoice drafts",
+            "Add related record creation functionality in agenda page",
+            "Add related record creation functionality in forms",
+            "Add vacation decision notifications and related UI"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Type coverage RPC rows",
+            "Prevent replanning active visits",
+            "Preserve contract generation during leave",
+            "Use UUIDs for default milestones"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "7bcfeb5813307aeabb1396d74647be4978b298fe",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Handle signup errors and improve user feedback messages"
+        },
+        {
+          "sha": "5509d92fe4f352e32739a488c55885218169295c",
+          "type": "fix",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Type coverage RPC rows"
+        },
+        {
+          "sha": "6a64ec17977ea76c482de718af6676954ddc6474",
+          "type": "fix",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Prevent replanning active visits"
+        },
+        {
+          "sha": "9ad6d16c67c4899cb322592aa0e4cf97295b02f3",
+          "type": "fix",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Preserve contract generation during leave"
+        },
+        {
+          "sha": "2a3f98b2ff1041b9646f55985b3f7d16a15d961f",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Implement listing all office visits with pagination feat(visits): add calendar view for agenda with date navigation feat(visits): validate search parameters for agenda and invoices test(visits): add tests for listing all office visits functionality test(visits): add tests for agenda calendar helpers and search validation"
+        },
+        {
+          "sha": "92459c2af13ced65a0227f98f4f2295b709de451",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Show coverage and prevent schedule conflicts"
+        },
+        {
+          "sha": "c131b59b5bedc35ea54c5f75edafa644fb6e45b3",
+          "type": "feat",
+          "scope": "ledger",
+          "breaking": false,
+          "description": "Add ledger tabs and validation for search parameters"
+        },
+        {
+          "sha": "c930897d04be9616bf0ca87dad3022aa829ae74d",
+          "type": "feat",
+          "scope": "invoices",
+          "breaking": false,
+          "description": "Improve UI spacing and text styles in invoice drafts"
+        },
+        {
+          "sha": "4308c675bbbcb85dfa4d5e179c2c0a0f909c5dcc",
+          "type": "fix",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Use UUIDs for default milestones"
+        },
+        {
+          "sha": "cbeb35c8f8dba5d001d200905777f8ec8ba1a819",
+          "type": "feat",
+          "scope": "agenda",
+          "breaking": false,
+          "description": "Add related record creation functionality in agenda page"
+        },
+        {
+          "sha": "653266eab9502b345e7b47be891a2472f24f497b",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add related record creation functionality in forms"
+        },
+        {
+          "sha": "e38bb1df142b0a1773c8be7423af43335760dc0c",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add vacation decision notifications and related UI"
+        }
+      ]
+    },
+    {
       "version": "0.0.8",
       "date": "2026-11-09",
       "title": "v0.0.8",

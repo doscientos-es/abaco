@@ -6,7 +6,12 @@ import { useSession } from '@/features/auth'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
 import { listVacationRequests, submitVacationRequest } from '../application/vacation-actions'
-import { isValidVacationPeriod } from '../domain/vacation-request'
+import {
+  absenceTypeLabels,
+  absenceTypes,
+  isValidAbsencePeriod,
+  type AbsenceType,
+} from '../domain/vacation-request'
 import { VacationDecisionNotices } from './vacation-decision-notices'
 import { VacationRequestCard } from './vacation-request-card'
 
@@ -17,6 +22,7 @@ export function MyVacationRequestsPage() {
   const tenantId = session?.tenantId
   const queryClient = useQueryClient()
   const [requestOpen, setRequestOpen] = useState(false)
+  const [absenceType, setAbsenceType] = useState<AbsenceType>('vacation')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [comment, setComment] = useState('')
@@ -31,11 +37,12 @@ export function MyVacationRequestsPage() {
   const submit = useMutation({
     mutationFn: () => {
       if (!tenantId) throw new Error('Selecciona una empresa.')
-      return submitVacationRequest({ tenantId, startDate, endDate, comment })
+      return submitVacationRequest({ tenantId, absenceType, startDate, endDate, comment })
     },
     onSuccess: async () => {
       setStartDate('')
       setEndDate('')
+      setAbsenceType('vacation')
       setComment('')
       setRequestOpen(false)
       await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
@@ -46,9 +53,10 @@ export function MyVacationRequestsPage() {
   })
 
   function onSubmit() {
-    if (!isValidVacationPeriod(startDate, endDate)) {
+    if (!isValidAbsencePeriod(startDate, endDate)) {
       toast.error('Revisa las fechas', {
-        description: 'La fecha final debe ser igual o posterior a la inicial.',
+        description:
+          'La fecha final debe ser igual o posterior a la inicial, o dejarse vacía si aún no se conoce.',
       })
       return
     }
@@ -58,15 +66,15 @@ export function MyVacationRequestsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Mis vacaciones</h1>
+        <h1 className="text-2xl font-semibold">Mis ausencias</h1>
         <p className="text-muted-foreground text-sm">
-          Envía una solicitud y consulta aquí la decisión de administración.
+          Solicita vacaciones, una baja o un permiso y consulta aquí su estado.
         </p>
       </header>
 
       {tenantId ? <VacationDecisionNotices tenantId={tenantId} /> : null}
 
-      <Button onPress={() => setRequestOpen(true)}>Solicitar vacaciones</Button>
+      <Button onPress={() => setRequestOpen(true)}>Solicitar ausencia</Button>
       <FormDialog
         open={requestOpen}
         onOpenChange={(open) => {
@@ -74,16 +82,31 @@ export function MyVacationRequestsPage() {
           if (!open) {
             setStartDate('')
             setEndDate('')
+            setAbsenceType('vacation')
             setComment('')
           }
         }}
-        title="Solicitar vacaciones"
+        title="Solicitar ausencia"
         submitLabel={submit.isPending ? 'Enviando…' : 'Enviar solicitud'}
         submitDisabled={!tenantId}
         isSubmitting={submit.isPending}
         isDirty={Boolean(startDate || endDate || comment)}
         onSubmit={onSubmit}
       >
+        <label className="grid gap-1.5 text-sm font-medium">
+          Tipo de ausencia
+          <select
+            value={absenceType}
+            onChange={(event) => setAbsenceType(event.target.value as AbsenceType)}
+            className="border-input bg-background min-h-10 rounded-md border px-3"
+          >
+            {absenceTypes.map((type) => (
+              <option key={type} value={type}>
+                {absenceTypeLabels[type]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="grid gap-1.5 text-sm font-medium">
           Desde
           <input
@@ -95,9 +118,8 @@ export function MyVacationRequestsPage() {
           />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Hasta, incluido
+          Hasta, incluido (opcional si no se conoce)
           <input
-            required
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
@@ -121,7 +143,7 @@ export function MyVacationRequestsPage() {
 
       <section className="space-y-3" aria-labelledby="my-vacation-history-title">
         <h2 id="my-vacation-history-title" className="text-lg font-semibold">
-          Historial de solicitudes
+          Mis solicitudes
         </h2>
         {requests.isPending ? <output>Cargando solicitudes…</output> : null}
         {requests.isError ? (

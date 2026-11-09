@@ -10,8 +10,8 @@ import {
   vacationRequestStatusLabels,
   type VacationRequestStatus,
 } from '../domain/vacation-request'
-import { VacationRequestCard } from './vacation-request-card'
 import { VacationCoverage } from './vacation-coverage'
+import { VacationRequestCard } from './vacation-request-card'
 
 type StatusFilter = 'all' | VacationRequestStatus
 
@@ -47,7 +47,7 @@ export function VacationManagementPage() {
       }
       toast.success(
         input.decision === 'approved'
-          ? 'Vacaciones aprobadas · revisa los servicios afectados'
+          ? 'Ausencia aprobada · revisa los servicios afectados'
           : 'Solicitud rechazada',
       )
     },
@@ -66,11 +66,11 @@ export function VacationManagementPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Solicitudes de vacaciones</h1>
+        <h1 className="text-2xl font-semibold">Solicitudes de ausencia</h1>
         <p className="text-muted-foreground text-sm">
-          Revisa cada solicitud y deja constancia de la decisión. Las vacaciones aprobadas
-          bloquearán nuevas visitas en esas fechas; revisa los servicios afectados para organizar
-          su cobertura.
+          Revisa cada solicitud y deja constancia de la decisión. Las vacaciones y bajas aprobadas
+          bloquearán nuevas visitas en esas fechas; revisa los servicios afectados para organizar su
+          cobertura.
         </p>
       </header>
 
@@ -103,7 +103,9 @@ export function VacationManagementPage() {
       <div className="space-y-3">
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
-            {request.status !== 'rejected' && tenantId ? (
+            {request.status !== 'rejected' &&
+            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+            tenantId ? (
               <VacationCoverage
                 tenantId={tenantId}
                 requestId={request.id}

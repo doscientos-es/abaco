@@ -1,7 +1,7 @@
 export type VacationDateRange = Readonly<{
   userId: string
   startDate: string
-  endDate: string
+  endDate: string | null
 }>
 
 function localDateAt(instant: string, timezone: string): string {
@@ -22,5 +22,7 @@ export function visitOverlapsVacation(
   const startDate = localDateAt(visit.startAt, visit.timezone)
   const lastOccupiedInstant = new Date(Date.parse(visit.endAt) - 1).toISOString()
   const endDate = localDateAt(lastOccupiedInstant, visit.timezone)
-  return startDate <= vacation.endDate && endDate >= vacation.startDate
+  return (
+    (vacation.endDate === null || startDate <= vacation.endDate) && endDate >= vacation.startDate
+  )
 }

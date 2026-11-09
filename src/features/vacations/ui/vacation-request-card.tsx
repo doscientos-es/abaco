@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
 import type { ReactNode } from 'react'
 
-import { vacationRequestStatusLabels, type VacationRequest } from '../domain/vacation-request'
+import {
+  absenceTypeLabels,
+  vacationRequestStatusLabels,
+  type VacationRequest,
+} from '../domain/vacation-request'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeZone: 'UTC' }).format(
@@ -31,7 +35,9 @@ export function VacationRequestCard({
         <div className="space-y-1">
           <CardTitle className="text-base">
             {formatDate(request.startDate)}
-            {request.startDate !== request.endDate ? ` – ${formatDate(request.endDate)}` : ''}
+            {request.endDate && request.startDate !== request.endDate
+              ? ` – ${formatDate(request.endDate)}`
+              : ''}
           </CardTitle>
           {showRequester ? (
             <p className="text-muted-foreground text-sm">{request.requesterName}</p>
@@ -45,6 +51,10 @@ export function VacationRequestCard({
         </span>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">{absenceTypeLabels[request.absenceType]}</p>
+        {!request.endDate ? (
+          <p className="text-muted-foreground">Sin fecha de fin confirmada</p>
+        ) : null}
         {request.comment ? (
           <p className="whitespace-pre-line">
             <span className="font-medium">Comentario: </span>

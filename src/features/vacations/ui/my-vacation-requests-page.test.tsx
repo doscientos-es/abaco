@@ -23,8 +23,8 @@ vi.mock('react', async (importOriginal) => {
     useState: (initial: unknown) => {
       const index = mocks.stateIndex++
       if (index === 0) return [mocks.open, mocks.setOpen]
-      if (mocks.dates && index === 1) return ['2026-11-10', vi.fn()]
-      if (mocks.dates && index === 2) return ['2026-11-12', vi.fn()]
+      if (mocks.dates && index === 2) return ['2026-11-10', vi.fn()]
+      if (mocks.dates && index === 3) return ['2026-11-12', vi.fn()]
       return actual.useState(initial)
     },
   }
@@ -77,14 +77,14 @@ describe('Solicitud de vacaciones', () => {
 
   it('muestra el formulario solo después de solicitarlo', () => {
     const html = render()
-    expect(html).toContain('Solicitar vacaciones')
-    expect(html).toContain('Historial de solicitudes')
+    expect(html).toContain('Solicitar ausencia')
+    expect(html).toContain('Mis solicitudes')
     expect(html).not.toContain('Hasta, incluido')
     mocks.onOpen?.()
     expect(mocks.setOpen).toHaveBeenCalledWith(true)
 
     mocks.open = true
-    expect(render()).toContain('Hasta, incluido')
+    expect(render()).toContain('Hasta, incluido (opcional si no se conoce)')
   })
 
   it('permite enviar un periodo válido desde el diálogo', () => {
