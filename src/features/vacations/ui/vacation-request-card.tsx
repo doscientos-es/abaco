@@ -61,6 +61,18 @@ export function VacationRequestCard({
             {request.comment}
           </p>
         ) : null}
+        {request.informationRequestComment ? (
+          <div className="bg-muted/40 rounded-md border p-3">
+            <p className="font-medium">Información solicitada</p>
+            <p className="mt-1 whitespace-pre-line">{request.informationRequestComment}</p>
+            {request.requesterResponseComment ? (
+              <p className="mt-2 whitespace-pre-line">
+                <span className="font-medium">Tu respuesta: </span>
+                {request.requesterResponseComment}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <p className="text-muted-foreground">
           Solicitada el{' '}
           <time dateTime={request.submittedAt}>{formatTimestamp(request.submittedAt)}</time>

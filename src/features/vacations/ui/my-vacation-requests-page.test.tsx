@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   stateIndex: 0,
   open: false,
   dates: false,
+  requests: [] as Array<Record<string, unknown>>,
   setOpen: vi.fn(),
   mutate: vi.fn(),
   invalidate: vi.fn(),
@@ -39,7 +40,7 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
-  useQuery: () => ({ data: [] }),
+  useQuery: () => ({ data: mocks.requests }),
   useMutation: () => ({ isPending: false, mutate: mocks.mutate }),
 }))
 vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'tenant-1' }) }))
@@ -48,7 +49,9 @@ vi.mock('../application/vacation-actions', () => ({
   submitVacationRequest: vi.fn(),
 }))
 vi.mock('./vacation-decision-notices', () => ({ VacationDecisionNotices: () => null }))
-vi.mock('./vacation-request-card', () => ({ VacationRequestCard: () => null }))
+vi.mock('./vacation-request-card', () => ({
+  VacationRequestCard: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+}))
 vi.mock('@/shared/ui/form-dialog', () => ({
   FormDialog: (props: {
     open: boolean
@@ -70,6 +73,7 @@ describe('Solicitud de vacaciones', () => {
   beforeEach(() => {
     mocks.open = false
     mocks.dates = false
+    mocks.requests = []
     mocks.onOpen = null
     mocks.dialog = null
     vi.clearAllMocks()
@@ -96,5 +100,29 @@ describe('Solicitud de vacaciones', () => {
     expect(mocks.dialog?.isDirty).toBe(true)
     mocks.dialog?.onSubmit()
     expect(mocks.mutate).toHaveBeenCalledOnce()
+  })
+
+  it('lets the worker answer an admin information request', () => {
+    mocks.requests = [
+      {
+        id: 'request-info',
+        requesterId: 'worker-1',
+        requesterName: 'Ana',
+        absenceType: 'sick_leave',
+        startDate: '2026-11-10',
+        endDate: null,
+        comment: '',
+        status: 'needs_info',
+        submittedAt: '2026-11-09T10:00:00Z',
+        decisionComment: '',
+        decidedAt: null,
+        decidedByName: '',
+        informationRequestComment: 'Confirma la fecha prevista.',
+        requesterResponseComment: '',
+      },
+    ]
+    const html = render()
+    expect(html).toContain('Tu respuesta')
+    expect(html).toContain('Enviar información')
   })
 })

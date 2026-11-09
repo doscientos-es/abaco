@@ -1,4 +1,4 @@
-export const vacationRequestStatuses = ['pending', 'approved', 'rejected'] as const
+export const vacationRequestStatuses = ['pending', 'needs_info', 'approved', 'rejected'] as const
 
 export const absenceTypes = ['vacation', 'sick_leave', 'personal_leave', 'other'] as const
 
@@ -19,10 +19,13 @@ export type VacationRequest = Readonly<{
   decisionComment: string
   decidedAt: string | null
   decidedByName: string
+  informationRequestComment: string
+  requesterResponseComment: string
 }>
 
 export const vacationRequestStatusLabels: Record<VacationRequestStatus, string> = {
   pending: 'Pendiente',
+  needs_info: 'Necesita información',
   approved: 'Aprobada',
   rejected: 'Rechazada',
 }

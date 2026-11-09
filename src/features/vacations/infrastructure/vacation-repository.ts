@@ -19,6 +19,8 @@ type VacationRequestRow = {
   decision_comment: string
   decided_at: string | null
   decided_by_name: string
+  information_request_comment: string
+  requester_response_comment: string
 }
 
 export type ApprovedVacationRange = {
@@ -81,6 +83,8 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
     decisionComment: row.decision_comment,
     decidedAt: row.decided_at,
     decidedByName: row.decided_by_name,
+    informationRequestComment: row.information_request_comment ?? '',
+    requesterResponseComment: row.requester_response_comment ?? '',
   }
 }
 
@@ -88,7 +92,7 @@ export async function listVacationRequests(tenantId: string): Promise<VacationRe
   const { data, error } = await createBrowserSupabaseClient()
     .from('absence_requests')
     .select(
-      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name',
+      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment',
     )
     .eq('tenant_id', tenantId)
     .order('submitted_at', { ascending: false })
@@ -184,5 +188,35 @@ export async function decideVacationRequest(input: {
   })
   if (error || typeof data !== 'string')
     throw new Error(error?.message ?? 'No se pudo guardar la decisión.')
+  return data
+}
+
+export async function requestAbsenceInformation(input: {
+  tenantId: string
+  requestId: string
+  comment: string
+}): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('request_absence_information', {
+    p_tenant_id: input.tenantId,
+    p_request_id: input.requestId,
+    p_comment: input.comment.trim(),
+  })
+  if (error || typeof data !== 'string')
+    throw new Error(error?.message ?? 'No se pudo solicitar información.')
+  return data
+}
+
+export async function respondAbsenceInformation(input: {
+  tenantId: string
+  requestId: string
+  comment: string
+}): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('respond_absence_information', {
+    p_tenant_id: input.tenantId,
+    p_request_id: input.requestId,
+    p_comment: input.comment.trim(),
+  })
+  if (error || typeof data !== 'string')
+    throw new Error(error?.message ?? 'No se pudo enviar la respuesta.')
   return data
 }

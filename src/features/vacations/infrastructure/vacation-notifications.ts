@@ -3,7 +3,7 @@ import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 export type VacationDecisionNotification = {
   id: string
   requestId: string
-  decision: 'approved' | 'rejected'
+  decision: 'approved' | 'rejected' | 'needs_info'
   createdAt: string
   readAt: string | null
 }

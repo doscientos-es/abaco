@@ -17,6 +17,8 @@ const request: VacationRequest = {
   decisionComment: 'Aprobada por el equipo.',
   decidedAt: '2026-11-02T10:00:00.000Z',
   decidedByName: 'Pol Administración',
+  informationRequestComment: '',
+  requesterResponseComment: '',
 }
 
 describe('VacationRequestCard', () => {

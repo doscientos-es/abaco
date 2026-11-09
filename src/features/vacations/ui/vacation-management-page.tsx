@@ -4,8 +4,14 @@ import { useId, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 
-import { decideVacationRequest, listVacationRequests } from '../application/vacation-actions'
 import {
+  decideVacationRequest,
+  listVacationRequests,
+  requestAbsenceInformation,
+} from '../application/vacation-actions'
+import {
+  absenceTypeLabels,
+  absenceTypes,
   vacationRequestStatuses,
   vacationRequestStatusLabels,
   type VacationRequestStatus,
@@ -22,6 +28,10 @@ export function VacationManagementPage() {
   const tenantId = session?.tenantId
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<StatusFilter>('pending')
+  const [typeFilter, setTypeFilter] = useState<'all' | (typeof absenceTypes)[number]>('all')
+  const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const requests = useQuery({
     queryKey: requestQueryKey(tenantId),
     enabled: Boolean(tenantId),
@@ -54,9 +64,31 @@ export function VacationManagementPage() {
     onError: (error: Error) =>
       toast.error('No se pudo guardar la decisión', { description: error.message }),
   })
+  const requestInfo = useMutation({
+    mutationFn: (input: { requestId: string; comment: string }) => {
+      if (!tenantId) throw new Error('Selecciona una empresa.')
+      return requestAbsenceInformation({ tenantId, ...input })
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
+      await queryClient.invalidateQueries({
+        queryKey: ['vacation-decision-notifications', tenantId],
+      })
+      toast.success('Solicitud enviada al trabajador para completar')
+    },
+    onError: (error: Error) =>
+      toast.error('No se pudo solicitar la información', { description: error.message }),
+  })
 
   const visibleRequests = (requests.data ?? []).filter(
-    (request) => filter === 'all' || request.status === filter,
+    (request) =>
+      (filter === 'all' || request.status === filter) &&
+      (typeFilter === 'all' || request.absenceType === typeFilter) &&
+      request.requesterName
+        .toLocaleLowerCase('es')
+        .includes(search.trim().toLocaleLowerCase('es')) &&
+      (!dateFrom || (request.endDate ?? '9999-12-31') >= dateFrom) &&
+      (!dateTo || request.startDate <= dateTo),
   )
   const countFor = (status: StatusFilter) =>
     status === 'all'
@@ -89,6 +121,52 @@ export function VacationManagementPage() {
         ))}
       </nav>
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="grid gap-1.5 text-sm font-medium">
+          Buscar trabajador
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Nombre del trabajador"
+            className="border-input bg-background min-h-10 rounded-md border px-3"
+          />
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium">
+          Tipo de ausencia
+          <select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
+            className="border-input bg-background min-h-10 rounded-md border px-3"
+          >
+            <option value="all">Todos los tipos</option>
+            {absenceTypes.map((type) => (
+              <option key={type} value={type}>
+                {absenceTypeLabels[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium">
+          Desde
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            className="border-input bg-background min-h-10 rounded-md border px-3"
+          />
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium">
+          Hasta
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            className="border-input bg-background min-h-10 rounded-md border px-3"
+          />
+        </label>
+      </div>
+
       {requests.isPending ? <output>Cargando solicitudes…</output> : null}
       {requests.isError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -97,7 +175,7 @@ export function VacationManagementPage() {
       ) : null}
       {!requests.isPending && !requests.isError && visibleRequests.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border p-4 text-sm">
-          No hay solicitudes en este estado.
+          No hay solicitudes que coincidan con estos filtros.
         </p>
       ) : null}
       <div className="space-y-3">
@@ -112,12 +190,13 @@ export function VacationManagementPage() {
                 approved={request.status === 'approved'}
               />
             ) : null}
-            {request.status === 'pending' ? (
+            {request.status === 'pending' || request.status === 'needs_info' ? (
               <DecisionForm
-                disabled={decide.isPending}
+                disabled={decide.isPending || requestInfo.isPending}
                 onDecide={(decision, comment) =>
                   decide.mutate({ requestId: request.id, decision, comment })
                 }
+                onRequestInfo={(comment) => requestInfo.mutate({ requestId: request.id, comment })}
               />
             ) : null}
           </VacationRequestCard>
@@ -130,16 +209,18 @@ export function VacationManagementPage() {
 function DecisionForm({
   disabled,
   onDecide,
+  onRequestInfo,
 }: {
   disabled: boolean
   onDecide: (decision: 'approved' | 'rejected', comment: string) => void
+  onRequestInfo: (comment: string) => void
 }) {
   const [comment, setComment] = useState('')
   const commentId = useId()
   return (
     <div className="border-border space-y-3 border-t pt-3">
       <label htmlFor={commentId} className="grid gap-1.5 text-sm font-medium">
-        <span>Comentario de decisión (opcional)</span>
+        <span>Comentario o información que falta</span>
         <Textarea
           id={commentId}
           value={comment}
@@ -158,6 +239,13 @@ function DecisionForm({
           onPress={() => onDecide('rejected', comment)}
         >
           Rechazar
+        </Button>
+        <Button
+          variant="outline"
+          isDisabled={disabled || !comment.trim()}
+          onPress={() => onRequestInfo(comment)}
+        >
+          Solicitar información
         </Button>
       </div>
     </div>

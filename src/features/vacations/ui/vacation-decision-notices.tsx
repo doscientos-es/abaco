@@ -21,7 +21,7 @@ export function VacationDecisionNotices({ tenantId }: { tenantId: string }) {
   return (
     <section aria-labelledby="vacation-notices-title" className="space-y-3">
       <h2 id="vacation-notices-title" className="text-lg font-semibold">
-        Avisos de vacaciones
+        Avisos de solicitudes
       </h2>
       <ul className="space-y-2">
         {notices.data.map((notice) => (
@@ -32,7 +32,9 @@ export function VacationDecisionNotices({ tenantId }: { tenantId: string }) {
             <span>
               {notice.decision === 'approved'
                 ? 'Tu solicitud ha sido aprobada.'
-                : 'Tu solicitud ha sido rechazada.'}{' '}
+                : notice.decision === 'rejected'
+                  ? 'Tu solicitud ha sido rechazada.'
+                  : 'Administración necesita información sobre tu solicitud.'}{' '}
               <a className="text-primary underline" href={`#vacation-request-${notice.requestId}`}>
                 Ver solicitud
               </a>

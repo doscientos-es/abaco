@@ -1,11 +1,15 @@
 import { Button, Textarea, toast } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
-import { listVacationRequests, submitVacationRequest } from '../application/vacation-actions'
+import {
+  listVacationRequests,
+  respondAbsenceInformation,
+  submitVacationRequest,
+} from '../application/vacation-actions'
 import {
   absenceTypeLabels,
   absenceTypes,
@@ -50,6 +54,18 @@ export function MyVacationRequestsPage() {
     },
     onError: (error: Error) =>
       toast.error('No se pudo enviar la solicitud', { description: error.message }),
+  })
+  const respond = useMutation({
+    mutationFn: (input: { requestId: string; comment: string }) => {
+      if (!tenantId) throw new Error('Selecciona una empresa.')
+      return respondAbsenceInformation({ tenantId, ...input })
+    },
+    onSuccess: async () => {
+      if (tenantId) await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
+      toast.success('Información enviada a administración')
+    },
+    onError: (error: Error) =>
+      toast.error('No se pudo enviar la información', { description: error.message }),
   })
 
   function onSubmit() {
@@ -195,10 +211,46 @@ export function MyVacationRequestsPage() {
         ) : null}
         {requests.data?.map((request) => (
           <div key={request.id} id={`vacation-request-${request.id}`}>
-            <VacationRequestCard request={request} />
+            <VacationRequestCard request={request}>
+              {request.status === 'needs_info' ? (
+                <InformationResponseForm
+                  disabled={respond.isPending}
+                  onRespond={(comment) => respond.mutate({ requestId: request.id, comment })}
+                />
+              ) : null}
+            </VacationRequestCard>
           </div>
         ))}
       </section>
+    </div>
+  )
+}
+
+function InformationResponseForm({
+  disabled,
+  onRespond,
+}: {
+  disabled: boolean
+  onRespond: (comment: string) => void
+}) {
+  const [comment, setComment] = useState('')
+  const fieldId = useId()
+  return (
+    <div className="border-border space-y-3 border-t pt-3">
+      <label htmlFor={fieldId} className="grid gap-1.5 text-sm font-medium">
+        <span>Tu respuesta</span>
+        <Textarea
+          id={fieldId}
+          value={comment}
+          maxLength={1000}
+          rows={3}
+          onChange={(event) => setComment(event.target.value)}
+          placeholder="Responde solo con la información necesaria para tramitar la solicitud."
+        />
+      </label>
+      <Button isDisabled={disabled || !comment.trim()} onPress={() => onRespond(comment)}>
+        Enviar información
+      </Button>
     </div>
   )
 }

@@ -29,6 +29,7 @@ describe('vacation request domain', () => {
   it('uses clear labels for every persisted decision', () => {
     expect(vacationRequestStatusLabels).toEqual({
       pending: 'Pendiente',
+      needs_info: 'Necesita información',
       approved: 'Aprobada',
       rejected: 'Rechazada',
     })
