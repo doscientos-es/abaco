@@ -1,11 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { describeSubscription, paymentsQuery } from './billing-actions'
+import { describeSubscription, paymentsQuery, subscriptionQuery } from './billing-actions'
 
 const { from, request } = vi.hoisted(() => ({
   from: vi.fn(),
-  request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn() },
+  request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn(), single: vi.fn() },
 }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({
@@ -31,6 +31,24 @@ describe('describeSubscription', () => {
       trialDaysLeft: 0,
     })
     expect(describeSubscription({ ...expired, is_complimentary: false }).canWrite).toBe(false)
+  })
+
+  it('continues to load legacy subscriptions before the courtesy migration', async () => {
+    from.mockReturnValue(request)
+    request.select.mockReturnValue(request)
+    request.eq.mockReturnValue(request)
+    request.single
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: '42703', message: 'column is_complimentary does not exist' },
+      })
+      .mockResolvedValueOnce({ data: expired, error: null })
+    const client = new QueryClient()
+    await expect(client.fetchQuery(subscriptionQuery('legacy'))).resolves.toMatchObject({
+      isComplimentary: false,
+      canWrite: false,
+    })
+    client.clear()
   })
 })
 

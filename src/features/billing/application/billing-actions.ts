@@ -25,6 +25,8 @@ export type Subscription = {
 
 const statuses: readonly string[] = ['trialing', 'active', 'past_due', 'canceled']
 const plans: readonly string[] = ['trial', 'solo', 'team', 'business']
+const subscriptionFields =
+  'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval'
 
 export function describeSubscription(row: {
   plan: string
@@ -72,13 +74,22 @@ export const subscriptionQuery = (tenantId: string) =>
     queryKey: ['subscription', tenantId],
     staleTime: 60_000,
     queryFn: async (): Promise<Subscription> => {
-      const { data, error } = await createBrowserSupabaseClient()
+      const client = createBrowserSupabaseClient()
+      const { data, error } = await client
         .from('tenants')
-        .select(
-          'plan, subscription_status, is_complimentary, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval',
-        )
+        .select(`${subscriptionFields}, is_complimentary`)
         .eq('id', tenantId)
         .single()
+      // Keep the app usable while this schema change is awaiting deployment.
+      if (error?.code === '42703' && error.message.includes('is_complimentary')) {
+        const legacy = await client
+          .from('tenants')
+          .select(subscriptionFields)
+          .eq('id', tenantId)
+          .single()
+        if (legacy.error) throw new Error('No se pudo cargar el plan.')
+        return describeSubscription({ ...legacy.data, is_complimentary: false })
+      }
       if (error) throw new Error('No se pudo cargar el plan.')
       return describeSubscription(data)
     },
