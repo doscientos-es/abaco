@@ -57,11 +57,11 @@ select is((select status from public.absence_requests
 select throws_ok(
   $$select public.submit_absence_request(
     '67000000-0000-4000-8000-000000000001', 'vacation', '2026-12-26', '2026-12-24', '')$$,
-  '22023', 'Datos de vacaciones inválidos', 'Reversed date ranges are rejected');
+  '22023', 'Datos de ausencia inválidos', 'Reversed date ranges are rejected');
 select throws_ok(
   $$select public.submit_absence_request(
     '67000000-0000-4000-8000-000000000001', 'vacation', '2026-12-24', '2026-12-24', repeat('x', 1001))$$,
-  '22023', 'Datos de vacaciones inválidos', 'Oversized request comments are rejected');
+  '22023', 'Datos de ausencia inválidos', 'Oversized request comments are rejected');
 select throws_ok(
   $$insert into public.absence_requests (tenant_id, requester_id, requester_name, start_date, end_date)
     values ('67000000-0000-4000-8000-000000000001',
@@ -80,7 +80,7 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_one')::uuid, 'approved', '')$$,
-  '42501', 'No tienes permiso para gestionar vacaciones',
+  '42501', 'No tienes permiso para gestionar ausencias',
   'User cannot decide vacation requests');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000007';
@@ -95,7 +95,7 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_one')::uuid, 'approved', '')$$,
-  '42501', 'No tienes permiso para gestionar vacaciones',
+  '42501', 'No tienes permiso para gestionar ausencias',
   'Another company cannot decide a request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000003';
@@ -130,7 +130,7 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_two')::uuid, 'pending', '')$$,
-  '22023', 'Decisión de vacaciones inválida', 'Only approval or rejection are valid decisions');
+  '22023', 'Decisión de ausencia inválida', 'Only approval or rejection are valid decisions');
 select throws_ok(
   $$update public.absence_requests set status = 'rejected'
     where id = current_setting('test.vacation_one')::uuid$$,
@@ -177,13 +177,13 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_pending')::uuid, 'approved', '')$$,
-  'P0402', 'La empresa no puede gestionar vacaciones',
+  'P0402', 'La empresa no puede gestionar ausencias',
   'Inactive companies cannot approve vacation requests');
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000005';
 select throws_ok(
   $$select public.submit_absence_request(
     '67000000-0000-4000-8000-000000000001', 'vacation', '2027-03-01', '2027-03-02', '')$$,
-  'P0402', 'La empresa no puede gestionar vacaciones',
+  'P0402', 'La empresa no puede gestionar ausencias',
   'Inactive companies cannot submit vacation requests');
 
 select * from finish();
