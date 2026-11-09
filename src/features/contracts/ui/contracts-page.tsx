@@ -3,10 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
-import {
-  RelatedCreateButton,
-  useRelatedRecordCreation,
-} from '@/features/clients/ui/related-record-creation'
+import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
@@ -75,7 +72,7 @@ export function ContractsPage() {
   })
   const targets = useQuery({
     queryKey: ['work-target-options', tenant.id, clientId],
-    enabled: Boolean(clientId) && !related.pending,
+    enabled: Boolean(clientId) && !related.storePending,
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const technicians = useQuery({
@@ -166,12 +163,7 @@ export function ContractsPage() {
                     setAssetId('')
                   }}
                 />
-                {related.allowed ? (
-                  <RelatedCreateButton
-                    label="Crear cliente"
-                    onPress={() => related.start('client')}
-                  />
-                ) : null}
+                {related.allowed ? <RelatedCreateButton label="Crear cliente" onPress={() => related.start('client')} /> : null}
               </div>
               <div className="flex flex-col gap-1.5">
                 <SelectField
@@ -189,13 +181,7 @@ export function ContractsPage() {
                     setAssetId('')
                   }}
                 />
-                {related.allowed && clientId ? (
-                  <RelatedCreateButton
-                    label="Crear ubicación"
-                    disabled={related.pending}
-                    onPress={() => related.start('location')}
-                  />
-                ) : null}
+                {related.allowed && clientId ? <RelatedCreateButton label="Crear ubicación" disabled={related.pending} onPress={() => related.start('location')} /> : null}
               </div>
               <div className="flex flex-col gap-1.5">
                 <SelectField
@@ -209,13 +195,7 @@ export function ContractsPage() {
                   ]}
                   onChange={setAssetId}
                 />
-                {related.allowed && locationId ? (
-                  <RelatedCreateButton
-                    label="Crear piscina"
-                    disabled={related.pending}
-                    onPress={() => related.start('pool')}
-                  />
-                ) : null}
+                {related.allowed && locationId ? <RelatedCreateButton label="Crear piscina" disabled={related.pending} onPress={() => related.start('pool')} /> : null}
               </div>
               <TextField
                 label="Título"
@@ -274,10 +254,7 @@ export function ContractsPage() {
                 className="sm:col-span-2"
               />
             </div>
-            <Button
-              isDisabled={busy || related.pending || !valid}
-              onPress={() => void createContract()}
-            >
+            <Button isDisabled={busy || related.pending || !valid} onPress={() => void createContract()}>
               {busy ? 'Creando…' : 'Crear borrador'}
             </Button>
           </CardContent>
