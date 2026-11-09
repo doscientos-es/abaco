@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
+import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -64,6 +65,21 @@ export function AgendaPage() {
   const [replanning, setReplanning] = useState<VisitSummary | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const operations = useRef(new Map<string, string>())
+  const related = useRelatedRecordCreation({
+    tenantId: tenant.id,
+    clientId,
+    locationId,
+    onClientCreated: (id) => {
+      setClientId(id)
+      setLocationId('')
+      setAssetId('')
+    },
+    onLocationCreated: (id) => {
+      setLocationId(id)
+      setAssetId('')
+    },
+    onPoolCreated: setAssetId,
+  })
   const to = view === 'week' ? addDays(date, 6) : date
   const queryKey = ['office-visits', tenant.id, date, to, filterTechnicianId, page]
   const visits = useQuery({
@@ -76,7 +92,7 @@ export function AgendaPage() {
   })
   const targets = useQuery({
     queryKey: ['work-target-options', tenant.id, clientId],
-    enabled: Boolean(clientId),
+    enabled: Boolean(clientId) && !related.pending,
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
@@ -116,7 +132,7 @@ export function AgendaPage() {
   }
 
   async function createVisit() {
-    if (busy || !validForm) return
+    if (busy || related.pending || !validForm) return
     const payload = {
       tenantId: tenant.id,
       clientId,
@@ -170,18 +186,20 @@ export function AgendaPage() {
         </Button>
       </div>
       <FormDialog
-        open={createOpen}
+        open={createOpen && !related.creating}
         onOpenChange={(open) => {
           setCreateOpen(open)
           if (!open) resetCreateForm()
         }}
         title="Nueva visita"
         submitLabel={busy ? 'Guardando…' : 'Planificar visita'}
-        submitDisabled={!validForm || !session?.tenantId}
+        submitDisabled={related.pending || !validForm || !session?.tenantId}
         isSubmitting={busy}
         isDirty={isDirty}
         onSubmit={() => void createVisit()}
       >
+        {related.status}
+        <div className="flex flex-col gap-1.5">
         <SelectField
           label="Cliente"
           value={clientId}
@@ -195,6 +213,9 @@ export function AgendaPage() {
             setAssetId('')
           }}
         />
+        {related.allowed ? <RelatedCreateButton label="Crear cliente" onPress={() => related.start('client')} /> : null}
+        </div>
+        <div className="flex flex-col gap-1.5">
         <SelectField
           label="Ubicación"
           value={locationId}
@@ -210,6 +231,9 @@ export function AgendaPage() {
             setAssetId('')
           }}
         />
+        {related.allowed && clientId ? <RelatedCreateButton label="Crear ubicación" disabled={related.pending} onPress={() => related.start('location')} /> : null}
+        </div>
+        <div className="flex flex-col gap-1.5">
         <SelectField
           label="Activo"
           value={assetId}
@@ -221,6 +245,8 @@ export function AgendaPage() {
           ]}
           onChange={setAssetId}
         />
+        {related.allowed && locationId ? <RelatedCreateButton label="Crear piscina" disabled={related.pending} onPress={() => related.start('pool')} /> : null}
+        </div>
         <SelectField
           label="Técnico"
           value={assignedUserId}
@@ -280,6 +306,7 @@ export function AgendaPage() {
           className="sm:col-span-2"
         />
       </FormDialog>
+      {related.dialogs}
 
       <Card>
         <CardHeader>
