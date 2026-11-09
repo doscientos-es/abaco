@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   invalidate: vi.fn(),
   error: vi.fn(),
+  navigate: vi.fn(),
+  search: {} as { view?: 'list' | 'calendar'; date?: string; period?: 'day' | 'week' },
+  calendarView: undefined as string | undefined,
+  calendarValue: undefined as Date | undefined,
   buttons: new Map<string, () => void>(),
   dialog: null as null | { open: boolean; isDirty: boolean; onSubmit: () => void },
 }))
@@ -23,9 +27,9 @@ vi.mock('react', async (importOriginal) => {
     ...actual,
     useState: (initial: unknown) => {
       const index = mocks.stateIndex++
-      if (index === 4) return [mocks.open, mocks.setOpen]
-      if (index === 6 && mocks.valid) return ['client-1', vi.fn()]
-      if (index === 9 && mocks.valid) return ['Revisión', vi.fn()]
+      if (index === 3) return [mocks.open, mocks.setOpen]
+      if (index === 5 && mocks.valid) return ['client-1', vi.fn()]
+      if (index === 8 && mocks.valid) return ['Revisión', vi.fn()]
       return actual.useState(initial)
     },
   }
@@ -43,17 +47,36 @@ vi.mock('@doscientos/ui', () => {
     CardContent: Container,
     CardHeader: Container,
     CardTitle: Container,
+    Calendar: ({ view, value }: { view?: string; value?: Date }) => {
+      mocks.calendarView = view
+      mocks.calendarValue = value
+      return <div>Calendario semanal de visitas</div>
+    },
     toast: { success: vi.fn(), error: mocks.error },
   }
 })
-vi.mock('@phosphor-icons/react', () => ({ PlusIcon: () => null }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data: queryKey[0] === 'work-target-options' ? { locations: [], assets: [] } : [],
   }),
 }))
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mocks.navigate,
+  useSearch: () => mocks.search,
+}))
 vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'tenant-1' }) }))
+vi.mock('@/features/clients/ui/related-record-creation', () => ({
+  RelatedCreateButton: () => null,
+  useRelatedRecordCreation: () => ({
+    pending: false,
+    status: null,
+    allowed: false,
+    creating: false,
+    dialogs: null,
+    start: vi.fn(),
+  }),
+}))
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'tenant-1' }, clients: [] }),
 }))
@@ -92,6 +115,9 @@ describe('AgendaPage: nueva visita', () => {
   beforeEach(() => {
     mocks.open = false
     mocks.valid = false
+    mocks.search = {}
+    mocks.calendarView = undefined
+    mocks.calendarValue = undefined
     mocks.buttons.clear()
     mocks.dialog = null
     vi.clearAllMocks()
@@ -102,7 +128,8 @@ describe('AgendaPage: nueva visita', () => {
   it('muestra la agenda sin el formulario y lo abre mediante el botón', () => {
     const html = render()
     expect(html).toContain('Nueva visita')
-    expect(html).toContain('Visitas planificadas')
+    expect(html).toContain('Lista de visitas')
+    expect(html).toContain('Calendario')
     expect(html).not.toContain('Asunto')
     expect(mocks.dialog?.open).toBe(false)
     mocks.buttons.get('Nueva visita')?.()
@@ -111,6 +138,14 @@ describe('AgendaPage: nueva visita', () => {
     mocks.open = true
     expect(render()).toContain('Asunto')
     expect(mocks.dialog?.open).toBe(true)
+  })
+
+  it('renders the calendar week for the date in the URL', () => {
+    mocks.search = { view: 'calendar', date: '2026-06-10' }
+
+    expect(render()).toContain('Calendario semanal de visitas')
+    expect(mocks.calendarView).toBe('week')
+    expect(mocks.calendarValue?.getDate()).toBe(10)
   })
 
   it('guarda, actualiza la agenda y cierra el diálogo', async () => {
