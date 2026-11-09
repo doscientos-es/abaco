@@ -29,21 +29,18 @@ declare
   local_end date;
 begin
   if tg_op = 'UPDATE' then
-    if old.assigned_user_id is not null and new.assigned_user_id is not null and (
+    if old.assigned_user_id is not null and (
       new.assigned_user_id is distinct from old.assigned_user_id
       or new.tenant_id is distinct from old.tenant_id
-    ) and old.tenant_id::text || ':' || old.assigned_user_id::text
-      < new.tenant_id::text || ':' || new.assigned_user_id::text then
+    ) then
       perform pg_catalog.pg_advisory_xact_lock(
         pg_catalog.hashtextextended(old.tenant_id::text || ':' || old.assigned_user_id::text, 2)
       );
     end if;
-    if old.assigned_user_id is not null and new.assigned_user_id is not null and (
+    if new.assigned_user_id is not null and (
       new.assigned_user_id is distinct from old.assigned_user_id
       or new.tenant_id is distinct from old.tenant_id
-    ) and (old.assigned_user_id is null
-      or new.tenant_id::text || ':' || new.assigned_user_id::text
-        < old.tenant_id::text || ':' || old.assigned_user_id::text) then
+    ) then
       perform pg_catalog.pg_advisory_xact_lock(
         pg_catalog.hashtextextended(new.tenant_id::text || ':' || new.assigned_user_id::text, 2)
       );
@@ -57,6 +54,11 @@ begin
   end if;
   if new.assigned_user_id is null then return new; end if;
 
+  if tg_op = 'INSERT' and new.contract_id is not null then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(new.tenant_id::text, 31)
+    );
+  end if;
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(new.tenant_id::text || ':' || new.assigned_user_id::text, 2)
   );
@@ -68,7 +70,29 @@ begin
   local_end := ((new.scheduled_end_at - interval '1 microsecond')
     at time zone visit_timezone)::date;
 
-  if exists (
+  if new.contract_id is not null and exists (
+    select 1 from public.service_contracts sc
+    where sc.id = new.contract_id and sc.tenant_id = new.tenant_id
+      and sc.default_assigned_user_id = new.assigned_user_id
+  ) and exists (
+    select 1 from public.vacation_requests r
+    where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
+      and r.status = 'approved'
+      and r.start_date <= local_end and r.end_date >= local_start
+  ) then
+    -- Contract generation is best-effort per occurrence: keep the occurrence
+    -- and its idempotent issue record, but leave assignment for an admin.
+    insert into public.service_contract_generation_issues (
+      tenant_id, contract_id, rule_id, occurrence_on,
+      schedule_version, kind, detail
+    ) values (
+      new.tenant_id, new.contract_id, new.contract_rule_id,
+      new.contract_occurrence_on, new.contract_schedule_version,
+      'assignment_conflict',
+      'Se ha generado pendiente de asignar: el técnico tiene vacaciones aprobadas'
+    ) on conflict do nothing;
+    new.assigned_user_id := null;
+  elsif exists (
     select 1 from public.vacation_requests r
     where r.tenant_id = new.tenant_id and r.requester_id = new.assigned_user_id
       and r.status = 'approved'
