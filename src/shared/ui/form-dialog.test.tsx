@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FormDialog } from './form-dialog'
 
 const handlers = vi.hoisted(() => ({
-  close: (_open: boolean) => { },
-  submit: (_event: FormEvent<HTMLFormElement>) => { },
+  close: (_open: boolean) => {},
+  submit: (_event: FormEvent<HTMLFormElement>) => {},
 }))
 
 // Keep the form and its event handlers real; replace portal-only presentation in Node.
