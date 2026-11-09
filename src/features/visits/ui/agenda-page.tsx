@@ -1,9 +1,11 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
 import { PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
+import { listApprovedVacationRanges, visitOverlapsVacation } from '@/features/vacations/application/vacation-actions'
 import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { useTenantData } from '@/shared/store/store'
@@ -85,6 +87,11 @@ export function AgendaPage() {
   const visits = useQuery({
     queryKey,
     queryFn: () => listOfficeVisits(tenant.id, date, to, filterTechnicianId || null, page),
+  })
+  const approvedVacations = useQuery({
+    queryKey: ['approved-vacations', tenant.id, date, to],
+    enabled: session?.role === 'admin',
+    queryFn: () => listApprovedVacationRanges(tenant.id, date, to),
   })
   const technicians = useQuery({
     queryKey: ['technicians', tenant.id],
@@ -360,6 +367,11 @@ export function AgendaPage() {
               No se pudo cargar la agenda: {visits.error.message}
             </p>
           ) : null}
+          {approvedVacations.isError ? (
+            <p role="alert" className="text-destructive text-sm">
+              No se pudieron comprobar las vacaciones aprobadas: {approvedVacations.error.message}
+            </p>
+          ) : null}
           {visits.data?.length === 0 ? (
             <p className="text-muted-foreground text-sm">No hay visitas en este periodo.</p>
           ) : null}
@@ -368,6 +380,24 @@ export function AgendaPage() {
               <li key={visit.id} className="flex flex-wrap justify-between gap-3 py-3 text-sm">
                 <div>
                   <p className="font-medium">{visit.title}</p>
+                  {session?.role === 'admin' && approvedVacations.data?.some((vacation) =>
+                    visitOverlapsVacation(
+                      {
+                        assignedUserId: visit.assigned_user_id ?? null,
+                        startAt: visit.scheduled_start_at,
+                        endAt: visit.scheduled_end_at,
+                        timezone: visit.timezone,
+                      },
+                      vacation,
+                    ),
+                  ) ? (
+                    <p className="text-destructive font-medium">
+                      Vacaciones aprobadas · revisar cobertura en{' '}
+                      <Link to="/vacaciones" className="underline">
+                        Vacaciones
+                      </Link>
+                    </p>
+                  ) : null}
                   <p className="text-muted-foreground">
                     {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
                       timeZone: visit.timezone,

@@ -16,6 +16,35 @@ type VacationRequestRow = {
   decided_by_name: string
 }
 
+export type ApprovedVacationRange = {
+  userId: string
+  startDate: string
+  endDate: string
+}
+
+export type VacationCoverageCandidate = {
+  userId: string
+  label: string
+  workTeamMatch: boolean
+}
+
+export type VacationAffectedVisit = {
+  visitId: string
+  title: string
+  clientName: string
+  locationName: string
+  address: string
+  timezone: string
+  assignedUserId: string
+  assignedUserName: string
+  scheduledStartAt: string
+  scheduledEndAt: string
+  status: 'scheduled' | 'in_progress'
+  updatedAt: string
+  workTeamName: string | null
+  candidates: VacationCoverageCandidate[]
+}
+
 function toVacationRequest(row: VacationRequestRow): VacationRequest {
   return {
     id: row.id,
@@ -42,6 +71,59 @@ export async function listVacationRequests(tenantId: string): Promise<VacationRe
     .order('submitted_at', { ascending: false })
   if (error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
   return ((data ?? []) as VacationRequestRow[]).map(toVacationRequest)
+}
+
+export async function listApprovedVacationRanges(
+  tenantId: string,
+  from: string,
+  to: string,
+): Promise<ApprovedVacationRange[]> {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('vacation_requests')
+    .select('requester_id, start_date, end_date')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+    .lte('start_date', to)
+    .gte('end_date', from)
+  if (error) throw new Error('No se pudieron cargar las ausencias aprobadas.')
+  return (data ?? []).map((row) => ({
+    userId: row.requester_id,
+    startDate: row.start_date,
+    endDate: row.end_date,
+  }))
+}
+
+export async function listVacationCoverage(
+  tenantId: string,
+  requestId: string,
+): Promise<VacationAffectedVisit[]> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('list_vacation_coverage', {
+    p_tenant_id: tenantId,
+    p_request_id: requestId,
+  })
+  if (error) throw new Error('No se pudieron cargar los servicios afectados.')
+  return (data ?? []).map((row) => ({
+    visitId: row.visit_id,
+    title: row.title,
+    clientName: row.client_name,
+    locationName: row.location_name,
+    address: row.address,
+    timezone: row.timezone,
+    assignedUserId: row.assigned_user_id,
+    assignedUserName: row.assigned_user_name,
+    scheduledStartAt: row.scheduled_start_at,
+    scheduledEndAt: row.scheduled_end_at,
+    status: row.status,
+    updatedAt: row.updated_at,
+    workTeamName: row.work_team_name,
+    candidates: Array.isArray(row.candidates)
+      ? row.candidates.map((candidate: Record<string, unknown>) => ({
+          userId: String(candidate.userId),
+          label: String(candidate.label),
+          workTeamMatch: candidate.workTeamMatch === true,
+        }))
+      : [],
+  }))
 }
 
 export async function submitVacationRequest(input: {
