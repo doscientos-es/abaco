@@ -53,10 +53,12 @@ export function MyVacationRequestsPage() {
   })
 
   function onSubmit() {
-    if (!isValidAbsencePeriod(startDate, endDate)) {
+    if (!isValidAbsencePeriod(startDate, endDate) || (absenceType === 'vacation' && !endDate)) {
       toast.error('Revisa las fechas', {
         description:
-          'La fecha final debe ser igual o posterior a la inicial, o dejarse vacía si aún no se conoce.',
+          absenceType === 'vacation'
+            ? 'Para las vacaciones, indica una fecha final igual o posterior a la inicial.'
+            : 'La fecha final debe ser igual o posterior a la inicial, o dejarse vacía si aún no se conoce.',
       })
       return
     }
@@ -64,17 +66,23 @@ export function MyVacationRequestsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Mis ausencias</h1>
-        <p className="text-muted-foreground text-sm">
-          Solicita vacaciones, una baja o un permiso y consulta aquí su estado.
-        </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <header className="bg-muted/30 flex flex-col gap-5 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            Tu tiempo, bien organizado
+          </p>
+          <h1 className="text-2xl font-semibold">Mis ausencias</h1>
+          <p className="text-muted-foreground max-w-xl text-sm">
+            Pide vacaciones, comunica una baja o solicita un permiso. Aquí podrás seguir cada
+            solicitud y consultar la respuesta de administración.
+          </p>
+        </div>
+        <Button onPress={() => setRequestOpen(true)}>Solicitar ausencia</Button>
       </header>
 
       {tenantId ? <VacationDecisionNotices tenantId={tenantId} /> : null}
 
-      <Button onPress={() => setRequestOpen(true)}>Solicitar ausencia</Button>
       <FormDialog
         open={requestOpen}
         onOpenChange={(open) => {
@@ -106,6 +114,9 @@ export function MyVacationRequestsPage() {
               </option>
             ))}
           </select>
+          <span className="text-muted-foreground text-xs font-normal">
+            Elige la opción que mejor describa tu solicitud. No incluyas información médica privada.
+          </span>
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
           Desde
@@ -116,6 +127,11 @@ export function MyVacationRequestsPage() {
             onChange={(event) => setStartDate(event.target.value)}
             className="border-input bg-background min-h-10 rounded-md border px-3"
           />
+          <span className="text-muted-foreground text-xs font-normal">
+            {absenceType === 'vacation'
+              ? 'Indica el primer día que estarás ausente.'
+              : 'Si aún no conoces cuándo empieza, consulta con administración antes de enviarla.'}
+          </span>
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
           Hasta, incluido
@@ -127,26 +143,45 @@ export function MyVacationRequestsPage() {
             onChange={(event) => setEndDate(event.target.value)}
             className="border-input bg-background min-h-10 rounded-md border px-3"
           />
+          <span className="text-muted-foreground text-xs font-normal">
+            {absenceType === 'sick_leave'
+              ? 'Si todavía no sabes cuándo volverás, puedes dejar esta fecha vacía.'
+              : 'La fecha final se incluye en la solicitud.'}
+          </span>
         </label>
         <label
           htmlFor="vacation-request-comment"
           className="grid gap-1.5 text-sm font-medium sm:col-span-2"
         >
-          <span>Comentario (opcional)</span>
+          <span>Comentario para administración (opcional)</span>
           <Textarea
             id="vacation-request-comment"
             value={comment}
             maxLength={1000}
             rows={3}
             onChange={(event) => setComment(event.target.value)}
+            placeholder="Añade solo la información necesaria para tramitar la solicitud."
           />
         </label>
       </FormDialog>
 
       <section className="space-y-3" aria-labelledby="my-vacation-history-title">
-        <h2 id="my-vacation-history-title" className="text-lg font-semibold">
-          Mis solicitudes
-        </h2>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="my-vacation-history-title" className="text-lg font-semibold">
+              Mis solicitudes
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Revisa su estado y la respuesta de administración.
+            </p>
+          </div>
+          {requests.data?.length ? (
+            <p className="text-muted-foreground text-sm">
+              {requests.data.filter((request) => request.status === 'pending').length} pendientes ·{' '}
+              {requests.data.filter((request) => request.status === 'approved').length} aprobadas
+            </p>
+          ) : null}
+        </div>
         {requests.isPending ? <output>Cargando solicitudes…</output> : null}
         {requests.isError ? (
           <p role="alert" className="text-destructive text-sm">

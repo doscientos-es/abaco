@@ -77,6 +77,7 @@ describe('Solicitud de vacaciones', () => {
 
   it('muestra el formulario solo después de solicitarlo', () => {
     const html = render()
+    expect(html).toContain('Tu tiempo, bien organizado')
     expect(html).toContain('Solicitar ausencia')
     expect(html).toContain('Mis solicitudes')
     expect(html).not.toContain('Hasta, incluido')
@@ -85,6 +86,7 @@ describe('Solicitud de vacaciones', () => {
 
     mocks.open = true
     expect(render()).toContain('Hasta, incluido (opcional si no se conoce)')
+    expect(render()).toContain('No incluyas información médica privada')
   })
 
   it('permite enviar un periodo válido desde el diálogo', () => {
