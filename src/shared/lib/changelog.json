@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.8",
+      "date": "2026-11-09",
+      "title": "v0.0.8",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Enhance subscription query to handle schema changes"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "edc0f7a4e41bc64d7cbb86d14f450db12d8f2c67",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Enhance subscription query to handle schema changes"
+        }
+      ]
+    },
+    {
       "version": "0.0.7",
       "date": "2026-11-09",
       "title": "v0.0.7",
