@@ -1,16 +1,56 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { paymentsQuery } from './billing-actions'
+import { describeSubscription, paymentsQuery, subscriptionQuery } from './billing-actions'
 
 const { from, request } = vi.hoisted(() => ({
   from: vi.fn(),
-  request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn() },
+  request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn(), single: vi.fn() },
 }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({
   createBrowserSupabaseClient: () => ({ from }),
 }))
+
+describe('describeSubscription', () => {
+  const expired = {
+    plan: 'business',
+    subscription_status: 'trialing',
+    trial_ends_at: '2020-01-01T00:00:00Z',
+    billing_interval: null,
+    current_period_end: null,
+    cancel_at_period_end: false,
+    next_plan: null,
+    next_interval: null,
+  }
+
+  it('allows an expired courtesy tenant to write without reporting trial days', () => {
+    expect(describeSubscription({ ...expired, is_complimentary: true })).toMatchObject({
+      isComplimentary: true,
+      canWrite: true,
+      trialDaysLeft: 0,
+    })
+    expect(describeSubscription({ ...expired, is_complimentary: false }).canWrite).toBe(false)
+  })
+
+  it('continues to load legacy subscriptions before the courtesy migration', async () => {
+    from.mockReturnValue(request)
+    request.select.mockReturnValue(request)
+    request.eq.mockReturnValue(request)
+    request.single
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: '42703', message: 'column is_complimentary does not exist' },
+      })
+      .mockResolvedValueOnce({ data: expired, error: null })
+    const client = new QueryClient()
+    await expect(client.fetchQuery(subscriptionQuery('legacy'))).resolves.toMatchObject({
+      isComplimentary: false,
+      canWrite: false,
+    })
+    client.clear()
+  })
+})
 
 describe('paymentsQuery', () => {
   let client: QueryClient

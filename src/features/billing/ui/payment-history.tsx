@@ -40,7 +40,7 @@ function downloadReceipt(payment: Payment, companyName: string) {
   downloadTextFile(`justificante-abaco-${payment.order}.html`, html, 'text/html')
 }
 
-/** Shows the company's plan, next payment and payment history. Admins only. */
+/** What the company has contracted, what it has paid so far and what comes next. Owner only. */
 export function PaymentHistory({
   tenantId,
   companyName,
@@ -57,8 +57,11 @@ export function PaymentHistory({
     fetchStatus,
     refetch,
   } = useQuery(paymentsQuery(tenantId))
-  const onTrial = subscription?.status === 'trialing'
-  const active = subscription && ['active', 'past_due'].includes(subscription.status)
+  const onTrial = !subscription?.isComplimentary && subscription?.status === 'trialing'
+  const active =
+    subscription &&
+    !subscription.isComplimentary &&
+    ['active', 'past_due'].includes(subscription.status)
   const nextPlan = planInfo(subscription?.nextPlan ?? subscription?.plan ?? 'trial')
   const nextInterval = subscription?.nextInterval ?? subscription?.interval
   const nextCents =
@@ -77,9 +80,11 @@ export function PaymentHistory({
         <div className="border-border rounded-lg border p-3">
           <dt className="text-muted-foreground text-xs">Plan contratado</dt>
           <dd className="font-medium">
-            {active && current
-              ? `${current.name} · ${subscription.interval === 'year' ? 'anual' : 'mensual'}`
-              : 'Ninguno todavía'}
+            {subscription?.isComplimentary
+              ? 'Cortesía'
+              : active && current
+                ? `${current.name} · ${subscription.interval === 'year' ? 'anual' : 'mensual'}`
+                : 'Ninguno todavía'}
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">

@@ -16,6 +16,7 @@ vi.mock('../application/billing-actions', () => ({
 const subscription: Subscription = {
   plan: 'trial',
   status: 'trialing',
+  isComplimentary: false,
   trialEndsAt: new Date('2026-11-01T12:00:00Z'),
   interval: null,
   currentPeriodEnd: null,
@@ -59,6 +60,14 @@ describe('PaymentHistory', () => {
     expect(html).toContain('1 de noviembre de 2026')
     expect(html).toContain('No se cobra automáticamente al terminar.')
     expect(html).not.toContain('Próximo cobro')
+  })
+
+  it('shows courtesy and no upcoming charge even with old trial data', () => {
+    query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
+    const html = render({ ...subscription, isComplimentary: true })
+    expect(html).toContain('Cortesía')
+    expect(html).toContain('Ninguno')
+    expect(html).not.toContain('Fin de la prueba gratuita')
   })
 
   it('keeps lifetime paid totals out of the plan summary', () => {

@@ -127,6 +127,24 @@ export function BillingSection({
   const recommended = onTrial ? selectedPlan?.id : undefined
   const recommendedScale = onTrial && selectedPlan === null
 
+  if (subscription?.isComplimentary) {
+    return (
+      <section className="border-border bg-card rounded-xl border px-5 py-4">
+        <h2 className="text-sm font-semibold">Plan y facturación</h2>
+        <p className="text-muted-foreground text-sm">
+          Acceso de cortesía: sin caducidad ni renovaciones automáticas.
+        </p>
+        <div className="mt-5">
+          <PaymentHistory
+            tenantId={tenantId}
+            companyName={companyName}
+            subscription={subscription}
+          />
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="border-border bg-card rounded-xl border">
       <div className="border-border border-b px-5 py-4">

@@ -1,6 +1,79 @@
 {
   "releases": [
     {
+      "version": "0.0.8",
+      "date": "2026-11-09",
+      "title": "v0.0.8",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Enhance subscription query to handle schema changes"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "edc0f7a4e41bc64d7cbb86d14f450db12d8f2c67",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Enhance subscription query to handle schema changes"
+        }
+      ]
+    },
+    {
+      "version": "0.0.7",
+      "date": "2026-11-09",
+      "title": "v0.0.7",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add plan selection and user role management features",
+            "Add tests for LinesEditor component functionality",
+            "Add company-wide dashboard customization"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Address PR review findings"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "a2e15e9458c5c3c3bc9d7d3985a58537dcd1695a",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add plan selection and user role management features"
+        },
+        {
+          "sha": "e5205afeb99ff209bbb5d11bde43323b41286963",
+          "type": "fix",
+          "scope": "dashboard",
+          "breaking": false,
+          "description": "Address PR review findings"
+        },
+        {
+          "sha": "cb2bc198188589f60fd6b668d27e81a5c86de8a8",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add tests for LinesEditor component functionality"
+        },
+        {
+          "sha": "f5eca9648c869bbb11b553c220dc1272af0153cd",
+          "type": "feat",
+          "scope": "dashboard",
+          "breaking": false,
+          "description": "Add company-wide dashboard customization"
+        }
+      ]
+    },
+    {
       "version": "0.0.6",
       "date": "2026-11-09",
       "title": "v0.0.6",

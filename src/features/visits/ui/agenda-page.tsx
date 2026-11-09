@@ -92,7 +92,7 @@ export function AgendaPage() {
   })
   const targets = useQuery({
     queryKey: ['work-target-options', tenant.id, clientId],
-    enabled: Boolean(clientId) && !related.storePending,
+    enabled: Boolean(clientId) && !related.pending,
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)

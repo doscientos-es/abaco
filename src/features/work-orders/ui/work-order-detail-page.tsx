@@ -80,6 +80,8 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
   })
   const [changing, setChanging] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [planOpened, setPlanOpened] = useState(false)
+  const [planVisible, setPlanVisible] = useState(false)
   const pendingOperation = useRef<{ status: WorkOrderStatus; id: string } | null>(null)
 
   async function changeStatus(status: WorkOrderStatus) {
@@ -317,15 +319,31 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
       {can(session?.role, 'work:write') &&
       order.status !== 'completed' &&
       order.status !== 'canceled' ? (
-        <WorkPlanForm
-          key={order.updated_at}
-          tenantId={tenant.id}
-          order={order}
-          onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey })
-            await queryClient.invalidateQueries({ queryKey: ['work-orders', tenant.id] })
-          }}
-        />
+        <div className="space-y-4">
+          <Button
+            variant="outline"
+            onPress={() => {
+              setPlanOpened(true)
+              setPlanVisible((visible) => !visible)
+            }}
+          >
+            {planVisible ? 'Ocultar planificación' : 'Editar planificación'}
+          </Button>
+          {planOpened ? (
+            <div hidden={!planVisible}>
+              <WorkPlanForm
+                key={order.updated_at}
+                tenantId={tenant.id}
+                order={order}
+                onSaved={async () => {
+                  await queryClient.invalidateQueries({ queryKey })
+                  await queryClient.invalidateQueries({ queryKey: ['work-orders', tenant.id] })
+                  setPlanVisible(false)
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <WorkStructurePanel

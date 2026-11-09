@@ -2,6 +2,24 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-09 — v0.0.8
+
+### Nuevas funciones
+
+- Enhance subscription query to handle schema changes
+
+## 2026-11-09 — v0.0.7
+
+### Nuevas funciones
+
+- Add plan selection and user role management features
+- Add tests for LinesEditor component functionality
+- Add company-wide dashboard customization
+
+### Correcciones
+
+- Address PR review findings
+
 ## 2026-11-09 — v0.0.6
 
 ### Nuevas funciones

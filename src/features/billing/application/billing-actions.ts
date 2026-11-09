@@ -9,6 +9,7 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type Subscription = {
   plan: Plan
   status: SubscriptionStatus
+  isComplimentary: boolean
   trialEndsAt: Date
   interval: Interval | null
   currentPeriodEnd: Date | null
@@ -24,10 +25,13 @@ export type Subscription = {
 
 const statuses: readonly string[] = ['trialing', 'active', 'past_due', 'canceled']
 const plans: readonly string[] = ['trial', 'solo', 'team', 'business']
+const subscriptionFields =
+  'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval'
 
 export function describeSubscription(row: {
   plan: string
   subscription_status: string
+  is_complimentary: boolean
   trial_ends_at: string
   billing_interval: string | null
   current_period_end: string | null
@@ -43,6 +47,7 @@ export function describeSubscription(row: {
   return {
     plan: (plans.includes(row.plan) ? row.plan : 'trial') as Plan,
     status,
+    isComplimentary: row.is_complimentary,
     trialEndsAt,
     interval:
       row.billing_interval === 'year' || row.billing_interval === 'month'
@@ -56,10 +61,11 @@ export function describeSubscription(row: {
         : null,
     nextInterval:
       row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
-    canWrite: trialActive || status === 'active' || status === 'past_due',
-    trialDaysLeft: trialActive
-      ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
-      : 0,
+    canWrite: row.is_complimentary || trialActive || status === 'active' || status === 'past_due',
+    trialDaysLeft:
+      trialActive && !row.is_complimentary
+        ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
+        : 0,
   }
 }
 
@@ -68,13 +74,22 @@ export const subscriptionQuery = (tenantId: string) =>
     queryKey: ['subscription', tenantId],
     staleTime: 60_000,
     queryFn: async (): Promise<Subscription> => {
-      const { data, error } = await createBrowserSupabaseClient()
+      const client = createBrowserSupabaseClient()
+      const { data, error } = await client
         .from('tenants')
-        .select(
-          'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval',
-        )
+        .select(`${subscriptionFields}, is_complimentary`)
         .eq('id', tenantId)
         .single()
+      // Keep the app usable while this schema change is awaiting deployment.
+      if (error?.code === '42703' && error.message.includes('is_complimentary')) {
+        const legacy = await client
+          .from('tenants')
+          .select(subscriptionFields)
+          .eq('id', tenantId)
+          .single()
+        if (legacy.error) throw new Error('No se pudo cargar el plan.')
+        return describeSubscription({ ...legacy.data, is_complimentary: false })
+      }
       if (error) throw new Error('No se pudo cargar el plan.')
       return describeSubscription(data)
     },

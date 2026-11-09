@@ -64,10 +64,11 @@ Deno.serve(async (request) => {
 
   const { data: tenant } = await admin
     .from('tenants')
-    .select('subscription_status')
+    .select('subscription_status, is_complimentary')
     .eq('id', tenantId)
     .single()
   if (!tenant) return reply(404, { error: 'Empresa no encontrada' })
+  if (tenant.is_complimentary) return reply(409, { error: 'Esta empresa tiene acceso de cortesía' })
   const subscribed = ['active', 'past_due'].includes(tenant.subscription_status)
 
   if (input?.action === 'cancel' || input?.action === 'resume') {

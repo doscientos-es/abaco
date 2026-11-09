@@ -27,7 +27,7 @@ const {
   invalidate: vi.fn(),
   setBusy: vi.fn(),
   setError: vi.fn(),
-  queryState: { members: 1, plan: 'trial', status: 'trialing' },
+  queryState: { members: 1, plan: 'trial', status: 'trialing', isComplimentary: false },
 }))
 
 // Exercise the component's handlers without adding a browser-testing dependency.
@@ -41,7 +41,13 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data:
       queryKey[0] === 'subscription'
-        ? { plan: queryState.plan, status: queryState.status, canWrite: true, trialDaysLeft: 14 }
+        ? {
+            plan: queryState.plan,
+            status: queryState.status,
+            isComplimentary: queryState.isComplimentary,
+            canWrite: true,
+            trialDaysLeft: 14,
+          }
         : queryState.members,
   }),
 }))
@@ -99,6 +105,7 @@ describe('BillingSection payment recovery', () => {
     queryState.members = 1
     queryState.plan = 'trial'
     queryState.status = 'trialing'
+    queryState.isComplimentary = false
     busy = null
     interval = 'year'
     error = ''
@@ -149,6 +156,14 @@ describe('BillingSection payment recovery', () => {
     expect(html).toContain(formatEuros(perMonthWhenYearly(solo)))
     expect(html).toContain(`Se cobran ${formatEuros(solo.yearly)} al año, sin IVA.`)
     expect(html).not.toContain('Pago mensual, sin IVA.')
+  })
+
+  it('shows courtesy instead of paid plan actions', () => {
+    queryState.isComplimentary = true
+    const html = render()
+    expect(html).toContain('Acceso de cortesía')
+    expect(html).not.toContain('Elegir Empresa')
+    expect(checkout).not.toHaveBeenCalled()
   })
 
   it('recommends the smallest plan that fits the existing team', () => {
