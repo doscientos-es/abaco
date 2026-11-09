@@ -6,8 +6,8 @@ import type { BillingResult } from '../application/billing-actions'
 import { formatEuros, perMonthWhenYearly, planCatalog, type Interval } from '../domain/plans'
 import { BillingSection } from './billing-section'
 
-const { state, effect, button, checkout, submit, invalidate, setBusy, setError } = vi.hoisted(
-  () => ({
+const { state, effect, button, checkout, submit, invalidate, setBusy, setError, queryState } =
+  vi.hoisted(() => ({
     state: vi.fn(),
     effect: vi.fn(),
     button: vi.fn(),
@@ -16,8 +16,8 @@ const { state, effect, button, checkout, submit, invalidate, setBusy, setError }
     invalidate: vi.fn(),
     setBusy: vi.fn(),
     setError: vi.fn(),
-  }),
-)
+    queryState: { members: 1 },
+  }))
 
 // Exercise the component's handlers without adding a browser-testing dependency.
 vi.mock('react', async (importOriginal) => ({
@@ -31,7 +31,7 @@ vi.mock('@tanstack/react-query', () => ({
     data:
       queryKey[0] === 'subscription'
         ? { plan: 'trial', status: 'trialing', canWrite: true, trialDaysLeft: 14 }
-        : 1,
+        : queryState.members,
   }),
 }))
 vi.mock('@doscientos/ui', () => ({
@@ -50,7 +50,13 @@ vi.mock('../application/billing-actions', () => ({
   memberCountQuery: (id: string) => ({ queryKey: ['member-count', id] }),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
-vi.mock('./custom-plan-card', () => ({ CustomPlanCard: () => null }))
+vi.mock('./custom-plan-card', () => ({
+  CustomPlanCard: ({ members }: { members?: number }) => (
+    <article>
+      {members && members <= 100 ? `Ábaco Escala · ${members} personas` : 'Plan personalizado'}
+    </article>
+  ),
+}))
 
 const form = {
   url: 'https://payments.example/checkout',
@@ -60,6 +66,11 @@ const form = {
 }
 const render = () =>
   renderToStaticMarkup(<BillingSection tenantId="trial-company" companyName="Trial company" />)
+const soloPlan = () => {
+  const plan = planCatalog.find((candidate) => candidate.id === 'solo')
+  if (!plan) throw new Error('Autónomo plan is missing')
+  return plan
+}
 const choose = () => {
   const props = button.mock.calls.find(([props]) => props.children === 'Elegir Autónomo')?.[0]
   expect(props).toBeDefined()
@@ -74,6 +85,7 @@ describe('BillingSection payment recovery', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    queryState.members = 1
     busy = null
     interval = 'year'
     error = ''
@@ -104,26 +116,61 @@ describe('BillingSection payment recovery', () => {
     vi.unstubAllGlobals()
   })
 
-  it('explains feature parity, owner-inclusive limits and the annual amount charged', () => {
+  it('shows a team-size selector, the matching plan and its annual amount', () => {
+    const html = render()
+    const solo = soloPlan()
+
+    expect(html).toContain(
+      'En los planes actuales, todas las funciones están incluidas; solo cambia el número de personas.',
+    )
+    expect(html).toContain('Personas con acceso')
+    expect(html).toContain('type="range"')
+    expect(html).toContain('aria-label="Ajustar el número de personas"')
+    expect(html).toContain('max="100"')
+    expect(html).toContain('1 persona: tú.')
+    expect(html).toContain('Incluye hasta 1 persona en total.')
+    expect(html).not.toContain('Elegir Equipo')
+    expect(html).not.toContain('Elegir Empresa')
+    expect(html).toContain('Equivalente mensual · pago anual')
+    expect(html).toContain(formatEuros(perMonthWhenYearly(solo)))
+    expect(html).toContain(`Se cobra ${formatEuros(solo.yearly)} al año, sin IVA`)
+    expect(html).not.toContain('Se cobra cada mes')
+  })
+
+  it('recommends the smallest plan that fits the existing team', () => {
+    queryState.members = 3
     const html = render()
 
-    expect(html).toContain('Todas las funciones en todos los planes.')
-    expect(html).toContain('1 persona: tú.')
-    expect(html).toContain('Hasta 5 personas, incluyéndote a ti.')
-    expect(html).toContain('Hasta 15 personas, incluyéndote a ti.')
-    expect(html).toContain('Equivalente mensual · pago anual')
-    for (const plan of planCatalog) {
-      expect(html).toContain(formatEuros(perMonthWhenYearly(plan)))
-      expect(html).toContain(`Se cobra ${formatEuros(plan.yearly)} al año, sin IVA`)
-    }
-    expect(html).not.toContain('Se cobra cada mes')
+    expect(html).toContain('min="3"')
+    expect(html).toContain('Para 3 personas, incluyéndote a ti.')
+    expect(html).toContain('Elegir Equipo')
+    expect(html).not.toContain('Elegir Autónomo')
+  })
+
+  it('routes teams of 16 to 100 to a proposal instead of an unconfigured checkout price', () => {
+    queryState.members = 32
+    const html = render()
+
+    expect(html).toContain('value="32"')
+    expect(html).toContain('Ábaco Escala · 32 personas')
+    expect(html).not.toContain('Elegir Empresa')
+    expect(checkout).not.toHaveBeenCalled()
+  })
+
+  it('shows the personalized offer without a slider for teams above 100', () => {
+    queryState.members = 101
+    const html = render()
+
+    expect(html).toContain('Plan personalizado')
+    expect(html).not.toContain('type="range"')
   })
 
   it('distinguishes monthly billing from an annual equivalent', () => {
     interval = 'month'
     const html = render()
 
-    for (const plan of planCatalog) expect(html).toContain(formatEuros(plan.monthly))
+    const solo = soloPlan()
+    expect(html).toContain(formatEuros(solo.monthly))
     expect(html).toContain('Se cobra cada mes, sin IVA')
     expect(html).not.toContain('Equivalente mensual · pago anual')
     expect(html).not.toContain('al año, sin IVA')

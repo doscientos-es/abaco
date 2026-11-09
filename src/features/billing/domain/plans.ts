@@ -23,6 +23,8 @@ export type PlanInfo = {
 export const TRIAL_DAYS = 14
 /** Personas permitidas durante la prueba. */
 export const TRIAL_MEMBERS = 15
+/** Maximum team size that can request an Ábaco Escala proposal through the selector. */
+export const MAX_SCALE_PLAN_MEMBERS = 100
 
 export const planCatalog: readonly PlanInfo[] = [
   {
@@ -31,7 +33,7 @@ export const planCatalog: readonly PlanInfo[] = [
     members: 1,
     monthly: 20,
     yearly: 200,
-    audience: 'Gestionas tú los presupuestos y cobros.',
+    audience: 'Ordena tus presupuestos, facturas y cobros en un solo lugar.',
   },
   {
     id: 'team',
@@ -39,7 +41,7 @@ export const planCatalog: readonly PlanInfo[] = [
     members: 5,
     monthly: 34,
     yearly: 340,
-    audience: 'Trabajas con una cuadrilla.',
+    audience: 'Comparte la gestión de presupuestos y facturas con tu cuadrilla.',
   },
   {
     id: 'business',
@@ -47,7 +49,7 @@ export const planCatalog: readonly PlanInfo[] = [
     members: 15,
     monthly: 54,
     yearly: 540,
-    audience: 'Coordinas varias cuadrillas y la oficina.',
+    audience: 'Coordina varias cuadrillas y la oficina desde una misma cuenta.',
   },
 ]
 
