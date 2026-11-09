@@ -162,12 +162,18 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
     await remove('estimates', d.estimates.removed)
     await remove('catalog_items', d.catalog.removed)
 
-    if (JSON.stringify(tenantToRow(before.tenant)) !== JSON.stringify(tenantToRow(after.tenant))) {
-      const { id, ...settings } = tenantToRow(after.tenant)
+    const previousTenant = tenantToRow(before.tenant)
+    const nextTenant = tenantToRow(after.tenant)
+    const changedSettings = Object.fromEntries(
+      Object.entries(nextTenant).filter(
+        ([key, value]) => key !== 'id' && JSON.stringify(previousTenant[key]) !== JSON.stringify(value),
+      ),
+    )
+    if (Object.keys(changedSettings).length > 0) {
       const { error } = await supabase
         .from('tenants')
-        .update(settings)
-        .eq('id', id as string)
+        .update(changedSettings)
+        .eq('id', nextTenant.id as string)
       if (error) throw new Error(`tenants: ${error.message}`)
     }
     await write('clients', d.clients.changed, a.clients)
