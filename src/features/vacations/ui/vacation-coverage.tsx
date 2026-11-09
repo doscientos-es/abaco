@@ -98,7 +98,11 @@ export function VacationCoverage({
                 {visit.locationName ? ` · ${visit.locationName}` : ''}
                 {visit.workTeamName ? ` · Equipo ${visit.workTeamName}` : ''}
               </p>
-              {visit.candidates.length ? (
+              {visit.status === 'in_progress' ? (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  La visita ya está en curso. Coordina la cobertura manualmente; no se puede reasignar desde aquí.
+                </p>
+              ) : visit.candidates.length ? (
                 <div className="mt-3 space-y-2">
                   <p className="text-sm font-medium">Posibles coberturas</p>
                   {visit.candidates.map((candidate) => {
