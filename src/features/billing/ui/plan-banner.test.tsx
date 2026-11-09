@@ -21,6 +21,7 @@ vi.mock('../application/billing-actions', () => ({
 const subscription: Subscription = {
   plan: 'trial',
   status: 'trialing',
+  isComplimentary: false,
   trialEndsAt: new Date('2026-11-01T12:00:00Z'),
   interval: null,
   currentPeriodEnd: null,
@@ -76,5 +77,10 @@ describe('PlanBanner', () => {
 
     expect(html).toContain('Pide a un administrador que elija un plan.')
     expect(link).not.toHaveBeenCalled()
+  })
+
+  it('never shows billing alerts for courtesy access', () => {
+    query.mockReturnValue({ data: { ...subscription, isComplimentary: true, status: 'past_due' } })
+    expect(renderToStaticMarkup(<PlanBanner />)).toBe('')
   })
 })

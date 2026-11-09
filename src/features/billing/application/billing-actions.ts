@@ -9,6 +9,7 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export type Subscription = {
   plan: Plan
   status: SubscriptionStatus
+  isComplimentary: boolean
   trialEndsAt: Date
   interval: Interval | null
   currentPeriodEnd: Date | null
@@ -28,6 +29,7 @@ const plans: readonly string[] = ['trial', 'solo', 'team', 'business']
 export function describeSubscription(row: {
   plan: string
   subscription_status: string
+  is_complimentary: boolean
   trial_ends_at: string
   billing_interval: string | null
   current_period_end: string | null
@@ -43,6 +45,7 @@ export function describeSubscription(row: {
   return {
     plan: (plans.includes(row.plan) ? row.plan : 'trial') as Plan,
     status,
+    isComplimentary: row.is_complimentary,
     trialEndsAt,
     interval:
       row.billing_interval === 'year' || row.billing_interval === 'month'
@@ -56,10 +59,11 @@ export function describeSubscription(row: {
         : null,
     nextInterval:
       row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
-    canWrite: trialActive || status === 'active' || status === 'past_due',
-    trialDaysLeft: trialActive
-      ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
-      : 0,
+    canWrite: row.is_complimentary || trialActive || status === 'active' || status === 'past_due',
+    trialDaysLeft:
+      trialActive && !row.is_complimentary
+        ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
+        : 0,
   }
 }
 
@@ -71,7 +75,7 @@ export const subscriptionQuery = (tenantId: string) =>
       const { data, error } = await createBrowserSupabaseClient()
         .from('tenants')
         .select(
-          'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval',
+          'plan, subscription_status, is_complimentary, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval',
         )
         .eq('id', tenantId)
         .single()

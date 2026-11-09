@@ -18,7 +18,7 @@ export function WelcomePage() {
   }).data
   const [busy, setBusy] = useState<'trial' | 'plan' | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const trialing = subscription?.status === 'trialing'
+  const trialing = !subscription?.isComplimentary && subscription?.status === 'trialing'
   const expired = trialing && !subscription.canWrite
   const daysLeft = subscription?.trialDaysLeft ?? TRIAL_DAYS
   const trialLabel = expired
@@ -72,9 +72,13 @@ export function WelcomePage() {
           Sin tarjeta
         </span>
         <div className="space-y-1">
-          <h2 className="font-semibold">Prueba gratuita</h2>
+          <h2 className="font-semibold">
+            {subscription?.isComplimentary ? 'Acceso de cortesía' : 'Prueba gratuita'}
+          </h2>
           <p className="text-muted-foreground text-sm">
-            Todas las funciones del plan Empresa durante {TRIAL_DAYS} días.
+            {subscription?.isComplimentary
+              ? 'Todas las funciones del plan Empresa, sin caducidad.'
+              : `Todas las funciones del plan Empresa durante ${TRIAL_DAYS} días.`}
           </p>
           {trialing ? (
             <p className="text-muted-foreground text-xs">
@@ -87,30 +91,34 @@ export function WelcomePage() {
           {busy === 'trial' ? 'Entrando…' : trialLabel}
         </Button>
       </section>
-      <section
-        aria-label="Elegir un plan"
-        className="border-border space-y-3 rounded-xl border p-4"
-      >
-        <div className="space-y-1">
-          <h2 className="font-semibold">¿Ya lo tienes claro?</h2>
-          <p className="text-muted-foreground text-sm">
-            Todas las funciones están incluidas. Elige según el número de personas de tu equipo y
-            paga con tarjeta.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          className="w-full"
-          isDisabled={busy !== null}
-          onPress={() => void choose('plan')}
+      {!subscription?.isComplimentary ? (
+        <section
+          aria-label="Elegir un plan"
+          className="border-border space-y-3 rounded-xl border p-4"
         >
-          {busy === 'plan' ? 'Abriendo planes…' : 'Elegir un plan ahora'}
-        </Button>
-      </section>
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan. Si no
-        contratas, tus datos se conservan en modo lectura.
-      </p>
+          <div className="space-y-1">
+            <h2 className="font-semibold">¿Ya lo tienes claro?</h2>
+            <p className="text-muted-foreground text-sm">
+              Todas las funciones están incluidas. Elige según el número de personas de tu equipo y
+              paga con tarjeta.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full"
+            isDisabled={busy !== null}
+            onPress={() => void choose('plan')}
+          >
+            {busy === 'plan' ? 'Abriendo planes…' : 'Elegir un plan ahora'}
+          </Button>
+        </section>
+      ) : null}
+      {!subscription?.isComplimentary ? (
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan. Si no
+          contratas, tus datos se conservan en modo lectura.
+        </p>
+      ) : null}
       <FormError message={error} />
     </AuthLayout>
   )

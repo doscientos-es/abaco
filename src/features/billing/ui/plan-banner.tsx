@@ -15,7 +15,7 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
     ...subscriptionQuery(tenantId ?? ''),
     enabled: tenantId !== null,
   })
-  if (!sub || !session) return null
+  if (!sub || !session || sub.isComplimentary) return null
 
   const isAdmin = session.role === 'admin'
   let text = ''

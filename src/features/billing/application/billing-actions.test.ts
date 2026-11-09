@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { paymentsQuery } from './billing-actions'
+import { describeSubscription, paymentsQuery } from './billing-actions'
 
 const { from, request } = vi.hoisted(() => ({
   from: vi.fn(),
@@ -11,6 +11,28 @@ const { from, request } = vi.hoisted(() => ({
 vi.mock('@/shared/lib/supabase/client', () => ({
   createBrowserSupabaseClient: () => ({ from }),
 }))
+
+describe('describeSubscription', () => {
+  const expired = {
+    plan: 'business',
+    subscription_status: 'trialing',
+    trial_ends_at: '2020-01-01T00:00:00Z',
+    billing_interval: null,
+    current_period_end: null,
+    cancel_at_period_end: false,
+    next_plan: null,
+    next_interval: null,
+  }
+
+  it('allows an expired courtesy tenant to write without reporting trial days', () => {
+    expect(describeSubscription({ ...expired, is_complimentary: true })).toMatchObject({
+      isComplimentary: true,
+      canWrite: true,
+      trialDaysLeft: 0,
+    })
+    expect(describeSubscription({ ...expired, is_complimentary: false }).canWrite).toBe(false)
+  })
+})
 
 describe('paymentsQuery', () => {
   let client: QueryClient
