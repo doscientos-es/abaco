@@ -23,6 +23,7 @@ import {
   visitOverlapsVacation,
 } from '@/features/vacations/application/vacation-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
+import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -30,7 +31,6 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import {
   createServiceVisit,
   listAllOfficeVisits,
-  listOfficeVisits,
   listTechnicians,
   type VisitPriority,
   type VisitSummary,
@@ -40,11 +40,15 @@ import {
   calendarDateValue,
   calendarWeekLabel,
   calendarWeekRange,
+  calendarMonthRange,
+  moveCalendarMonth,
   toCalendarWallTime,
 } from './agenda-calendar'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
+import { PaperVisitPanel } from './paper-visit-panel'
+import { BatchWorkSheets } from './batch-work-sheets'
 
 const todayInMadrid = () =>
   new Intl.DateTimeFormat('sv-SE', {
@@ -84,7 +88,7 @@ export function AgendaPage() {
   const search = useSearch({ from: '/agenda' })
   const date = search.date ?? todayInMadrid()
   const view: AgendaView = search.view ?? 'list'
-  const period: AgendaPeriod = search.period ?? 'day'
+  const period: AgendaPeriod = search.period ?? (view === 'calendar' ? 'month' : 'day')
   const [filterTechnicianId, setFilterTechnicianId] = useState('')
   const [page, setPage] = useState(0)
   const [selectedCalendarVisitId, setSelectedCalendarVisitId] = useState<string | null>(null)
@@ -102,6 +106,9 @@ export function AgendaPage() {
   const [busy, setBusy] = useState(false)
   const [replanning, setReplanning] = useState<VisitSummary | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
+  const [teamFilter, setTeamFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [textFilter, setTextFilter] = useState('')
   const operations = useRef(new Map<string, string>())
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
@@ -118,18 +125,24 @@ export function AgendaPage() {
     },
     onPoolCreated: setAssetId,
   })
-  const calendarRange = calendarWeekRange(date)
-  const from = view === 'calendar' ? calendarRange.from : date
-  const to = view === 'calendar' ? calendarRange.to : period === 'week' ? addDays(date, 6) : date
-  const queryPage = view === 'calendar' ? 'all' : page
+  const calendarRange = period === 'month' ? calendarMonthRange(date) : calendarWeekRange(date)
+  const from = view === 'calendar' || period === 'month' ? calendarRange.from : date
+  const to = view === 'calendar' || period === 'month' ? calendarRange.to : period === 'week' ? addDays(date, 6) : date
+  const queryPage = 'all'
   const queryKey = ['office-visits', tenant.id, from, to, filterTechnicianId, queryPage]
   const visits = useQuery({
     queryKey,
-    queryFn: () =>
-      view === 'calendar'
-        ? listAllOfficeVisits(tenant.id, from, to, filterTechnicianId || null)
-        : listOfficeVisits(tenant.id, from, to, filterTechnicianId || null, page),
+    queryFn: () => listAllOfficeVisits(tenant.id, from, to, filterTechnicianId === 'unassigned' ? null : filterTechnicianId || null),
   })
+  const teams = useQuery(workTeamsQuery(tenant.id))
+  const visibleVisits = (visits.data ?? []).filter(visit =>
+    (!teamFilter || (teamFilter === 'unassigned' ? !visit.work_team_id : visit.work_team_id === teamFilter)) &&
+    (!statusFilter || visit.status === statusFilter) &&
+    (filterTechnicianId !== 'unassigned' || (!visit.assigned_user_id && !visit.work_team_id)) &&
+    `${visit.client_name} ${visit.location_name} ${visit.address} ${visit.title}`.toLocaleLowerCase('es').includes(textFilter.trim().toLocaleLowerCase('es'))
+  ).sort((a, b) => a.scheduled_start_at.slice(0, 10).localeCompare(b.scheduled_start_at.slice(0, 10)) ||
+    (a.work_team_name || a.assigned_user_name || 'Sin asignar').localeCompare(b.work_team_name || b.assigned_user_name || 'Sin asignar') ||
+    (a.route_order ?? 0) - (b.route_order ?? 0) || a.scheduled_start_at.localeCompare(b.scheduled_start_at) || a.id.localeCompare(b.id))
   const approvedVacations = useQuery({
     queryKey: ['approved-vacations', tenant.id, date, to],
     enabled: session?.role === 'admin',
@@ -145,7 +158,7 @@ export function AgendaPage() {
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
-  const calendarItems: CalendarItem[] = (visits.data ?? []).map((visit) => ({
+  const calendarItems: CalendarItem[] = visibleVisits.map((visit) => ({
     id: visit.id,
     title: visit.title,
     start: toCalendarWallTime(visit.scheduled_start_at, visit.timezone),
@@ -287,6 +300,7 @@ export function AgendaPage() {
         ) : null}
         {openReportId === visit.id && session?.userId ? (
           <div className="w-full">
+            <PaperVisitPanel tenantId={tenant.id} visit={visit} />
             <VisitReportEditor
               key={`${session.userId}:${tenant.id}:${visit.id}`}
               visit={visit}
@@ -303,9 +317,9 @@ export function AgendaPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Agenda de visitas</h1>
+          <h1 className="text-2xl font-semibold">Planificación y partes</h1>
           <p className="text-muted-foreground text-sm">
-            Planifica una jornada y consulta las visitas por día, semana o técnico.
+            Servicios móviles por día, semana o mes; equipo, asignación y partes impresos.
           </p>
         </div>
         <Button onPress={() => setCreateOpen(true)}>
@@ -347,7 +361,7 @@ export function AgendaPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           <SelectField
-            label="Ubicación"
+            label="Centro"
             value={locationId}
             options={[
               { value: '', label: 'Sin ubicación' },
@@ -405,7 +419,7 @@ export function AgendaPage() {
           label="Asunto"
           value={title}
           onChange={setTitle}
-          placeholder="Ejemplo: revisión de piscina"
+          placeholder="Ejemplo: cristales del centro"
           maxLength={200}
           className="sm:col-span-2"
         />
@@ -417,16 +431,14 @@ export function AgendaPage() {
           placeholder="Fecha y hora"
           helper={`Zona horaria: ${timezone}`}
         />
-        <SelectField
-          label="Duración"
+        <TextField
+          label="Duración estimada (minutos)"
+          type="number"
           value={duration}
-          options={[
-            { value: '30', label: '30 minutos' },
-            { value: '60', label: '1 hora' },
-            { value: '90', label: '1 hora y media' },
-            { value: '120', label: '2 horas' },
-          ]}
           onChange={setDuration}
+          min={15}
+          max={720}
+          placeholder="120"
         />
         <SelectField
           label="Prioridad"
@@ -459,7 +471,7 @@ export function AgendaPage() {
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
                 {view === 'calendar'
-                  ? calendarWeekLabel(date)
+                  ? period === 'month' ? new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : calendarWeekLabel(date)
                   : period === 'day'
                     ? 'Consulta las visitas de un día.'
                     : 'Consulta las visitas de una semana.'}
@@ -477,11 +489,10 @@ export function AgendaPage() {
                     setSelectedCalendarVisitId(null)
                     updateSearch({ view: nextView })
                   }}
-                  className={`focus-visible:outline-ring rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                    view === nextView
+                  className={`focus-visible:outline-ring rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${view === nextView
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
+                    }`}
                 >
                   {nextView === 'list' ? 'Lista' : 'Calendario'}
                 </button>
@@ -502,55 +513,58 @@ export function AgendaPage() {
               }}
               placeholder="Fecha"
             />
-            {view === 'list' ? (
+            <div className="space-y-3">
               <SelectField
                 label="Periodo"
                 value={period}
                 options={[
                   { value: 'day', label: 'Día' },
                   { value: 'week', label: 'Semana' },
+                  { value: 'month', label: 'Mes' },
                 ]}
                 onChange={(value) => {
                   setPage(0)
                   updateSearch({ period: value as AgendaPeriod })
                 }}
               />
-            ) : (
-              <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ date: addDays(date, -7) })
-                  }}
-                >
-                  Semana anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ date: todayInMadrid() })
-                  }}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ date: addDays(date, 7) })
-                  }}
-                >
-                  Semana siguiente
-                </Button>
-              </div>
-            )}
+              {view === 'calendar' ? (
+                <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setSelectedCalendarVisitId(null)
+                      updateSearch({ date: period === 'month' ? moveCalendarMonth(date, -1) : addDays(date, -7) })
+                    }}
+                  >
+                    Periodo anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setSelectedCalendarVisitId(null)
+                      updateSearch({ date: todayInMadrid() })
+                    }}
+                  >
+                    Hoy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setSelectedCalendarVisitId(null)
+                      updateSearch({ date: period === 'month' ? moveCalendarMonth(date, 1) : addDays(date, 7) })
+                    }}
+                  >
+                    Periodo siguiente
+                  </Button>
+                </div>
+              ) : <Button variant="outline" onPress={() => updateSearch({ date: todayInMadrid(), period: 'day' })}>Hoy</Button>}
+            </div>
             <SelectField
               label="Técnico"
               value={filterTechnicianId}
               options={[
                 { value: '', label: 'Todos' },
+                { value: 'unassigned', label: 'Sin persona ni equipo' },
                 ...(technicians.data ?? []).map((person) => ({
                   value: person.id,
                   label: person.label,
@@ -562,9 +576,14 @@ export function AgendaPage() {
                 setSelectedCalendarVisitId(null)
               }}
             />
+            <SelectField label="Equipo" value={teamFilter} onChange={setTeamFilter} options={[{ value: '', label: 'Todos los equipos' }, { value: 'unassigned', label: 'Sin equipo' }, ...(teams.data ?? []).map(t => ({ value: t.id, label: t.name }))]} />
+            <SelectField label="Estado" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos los estados' }, ...Object.entries(statusLabels).map(([value, label]) => ({ value, label }))]} />
+            <TextField label="Buscar cliente o centro" value={textFilter} onChange={setTextFilter} placeholder="Nombre o dirección" />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-muted-foreground text-sm">{visibleVisits.length} visitas · {Math.round(visibleVisits.filter(v => v.status !== 'canceled' && v.status !== 'skipped').reduce((total, v) => total + (Date.parse(v.scheduled_end_at) - Date.parse(v.scheduled_start_at)) / 60000, 0))} minutos estimados (no equivale a trabajo realizado)</p>
+          {view === 'list' && period === 'day' ? <BatchWorkSheets tenantId={tenant.id} visits={visibleVisits.filter(v => v.status !== 'canceled' && v.status !== 'skipped')} /> : null}
           {visits.isPending ? <output>Cargando agenda…</output> : null}
           {visits.isError ? (
             <p role="alert" className="text-destructive text-sm">
@@ -585,8 +604,8 @@ export function AgendaPage() {
                 </output>
               ) : null}
               <Calendar
-                aria-label="Calendario semanal de visitas"
-                view="week"
+                aria-label={period === 'month' ? 'Calendario mensual de visitas' : 'Calendario semanal de visitas'}
+                view={period === 'month' ? 'month' : 'week'}
                 value={calendarDateValue(date)}
                 items={calendarItems}
                 minuteStep={30}
@@ -672,8 +691,9 @@ export function AgendaPage() {
                 <p className="text-muted-foreground text-sm">No hay visitas en este periodo.</p>
               ) : null}
               <ol className="divide-border divide-y">
-                {visits.data?.map((visit) => (
+                {visibleVisits.map((visit, index) => (
                   <li key={visit.id} className="space-y-3 py-4 text-sm">
+                    {index === 0 || (visibleVisits[index - 1]?.work_team_id ?? visibleVisits[index - 1]?.assigned_user_id) !== (visit.work_team_id ?? visit.assigned_user_id) || visibleVisits[index - 1]?.scheduled_start_at.slice(0, 10) !== visit.scheduled_start_at.slice(0, 10) ? <h3 className="text-primary font-semibold">{visit.work_team_name || visit.assigned_user_name || 'Sin asignar'} · {new Date(visit.scheduled_start_at).toLocaleDateString('es-ES', { timeZone: visit.timezone })}</h3> : null}
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{visit.title}</p>
@@ -695,7 +715,7 @@ export function AgendaPage() {
                           {visit.location_name ? ` · ${visit.location_name}` : ''}
                         </p>
                         <p className="text-muted-foreground">
-                          {visit.assigned_user_name || 'Pendiente de asignar'} ·{' '}
+                          {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'} · Orden {visit.route_order ?? 0} ·{' '}
                           {statusLabels[visit.status]}
                           {visit.priority === 'urgent' ? ' · Urgente' : ''}
                         </p>
@@ -706,25 +726,6 @@ export function AgendaPage() {
                   </li>
                 ))}
               </ol>
-              <div className="flex items-center justify-between text-sm">
-                <span>Página {page + 1}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    isDisabled={page === 0}
-                    onPress={() => setPage(page - 1)}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    isDisabled={(visits.data?.length ?? 0) < 50}
-                    onPress={() => setPage(page + 1)}
-                  >
-                    Siguiente
-                  </Button>
-                </div>
-              </div>
             </>
           )}
         </CardContent>

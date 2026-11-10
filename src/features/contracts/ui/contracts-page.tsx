@@ -86,8 +86,8 @@ export function ContractsPage() {
   })
   const priceCents = parseEuros(price)
   const valid =
-    Boolean(clientId && locationId && title.trim() && startsOn && price.trim()) &&
-    /^\d+(?:[.,]\d{1,2})?$/.test(price.trim()) &&
+    Boolean(clientId && locationId && title.trim() && startsOn) &&
+    (!price.trim() || /^\d+(?:[.,]\d{1,2})?$/.test(price.trim())) &&
     Number.isSafeInteger(priceCents) &&
     priceCents >= 0 &&
     (!endsOn || endsOn >= startsOn)
@@ -136,7 +136,7 @@ export function ContractsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Contratos de mantenimiento</h1>
+        <h1 className="text-2xl font-semibold">Contratos de servicio</h1>
         <p className="text-muted-foreground text-sm">
           Acuerdos y visitas recurrentes. La facturación periódica se incorpora después.
         </p>
@@ -177,7 +177,7 @@ export function ContractsPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <SelectField
-                  label="Ubicación"
+                  label="Centro principal · obligatorio"
                   value={locationId}
                   options={[
                     { value: '', label: 'Selecciona una ubicación' },
@@ -223,7 +223,7 @@ export function ContractsPage() {
                 label="Título"
                 value={title}
                 onChange={setTitle}
-                placeholder="Mantenimiento de piscina"
+                placeholder="Servicios de limpieza"
                 maxLength={200}
               />
               <TextField
@@ -241,10 +241,10 @@ export function ContractsPage() {
                 placeholder="Sin fecha de fin"
               />
               <TextField
-                label="Precio por periodo, sin IVA (€)"
+                label="Precio por periodo, sin IVA (€) · opcional"
                 value={price}
                 onChange={setPrice}
-                placeholder="0,00"
+                placeholder="Sin precio registrado: no facturable"
               />
               <SelectField
                 label="Facturación prevista"

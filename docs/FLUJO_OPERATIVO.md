@@ -19,18 +19,16 @@ no demuestra que se hayan aplicado a Supabase ni que el recorrido se haya valida
 
 ## Estado actual de `main`
 
-| Tramo | Estado |
-| --- | --- |
-| Presupuestos y aceptación pública/manual | Implementado; la aceptación guarda evidencia. |
-| Conversión al contrato y servicios múltiples reutilizables | Parcial/pendiente: existe conversión tradicional, pero falta el flujo «Tus servicios» y selección múltiple. Hay una implementación más avanzada en la rama local `DEV-16-panel-superadmin-de-abaco-empresas-pagos-y-precios-personalizados`, que aún no está integrada a `main`. |
-| Visitas en agenda y asignación individual | Implementado. |
-| Asignación de visitas a equipos y visibilidad para sus miembros | Pendiente: `main` puede asignar equipos a trabajos, pero las visitas y la jornada del técnico se basan en asignación individual. |
-| Jornada individual, inicio, parte, tareas, fotos y cierre | Implementado parcialmente: inicio/cierre y partes; falta unificar visualmente las tareas heredadas de servicios y reforzar el recorrido móvil. |
-| Captura opcional de ubicación al iniciar | Implementada en esta rama de trabajo, pendiente de aplicar y validar la migración y el flujo en un entorno. Desactivada por defecto; una captura, sin seguimiento continuo. |
-| Firma dibujada del cliente | No implementada. |
-| Parte en papel, impresión e importación posterior | Adjuntos privados de PDF/foto pueden cargarse desde administración en la rama de trabajo, pero no hay un circuito completo de impresión/importación ligado al cierre del técnico en `main`. |
-| Cierre condicionado a firma digital o constancia física | No implementado. Hoy el cierre de visita puede generar una instantánea antes de cualquier firma. |
-| Aviso a administración al cerrar | La versión cerrada queda consultable; falta comprobar y completar el aviso operativo para el flujo acordado. |
+- **Presupuestos y aceptación pública/manual:** implementado; la aceptación guarda evidencia.
+- **Conversión al contrato y servicios múltiples reutilizables:** parcial/pendiente: existe conversión tradicional, pero falta el flujo «Tus servicios» y selección múltiple. Hay una implementación más avanzada en la rama local `DEV-16-panel-superadmin-de-abaco-empresas-pagos-y-precios-personalizados`, que aún no está integrada a `main`.
+- **Visitas en agenda y asignación individual:** implementado.
+- **Asignación de visitas a equipos y visibilidad para sus miembros:** pendiente: `main` puede asignar equipos a trabajos, pero las visitas y la jornada del técnico se basan en asignación individual.
+- **Jornada individual, inicio, parte, tareas, fotos y cierre:** implementado parcialmente: inicio/cierre y partes; falta unificar visualmente las tareas heredadas de servicios y reforzar el recorrido móvil.
+- **Captura opcional de ubicación al iniciar:** implementada en esta rama de trabajo, pendiente de aplicar y validar la migración y el flujo en un entorno. Desactivada por defecto; una captura, sin seguimiento continuo.
+- **Firma dibujada del cliente:** no implementada.
+- **Parte en papel, impresión e importación posterior:** adjuntos privados de PDF/foto pueden cargarse desde administración en la rama de trabajo, pero no hay un circuito completo de impresión/importación ligado al cierre del técnico en `main`.
+- **Cierre condicionado a firma digital o constancia física:** no implementado. Hoy el cierre de visita puede generar una instantánea antes de cualquier firma.
+- **Aviso a administración al cerrar:** la versión cerrada queda consultable; falta comprobar y completar el aviso operativo para el flujo acordado.
 
 ## Orden recomendado para completar
 

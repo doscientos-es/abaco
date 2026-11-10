@@ -4,13 +4,17 @@ alter table public.service_visits
   add constraint service_visits_start_location_pair check (
     (actual_start_latitude is null and actual_start_longitude is null)
     or (
-      actual_start_latitude between -90 and 90
+      actual_start_latitude is not null and actual_start_longitude is not null
+      and actual_start_latitude between -90 and 90
       and actual_start_longitude between -180 and 180
     )
   );
 
 alter table public.tenants
   add column collect_visit_start_location boolean not null default false;
+
+-- Replace the six-argument overload so existing callers use these defaults too.
+drop function public.transition_service_visit(uuid, uuid, timestamptz, text, text, uuid);
 
 create or replace function public.transition_service_visit(
   p_tenant_id uuid, p_visit_id uuid, p_expected_updated_at timestamptz,

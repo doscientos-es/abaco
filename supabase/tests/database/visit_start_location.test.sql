@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(12);
 
 insert into public.tenants (id,name,collect_visit_start_location) values
   ('49000000-0000-4000-8000-000000000001','Ubicación opcional',true),
@@ -51,16 +51,28 @@ select is((select payload->>'startLatitude' from public.service_visit_events
 select throws_ok($$select public.transition_service_visit(
   '49000000-0000-4000-8000-000000000001',current_setting('test.loc_visit')::uuid,
   current_setting('test.loc_version')::timestamptz,'in_progress','','49000000-0000-4000-8000-000000000011',
-  91,2)$$,'23505','La clave de operación ya se utilizó con otros datos',
+  40,2)$$,'23505','La clave de operación ya se utilizó con otros datos',
   'Operation retry cannot change its coordinates');
+select throws_ok($$select public.transition_service_visit(
+  '49000000-0000-4000-8000-000000000001',current_setting('test.loc_visit')::uuid,
+  current_setting('test.loc_version')::timestamptz,'in_progress','','49000000-0000-4000-8000-000000000011',
+  91,2)$$,'22023','Datos de cambio de visita inválidos',
+  'Coordinates outside the valid range are rejected');
 select throws_ok($$select public.transition_service_visit(
   '49000000-0000-4000-8000-000000000001',current_setting('test.loc_visit')::uuid,
   current_setting('test.loc_version')::timestamptz,'completed','','49000000-0000-4000-8000-000000000012',
   41,2)$$,'22023','No se admite ubicación para este cambio',
   'Coordinates cannot be supplied on completion');
 select throws_ok($$update public.service_visits set actual_start_latitude=91
+  where id=current_setting('test.loc_visit')::uuid$$,'42501',null,
+  'Authenticated users cannot update visits directly');
+reset role;
+select throws_ok($$update public.service_visits set actual_start_latitude=91
   where id=current_setting('test.loc_visit')::uuid$$,'23514',null,
   'Database constraint rejects invalid coordinates');
+select throws_ok($$update public.service_visits set actual_start_latitude=null
+  where id=current_setting('test.loc_visit')::uuid$$,'23514',null,
+  'Database constraint rejects a coordinate without its pair');
 
 select * from finish();
 rollback;

@@ -21,6 +21,7 @@ type VacationRequestRow = {
   decided_by_name: string
   information_request_comment: string
   requester_response_comment: string
+  updated_at: string
 }
 
 export type ApprovedVacationRange = {
@@ -85,19 +86,38 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
     decidedByName: row.decided_by_name,
     informationRequestComment: row.information_request_comment ?? '',
     requesterResponseComment: row.requester_response_comment ?? '',
+    updatedAt: row.updated_at,
   }
 }
 
 export async function listVacationRequests(tenantId: string): Promise<VacationRequest[]> {
-  const { data, error } = await createBrowserSupabaseClient()
+  const data: VacationRequestRow[] = []
+  for (let page = 0; ; page++) {
+  const result = await createBrowserSupabaseClient()
     .from('absence_requests')
     .select(
-      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment',
+      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
     )
     .eq('tenant_id', tenantId)
     .order('submitted_at', { ascending: false })
-  if (error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
-  return ((data ?? []) as VacationRequestRow[]).map(toVacationRequest)
+    .order('id').range(page*500,(page+1)*500-1)
+  if (result.error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
+  data.push(...((result.data ?? []) as VacationRequestRow[]))
+  if ((result.data?.length ?? 0) < 500) break
+  }
+  return data.map(toVacationRequest)
+}
+
+export type AdministrativeAbsence = {requester_id:string;start_date:string;end_date:string|null;absence_type:AbsenceType;status:'pending'|'approved'|'rejected'|'canceled';comment:string;decision_comment:string}
+export async function saveAdministrativeAbsence(tenantId:string, request:VacationRequest|null, absence:AdministrativeAbsence, operationId:string) {
+  const {error} = await createBrowserSupabaseClient().rpc('save_administrative_absence',{p_tenant_id:tenantId,p_request_id:request?.id ?? null,p_expected_updated_at:request?.updatedAt ?? null,p_absence:absence,p_operation_id:operationId})
+  if(error) throw new Error(error.message)
+}
+
+export async function listAbsenceHistory(tenantId:string, requestId:string) {
+  const {data,error} = await createBrowserSupabaseClient().from('absence_request_history').select('id,before_state,after_state,actor_id,occurred_at').eq('tenant_id',tenantId).eq('request_id',requestId).order('occurred_at',{ascending:false})
+  if(error) throw new Error(error.message)
+  return (data ?? []) as Array<{id:string;before_state:Record<string,unknown>|null;after_state:Record<string,unknown>;actor_id:string;occurred_at:string}>
 }
 
 export async function listApprovedVacationRanges(

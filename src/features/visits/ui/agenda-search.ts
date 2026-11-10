@@ -1,5 +1,5 @@
 export const agendaViews = ['list', 'calendar'] as const
-export const agendaPeriods = ['day', 'week'] as const
+export const agendaPeriods = ['day', 'week', 'month'] as const
 
 export type AgendaView = (typeof agendaViews)[number]
 export type AgendaPeriod = (typeof agendaPeriods)[number]
