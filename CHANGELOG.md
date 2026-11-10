@@ -6,6 +6,9 @@
 
 ### Nuevas funciones
 
+- Update demo documentation with implementation details and validations
+- Add tests for expense guard permissions and functionality
+- Add validation logs and tests for Felipe
 - Add lint and test validation logs for Felipe
 - Add validation log for Felipe build and tests
 - Add tests for cleaning service center data

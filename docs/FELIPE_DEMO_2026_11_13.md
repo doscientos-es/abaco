@@ -55,6 +55,8 @@ después de comprobar las migraciones anteriores y revisar el SQL:
 - `20261110130000_admin_absence_management.sql`
 - `20261110140000_restrict_expense_guard_execution.sql`
 
+Las versiones de estas cuatro entradas del historial remoto se han alineado con
+los nombres del repositorio, conservando sus sentencias y sin volver a ejecutarlas.
 La última restringe la ejecución directa de una función interna de gastos; el trigger
 conserva su protección de modificaciones y borrados, verificada con pruebas.
 El bucket `signed-work-sheets` es privado, con límite de 15 MiB y tipos PDF/JPEG/PNG/WebP.
