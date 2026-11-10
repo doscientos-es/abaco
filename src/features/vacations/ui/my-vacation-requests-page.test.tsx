@@ -8,14 +8,23 @@ import { MyVacationRequestsPage } from './my-vacation-requests-page'
 const mocks = vi.hoisted(() => ({
   stateIndex: 0,
   open: false,
-  dates: false,
+  start: '',
+  end: '',
   requests: [] as Array<Record<string, unknown>>,
   absenceType: 'vacation',
   setOpen: vi.fn(),
+  setStart: vi.fn(),
+  setEnd: vi.fn(),
   mutate: vi.fn(),
   invalidate: vi.fn(),
   onOpen: null as null | (() => void),
   dialog: null as null | { open: boolean; isDirty: boolean; onSubmit: () => void },
+  picker: null as null | {
+    start: string
+    end: string
+    endOptional: boolean
+    onChange: (start: string, end: string) => void
+  },
 }))
 
 vi.mock('react', async (importOriginal) => {
@@ -26,8 +35,8 @@ vi.mock('react', async (importOriginal) => {
       const index = mocks.stateIndex++
       if (index === 0) return [mocks.open, mocks.setOpen]
       if (index === 1) return [mocks.absenceType, vi.fn()]
-      if (mocks.dates && index === 2) return ['2026-11-10', vi.fn()]
-      if (mocks.dates && index === 3) return ['2026-11-12', vi.fn()]
+      if (index === 2) return [mocks.start, mocks.setStart]
+      if (index === 3) return [mocks.end, mocks.setEnd]
       return actual.useState(initial)
     },
   }
@@ -51,6 +60,12 @@ vi.mock('../application/vacation-actions', () => ({
   submitVacationRequest: vi.fn(),
 }))
 vi.mock('./vacation-decision-notices', () => ({ VacationDecisionNotices: () => null }))
+vi.mock('./absence-date-range-picker', () => ({
+  AbsenceDateRangePicker: (props: NonNullable<typeof mocks.picker>) => {
+    mocks.picker = props
+    return <div>Fechas de la ausencia</div>
+  },
+}))
 vi.mock('./vacation-request-card', () => ({
   VacationRequestCard: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }))
@@ -74,11 +89,13 @@ function render() {
 describe('Solicitud de vacaciones', () => {
   beforeEach(() => {
     mocks.open = false
-    mocks.dates = false
+    mocks.start = ''
+    mocks.end = ''
     mocks.requests = []
     mocks.absenceType = 'vacation'
     mocks.onOpen = null
     mocks.dialog = null
+    mocks.picker = null
     vi.clearAllMocks()
   })
 
@@ -94,25 +111,40 @@ describe('Solicitud de vacaciones', () => {
     mocks.open = true
     const openedHtml = render()
     expect(openedHtml).toContain('No incluyas información médica privada')
-    expect(openedHtml).toContain('Hasta, incluido')
-    expect(openedHtml).not.toContain('opcional si no se conoce')
-    expect(openedHtml).toContain('Hasta, incluido<input required')
+    expect(openedHtml).toContain('Fechas de la ausencia')
+    expect(openedHtml).not.toContain('type="date"')
+    expect(mocks.picker?.endOptional).toBe(false)
   })
 
   it('indica que la fecha final puede omitirse en otros tipos de ausencia', () => {
     mocks.open = true
     mocks.absenceType = 'sick_leave'
-    const html = render()
-    expect(html).toContain('Hasta, incluido (opcional si no se conoce)')
-    expect(html).toContain('Hasta, incluido (opcional si no se conoce)<input')
-    expect(html).not.toContain('Hasta, incluido (opcional si no se conoce)<input required')
+    render()
+    expect(mocks.picker?.endOptional).toBe(true)
+    mocks.picker?.onChange('2026-11-10', '2026-11-12')
+    expect(mocks.setStart).toHaveBeenCalledWith('2026-11-10')
+    expect(mocks.setEnd).toHaveBeenCalledWith('2026-11-12')
   })
 
   it('permite enviar un periodo válido desde el diálogo', () => {
     mocks.open = true
-    mocks.dates = true
+    mocks.start = '2026-11-10'
+    mocks.end = '2026-11-12'
     render()
     expect(mocks.dialog?.isDirty).toBe(true)
+    mocks.dialog?.onSubmit()
+    expect(mocks.mutate).toHaveBeenCalledOnce()
+  })
+
+  it('exige fecha final para vacaciones pero permite una baja sin fecha final', () => {
+    mocks.open = true
+    mocks.start = '2026-11-10'
+    render()
+    mocks.dialog?.onSubmit()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+
+    mocks.absenceType = 'sick_leave'
+    render()
     mocks.dialog?.onSubmit()
     expect(mocks.mutate).toHaveBeenCalledOnce()
   })

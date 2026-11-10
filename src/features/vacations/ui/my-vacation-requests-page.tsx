@@ -16,6 +16,7 @@ import {
   isValidAbsencePeriod,
   type AbsenceType,
 } from '../domain/vacation-request'
+import { AbsenceDateRangePicker } from './absence-date-range-picker'
 import { VacationDecisionNotices } from './vacation-decision-notices'
 import { VacationRequestCard } from './vacation-request-card'
 
@@ -134,37 +135,15 @@ export function MyVacationRequestsPage() {
             Elige la opción que mejor describa tu solicitud. No incluyas información médica privada.
           </span>
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Desde
-          <input
-            required
-            type="date"
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
-          />
-          <span className="text-muted-foreground text-xs font-normal">
-            {absenceType === 'vacation'
-              ? 'Indica el primer día que estarás ausente.'
-              : 'Si aún no conoces cuándo empieza, consulta con administración antes de enviarla.'}
-          </span>
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Hasta, incluido
-          {absenceType === 'vacation' ? '' : ' (opcional si no se conoce)'}
-          <input
-            required={absenceType === 'vacation'}
-            type="date"
-            value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
-          />
-          <span className="text-muted-foreground text-xs font-normal">
-            {absenceType === 'sick_leave'
-              ? 'Si todavía no sabes cuándo volverás, puedes dejar esta fecha vacía.'
-              : 'La fecha final se incluye en la solicitud.'}
-          </span>
-        </label>
+        <AbsenceDateRangePicker
+          start={startDate}
+          end={endDate}
+          endOptional={absenceType !== 'vacation'}
+          onChange={(start, end) => {
+            setStartDate(start)
+            setEndDate(end)
+          }}
+        />
         <label
           htmlFor="vacation-request-comment"
           className="grid gap-1.5 text-sm font-medium sm:col-span-2"

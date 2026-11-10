@@ -23,6 +23,8 @@ import { brand } from '@/shared/lib/brand'
 import { initials, SidebarLink, type NavItem } from './frame-navigation'
 import { navIcons } from './nav-icons'
 
+import './technician-frame.css'
+
 const navigation: NavItem[] = [
   { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.home },
   { to: '/mis-vacaciones', label: 'Mis vacaciones', icon: navIcons.visits },
