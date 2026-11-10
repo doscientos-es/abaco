@@ -342,7 +342,7 @@ export function CatalogPage() {
               </li>
             ))}
           </ul>
-          <Table containerClassName="hidden md:block">
+          <Table containerClassName="max-md:hidden">
             <TableHeader>
               <TableRow>
                 <TableHead>Ref.</TableHead>
