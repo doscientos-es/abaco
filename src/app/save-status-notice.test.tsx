@@ -13,6 +13,22 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('SaveStatusNotice', () => {
+  it('mantiene el mismo espacio al guardar y al terminar, sin mover el formulario', () => {
+    const saving = renderToStaticMarkup(
+      <SaveStatusNotice status={{ state: 'saving' }} onRetry={vi.fn()} />,
+    )
+    const saved = renderToStaticMarkup(
+      <SaveStatusNotice status={{ state: 'saved' }} onRetry={vi.fn()} />,
+    )
+
+    expect(saving).toContain('Guardando cambios…')
+    expect(saved).toContain('Cambios guardados')
+    expect(saving).toContain('aria-live="polite"')
+    expect(saved).toContain('aria-live="polite"')
+    expect(saving.match(/class="([^"]+)"/)?.[1]).toBe(saved.match(/class="([^"]+)"/)?.[1])
+    expect(saved).toContain('h-7 shrink-0')
+  })
+
   it('presents an expired trial as a reassuring plan prompt instead of a database error', () => {
     const html = renderToStaticMarkup(
       <SaveStatusNotice
