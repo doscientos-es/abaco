@@ -256,11 +256,11 @@ export async function transitionServiceContract(input: {
   if (error) throw new Error(error.message)
 }
 
-export async function generateContractVisits(tenantId: string) {
+export async function generateContractVisits(tenantId: string, from: string | null = null, through: string | null = null) {
   const { data, error } = await createBrowserSupabaseClient().rpc('generate_contract_visits', {
     p_tenant_id: tenantId,
-    p_from: null,
-    p_through: null,
+    p_from: from,
+    p_through: through,
   })
   if (error) throw new Error(error.message)
   return Number(data ?? 0)

@@ -6,6 +6,19 @@ export function calendarWeekRange(date: string) {
   return { from, to: start.toISOString().slice(0, 10) }
 }
 
+export function calendarMonthRange(date: string) {
+  const first = `${date.slice(0,7)}-01`
+  const last = new Date(`${first}T12:00:00Z`)
+  last.setUTCMonth(last.getUTCMonth()+1,0)
+  return {from:first,to:last.toISOString().slice(0,10)}
+}
+
+export function moveCalendarMonth(date: string, direction: number) {
+  const first = new Date(`${date.slice(0,7)}-01T12:00:00Z`)
+  first.setUTCMonth(first.getUTCMonth()+direction)
+  return first.toISOString().slice(0,10)
+}
+
 export function calendarDateValue(date: string) {
   return new Date(
     Number(date.slice(0, 4)),

@@ -20,6 +20,7 @@ import {
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
+import { CleaningServicesPanel } from './cleaning-services-panel'
 
 const monthNames = [
   'Enero',
@@ -62,6 +63,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const [ruleTitle, setRuleTitle] = useState('')
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const [generationMonth, setGenerationMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const operationIds = useRef(new Map<string, string>())
   const queryKey = ['service-contract', tenant.id, contractId]
   const query = useQuery({
@@ -181,7 +183,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     if (busy) return
     setBusy('generate')
     try {
-      const count = await generateContractVisits(tenant.id)
+      const first = `${generationMonth}-01`
+      const next = new Date(`${first}T12:00:00Z`)
+      next.setUTCMonth(next.getUTCMonth() + 1, 0)
+      const count = await generateContractVisits(tenant.id, first, next.toISOString().slice(0, 10))
       await refresh()
       await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
       toast.success(`${count} visitas nuevas generadas`)
@@ -223,7 +228,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           <p>
             Desde {contract.starts_on}
             {contract.ends_on ? ` hasta ${contract.ends_on}` : ' sin fecha de fin'} ·{' '}
-            {formatEuros(contract.price_cents)} /{' '}
+            {contract.price_cents > 0 ? formatEuros(contract.price_cents) : 'Precio pendiente / no facturable'} /{' '}
             {contract.billing_frequency === 'monthly'
               ? 'mes'
               : contract.billing_frequency === 'quarterly'
@@ -242,6 +247,8 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           ) : null}
         </CardContent>
       </Card>
+
+      <CleaningServicesPanel tenantId={tenant.id} contractId={contract.id} clientId={contract.client_id} startsOn={contract.starts_on} editable={contract.status === 'draft' || contract.status === 'active'} />
 
       {can(session?.role, 'work:costs') ? (
         <ContractBillingPanel
@@ -397,6 +404,8 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             <CardTitle>Estado y generación</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <TextField label="Mes que se va a preparar (todos los contratos activos)" type="month" value={generationMonth} onChange={setGenerationMonth} placeholder="Mes" />
+            <Link to="/agenda" search={{ view: 'calendar', period: 'month', date: `${generationMonth}-01` }} className="text-primary text-sm underline">Revisar visitas del mes</Link>
             {contract.status !== 'draft' ? (
               <TextField
                 label="Motivo de la pausa o cancelación"
@@ -416,10 +425,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                 <>
                   <Button
                     variant="outline"
-                    isDisabled={Boolean(busy)}
+                    isDisabled={Boolean(busy) || !/^\d{4}-\d{2}$/.test(generationMonth)}
                     onPress={() => void generate()}
                   >
-                    Generar agenda de contratos
+                    Preparar mes
                   </Button>
                   <Button
                     variant="outline"
@@ -439,9 +448,8 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              La generación diaria incluye todos los contratos activos de la empresa y usa un
-              horizonte de 30 días por defecto. Repetirla no duplica visitas. Los conflictos quedan
-              pendientes de asignación.
+              Se prepara el mes indicado para todos los contratos activos. Repetir no duplica ni
+              devuelve una visita reprogramada a su fecha original. Las hojas fijas no emiten visitas.
             </p>
           </CardContent>
         </Card>

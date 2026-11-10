@@ -18,6 +18,9 @@ export type VisitSummary = {
   priority: VisitPriority
   notes: string
   updated_at: string
+  work_team_id?: string | null
+  work_team_name?: string
+  route_order?: number
 }
 
 export type TechnicianOption = { id: string; label: string }
@@ -54,7 +57,16 @@ export async function listOfficeVisits(
     p_page: page,
   })
   if (error) throw new Error(error.message)
-  return (data ?? []) as VisitSummary[]
+  const rows = (data ?? []) as VisitSummary[]
+  if (!rows.length) return rows
+  const extra = await createBrowserSupabaseClient().from('service_visits')
+    .select('id,work_team_id,route_order,work_teams(name)').eq('tenant_id',tenantId).in('id',rows.map(row => row.id))
+  if (extra.error) throw new Error(extra.error.message)
+  return rows.map(row => {
+    const detail = extra.data?.find(item => item.id === row.id)
+    const team = Array.isArray(detail?.work_teams) ? detail.work_teams[0] : detail?.work_teams
+    return {...row,work_team_id:detail?.work_team_id,route_order:detail?.route_order,work_team_name:team?.name ?? ''}
+  })
 }
 
 export async function listMyVisits(
