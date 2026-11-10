@@ -134,7 +134,9 @@ export async function loadClientPassport(
       .order('created_at'),
     db
       .from('service_locations')
-      .select('id,name,kind,address,city,postal_code,opening_hours,operational_contact,access_notes,notes,active,updated_at')
+      .select(
+        'id,name,kind,address,city,postal_code,opening_hours,operational_contact,access_notes,notes,active,updated_at',
+      )
       .eq('tenant_id', tenantId)
       .eq('client_id', clientId)
       .order('created_at'),
@@ -340,7 +342,17 @@ export async function updateContact(
 export async function updateLocation(
   tenantId: string,
   location: ServiceLocation,
-  input: Pick<ServiceLocation, 'name' | 'kind' | 'address' | 'city' | 'operational_contact' | 'access_notes' | 'notes' | 'active'>,
+  input: Pick<
+    ServiceLocation,
+    | 'name'
+    | 'kind'
+    | 'address'
+    | 'city'
+    | 'operational_contact'
+    | 'access_notes'
+    | 'notes'
+    | 'active'
+  >,
 ): Promise<void> {
   assertOne(
     await createBrowserSupabaseClient()

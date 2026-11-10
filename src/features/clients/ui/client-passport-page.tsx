@@ -17,6 +17,7 @@ import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
+import { ClientVisitHistory } from '@/features/visits/ui/client-visit-history'
 import { useTenantData } from '@/shared/store/store'
 import { PageNotFound } from '@/shared/ui/page-states'
 
@@ -104,7 +105,7 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
         <PageHeaderHeading>
           <PageHeaderTitle>{client.name}</PageHeaderTitle>
           <PageHeaderDescription>
-            Contactos, ubicaciones, piscinas y equipos del cliente.
+            Contactos, centros, servicios y partes del cliente. Las instalaciones existentes se conservan.
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
@@ -189,79 +190,77 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                 Añade la primera ubicación de servicio o facturación de este cliente.
               </p>
             ) : null}
-            {data.locations
-              .map((location) => (
-                <Card key={location.id}>
-                  <CardHeader className="flex flex-row items-start justify-between gap-3">
-                    <div>
-                      <CardTitle>{location.name}{!location.active ? ' · Inactivo' : ''}</CardTitle>
-                      <p className="text-muted-foreground text-sm">
-                        {location.address}
-                        {location.city ? ` · ${location.city}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {canWrite ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onPress={() => setCreating({ kind: 'editLocation', location })}
-                        >
-                          Editar ubicación
-                        </Button>
-                      ) : null}
-                      {canWrite && location.kind !== 'billing' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onPress={() => setCreating({ kind: 'pool', locationId: location.id })}
-                        >
-                          Añadir piscina
-                        </Button>
-                      ) : null}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="whitespace-pre-wrap text-sm">{location.operational_contact}</p>
-                    <p className="whitespace-pre-wrap text-sm">{location.access_notes}</p>
-                    <p className="whitespace-pre-wrap text-sm">{location.notes}</p>
-                    {data.assets.filter((asset) => asset.location_id === location.id).length ===
-                      0 ? (
-                      <p className="text-muted-foreground text-sm">No hay activos registrados.</p>
+            {data.locations.map((location) => (
+              <Card key={location.id}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>
+                      {location.name}
+                      {!location.active ? ' · Inactivo' : ''}
+                    </CardTitle>
+                    <p className="text-muted-foreground text-sm">
+                      {location.address}
+                      {location.city ? ` · ${location.city}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canWrite ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onPress={() => setCreating({ kind: 'editLocation', location })}
+                      >
+                        Editar ubicación
+                      </Button>
                     ) : null}
-                    {data.assets
-                      .filter((asset) => asset.location_id === location.id)
-                      .map((asset) => (
-                        <AssetCard
-                          key={asset.id}
-                          tenantId={tenant.id}
-                          asset={asset}
-                          data={data}
-                          canWrite={canWrite}
-                          changing={changing}
-                          onAssetStatus={(status) => void changeAssetStatus(asset, status)}
-                          onEquipmentStatus={(equipment, status) =>
-                            void changeEquipmentStatus(equipment, status)
-                          }
-                          onEditPool={(profile) =>
-                            setCreating({ kind: 'editPool', asset, profile })
-                          }
-                          onEditEquipment={(equipment) =>
-                            setCreating({ kind: 'editEquipment', equipment })
-                          }
-                          onReplaceEquipment={(equipment) =>
-                            setCreating({ kind: 'replaceEquipment', equipment })
-                          }
-                          onTransferEquipment={setTransferring}
-                          onAddEquipment={() =>
-                            setCreating({ kind: 'equipment', assetId: asset.id })
-                          }
-                        />
-                      ))}
-                  </CardContent>
-                </Card>
-              ))}
+                    {canWrite && location.kind !== 'billing' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onPress={() => setCreating({ kind: 'pool', locationId: location.id })}
+                      >
+                        Añadir piscina
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm whitespace-pre-wrap">{location.operational_contact}</p>
+                  <p className="text-sm whitespace-pre-wrap">{location.access_notes}</p>
+                  <p className="text-sm whitespace-pre-wrap">{location.notes}</p>
+                  {data.assets.filter((asset) => asset.location_id === location.id).length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No hay activos registrados.</p>
+                  ) : null}
+                  {data.assets
+                    .filter((asset) => asset.location_id === location.id)
+                    .map((asset) => (
+                      <AssetCard
+                        key={asset.id}
+                        tenantId={tenant.id}
+                        asset={asset}
+                        data={data}
+                        canWrite={canWrite}
+                        changing={changing}
+                        onAssetStatus={(status) => void changeAssetStatus(asset, status)}
+                        onEquipmentStatus={(equipment, status) =>
+                          void changeEquipmentStatus(equipment, status)
+                        }
+                        onEditPool={(profile) => setCreating({ kind: 'editPool', asset, profile })}
+                        onEditEquipment={(equipment) =>
+                          setCreating({ kind: 'editEquipment', equipment })
+                        }
+                        onReplaceEquipment={(equipment) =>
+                          setCreating({ kind: 'replaceEquipment', equipment })
+                        }
+                        onTransferEquipment={setTransferring}
+                        onAddEquipment={() => setCreating({ kind: 'equipment', assetId: asset.id })}
+                      />
+                    ))}
+                </CardContent>
+              </Card>
+            ))}
           </section>
+          <ClientVisitHistory key={`${tenant.id}:${clientId}`} tenantId={tenant.id} clientId={clientId} clientName={client.name} locations={data.locations} />
           {canWrite && session?.userId ? (
             <Card>
               <CardContent>

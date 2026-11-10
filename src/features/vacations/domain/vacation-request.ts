@@ -1,4 +1,10 @@
-export const vacationRequestStatuses = ['pending', 'needs_info', 'approved', 'rejected', 'canceled'] as const
+export const vacationRequestStatuses = [
+  'pending',
+  'needs_info',
+  'approved',
+  'rejected',
+  'canceled',
+] as const
 
 export const absenceTypes = ['vacation', 'sick_leave', 'personal_leave', 'other'] as const
 

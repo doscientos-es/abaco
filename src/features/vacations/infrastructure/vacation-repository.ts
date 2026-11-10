@@ -93,32 +93,71 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
 export async function listVacationRequests(tenantId: string): Promise<VacationRequest[]> {
   const data: VacationRequestRow[] = []
   for (let page = 0; ; page++) {
-  const result = await createBrowserSupabaseClient()
-    .from('absence_requests')
-    .select(
-      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
-    )
-    .eq('tenant_id', tenantId)
-    .order('submitted_at', { ascending: false })
-    .order('id').range(page*500,(page+1)*500-1)
-  if (result.error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
-  data.push(...((result.data ?? []) as VacationRequestRow[]))
-  if ((result.data?.length ?? 0) < 500) break
+    const result = await createBrowserSupabaseClient()
+      .from('absence_requests')
+      .select(
+        'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
+      )
+      .eq('tenant_id', tenantId)
+      .order('submitted_at', { ascending: false })
+      .order('id')
+      .range(page * 500, (page + 1) * 500 - 1)
+    if (result.error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
+    data.push(...((result.data ?? []) as VacationRequestRow[]))
+    if ((result.data?.length ?? 0) < 500) break
   }
   return data.map(toVacationRequest)
 }
 
-export type AdministrativeAbsence = {requester_id:string;start_date:string;end_date:string|null;absence_type:AbsenceType;status:VacationRequestStatus;comment:string;decision_comment:string}
-export async function saveAdministrativeAbsence(tenantId:string, request:VacationRequest|null, absence:AdministrativeAbsence, operationId:string) {
-  const {error} = await createBrowserSupabaseClient().rpc('save_administrative_absence',{p_tenant_id:tenantId,p_request_id:request?.id ?? null,p_expected_updated_at:request?.updatedAt ?? null,p_absence:absence,p_operation_id:operationId})
-  if(error) throw new Error(error.message)
+export type AdministrativeAbsence = {
+  requester_id: string
+  start_date: string
+  end_date: string | null
+  absence_type: AbsenceType
+  status: VacationRequestStatus
+  comment: string
+  decision_comment: string
+}
+export async function saveAdministrativeAbsence(
+  tenantId: string,
+  request: VacationRequest | null,
+  absence: AdministrativeAbsence,
+  operationId: string,
+) {
+  const { error } = await createBrowserSupabaseClient().rpc('save_administrative_absence', {
+    p_tenant_id: tenantId,
+    p_request_id: request?.id ?? null,
+    p_expected_updated_at: request?.updatedAt ?? null,
+    p_absence: absence,
+    p_operation_id: operationId,
+  })
+  if (error) throw new Error(error.message)
 }
 
-type AbsenceHistoryState = {start_date:string;end_date:string|null;status:VacationRequestStatus;requester_name:string;absence_type:AbsenceType;requester_comment:string;decision_comment:string}
-export async function listAbsenceHistory(tenantId:string, requestId:string) {
-  const {data,error} = await createBrowserSupabaseClient().from('absence_request_history').select('id,before_state,after_state,actor_id,occurred_at').eq('tenant_id',tenantId).eq('request_id',requestId).order('occurred_at',{ascending:false})
-  if(error) throw new Error(error.message)
-  return (data ?? []) as Array<{id:string;before_state:AbsenceHistoryState|null;after_state:AbsenceHistoryState;actor_id:string|null;occurred_at:string}>
+type AbsenceHistoryState = {
+  start_date: string
+  end_date: string | null
+  status: VacationRequestStatus
+  requester_name: string
+  absence_type: AbsenceType
+  requester_comment: string
+  decision_comment: string
+}
+export async function listAbsenceHistory(tenantId: string, requestId: string) {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('absence_request_history')
+    .select('id,before_state,after_state,actor_id,occurred_at')
+    .eq('tenant_id', tenantId)
+    .eq('request_id', requestId)
+    .order('occurred_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Array<{
+    id: string
+    before_state: AbsenceHistoryState | null
+    after_state: AbsenceHistoryState
+    actor_id: string | null
+    occurred_at: string
+  }>
 }
 
 export async function listApprovedVacationRanges(
