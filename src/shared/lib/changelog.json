@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-10",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add superadmin panel with company and payment management"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "cbdc1bab5ef69c64d67f4018a6b8cfaf0bd33221",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add superadmin panel with company and payment management"
+        }
+      ]
+    },
+    {
       "version": "0.0.9",
       "date": "2026-11-10",
       "title": "v0.0.9",

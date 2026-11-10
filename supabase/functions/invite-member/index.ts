@@ -7,26 +7,26 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { inviteCorsHeaders } from '../_shared/invite-cors.ts'
+
 type Role = 'admin' | 'user'
 const invitable: Role[] = ['admin', 'user']
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') ?? '',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  Vary: 'Origin',
-}
-
-function reply(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (request) => {
+  const corsHeaders = inviteCorsHeaders(
+    request,
+    Deno.env.get('APP_URL'),
+    Deno.env.get('INVITE_ALLOWED_ORIGINS'),
+  )
+  function reply(status: number, body: Record<string, unknown>) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (request.method !== 'POST') return reply(405, { error: 'Método no permitido' })
 
