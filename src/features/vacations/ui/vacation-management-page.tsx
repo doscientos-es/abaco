@@ -196,7 +196,7 @@ export function VacationManagementPage() {
           </div>
           <Popover
             placement="bottom end"
-            className="max-h-[80dvh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-2"
+            className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
             trigger={
               <Button
                 variant="ghost"
@@ -263,9 +263,9 @@ export function VacationManagementPage() {
               <AbsenceHistory tenantId={tenantId} requestId={request.id} />
             ) : null}
             {request.status !== 'rejected' &&
-            request.status !== 'canceled' &&
-            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
-            tenantId ? (
+              request.status !== 'canceled' &&
+              (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+              tenantId ? (
               <VacationCoverage
                 tenantId={tenantId}
                 requestId={request.id}
