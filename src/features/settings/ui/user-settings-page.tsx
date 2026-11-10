@@ -56,7 +56,11 @@ export function UserSettingsPage() {
             ))}
           </ul>
           {switching ? <p role="status">Cambiando de empresa…</p> : null}
-          {error ? <p role="alert" className="text-destructive text-sm">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

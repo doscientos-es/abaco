@@ -48,11 +48,18 @@ describe('worker settings', () => {
     state.mockImplementation((initial: unknown) => {
       const index = cursor++
       if (!(index in values)) values[index] = initial
-      return [values[index], (value: unknown) => { values[index] = value }]
+      return [
+        values[index],
+        (value: unknown) => {
+          values[index] = value
+        },
+      ]
     })
-    button.mockImplementation(({ children, isDisabled }: { children: React.ReactNode; isDisabled: boolean }) => (
-      <button disabled={isDisabled}>{children}</button>
-    ))
+    button.mockImplementation(
+      ({ children, isDisabled }: { children: React.ReactNode; isDisabled: boolean }) => (
+        <button disabled={isDisabled}>{children}</button>
+      ),
+    )
     session.mockReturnValue({ tenantId: 'one', companies })
     switchTo.mockResolvedValue(undefined)
   })

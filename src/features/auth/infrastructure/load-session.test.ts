@@ -107,6 +107,8 @@ describe('welcome state in the session', () => {
 
   it('reports a failure to save the selected company', async () => {
     updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
-    await expect(setPreferredCompanyId('company-2')).rejects.toThrow('No se pudo cambiar de empresa')
+    await expect(setPreferredCompanyId('company-2')).rejects.toThrow(
+      'No se pudo cambiar de empresa',
+    )
   })
 })

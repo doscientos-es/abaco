@@ -145,6 +145,44 @@ h3 {
   height: 100%;
 }
 
+/* User shell: only the content scrolls; navigation stays accessible on every screen. */
+[data-slot='app-shell'].user-frame {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.user-frame [data-slot='app-shell-main'] {
+  overflow: hidden;
+}
+
+.user-frame [data-slot='app-shell-content'] {
+  min-width: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.user-frame__page {
+  width: min(100%, 72rem);
+  margin-inline: auto;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) 1.5rem max(1rem, env(safe-area-inset-left));
+}
+
+@media (min-width: 40rem) {
+  .user-frame__page {
+    padding: 2.5rem;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .user-frame [data-slot='app-shell-mobile-header'] {
+    height: calc(3.5rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+  }
+}
+
 /* Auth screens: slow-moving green aurora behind a frosted card. */
 .auth-bg {
   position: relative;
