@@ -96,7 +96,7 @@ export function VacationManagementPage() {
       : (requests.data?.filter((request) => request.status === status).length ?? 0)
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="@container mx-auto max-w-4xl space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Solicitudes de ausencia</h1>
         <p className="text-muted-foreground text-sm">
@@ -121,23 +121,23 @@ export function VacationManagementPage() {
         ))}
       </nav>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="grid gap-1.5 text-sm font-medium">
+      <div className="grid gap-3 sm:grid-cols-2 @min-[40rem]:grid-cols-4">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Buscar trabajador
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Nombre del trabajador"
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           />
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Tipo de ausencia
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           >
             <option value="all">Todos los tipos</option>
             {absenceTypes.map((type) => (
@@ -147,22 +147,22 @@ export function VacationManagementPage() {
             ))}
           </select>
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Desde
           <input
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           />
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Hasta
           <input
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           />
         </label>
       </div>
@@ -182,8 +182,8 @@ export function VacationManagementPage() {
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
             {request.status !== 'rejected' &&
-            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
-            tenantId ? (
+              (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+              tenantId ? (
               <VacationCoverage
                 tenantId={tenantId}
                 requestId={request.id}

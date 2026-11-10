@@ -57,6 +57,8 @@ describe('VacationManagementPage', () => {
     expect(html).toContain('Todos los tipos')
     expect(html).toContain('Desde')
     expect(html).toContain('Hasta')
+    expect(html).toContain('@container')
+    expect(html).toContain('@min-[40rem]:grid-cols-4')
   })
 
   it('does not offer a final decision while an absence is waiting for the worker', () => {
