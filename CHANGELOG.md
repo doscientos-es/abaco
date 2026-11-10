@@ -6,6 +6,9 @@
 
 ### Nuevas funciones
 
+- Add lint and test validation logs for Felipe
+- Add validation log for Felipe build and tests
+- Add tests for cleaning service center data
 - Return first location from array if present
 - Update changelog with new features and improvements
 - Add client visit history and improve paper visit panel

@@ -8,6 +8,9 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add lint and test validation logs for Felipe",
+            "Add validation log for Felipe build and tests",
+            "Add tests for cleaning service center data",
             "Return first location from array if present",
             "Update changelog with new features and improvements",
             "Add client visit history and improve paper visit panel",
@@ -31,6 +34,27 @@
         }
       ],
       "changes": [
+        {
+          "sha": "143cb8320f68dd803db532790d7c0b25bf69b321",
+          "type": "feat",
+          "scope": "validation",
+          "breaking": false,
+          "description": "Add lint and test validation logs for Felipe"
+        },
+        {
+          "sha": "7a222a1d145839f4d98893dba00bed4d45ec6963",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add validation log for Felipe build and tests"
+        },
+        {
+          "sha": "0f1317ef63a0d9fd3702541811d29567c54c8bce",
+          "type": "feat",
+          "scope": "cleaning-service",
+          "breaking": false,
+          "description": "Add tests for cleaning service center data"
+        },
         {
           "sha": "466d9ac53f370f9226f867a2f8ea1cd680ea1682",
           "type": "feat",
