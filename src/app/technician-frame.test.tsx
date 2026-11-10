@@ -36,7 +36,7 @@ vi.mock('@/features/auth', () => ({
   roleLabels: { user: 'Usuario', admin: 'Administrador' },
 }))
 vi.mock('@doscientos/ui', () => {
-  const box = ({ children, ...props }: { children?: ReactNode;[key: string]: unknown }) => (
+  const box = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
     <div {...props}>{children}</div>
   )
   return {

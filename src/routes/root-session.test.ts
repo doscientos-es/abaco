@@ -128,20 +128,23 @@ describe('root session guard', () => {
     }
     loadSession.mockResolvedValue(session)
     let finishHydration: () => void = () => undefined
-    hydrateStore.mockReturnValue(new Promise<void>((resolve) => { finishHydration = resolve }))
+    hydrateStore.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishHydration = resolve
+      }),
+    )
     let loaded = false
     const visit = beforeLoad({
       context: { queryClient },
       location: { pathname: '/ajustes', href: '/ajustes' },
-    } as Parameters<typeof beforeLoad>[0]).then((result) => {
+    } as Parameters<typeof beforeLoad>[0]).then(() => {
       loaded = true
-      return result
     })
 
     await vi.waitFor(() => expect(hydrateStore).toHaveBeenCalledOnce())
     expect(loaded).toBe(false)
     finishHydration()
-    await expect(visit).resolves.toEqual({ session })
+    await expect(visit).resolves.toBeUndefined()
     queryClient.clear()
   })
 })
