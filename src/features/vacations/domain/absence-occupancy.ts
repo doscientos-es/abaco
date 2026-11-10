@@ -1,6 +1,7 @@
 import type { VacationRequest } from './vacation-request'
 
 export function absencesInRange(requests: readonly VacationRequest[], from: string, through: string) {
+  if (from > through) return []
   return requests.filter(r => r.startDate <= through && (r.endDate ?? '9999-12-31') >= from)
 }
 
@@ -13,5 +14,6 @@ export function absenceOccupancy(requests: readonly VacationRequest[], from: str
 }
 
 export function overlappingEmployeeAbsences(requests: readonly VacationRequest[], person: string, from: string, through: string | null, excludingId?: string) {
-  return absencesInRange(requests,from,through ?? '9999-12-31').filter(r => r.id !== excludingId && r.requesterId === person && !['rejected','canceled'].includes(r.status))
+  if (!person || !from) return []
+  return absencesInRange(requests,from,through || '9999-12-31').filter(r => r.id !== excludingId && r.requesterId === person && !['rejected','canceled'].includes(r.status))
 }
