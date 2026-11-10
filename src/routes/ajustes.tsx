@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { requirePermission, useSession } from '@/features/auth'
+import { requirePermission } from '@/features/auth'
 import { SettingsPage, UserSettingsPage } from '@/features/settings'
 
 const tabs = ['empresa', 'documentos', 'equipo', 'plan', 'novedades'] as const
@@ -19,6 +19,7 @@ export const Route = createFileRoute('/ajustes')({
 })
 
 function SettingsRoute() {
-  const session = useSession()
+  // The route context changes only after the root has loaded the admin store.
+  const { session } = Route.useRouteContext()
   return session?.role === 'admin' ? <SettingsPage /> : <UserSettingsPage />
 }
