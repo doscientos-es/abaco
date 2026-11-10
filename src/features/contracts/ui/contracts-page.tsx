@@ -3,6 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
+import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
@@ -42,7 +46,6 @@ export function ContractsPage() {
   const [showForm, setShowForm] = useState(false)
   const [clientId, setClientId] = useState('')
   const [locationId, setLocationId] = useState('')
-  const [assetId, setAssetId] = useState('')
   const [title, setTitle] = useState('')
   const [startsOn, setStartsOn] = useState(todayInMadrid)
   const [endsOn, setEndsOn] = useState('')
@@ -52,6 +55,11 @@ export function ContractsPage() {
   const [included, setIncluded] = useState('')
   const [busy, setBusy] = useState(false)
   const operationIds = useRef(new Map<string, string>())
+  const related = useRelatedRecordCreation({
+    tenantId: tenant.id,
+    clientId,
+    onLocationCreated: setLocationId,
+  })
   const query = useQuery({
     queryKey: ['service-contracts', tenant.id, page],
     queryFn: () => listServiceContracts(tenant.id, page),
@@ -68,6 +76,9 @@ export function ContractsPage() {
   const priceCents = parseEuros(price)
   const valid =
     Boolean(clientId && locationId && title.trim() && startsOn) &&
+    targets.isSuccess &&
+    targets.data.locations.some((location) => location.id === locationId) &&
+    !related.pending &&
     (!price.trim() || /^\d+(?:[.,]\d{1,2})?$/.test(price.trim())) &&
     Number.isSafeInteger(priceCents) &&
     priceCents >= 0 &&
@@ -79,7 +90,7 @@ export function ContractsPage() {
       tenantId: tenant.id,
       clientId,
       locationId,
-      assetId: assetId || null,
+      assetId: null,
       title: title.trim(),
       startsOn,
       endsOn: endsOn || null,
@@ -134,6 +145,7 @@ export function ContractsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <SelectField
                 label="Cliente"
+                isDisabled={busy || related.pending || related.creating !== null}
                 value={clientId}
                 options={[
                   { value: '', label: 'Selecciona un cliente' },
@@ -144,35 +156,46 @@ export function ContractsPage() {
                 onChange={(value) => {
                   setClientId(value)
                   setLocationId('')
-                  setAssetId('')
                 }}
               />
-              <SelectField
-                label="Centro principal · obligatorio"
-                value={locationId}
-                options={[
-                  { value: '', label: 'Selecciona una ubicación' },
-                  ...(targets.data?.locations ?? []).map((location) => ({
-                    value: location.id,
-                    label: location.name,
-                  })),
-                ]}
-                onChange={(value) => {
-                  setLocationId(value)
-                  setAssetId('')
-                }}
-              />
-              <SelectField
-                label="Piscina o activo"
-                value={assetId}
-                options={[
-                  { value: '', label: 'Sin activo concreto' },
-                  ...(targets.data?.assets ?? [])
-                    .filter((asset) => asset.location_id === locationId)
-                    .map((asset) => ({ value: asset.id, label: asset.name })),
-                ]}
-                onChange={setAssetId}
-              />
+              <div className="grid content-start gap-1">
+                <SelectField
+                  label="Centro principal · obligatorio"
+                  isDisabled={!clientId || busy || targets.isPending || targets.isError || related.pending}
+                  value={locationId}
+                  options={[
+                    { value: '', label: 'Selecciona un centro' },
+                    ...(targets.data?.locations ?? []).map((location) => ({
+                      value: location.id,
+                      label: location.name,
+                    })),
+                  ]}
+                  onChange={setLocationId}
+                />
+                {related.allowed ? (
+                  <RelatedCreateButton
+                    label="Crear centro"
+                    disabled={!clientId || busy || related.pending}
+                    onPress={() => related.start('location')}
+                  />
+                ) : null}
+                {!clientId ? (
+                  <p className="text-muted-foreground text-xs">Selecciona primero un cliente.</p>
+                ) : targets.isPending ? (
+                  <output className="text-muted-foreground text-xs">Cargando centros…</output>
+                ) : targets.isError ? (
+                  <div role="alert" className="text-destructive text-sm">
+                    <p>No se pudieron cargar los centros: {targets.error.message}</p>
+                    <Button variant="outline" onPress={() => void targets.refetch()}>
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : targets.data?.locations.length === 0 ? (
+                  <p className="text-muted-foreground text-xs">
+                    Este cliente aún no tiene centros. Crea uno para continuar.
+                  </p>
+                ) : null}
+              </div>
               <TextField
                 label="Título"
                 value={title}
@@ -226,16 +249,18 @@ export function ContractsPage() {
                 label="Servicios incluidos, uno por línea"
                 value={included}
                 onChange={setIncluded}
-                placeholder="Revisión de agua y depuradora"
+                placeholder="Limpieza de suelos y escaleras"
                 className="sm:col-span-2"
               />
             </div>
+            {related.status}
             <Button isDisabled={busy || !valid} onPress={() => void createContract()}>
               {busy ? 'Creando…' : 'Crear borrador'}
             </Button>
           </CardContent>
         </Card>
       ) : null}
+      {related.dialogs}
       {query.isPending ? <output>Cargando contratos…</output> : null}
       {query.isError ? (
         <p role="alert" className="text-destructive text-sm">
