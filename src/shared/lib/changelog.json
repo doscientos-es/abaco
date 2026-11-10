@@ -8,6 +8,9 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update demo documentation with implementation details and validations",
+            "Add tests for expense guard permissions and functionality",
+            "Add validation logs and tests for Felipe",
             "Add lint and test validation logs for Felipe",
             "Add validation log for Felipe build and tests",
             "Add tests for cleaning service center data",
@@ -34,6 +37,27 @@
         }
       ],
       "changes": [
+        {
+          "sha": "f67b35b943e68bdb3df422175fd4bb0f1ee884ad",
+          "type": "feat",
+          "scope": "docs",
+          "breaking": false,
+          "description": "Update demo documentation with implementation details and validations"
+        },
+        {
+          "sha": "efb08cf9d4921b24d3555cd982e020c26d129cd6",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add tests for expense guard permissions and functionality"
+        },
+        {
+          "sha": "22dc927ce0d51291416f91f2ebad4c8406e87f33",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Add validation logs and tests for Felipe"
+        },
         {
           "sha": "143cb8320f68dd803db532790d7c0b25bf69b321",
           "type": "feat",
