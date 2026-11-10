@@ -52,7 +52,9 @@ describe('LinesEditor', () => {
   it('keeps the line fields, discount, total and actions in a responsive grid', () => {
     const markup = renderToStaticMarkup(<LinesEditor estimate={estimate} catalog={[]} />)
 
-    expect(markup).toContain('@min-[46rem]:grid-cols-[minmax(10rem,1fr)_4.75rem_4.5rem_7rem_5.5rem_minmax(5.5rem,auto)_2rem]')
+    expect(markup).toContain(
+      '@min-[46rem]:grid-cols-[minmax(10rem,1fr)_4.75rem_4.5rem_7rem_5.5rem_minmax(5.5rem,auto)_2rem]',
+    )
     expect(markup).toContain('aria-label="Descripción"')
     expect(markup).toContain('aria-label="Cantidad"')
     expect(markup).toContain('aria-label="Unidad"')

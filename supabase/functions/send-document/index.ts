@@ -8,25 +8,12 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { inviteCorsHeaders } from '../_shared/invite-cors.ts'
 import { sendEmail } from '../_shared/resend.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const writers = ['admin']
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') ?? '',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  Vary: 'Origin',
-}
-
-function reply(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -49,6 +36,18 @@ function toHtml(text: string, brand: { color: string; logoUrl: string; company: 
 }
 
 Deno.serve(async (request) => {
+  const corsHeaders = inviteCorsHeaders(
+    request,
+    Deno.env.get('APP_URL'),
+    Deno.env.get('INVITE_ALLOWED_ORIGINS'),
+  )
+  function reply(status: number, body: Record<string, unknown>) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (request.method !== 'POST') return reply(405, { error: 'method_not_allowed' })
 

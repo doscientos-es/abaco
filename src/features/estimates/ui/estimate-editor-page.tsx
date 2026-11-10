@@ -49,13 +49,14 @@ import { StatusBadge } from '@/shared/ui/status-badge'
 
 import { deleteEstimate, duplicateEstimate, patchEstimate } from '../application/estimate-actions'
 import {
-  acceptEstimateManually,
   loadManualEstimateAcceptance,
   loadPublishedEstimate,
   publishEstimate,
 } from '../application/estimate-publication-actions'
+import { recordManualApproval } from '../application/record-manual-approval'
 import { EstimateDocument } from './estimate-document'
 import { LinesEditor } from './lines-editor'
+import { ManualAcceptanceCard } from './manual-acceptance-card'
 import { MilestonesEditor } from './milestones-editor'
 import { PriceInput } from './price-input'
 
@@ -246,31 +247,55 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   }
 
   async function recordManualAcceptance() {
-    if (acceptingManually) return
+    if (!estimate || acceptingManually) return
     if (manualName.trim().length < 2 || manualEvidence.trim().length < 12) {
       toast.error('Indica quién aceptó y dónde se conserva la evidencia.')
       return
     }
     setAcceptingManually(true)
+    let published = false
     try {
-      await acceptEstimateManually(
-        tenant.id,
+      await recordManualApproval({
+        status: estimate.status,
+        tenantId: tenant.id,
         estimateId,
-        manualOperationId.current,
-        manualName,
-        manualEvidence,
-      )
-      await refreshStore()
+        operationId: manualOperationId.current,
+        name: manualName,
+        evidence: manualEvidence,
+        onPublished: () => {
+          published = true
+        },
+      })
       setShowManualAcceptance(false)
       toast.success('Aceptación manual registrada')
+      await refreshStore()
     } catch (error) {
       toast.error('No se pudo registrar la aceptación', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+        description: `${published ? 'El presupuesto quedó publicado. ' : ''}${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`,
       })
+      if (published) await refreshStore()
     } finally {
       setAcceptingManually(false)
     }
   }
+
+  const manualAcceptanceCard = showManualAcceptance ? (
+    <ManualAcceptanceCard
+      draft={estimate.status === 'draft'}
+      name={manualName}
+      evidence={manualEvidence}
+      busy={acceptingManually}
+      onNameChange={(value) => {
+        setManualName(value)
+        manualOperationId.current = crypto.randomUUID()
+      }}
+      onEvidenceChange={(value) => {
+        setManualEvidence(value)
+        manualOperationId.current = crypto.randomUUID()
+      }}
+      onSubmit={() => void recordManualAcceptance()}
+    />
+  ) : null
 
   if (preview) {
     return (
@@ -320,7 +345,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           <PageHeaderActions>
             {estimate.status === 'sent' && can(session?.role, 'estimates:write') ? (
               <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
-                Registrar aceptación manual
+                Marcar como aprobado
               </Button>
             ) : null}
             {estimate.status === 'accepted' && existingWork.data ? (
@@ -333,9 +358,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Link>
             ) : null}
             {estimate.status === 'accepted' &&
-              publication.data.estimate.conversionDestination !== 'contract' &&
-              !existingWork.data &&
-              can(session?.role, 'work:write') ? (
+            publication.data.estimate.conversionDestination !== 'contract' &&
+            !existingWork.data &&
+            can(session?.role, 'work:write') ? (
               <Button
                 isDisabled={converting || existingWork.isPending}
                 onPress={() => void convertToWork()}
@@ -391,45 +416,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           Las partidas y condiciones del presupuesto publicado están bloqueadas. Para cambiarlo,
           crea una revisión en borrador.
         </p>
-        {estimate.status === 'sent' && showManualAcceptance ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Aceptación recibida fuera del enlace</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Registra una aceptación que ya hayas recibido. Esta acción no representa una firma
-                del cliente en Ábaco y no se puede deshacer.
-              </p>
-              <TextField
-                label="Nombre de quien aceptó"
-                value={manualName}
-                onChange={(value) => {
-                  setManualName(value)
-                  manualOperationId.current = crypto.randomUUID()
-                }}
-                placeholder="Nombre comunicado por el cliente"
-                minLength={2}
-                maxLength={120}
-              />
-              <TextareaField
-                label="Referencia de la evidencia"
-                value={manualEvidence}
-                onChange={(value) => {
-                  setManualEvidence(value)
-                  manualOperationId.current = crypto.randomUUID()
-                }}
-                placeholder="Ejemplo: correo recibido el 21/10/2026, conservado en el expediente del cliente"
-                helper="Indica dónde se conserva el correo, documento o autorización original."
-                minLength={12}
-                maxLength={2000}
-              />
-              <Button isDisabled={acceptingManually} onPress={() => void recordManualAcceptance()}>
-                {acceptingManually ? 'Registrando…' : 'Confirmar aceptación manual'}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
+        {estimate.status === 'sent' ? manualAcceptanceCard : null}
         {estimate.status === 'accepted' && manualAcceptance.data ? (
           <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
             Aceptación registrada por oficina a nombre de {manualAcceptance.data.accepted_by} el{' '}
@@ -438,9 +425,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
-          publication.data.estimate.conversionDestination === 'contract' &&
-          !existingContract.data &&
-          can(session?.role, 'contracts:write') ? (
+        publication.data.estimate.conversionDestination === 'contract' &&
+        !existingContract.data &&
+        can(session?.role, 'contracts:write') ? (
           <Card>
             <CardHeader>
               <CardTitle>Crear contrato desde la versión aceptada</CardTitle>
@@ -566,6 +553,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
+          {can(session?.role, 'estimates:write') ? (
+            <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
+              Marcar como aprobado
+            </Button>
+          ) : null}
           <Button onPress={() => void sendByEmail()}>
             <span className="inline-flex items-center gap-2">
               {fieldIcons.mail}
@@ -619,6 +611,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </DropdownMenuTrigger>
         </PageHeaderActions>
       </PageHeader>
+
+      {manualAcceptanceCard}
 
       <Card className="@container">
         <CardHeader>
