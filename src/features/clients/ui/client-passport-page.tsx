@@ -178,10 +178,10 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           <section className="space-y-4" aria-labelledby="locations-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 id="locations-title" className="text-xl font-semibold">
-                Ubicaciones e instalaciones
+                Centros e instalaciones
               </h2>
               {canWrite ? (
-                <Button onPress={() => setCreating({ kind: 'location' })}>Añadir ubicación</Button>
+                <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
               ) : null}
             </div>
             {data.locations.filter((location) => location.active).length === 0 ? (
@@ -190,12 +190,11 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
               </p>
             ) : null}
             {data.locations
-              .filter((location) => location.active)
               .map((location) => (
                 <Card key={location.id}>
                   <CardHeader className="flex flex-row items-start justify-between gap-3">
                     <div>
-                      <CardTitle>{location.name}</CardTitle>
+                      <CardTitle>{location.name}{!location.active ? ' · Inactivo' : ''}</CardTitle>
                       <p className="text-muted-foreground text-sm">
                         {location.address}
                         {location.city ? ` · ${location.city}` : ''}
@@ -223,8 +222,11 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <p className="whitespace-pre-wrap text-sm">{location.operational_contact}</p>
+                    <p className="whitespace-pre-wrap text-sm">{location.access_notes}</p>
+                    <p className="whitespace-pre-wrap text-sm">{location.notes}</p>
                     {data.assets.filter((asset) => asset.location_id === location.id).length ===
-                    0 ? (
+                      0 ? (
                       <p className="text-muted-foreground text-sm">No hay activos registrados.</p>
                     ) : null}
                     {data.assets

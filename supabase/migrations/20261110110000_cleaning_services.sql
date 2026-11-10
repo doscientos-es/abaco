@@ -1,4 +1,8 @@
 -- Extend existing contract rules into independent services; existing rules remain valid.
+alter table public.service_locations
+  add column operational_contact text not null default '' check(char_length(operational_contact) <= 1000),
+  add column access_notes text not null default '' check(char_length(access_notes) <= 2000),
+  add column notes text not null default '' check(char_length(notes) <= 2000);
 alter table public.service_contract_visit_rules
   drop constraint service_contract_visit_rules_contract_id_season_weekday_key,
   add column location_id uuid,
@@ -110,7 +114,7 @@ begin
   end if;
   select * into r from public.service_contract_visit_rules where id = new.contract_rule_id and tenant_id = new.tenant_id;
   select jsonb_build_object('client',c.name,'center',coalesce(l.name,''),'address',coalesce(l.address,''),
-    'tasks',coalesce(r.tasks,''),'instructions',concat_ws(E'\n',nullif(l.opening_hours,''),nullif(r.instructions,''),nullif(new.notes,'')),
+    'tasks',coalesce(r.tasks,''),'instructions',concat_ws(E'\n',nullif(l.operational_contact,''),nullif(l.access_notes,''),nullif(l.notes,''),nullif(l.opening_hours,''),nullif(r.instructions,''),nullif(new.notes,'')),
     'requiresAcceptance',coalesce(r.requires_acceptance,true),'timeKnown',coalesce(r.time_known,true))
     into new.paper_snapshot from public.clients c left join public.service_locations l
       on l.id = new.location_id and l.tenant_id = c.tenant_id
