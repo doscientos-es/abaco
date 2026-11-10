@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(38);
 
 insert into public.tenants (id, name) values
   ('67000000-0000-4000-8000-000000000001', 'Empresa vacaciones'),
@@ -22,94 +22,103 @@ insert into public.memberships (tenant_id, user_id, role) values
 
 set local role authenticated;
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000005';
-select set_config('test.vacation_one', public.submit_vacation_request(
-  '67000000-0000-4000-8000-000000000001', '2026-12-24', '2026-12-26', 'Viaje familiar'
+select set_config('test.vacation_one', public.submit_absence_request(
+  '67000000-0000-4000-8000-000000000001', 'vacation', '2026-12-24', '2026-12-26', 'Viaje familiar'
 )::text, true);
 select ok(current_setting('test.vacation_one')::uuid is not null,
   'User can submit a vacation request');
-select is((select count(*) from public.vacation_requests), 1::bigint,
-  'User can read their own request');
-select is((select requester_id from public.vacation_requests
+select set_config('test.absence_open', public.submit_absence_request(
+  '67000000-0000-4000-8000-000000000001', 'sick_leave', '2026-12-27', null, ''
+)::text, true);
+select is((select end_date from public.absence_requests
+  where id = current_setting('test.absence_open')::uuid), null::date,
+  'Sick leave can be submitted without a known end date');
+select is((select absence_type from public.absence_requests
+  where id = current_setting('test.absence_open')::uuid), 'sick_leave',
+  'The requested absence type is recorded');
+select is((select count(*) from public.absence_requests), 2::bigint,
+  'User can read their vacation and open-ended sick leave requests');
+select is((select requester_id from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid),
   '67000000-0000-4000-8000-000000000005'::uuid,
   'Requester identity comes from the authenticated session');
-select is((select requester_name from public.vacation_requests
+select is((select requester_name from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Toni Usuario',
   'Requester display name is recorded from the trusted profile');
-select is((select start_date from public.vacation_requests
+select is((select start_date from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), '2026-12-24'::date,
   'Start date is stored as a calendar date');
-select is((select end_date from public.vacation_requests
+select is((select end_date from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), '2026-12-26'::date,
   'End date is included in the requested period');
-select is((select status from public.vacation_requests
+select is((select status from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'pending',
   'New requests do not change planning and start pending');
 select throws_ok(
-  $$select public.submit_vacation_request(
-    '67000000-0000-4000-8000-000000000001', '2026-12-26', '2026-12-24', '')$$,
-  '22023', 'Datos de vacaciones inválidos', 'Reversed date ranges are rejected');
+  $$select public.submit_absence_request(
+    '67000000-0000-4000-8000-000000000001', 'vacation', '2026-12-26', '2026-12-24', '')$$,
+  '22023', 'Datos de ausencia inválidos', 'Reversed date ranges are rejected');
 select throws_ok(
-  $$select public.submit_vacation_request(
-    '67000000-0000-4000-8000-000000000001', '2026-12-24', '2026-12-24', repeat('x', 1001))$$,
-  '22023', 'Datos de vacaciones inválidos', 'Oversized request comments are rejected');
+  $$select public.submit_absence_request(
+    '67000000-0000-4000-8000-000000000001', 'vacation', '2026-12-24', '2026-12-24', repeat('x', 1001))$$,
+  '22023', 'Datos de ausencia inválidos', 'Oversized request comments are rejected');
 select throws_ok(
-  $$insert into public.vacation_requests (tenant_id, requester_id, requester_name, start_date, end_date)
+  $$insert into public.absence_requests (tenant_id, requester_id, requester_name, start_date, end_date)
     values ('67000000-0000-4000-8000-000000000001',
       '67000000-0000-4000-8000-000000000005', 'Toni Usuario', current_date, current_date)$$,
   '42501', null, 'Direct table writes are denied');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000006';
-select is((select count(*) from public.vacation_requests), 0::bigint,
+select is((select count(*) from public.absence_requests), 0::bigint,
   'A user cannot read a colleague request');
-select set_config('test.vacation_two', public.submit_vacation_request(
-  '67000000-0000-4000-8000-000000000001', '2027-01-04', '2027-01-04', ''
+select set_config('test.vacation_two', public.submit_absence_request(
+  '67000000-0000-4000-8000-000000000001', 'vacation', '2027-01-04', '2027-01-04', ''
 )::text, true);
-select is((select count(*) from public.vacation_requests), 1::bigint,
+select is((select count(*) from public.absence_requests), 1::bigint,
   'Second user sees only their own request');
 select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_one')::uuid, 'approved', '')$$,
-  '42501', 'No tienes permiso para gestionar vacaciones',
+  '42501', 'No tienes permiso para gestionar ausencias',
   'User cannot decide vacation requests');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000007';
-select ok(public.submit_vacation_request(
-  '67000000-0000-4000-8000-000000000001', '2027-01-04', '2027-01-04', '') is not null,
+select ok(public.submit_absence_request(
+  '67000000-0000-4000-8000-000000000001', 'vacation', '2027-01-04', '2027-01-04', '') is not null,
   'Another user can submit a vacation request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000008';
-select is((select count(*) from public.vacation_requests), 0::bigint,
+select is((select count(*) from public.absence_requests), 0::bigint,
   'Another company cannot read vacation requests');
 select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_one')::uuid, 'approved', '')$$,
-  '42501', 'No tienes permiso para gestionar vacaciones',
+  '42501', 'No tienes permiso para gestionar ausencias',
   'Another company cannot decide a request');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000003';
-select is((select count(*) from public.vacation_requests), 3::bigint,
+select is((select count(*) from public.absence_requests), 4::bigint,
   'Admin can review company request history');
 select is(public.decide_vacation_request(
   '67000000-0000-4000-8000-000000000001',
   current_setting('test.vacation_one')::uuid, 'approved', 'Cobertura confirmada'
 ), current_setting('test.vacation_one')::uuid,
   'Admin can approve a pending request');
-select is((select status from public.vacation_requests
+select is((select status from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'approved',
   'Approval is visible in request history');
-select is((select decided_by from public.vacation_requests
+select is((select decided_by from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid),
   '67000000-0000-4000-8000-000000000003'::uuid,
   'Decision author is recorded');
-select is((select decided_by_name from public.vacation_requests
+select is((select decided_by_name from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Alicia Administradora',
   'Decision author display name is captured');
-select ok((select decided_at is not null from public.vacation_requests
+select ok((select decided_at is not null from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Decision timestamp is recorded');
-select is((select decision_comment from public.vacation_requests
+select is((select decision_comment from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Cobertura confirmada',
   'Decision comment is retained in history');
 select throws_ok(
@@ -121,9 +130,9 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_two')::uuid, 'pending', '')$$,
-  '22023', 'Decisión de vacaciones inválida', 'Only approval or rejection are valid decisions');
+  '22023', 'Decisión de ausencia inválida', 'Only approval or rejection are valid decisions');
 select throws_ok(
-  $$update public.vacation_requests set status = 'rejected'
+  $$update public.absence_requests set status = 'rejected'
     where id = current_setting('test.vacation_one')::uuid$$,
   '42501', null, 'Even office users cannot bypass the decision command');
 
@@ -133,28 +142,28 @@ select is(public.decide_vacation_request(
   current_setting('test.vacation_two')::uuid, 'rejected', 'Revisar otras fechas'
 ), current_setting('test.vacation_two')::uuid,
   'Admin can reject a pending request');
-select is((select status from public.vacation_requests
+select is((select status from public.absence_requests
   where id = current_setting('test.vacation_two')::uuid), 'rejected',
   'Rejection is visible in request history');
-select is((select decided_by from public.vacation_requests
+select is((select decided_by from public.absence_requests
   where id = current_setting('test.vacation_two')::uuid),
   '67000000-0000-4000-8000-000000000004'::uuid,
   'Admin decision author is recorded');
-select is((select decision_comment from public.vacation_requests
+select is((select decision_comment from public.absence_requests
   where id = current_setting('test.vacation_two')::uuid), 'Revisar otras fechas',
   'Rejection comment is retained');
 
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000005';
-select is((select status from public.vacation_requests
+select is((select status from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'approved',
   'Worker can consult their decision');
-select is((select decided_by_name from public.vacation_requests
+select is((select decided_by_name from public.absence_requests
   where id = current_setting('test.vacation_one')::uuid), 'Alicia Administradora',
   'Worker can identify who decided their request');
-select is((select count(*) from public.vacation_requests), 1::bigint,
+select is((select count(*) from public.absence_requests), 2::bigint,
   'Worker history remains limited to their own requests');
-select set_config('test.vacation_pending', public.submit_vacation_request(
-  '67000000-0000-4000-8000-000000000001', '2027-02-01', '2027-02-02', ''
+select set_config('test.vacation_pending', public.submit_absence_request(
+  '67000000-0000-4000-8000-000000000001', 'vacation', '2027-02-01', '2027-02-02', ''
 )::text, true);
 select ok(current_setting('test.vacation_pending')::uuid is not null,
   'User can submit a new request before the company becomes inactive');
@@ -168,13 +177,13 @@ select throws_ok(
   $$select public.decide_vacation_request(
     '67000000-0000-4000-8000-000000000001',
     current_setting('test.vacation_pending')::uuid, 'approved', '')$$,
-  'P0402', 'La empresa no puede gestionar vacaciones',
+  'P0402', 'La empresa no puede gestionar ausencias',
   'Inactive companies cannot approve vacation requests');
 set local request.jwt.claim.sub = '67000000-0000-4000-8000-000000000005';
 select throws_ok(
-  $$select public.submit_vacation_request(
-    '67000000-0000-4000-8000-000000000001', '2027-03-01', '2027-03-02', '')$$,
-  'P0402', 'La empresa no puede gestionar vacaciones',
+  $$select public.submit_absence_request(
+    '67000000-0000-4000-8000-000000000001', 'vacation', '2027-03-01', '2027-03-02', '')$$,
+  'P0402', 'La empresa no puede gestionar ausencias',
   'Inactive companies cannot submit vacation requests');
 
 select * from finish();

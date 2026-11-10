@@ -3,7 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
-import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
+import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
 import type { Client } from '@/shared/domain/types'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -64,7 +67,7 @@ export function ManualWorkForm({
   const targets = useQuery({
     queryKey: ['work-target-options', tenantId, clientId],
     queryFn: () => loadWorkTargetOptions(tenantId, clientId),
-    enabled: Boolean(clientId) && !related.pending,
+    enabled: Boolean(clientId) && !related.storePending,
   })
   const locations = targets.data?.locations ?? []
   const assets = (targets.data?.assets ?? []).filter((asset) => asset.location_id === locationId)
@@ -176,8 +179,8 @@ export function ManualWorkForm({
               {targets.isError ? (
                 <div role="alert" className="space-y-2 text-sm sm:col-span-2">
                   <p className="text-destructive">
-                    No se pudieron cargar las ubicaciones. Puedes crear el trabajo sin ellas o volver
-                    a intentarlo.
+                    No se pudieron cargar las ubicaciones. Puedes crear el trabajo sin ellas o
+                    volver a intentarlo.
                   </p>
                   <Button
                     variant="outline"
@@ -207,7 +210,11 @@ export function ManualWorkForm({
                   }}
                 />
                 {related.allowed ? (
-                  <RelatedCreateButton label="Crear ubicación" disabled={related.pending} onPress={() => related.start('location')} />
+                  <RelatedCreateButton
+                    label="Crear ubicación"
+                    disabled={related.pending}
+                    onPress={() => related.start('location')}
+                  />
                 ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
@@ -228,7 +235,11 @@ export function ManualWorkForm({
                   }}
                 />
                 {related.allowed && locationId ? (
-                  <RelatedCreateButton label="Crear piscina" disabled={related.pending} onPress={() => related.start('pool')} />
+                  <RelatedCreateButton
+                    label="Crear piscina"
+                    disabled={related.pending}
+                    onPress={() => related.start('pool')}
+                  />
                 ) : null}
               </div>
               {targets.isSuccess && !locations.length ? (
