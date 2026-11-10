@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   stateIndex: 0,
   open: false,
   dates: false,
+  absenceType: 'vacation',
   setOpen: vi.fn(),
   mutate: vi.fn(),
   invalidate: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock('react', async (importOriginal) => {
     useState: (initial: unknown) => {
       const index = mocks.stateIndex++
       if (index === 0) return [mocks.open, mocks.setOpen]
+      if (index === 1) return [mocks.absenceType, vi.fn()]
       if (mocks.dates && index === 2) return ['2026-11-10', vi.fn()]
       if (mocks.dates && index === 3) return ['2026-11-12', vi.fn()]
       return actual.useState(initial)
@@ -70,6 +72,7 @@ describe('Solicitud de vacaciones', () => {
   beforeEach(() => {
     mocks.open = false
     mocks.dates = false
+    mocks.absenceType = 'vacation'
     mocks.onOpen = null
     mocks.dialog = null
     vi.clearAllMocks()
@@ -84,7 +87,19 @@ describe('Solicitud de vacaciones', () => {
     expect(mocks.setOpen).toHaveBeenCalledWith(true)
 
     mocks.open = true
-    expect(render()).toContain('Hasta, incluido (opcional si no se conoce)')
+    const openedHtml = render()
+    expect(openedHtml).toContain('Hasta, incluido')
+    expect(openedHtml).not.toContain('opcional si no se conoce')
+    expect(openedHtml).toContain('Hasta, incluido<input required')
+  })
+
+  it('indica que la fecha final puede omitirse en otros tipos de ausencia', () => {
+    mocks.open = true
+    mocks.absenceType = 'sick_leave'
+    const html = render()
+    expect(html).toContain('Hasta, incluido (opcional si no se conoce)')
+    expect(html).toContain('Hasta, incluido (opcional si no se conoce)<input')
+    expect(html).not.toContain('Hasta, incluido (opcional si no se conoce)<input required')
   })
 
   it('permite enviar un periodo válido desde el diálogo', () => {
