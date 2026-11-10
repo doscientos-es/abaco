@@ -79,7 +79,9 @@ export function VacationCoverage({
       <h3 className="font-medium">Servicios afectados</h3>
       {coverage.isPending ? <p className="text-muted-foreground mt-2">Revisando agenda…</p> : null}
       {coverage.isError ? (
-        <p role="alert" className="text-destructive mt-2">{coverage.error.message}</p>
+        <p role="alert" className="text-destructive mt-2">
+          {coverage.error.message}
+        </p>
       ) : null}
       {coverage.data?.length === 0 ? (
         <p className="text-muted-foreground mt-2">No hay visitas futuras afectadas.</p>
@@ -91,29 +93,38 @@ export function VacationCoverage({
           )
           return (
             <li key={visit.visitId} className="bg-muted/30 rounded-md border p-3">
-              <p className="font-medium">{visit.title} · {visit.clientName}</p>
+              <p className="font-medium">
+                {visit.title} · {visit.clientName}
+              </p>
               <p className="text-muted-foreground">
-                {timeLabel(visit.scheduledStartAt, visit.timezone)}–{timeLabel(visit.scheduledEndAt, visit.timezone)}
-                {' · '}{visit.assignedUserName}
+                {timeLabel(visit.scheduledStartAt, visit.timezone)}–
+                {timeLabel(visit.scheduledEndAt, visit.timezone)}
+                {' · '}
+                {visit.assignedUserName}
                 {visit.locationName ? ` · ${visit.locationName}` : ''}
                 {visit.workTeamName ? ` · Equipo ${visit.workTeamName}` : ''}
               </p>
               {visit.status === 'in_progress' ? (
                 <p className="text-muted-foreground mt-2 text-sm">
-                  La visita ya está en curso. Coordina la cobertura manualmente; no se puede reasignar desde aquí.
+                  La visita ya está en curso. Coordina la cobertura manualmente; no se puede
+                  reasignar desde aquí.
                 </p>
               ) : visit.candidates.length ? (
                 <div className="mt-3 space-y-2">
                   <p className="text-sm font-medium">Posibles coberturas</p>
                   {visit.candidates.map((candidate) => {
                     const key = `${visit.visitId}:${candidate.userId}`
-                    const isPending = replan.isPending && replan.variables?.visitId === visit.visitId
+                    const isPending =
+                      replan.isPending && replan.variables?.visitId === visit.visitId
                     return (
                       <div key={key} className="space-y-2 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <span>{candidate.label}</span>
-                            <span className="text-muted-foreground"> · {candidate.workTeamMatch ? 'mismo equipo' : 'sin equipo asignado'}</span>
+                            <span className="text-muted-foreground">
+                              {' '}
+                              · {candidate.workTeamMatch ? 'mismo equipo' : 'sin equipo asignado'}
+                            </span>
                           </div>
                           <Button
                             size="sm"
@@ -136,9 +147,15 @@ export function VacationCoverage({
                           <input
                             type="checkbox"
                             checked={confirmed[key] ?? false}
-                            onChange={(event) => setConfirmed((current) => ({ ...current, [key]: event.target.checked }))}
+                            onChange={(event) =>
+                              setConfirmed((current) => ({
+                                ...current,
+                                [key]: event.target.checked,
+                              }))
+                            }
                           />
-                          He comprobado manualmente que tiene las competencias y el horario adecuados.
+                          He comprobado manualmente que tiene las competencias y el horario
+                          adecuados.
                         </label>
                       </div>
                     )
@@ -146,7 +163,8 @@ export function VacationCoverage({
                 </div>
               ) : (
                 <p className="text-muted-foreground mt-2 text-sm">
-                  No hay sustitutos disponibles según equipo, agenda y vacaciones. Habrá que cubrirlo manualmente.
+                  No hay sustitutos disponibles según equipo, agenda y vacaciones. Habrá que
+                  cubrirlo manualmente.
                 </p>
               )}
             </li>
@@ -155,7 +173,8 @@ export function VacationCoverage({
       </ul>
       {replan.isError ? (
         <p role="alert" className="text-destructive mt-2 text-sm">
-          No se pudo asignar. La visita puede haber cambiado o el técnico ya no estar disponible: {replan.error.message}
+          No se pudo asignar. La visita puede haber cambiado o el técnico ya no estar disponible:{' '}
+          {replan.error.message}
         </p>
       ) : null}
     </section>
