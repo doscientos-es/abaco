@@ -32,6 +32,7 @@ describe('vacation request domain', () => {
       needs_info: 'Necesita información',
       approved: 'Aprobada',
       rejected: 'Rechazada',
+      canceled: 'Cancelada',
     })
   })
 })
