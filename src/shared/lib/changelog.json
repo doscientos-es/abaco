@@ -8,11 +8,19 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add invite functionality and team management UI",
             "Add superadmin panel with company and payment management"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "189e41b0a1a72a8bb1623da13bc4513e6462159c",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add invite functionality and team management UI"
+        },
         {
           "sha": "cbdc1bab5ef69c64d67f4018a6b8cfaf0bd33221",
           "type": "feat",

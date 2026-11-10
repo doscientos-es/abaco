@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Add invite functionality and team management UI
 - Add superadmin panel with company and payment management
 
 ## 2026-11-10 — v0.0.9
