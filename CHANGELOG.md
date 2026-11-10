@@ -6,6 +6,21 @@
 
 ### Nuevas funciones
 
+- Add client visit history and improve paper visit panel
+- Add cancellation label to absence type labels
+- Add validation for absence occupancy and employee overlaps
+- Add month view and related calendar functionalities
+- Add validation cleaning tests log file
+- Add operational contact and notes fields to service locations
+- Add paper visit management and document handling features
+- Add SaveStatusIndicator for better save status display
+- Add manual approval functionality for estimates
+- Add filter mode to absence date range picker
+- Add absence date range picker component
+- Enhance accessibility and layout for user content
+- Implement user navigation and settings menu
+- Add user settings page and company switch functionality
+- Add invite functionality and team management UI
 - Add invite functionality and team management UI
 - Add superadmin panel with company and payment management
 

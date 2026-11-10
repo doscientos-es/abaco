@@ -8,12 +8,132 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add client visit history and improve paper visit panel",
+            "Add cancellation label to absence type labels",
+            "Add validation for absence occupancy and employee overlaps",
+            "Add month view and related calendar functionalities",
+            "Add validation cleaning tests log file",
+            "Add operational contact and notes fields to service locations",
+            "Add paper visit management and document handling features",
+            "Add SaveStatusIndicator for better save status display",
+            "Add manual approval functionality for estimates",
+            "Add filter mode to absence date range picker",
+            "Add absence date range picker component",
+            "Enhance accessibility and layout for user content",
+            "Implement user navigation and settings menu",
+            "Add user settings page and company switch functionality",
+            "Add invite functionality and team management UI",
             "Add invite functionality and team management UI",
             "Add superadmin panel with company and payment management"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "b240598ae2b01467f3a3c8c79af97b399f3ac9a6",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add client visit history and improve paper visit panel"
+        },
+        {
+          "sha": "f548646ac1c241ffcc34e23a49766200d3160032",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add cancellation label to absence type labels"
+        },
+        {
+          "sha": "af7c740b5e5e2f9e5049c01f974593e311d3f5db",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add validation for absence occupancy and employee overlaps"
+        },
+        {
+          "sha": "7f66e37638d6f60525e1a32a2c4c1b8c33bcdd50",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add month view and related calendar functionalities"
+        },
+        {
+          "sha": "f6475786f05a4354d2ee867657d9cfcb65c8bf56",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add validation cleaning tests log file"
+        },
+        {
+          "sha": "dc7a518568b3e1b89dc8bc0e6bef05279e1b5cf4",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add operational contact and notes fields to service locations"
+        },
+        {
+          "sha": "8f9c62e382e7ff5486b3c43eada8f880ae3f9f30",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add paper visit management and document handling features"
+        },
+        {
+          "sha": "eb1a4294479da6b5c9ac5014063c3742ce68b023",
+          "type": "feat",
+          "scope": "app-frame",
+          "breaking": false,
+          "description": "Add SaveStatusIndicator for better save status display"
+        },
+        {
+          "sha": "ba08e65c2335a667323b7db21605fc3893b94c46",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add manual approval functionality for estimates"
+        },
+        {
+          "sha": "188d3c3c92d09de818e37e9bbb3cb0da6cc2c700",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add filter mode to absence date range picker"
+        },
+        {
+          "sha": "befcc297f8c7eb5c0a8f4e14919f96b48922933f",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add absence date range picker component"
+        },
+        {
+          "sha": "159f005aff41eb8ca7b5207b6625b31fc82cf442",
+          "type": "feat",
+          "scope": "user-frame",
+          "breaking": false,
+          "description": "Enhance accessibility and layout for user content"
+        },
+        {
+          "sha": "760b773cc41e9fcf4e1bd9562fdb270f2fbdd4e9",
+          "type": "feat",
+          "scope": "technician-frame",
+          "breaking": false,
+          "description": "Implement user navigation and settings menu"
+        },
+        {
+          "sha": "65ac93aeb12c5c77ffa0b6ec41a885ef75f8572e",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Add user settings page and company switch functionality"
+        },
+        {
+          "sha": "290b381d9f18e99c43a5863e61810c823e10ad70",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add invite functionality and team management UI"
+        },
         {
           "sha": "189e41b0a1a72a8bb1623da13bc4513e6462159c",
           "type": "feat",
