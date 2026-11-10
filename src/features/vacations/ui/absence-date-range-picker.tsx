@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-element-to-interactive-role -- An interactive calendar uses a semantic table as its grid. */
 import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 
@@ -141,7 +142,6 @@ export function AbsenceDateRangePicker({
               <CaretRight aria-hidden="true" className="size-4" />
             </button>
           </div>
-          {/* oxlint-disable jsx-a11y(no-noninteractive-element-to-interactive-role) -- A table is the semantic base for an interactive calendar grid. */}
           <table
             role="grid"
             aria-label={`Calendario de ${month}`}
@@ -201,7 +201,6 @@ export function AbsenceDateRangePicker({
               ))}
             </tbody>
           </table>
-          {/* oxlint-enable jsx-a11y(no-noninteractive-element-to-interactive-role) */}
         </div>
         <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3">
           <p id={instructionsId} className="text-muted-foreground text-xs">
