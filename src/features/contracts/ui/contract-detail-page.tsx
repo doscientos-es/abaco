@@ -536,8 +536,12 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                 {event.kind === 'created'
                   ? 'Creado'
                   : event.kind === 'rule_added'
-                    ? 'Frecuencia añadida'
-                    : 'Estado cambiado'}
+                    ? 'Trabajo añadido'
+                    : event.kind === 'service_updated'
+                      ? 'Trabajo configurado'
+                      : event.kind === 'details_updated'
+                        ? 'Datos del contrato actualizados'
+                        : 'Estado cambiado'}
                 {typeof event.payload.reason === 'string' && event.payload.reason
                   ? ` · ${event.payload.reason}`
                   : ''}

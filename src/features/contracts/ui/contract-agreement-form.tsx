@@ -2,10 +2,9 @@ import { Button, toast } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
-import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
 
-import type { ServiceContract } from '../infrastructure/contract-repository'
+import { updateDraftContractDetails, type ServiceContract } from '../application/contract-actions'
 
 export function ContractAgreementForm({ contract }: { contract: ServiceContract }) {
   const cache = useQueryClient()
@@ -23,13 +22,7 @@ export function ContractAgreementForm({ contract }: { contract: ServiceContract 
     operations.current.set(key, operation)
     setBusy(true)
     try {
-      const { error } = await createBrowserSupabaseClient().rpc('update_draft_contract_details', {
-        p_tenant_id: contract.tenant_id, p_contract_id: contract.id,
-        p_expected_updated_at: contract.updated_at, p_starts_on: startsOn,
-        p_ends_on: endsOn || null, p_renewal_mode: renewal, p_notes: notes,
-        p_operation_id: operation,
-      })
-      if (error) throw new Error(error.message)
+      await updateDraftContractDetails({ contract, ...payload, operationId: operation })
       await cache.invalidateQueries({ queryKey: ['service-contract', contract.tenant_id, contract.id] })
       await cache.invalidateQueries({ queryKey: ['service-contracts', contract.tenant_id] })
       toast.success('Datos del contrato guardados')

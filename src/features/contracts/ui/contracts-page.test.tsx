@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as RelatedCreation from '@/features/clients/ui/related-record-creation'
 
-import { ContractsPage } from './contracts-page'
+import { CleaningServicesPanel } from './cleaning-services-panel'
 
 type Field = { value: string; onChange: (value: string) => void; isDisabled?: boolean }
 type Action = { onPress: () => void; disabled: boolean }
@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   fields: new Map<string, Field>(),
   actions: new Map<string, Action>(),
   dialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
+  jobDialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
   locations: {} as Record<string, Array<{ id: string; name: string }>>,
   targetState: 'ready' as 'ready' | 'loading' | 'error',
   allowed: true,
@@ -32,6 +33,11 @@ vi.mock('react', async (importOriginal) => {
   const actual = await importOriginal<typeof React>()
   return {
     ...actual,
+    useRef: (initial: unknown) => {
+      const index = mocks.cursor++
+      if (!(index in mocks.states)) mocks.states[index] = { current: initial }
+      return mocks.states[index]
+    },
     useState: (initial: unknown) => {
       const index = mocks.cursor++
       if (!(index in mocks.states)) {
@@ -71,6 +77,7 @@ vi.mock('@doscientos/ui', () => {
   }
 })
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
   useQuery: ({ queryKey, enabled = true }: { queryKey: string[]; enabled?: boolean }) => {
     if (queryKey[0] === 'work-target-options') {
@@ -114,8 +121,10 @@ vi.mock('@/shared/ui/form', () => {
   return { SelectField: Field, TextField: Field, TextareaField: Field }
 })
 vi.mock('@/shared/ui/form-dialog', () => ({
-  FormDialog: (props: { children: ReactNode; onSubmit: () => void; submitDisabled: boolean }) => {
-    mocks.dialog = props
+  FormDialog: (props: { open: boolean; title: string; children: ReactNode; onSubmit: () => void; submitDisabled: boolean }) => {
+    if (!props.open) return null
+    if (props.title.includes('trabajo')) mocks.jobDialog = props
+    else mocks.dialog = props
     return <dialog open>{props.children}</dialog>
   },
 }))
@@ -149,13 +158,17 @@ vi.mock('../application/contract-actions', () => ({
   createManualServiceContract: mocks.createContract,
   listServiceContracts: vi.fn(),
 }))
+vi.mock('../application/cleaning-service-actions', () => ({
+  listCleaningServices: vi.fn(), saveContractJob: mocks.createContract,
+}))
 
 function render() {
   mocks.cursor = 0
   mocks.fields.clear()
   mocks.actions.clear()
   mocks.dialog = null
-  return renderToStaticMarkup(<ContractsPage />)
+  mocks.jobDialog = null
+  return renderToStaticMarkup(<CleaningServicesPanel tenantId="tenant-1" contractId="contract-1" clientId="client-1" clientName="Alborán" startsOn="2026-12-01" endsOn="2027-11-30" updatedAt="version-1" draft editable />)
 }
 function press(label: string) {
   const action = mocks.actions.get(label)
@@ -171,9 +184,9 @@ function change(label: string, value: string) {
 }
 function openLocationForm() {
   render()
-  press('Nuevo contrato')
-  change('Cliente', 'client-1')
-  change('Título', 'Limpieza ordinaria')
+  press('Añadir trabajo')
+  change('Nombre · obligatorio', 'Limpieza ordinaria')
+  change('Tareas y alcance', 'Suelos y aseos')
   press('Crear centro')
   change('Nombre', 'Portal A')
   change('Dirección', 'Calle de prueba 1')
@@ -185,11 +198,11 @@ async function saveLocation() {
   await vi.waitFor(() => {
     render()
     expect(mocks.dialog).toBeNull()
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(false)
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
   })
 }
 
-describe('contract centre creation', () => {
+describe('contract job and inline centre creation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.states = []
@@ -204,17 +217,15 @@ describe('contract centre creation', () => {
     })
   })
 
-  it('requires a client before creating a centre and has no pool/asset selector', () => {
+  it('requires a centre and tasks, with no pool/asset selector', () => {
     render()
-    const html = press('Nuevo contrato')
-    expect(html).toContain('Selecciona primero un cliente')
-    expect(mocks.actions.get('Crear centro')?.disabled).toBe(true)
-    expect(mocks.fields.get('Centro principal · obligatorio')?.isDisabled).toBe(true)
+    const html = press('Añadir trabajo')
+    expect(mocks.actions.get('Crear centro')?.disabled).toBe(false)
     expect(html).not.toContain('Piscina o activo')
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(true)
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
   })
 
-  it('saves a centre for the selected client, selects it and creates a contract without an asset', async () => {
+  it('saves and selects a centre, then persists a punctual job for that contract', async () => {
     openLocationForm()
     await saveLocation()
     expect(mocks.createLocation).toHaveBeenCalledWith(
@@ -226,28 +237,22 @@ describe('contract centre creation', () => {
         kind: 'service',
       }),
     )
-    expect(mocks.fields.get('Centro principal · obligatorio')?.value).toBe('location-new')
+    expect(mocks.fields.get('Centro · obligatorio')?.value).toBe('location-new')
     for (const key of ['work-target-options', 'client-passport']) {
       expect(mocks.invalidate).toHaveBeenCalledWith(
         { queryKey: [key, 'tenant-1', 'client-1'] },
         { throwOnError: true },
       )
     }
-    press('Crear borrador')
+    mocks.jobDialog?.onSubmit()
     await vi.waitFor(() =>
       expect(mocks.createContract).toHaveBeenCalledWith(
         expect.objectContaining({
-          clientId: 'client-1',
-          locationId: 'location-new',
-          assetId: null,
+          tenantId: 'tenant-1', contractId: 'contract-1', jobId: null,
+          expectedUpdatedAt: 'version-1',
+          service: expect.objectContaining({ location_id: 'location-new', frequency: 'once', tasks: 'Suelos y aseos' }),
         }),
       ),
-    )
-    await vi.waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({
-        to: '/contratos/$contractId',
-        params: { contractId: 'contract-1' },
-      }),
     )
   })
 
@@ -260,7 +265,7 @@ describe('contract centre creation', () => {
     expect(mocks.dialog).not.toBeNull()
     expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
     expect(mocks.fields.get('Dirección')?.value).toBe('Calle de prueba 1')
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(true)
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
     expect(mocks.createContract).not.toHaveBeenCalled()
   })
 
@@ -269,32 +274,34 @@ describe('contract centre creation', () => {
     openLocationForm()
     mocks.dialog?.onSubmit()
     await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(true)
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
     press('Reintentar actualización')
     await vi.waitFor(() => {
       render()
-      expect(mocks.actions.get('Crear borrador')?.disabled).toBe(false)
+      expect(mocks.jobDialog?.submitDisabled).toBe(false)
     })
     expect(mocks.createLocation).toHaveBeenCalledOnce()
   })
 
-  it('clears the centre when changing client and prevents submitting a stale centre', async () => {
+  it('keeps job data and reuses the operation id when retrying a failed save', async () => {
     openLocationForm()
     await saveLocation()
-    change('Cliente', 'client-2')
-    expect(mocks.fields.get('Centro principal · obligatorio')?.value).toBe('')
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(true)
-    press('Crear borrador')
-    expect(mocks.createContract).not.toHaveBeenCalled()
+    mocks.createContract.mockRejectedValueOnce(new Error('Sin conexión'))
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled())
+    render()
+    expect(mocks.fields.get('Nombre · obligatorio')?.value).toBe('Limpieza ordinaria')
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() => expect(mocks.createContract).toHaveBeenCalledTimes(2))
+    expect(mocks.createContract.mock.calls[0]?.[0].operationId).toBe(mocks.createContract.mock.calls[1]?.[0].operationId)
   })
 
   it('shows a retry action and blocks submission when centres cannot be loaded', () => {
     render()
-    press('Nuevo contrato')
-    change('Cliente', 'client-1')
+    press('Añadir trabajo')
     mocks.targetState = 'error'
     expect(render()).toContain('No se pudieron cargar los centros')
-    expect(mocks.actions.get('Crear borrador')?.disabled).toBe(true)
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
     press('Reintentar')
     expect(mocks.refetch).toHaveBeenCalledOnce()
   })
@@ -302,8 +309,7 @@ describe('contract centre creation', () => {
   it('does not offer centre creation without client write permission', () => {
     mocks.allowed = false
     render()
-    press('Nuevo contrato')
-    change('Cliente', 'client-1')
+    press('Añadir trabajo')
     expect(mocks.actions.has('Crear centro')).toBe(false)
   })
 })

@@ -86,7 +86,7 @@ end;
 $$;
 revoke all on function app_private.create_contract_after_acceptance() from public,anon,authenticated;
 create constraint trigger estimates_create_contract
-  after update of status on public.estimates deferrable initially deferred
+  after update on public.estimates deferrable initially deferred
   for each row when (old.status is distinct from new.status and new.status = 'accepted')
   execute function app_private.create_contract_after_acceptance();
 
@@ -155,6 +155,8 @@ begin
     if not found then raise exception 'Trabajo no encontrado' using errcode='P0002'; end if;
     if (c.status<>'draft' and r.configured) or exists(select 1 from public.service_visits where contract_rule_id=r.id)
       then raise exception 'No se modifica una pauta con órdenes generadas' using errcode='P0409'; end if;
+  elsif exists(select 1 from public.service_contract_visit_rules where id=job_id) then
+    raise exception 'Identificador de trabajo utilizado' using errcode='23505';
   end if;
   if freq is null or freq not in ('once','weekly','fortnightly','days15','monthly') or mode is null
     or mode not in ('fixed','mobile') or (freq='once' and mode<>'mobile')
@@ -266,8 +268,10 @@ begin
   if c.status='draft' then raise exception 'Activa el contrato antes de generar periodos' using errcode='P0409'; end if;
   if c.price_cents<=0 then raise exception 'El contrato no tiene precio facturable' using errcode='P0410'; end if;
   if c.starts_on>p_through_on then return 0; end if;
+  if coalesce(c.ends_on,c.starts_on)>p_through_on then return 0; end if;
   vat := (c.source_snapshot #>> '{estimate,vat_rate}')::numeric;
   if vat is null or vat not between 0 and 100 then raise exception 'IVA contractual no disponible' using errcode='P0410'; end if;
+  if c.price_cents+round(c.price_cents*vat/100)>9000000000000000 then raise exception 'Importe de cuota fuera de rango' using errcode='22003'; end if;
   insert into public.contract_billing_periods(tenant_id,contract_id,cycle_index,period_start_on,period_end_on,
     net_cents,vat_rate,pricing_status,review_reason)
     values(p_tenant_id,c.id,0,c.starts_on,coalesce(c.ends_on,c.starts_on),

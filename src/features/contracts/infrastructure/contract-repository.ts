@@ -77,6 +77,19 @@ export async function findContractForEstimate(tenantId: string, estimateId: stri
   return (data?.id as string | undefined) ?? null
 }
 
+export async function updateDraftContractDetails(input: {
+  contract: ServiceContract; startsOn: string; endsOn: string; renewal: ServiceContract['renewal_mode']; notes: string; operationId: string
+}) {
+  const { contract } = input
+  const { error } = await createBrowserSupabaseClient().rpc('update_draft_contract_details', {
+    p_tenant_id: contract.tenant_id, p_contract_id: contract.id,
+    p_expected_updated_at: contract.updated_at, p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn || null, p_renewal_mode: input.renewal, p_notes: input.notes,
+    p_operation_id: input.operationId,
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function convertAcceptedEstimateToContract(input: {
   tenantId: string
   estimateId: string

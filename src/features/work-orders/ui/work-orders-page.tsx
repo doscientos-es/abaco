@@ -13,6 +13,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { ContractJobsPage } from '@/features/contracts/ui/contract-jobs-page'
 import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField } from '@/shared/ui/form'
@@ -25,6 +26,16 @@ import { WorkOrdersList } from './work-orders-list'
 import { workStatusLabels } from './work-status-badge'
 
 export function WorkOrdersPage() {
+  return <div className="space-y-6">
+    <ContractJobsPage />
+    <details className="rounded-lg border p-4">
+      <summary className="cursor-pointer font-medium">Trabajos anteriores e independientes (modelo anterior)</summary>
+      <div className="mt-4"><LegacyWorkOrdersPage /></div>
+    </details>
+  </div>
+}
+
+function LegacyWorkOrdersPage() {
   const { tenant, clients } = useTenantData()
   const session = useSession()
   const search = useSearch({ from: '/trabajos' })
