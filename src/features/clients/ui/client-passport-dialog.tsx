@@ -114,7 +114,7 @@ export function CreatePassportItem({
   const [specifications, setSpecifications] = useState(equipment?.specifications ?? '')
   const [equipmentNotes, setEquipmentNotes] = useState(equipment?.notes ?? '')
   const [saving, setSaving] = useState(false)
-  const label = isContact ? 'contacto' : isLocation ? 'ubicación' : isPool ? 'piscina' : 'equipo'
+  const label = isContact ? 'contacto' : isLocation ? 'centro' : isPool ? 'piscina' : 'equipo'
   const invalid =
     !name.trim() ||
     name.trim().length > (isEquipment ? 100 : 160) ||
