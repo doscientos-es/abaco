@@ -13,6 +13,7 @@ import {
   AppShellMobileHeader,
   AppShellSidebar,
 } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
@@ -26,6 +27,7 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
+import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
@@ -45,6 +47,7 @@ type NavTo =
   | '/contabilidad'
   | '/ajustes'
   | '/personalizar'
+  | '/superadmin'
 type NavItem = { to: NavTo; label: string; icon: ReactNode }
 type NavGroup = { label: string; items: NavItem[] }
 
@@ -82,6 +85,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
       { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
+      { to: '/superadmin', label: 'Administración de Ábaco', icon: navIcons.settings },
     ],
   },
 ]
@@ -144,12 +148,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const { tenant } = useTenantData()
   const saveStatus = useSaveStatus()
   const session = useSession()
+  const platformAccess = useQuery({
+    ...platformAccessQuery(session?.userId ?? ''),
+    enabled: Boolean(session?.userId),
+  })
   const signOut = useSignOut()
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
   const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
+    if (item.to === '/superadmin') return platformAccess.data === true
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
   }
