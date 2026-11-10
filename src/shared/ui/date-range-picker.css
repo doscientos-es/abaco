@@ -1,0 +1,34 @@
+.date-range-picker .rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-months-gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.date-range-picker .rdp-months {
+  justify-content: center;
+}
+
+.date-range-picker .rdp-month_caption {
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.date-range-picker .rdp-selected {
+  font-size: inherit;
+}
+
+.date-range-picker .rdp-day_button:focus-visible,
+.date-range-picker .rdp-button_previous:focus-visible,
+.date-range-picker .rdp-button_next:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.date-range-picker .rdp-day_button:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
