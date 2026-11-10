@@ -271,9 +271,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
       await refreshStore()
     } catch (error) {
       toast.error('No se pudo registrar la aceptación', {
-        description: `${published ? 'El presupuesto quedó publicado. ' : ''}${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`,
+        description: `${published ? 'El presupuesto quedó publicado. ' : estimate.status === 'draft' ? 'Comprueba si el presupuesto quedó publicado. ' : ''}${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`,
       })
-      if (published) await refreshStore()
+      await refreshStore()
     } finally {
       setAcceptingManually(false)
     }
@@ -358,9 +358,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Link>
             ) : null}
             {estimate.status === 'accepted' &&
-            publication.data.estimate.conversionDestination !== 'contract' &&
-            !existingWork.data &&
-            can(session?.role, 'work:write') ? (
+              publication.data.estimate.conversionDestination !== 'contract' &&
+              !existingWork.data &&
+              can(session?.role, 'work:write') ? (
               <Button
                 isDisabled={converting || existingWork.isPending}
                 onPress={() => void convertToWork()}
@@ -425,9 +425,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
-        publication.data.estimate.conversionDestination === 'contract' &&
-        !existingContract.data &&
-        can(session?.role, 'contracts:write') ? (
+          publication.data.estimate.conversionDestination === 'contract' &&
+          !existingContract.data &&
+          can(session?.role, 'contracts:write') ? (
           <Card>
             <CardHeader>
               <CardTitle>Crear contrato desde la versión aceptada</CardTitle>
