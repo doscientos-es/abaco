@@ -1,14 +1,15 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
 
 export type ContractStatus = 'draft' | 'active' | 'paused' | 'expired' | 'canceled'
-export type BillingFrequency = 'monthly' | 'quarterly' | 'yearly'
+export type BillingFrequency = ContractBillingFrequency
 
 export type ServiceContract = {
   id: string
   tenant_id: string
   client_id: string
   origin_estimate_id: string | null
-  location_id: string
+  location_id: string | null
   asset_id: string | null
   title: string
   status: ContractStatus
@@ -17,6 +18,8 @@ export type ServiceContract = {
   timezone: string
   price_cents: number
   billing_frequency: BillingFrequency
+  renewal_mode: 'pending' | 'manual' | 'automatic'
+  notes: string
   default_assigned_user_id: string | null
   included_scope: Array<{ description: string }>
   schedule_version: number
@@ -37,7 +40,7 @@ export type ContractVisitRule = {
 
 export type ContractEvent = {
   id: string
-  kind: 'created' | 'rule_added' | 'status_changed'
+  kind: 'created' | 'rule_added' | 'status_changed' | 'details_updated' | 'service_updated'
   payload: Record<string, unknown>
   occurred_at: string
 }
@@ -61,7 +64,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,default_assigned_user_id,included_scope,schedule_version,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,default_assigned_user_id,included_scope,schedule_version,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()
@@ -129,6 +132,8 @@ export async function loadServiceContract(tenantId: string, contractId: string) 
         .select('id,season,months,weekday,every_n_weeks,local_start,duration_minutes,title')
         .eq('tenant_id', tenantId)
         .eq('contract_id', contractId)
+        .is('frequency', null)
+        .eq('configured', true)
         .order('season'),
       db
         .from('service_contract_events')

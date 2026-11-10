@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -21,6 +22,7 @@ import { CleaningServicesPanel } from './cleaning-services-panel'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
+import { ContractAgreementForm } from './contract-agreement-form'
 
 const monthNames = [
   'Enero',
@@ -231,15 +233,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             {contract.price_cents > 0
               ? formatEuros(contract.price_cents)
               : 'Precio pendiente / no facturable'}{' '}
-            /{' '}
-            {contract.billing_frequency === 'monthly'
-              ? 'mes'
-              : contract.billing_frequency === 'quarterly'
-                ? 'trimestre'
-                : 'año'}
+            · {contractBillingLabels[contract.billing_frequency]}
           </p>
           <p className="text-muted-foreground">
-            El importe es la condición pactada. La generación de cuotas y facturas sigue pendiente.
+            El importe es la condición económica pactada, independiente de la frecuencia de cada trabajo.
           </p>
           {contract.included_scope.length ? (
             <ul className="list-inside list-disc">
@@ -248,6 +245,11 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
               ))}
             </ul>
           ) : null}
+          {contract.origin_estimate_id ? <Link to="/presupuestos/$estimateId" params={{ estimateId: contract.origin_estimate_id }} className="text-primary underline">Ver presupuesto aceptado</Link> : null}
+          {contract.status === 'draft' && can(session?.role, 'contracts:write') ? <ContractAgreementForm key={contract.updated_at} contract={contract} /> : <>
+            <p>Renovación: {contract.renewal_mode === 'pending' ? 'Pendiente de acordar' : contract.renewal_mode === 'automatic' ? 'Automática, según acuerdo' : 'Manual'}</p>
+            <p className="whitespace-pre-wrap">{contract.notes}</p>
+          </>}
         </CardContent>
       </Card>
 
@@ -257,7 +259,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         clientId={contract.client_id}
         clientName={clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
         startsOn={contract.starts_on}
-        editable={contract.status === 'draft' || contract.status === 'active'}
+        endsOn={contract.ends_on}
+        updatedAt={contract.updated_at}
+        draft={contract.status === 'draft'}
+        editable={can(session?.role, 'contracts:write') && (contract.status === 'draft' || contract.status === 'active')}
       />
 
       {can(session?.role, 'work:costs') ? (
@@ -282,9 +287,9 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         />
       ) : null}
 
-      <Card>
+      {query.data.rules.length > 0 ? <Card>
         <CardHeader>
-          <CardTitle>Frecuencia por temporada</CardTitle>
+          <CardTitle>Pautas por temporada anteriores</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {query.data.rules.length ? (
@@ -406,7 +411,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             </>
           ) : null}
         </CardContent>
-      </Card>
+      </Card> : null}
 
       {contract.status !== 'expired' && contract.status !== 'canceled' ? (
         <Card>

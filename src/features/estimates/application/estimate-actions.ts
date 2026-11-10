@@ -2,7 +2,7 @@ import { defaultMilestones, formatEstimateNumber } from '@/shared/domain/estimat
 import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, updateTenantData } from '@/shared/store/store'
 
-export function createEstimate(clientId: string, title = 'Nueva reforma'): string {
+export function createEstimate(clientId: string, title = 'Nuevo servicio'): string {
   const id = newId()
   updateTenantData((data) => {
     const now = new Date()
@@ -12,9 +12,10 @@ export function createEstimate(clientId: string, title = 'Nueva reforma'): strin
       tenantId: data.tenant.id,
       number: formatEstimateNumber(data.tenant.nextEstimateNumber, now.getFullYear()),
       clientId,
-      title: title.trim() || 'Nueva reforma',
+      title: title.trim() || 'Nuevo servicio',
       status: 'draft',
-      conversionDestination: 'work',
+      conversionDestination: 'contract',
+      automaticContract: true,
       contractBillingFrequency: 'monthly',
       lines: [],
       discountType: 'none',
@@ -73,6 +74,8 @@ export function duplicateEstimate(id: string): string | null {
       id: created,
       number: formatEstimateNumber(data.tenant.nextEstimateNumber, new Date().getFullYear()),
       status: 'draft',
+      conversionDestination: 'contract',
+      automaticContract: true,
       createdAt: new Date().toISOString().slice(0, 10),
       // Fresh ids: rows are upserted by id, so reusing them would move the originals' children.
       lines: source.lines.map((l) => ({ ...l, id: newId() })),
