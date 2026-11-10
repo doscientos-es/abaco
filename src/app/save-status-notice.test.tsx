@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-import { SaveStatusNotice } from './save-status-notice'
+import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
 vi.mock('@doscientos/ui', () => ({
   Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
@@ -13,7 +13,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('SaveStatusNotice', () => {
-  it('mantiene el mismo espacio al guardar y al terminar, sin mover el formulario', () => {
+  it('no ocupa espacio en el contenido mientras guarda o está al día', () => {
     const saving = renderToStaticMarkup(
       <SaveStatusNotice status={{ state: 'saving' }} onRetry={vi.fn()} />,
     )
@@ -21,12 +21,8 @@ describe('SaveStatusNotice', () => {
       <SaveStatusNotice status={{ state: 'saved' }} onRetry={vi.fn()} />,
     )
 
-    expect(saving).toContain('Guardando cambios…')
-    expect(saved).toContain('Autoguardado al día')
-    expect(saving).toContain('aria-live="polite"')
-    expect(saved).toContain('aria-live="polite"')
-    expect(saving.match(/class="([^"]+)"/)?.[1]).toBe(saved.match(/class="([^"]+)"/)?.[1])
-    expect(saved).toContain('h-7 shrink-0')
+    expect(saving).toBe('')
+    expect(saved).toBe('')
   })
 
   it('presents an expired trial as a reassuring plan prompt instead of a database error', () => {
@@ -61,5 +57,19 @@ describe('SaveStatusNotice', () => {
     expect(html).toContain('role="alert"')
     expect(html).toContain('Hay cambios sin guardar. No hay conexión.')
     expect(html).toContain('Reintentar guardado')
+  })
+})
+
+describe('SaveStatusIndicator', () => {
+  it.each([
+    ['saved', 'Guardado'],
+    ['saving', 'Guardando…'],
+    ['error', 'Sin guardar'],
+  ] as const)('muestra el estado %s de forma accesible y compacta', (state, label) => {
+    const html = renderToStaticMarkup(<SaveStatusIndicator status={{ state }} />)
+    expect(html).toContain(label)
+    expect(html).toContain('aria-live="polite"')
+    expect(html).toContain('h-7 shrink-0')
+    expect(html).toContain('aria-hidden="true"')
   })
 })
