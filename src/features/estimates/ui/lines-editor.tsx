@@ -21,11 +21,12 @@ import { patchEstimate } from '../application/estimate-actions'
 import { PriceInput } from './price-input'
 
 const FREE_KEY = '__free__'
-const gridCols = 'grid grid-cols-2 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_4rem_7rem]'
+const gridCols =
+  'grid grid-cols-2 items-end gap-2 @min-[46rem]:grid-cols-[minmax(10rem,1fr)_4.75rem_4.5rem_7rem_5.5rem_minmax(5.5rem,auto)_2rem]'
 
-/** Visible field label on phones, where the column header row is hidden. */
+/** Visible field label when there is not enough room for the column headers. */
 function MobileLabel({ children }: { children: string }) {
-  return <span className="text-muted-foreground mb-1 block text-xs lg:hidden">{children}</span>
+  return <span className="text-muted-foreground mb-1 block text-xs @min-[46rem]:hidden">{children}</span>
 }
 
 type PickerItem = { key: string; label: string; meta?: string; free?: boolean }
@@ -119,32 +120,35 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-3">
       {estimate.lines.length > 0 ? (
         <div className="space-y-2">
           <div
-            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium lg:grid`}
+            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium @min-[46rem]:grid`}
           >
             <span>Descripción</span>
             <span className="text-right">Cantidad</span>
             <span>Unidad</span>
-            <span className="text-right">Precio unitario (sin IVA, €)</span>
+            <span className="text-right">Precio ud. sin IVA</span>
+            <span className="text-right">Dto. %</span>
+            <span className="text-right">Total</span>
+            <span aria-hidden="true" />
           </div>
           {estimate.lines.map((line, lineIndex) => (
             <div
               key={line.id}
-              className="border-border bg-background focus-within:border-ring/60 space-y-2 rounded-lg border p-3 shadow-(--ui-shadow-hairline) transition-colors"
+              className="border-border bg-background focus-within:border-ring/60 rounded-lg border p-3 shadow-(--ui-shadow-hairline) transition-colors"
             >
               <div className={gridCols}>
                 <Input
                   aria-label="Descripción"
                   maxLength={formLimits.estimateLineDescription}
                   placeholder="Describe el trabajo o material"
-                  className="col-span-2 h-8 min-w-0 px-2 sm:col-span-1"
+                  className="col-span-2 h-8 min-w-0 px-2 @min-[46rem]:col-span-1"
                   value={line.description}
                   onChange={(event) => updateLine(line.id, { description: event.target.value })}
                 />
-                <div>
+                <div className="min-w-0">
                   <MobileLabel>Cantidad</MobileLabel>
                   <Input
                     aria-label="Cantidad"
@@ -153,7 +157,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     min={0}
                     max={formLimits.quantity}
                     step="0.001"
-                    className="h-8 px-2 text-right tabular-nums"
+                    className="h-8 min-w-0 px-2 text-right tabular-nums"
                     value={line.quantity}
                     onChange={(event) =>
                       updateLine(line.id, {
@@ -168,7 +172,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     }
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <MobileLabel>Unidad</MobileLabel>
                   <Input
                     aria-label="Unidad"
@@ -179,19 +183,17 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     onChange={(event) => updateLine(line.id, { unit: event.target.value })}
                   />
                 </div>
-                <div className="col-span-2 min-w-0 sm:col-span-1">
+                <div className="min-w-0">
                   <MobileLabel>Precio ud. (€)</MobileLabel>
                   <PriceInput
                     label="Precio unitario"
                     cents={line.unitPriceCents}
-                    className="h-8 px-2"
+                    className="h-8 min-w-0 px-2"
                     onCommit={(unitPriceCents) => updateLine(line.id, { unitPriceCents })}
                   />
                 </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                  Dto.
+                <div className="min-w-0">
+                  <MobileLabel>Dto. (%)</MobileLabel>
                   <Input
                     aria-label="Descuento de la línea (%)"
                     type="number"
@@ -199,7 +201,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     min={0}
                     max={100}
                     step="0.01"
-                    className="h-7 w-14 px-2 text-right tabular-nums"
+                    className="h-8 min-w-0 px-2 text-right tabular-nums"
                     value={line.discountPercent || ''}
                     placeholder="0"
                     onChange={(event) =>
@@ -210,9 +212,9 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                       })
                     }
                   />
-                  %
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="min-w-0 @min-[46rem]:text-right">
+                  <MobileLabel>Total</MobileLabel>
                   <p className="text-sm font-semibold tabular-nums">
                     {line.discountPercent > 0 ? (
                       <span className="text-muted-foreground mr-1 text-xs font-normal line-through">
@@ -221,6 +223,8 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     ) : null}
                     {formatEuros(lineNetCents(line))}
                   </p>
+                </div>
+                <div className="flex justify-end">
                   <DropdownMenuTrigger>
                     <Button
                       size="icon-sm"
