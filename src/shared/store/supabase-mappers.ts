@@ -169,7 +169,8 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     title: str(row.title),
     status: str(row.status) as Estimate['status'],
     conversionDestination: str(row.conversion_destination) === 'contract' ? 'contract' : 'work',
-    contractBillingFrequency: (['quarterly', 'yearly'].includes(str(row.contract_billing_frequency))
+    automaticContract: row.automatic_contract === true,
+    contractBillingFrequency: (['once', 'quarterly', 'yearly'].includes(str(row.contract_billing_frequency))
       ? str(row.contract_billing_frequency)
       : 'monthly') as NonNullable<Estimate['contractBillingFrequency']>,
     vatRate: num(row.vat_rate),
@@ -212,6 +213,7 @@ export const estimateToRow = (e: Estimate): Row => ({
   status: e.status,
   conversion_destination: e.conversionDestination ?? 'work',
   contract_billing_frequency: e.contractBillingFrequency ?? 'monthly',
+  automatic_contract: e.automaticContract ?? false,
   vat_rate: e.vatRate,
   discount_type: e.discountType,
   discount_value: e.discountType === 'none' ? 0 : e.discountValue,

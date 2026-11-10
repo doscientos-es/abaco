@@ -37,6 +37,7 @@ import {
   paidForEstimate,
 } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
+import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
@@ -69,7 +70,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [converting, setConverting] = useState(false)
   const conversionOperationId = useRef(crypto.randomUUID())
   const [contractLocationId, setContractLocationId] = useState('')
-  const [contractAssetId, setContractAssetId] = useState('')
   const [contractStart, setContractStart] = useState(() => new Date().toISOString().slice(0, 10))
   const [contractEnd, setContractEnd] = useState('')
   const [contractTechnicianId, setContractTechnicianId] = useState('')
@@ -228,7 +228,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         tenantId: tenant.id,
         estimateId,
         locationId: contractLocationId,
-        assetId: contractAssetId || null,
+        assetId: null,
         startsOn: contractStart,
         endsOn: contractEnd || null,
         defaultAssignedUserId: contractTechnicianId || null,
@@ -425,6 +425,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
+          !publication.data.estimate.automaticContract &&
           publication.data.estimate.conversionDestination === 'contract' &&
           !existingContract.data &&
           can(session?.role, 'contracts:write') ? (
@@ -439,30 +440,16 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <SelectField
-                  label="Ubicación"
+                  label="Centro"
                   value={contractLocationId}
                   options={[
-                    { value: '', label: 'Selecciona una ubicación' },
+                    { value: '', label: 'Selecciona un centro' },
                     ...(contractTargets.data?.locations ?? []).map((location) => ({
                       value: location.id,
                       label: location.name,
                     })),
                   ]}
-                  onChange={(value) => {
-                    setContractLocationId(value)
-                    setContractAssetId('')
-                  }}
-                />
-                <SelectField
-                  label="Piscina o activo"
-                  value={contractAssetId}
-                  options={[
-                    { value: '', label: 'Sin activo concreto' },
-                    ...(contractTargets.data?.assets ?? [])
-                      .filter((asset) => asset.location_id === contractLocationId)
-                      .map((asset) => ({ value: asset.id, label: asset.name })),
-                  ]}
-                  onChange={setContractAssetId}
+                  onChange={setContractLocationId}
                 />
                 <TextField
                   label="Inicio"
@@ -505,6 +492,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Button>
             </CardContent>
           </Card>
+        ) : null}
+        {estimate.status === 'accepted' && publication.data.estimate.automaticContract && !existingContract.data ? (
+          <div className="rounded-lg border p-4" aria-live="polite">
+            <p>{existingContract.isPending ? 'Cargando el contrato creado al aceptar…' : 'No se pudo recuperar el contrato. Recarga para consultar el resultado; no vuelvas a aceptar el presupuesto.'}</p>
+            <Button variant="outline" onPress={() => void existingContract.refetch()}>Recargar contrato</Button>
+          </div>
         ) : null}
         <p className="text-muted-foreground text-sm">
           {estimate.emailSentAt
@@ -620,11 +613,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 @min-[44rem]:grid-cols-4">
           <TextField
-            label="Título de la obra"
+            label="Título del servicio o acuerdo"
             minLength={1}
             maxLength={formLimits.estimateTitle}
             className="sm:col-span-2"
-            placeholder="Ej. Reforma de baño"
+            placeholder="Ej. Limpieza de oficinas"
             icon={fieldIcons.file}
             helper={`Obligatorio · máximo ${formLimits.estimateTitle} caracteres.`}
             value={titleDraft}
@@ -665,7 +658,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             value={estimate.validUntil}
             onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
           />
-          <SelectField
+          {!estimate.automaticContract ? <SelectField
             label="Destino tras la aceptación"
             className={
               estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
@@ -680,16 +673,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                 conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
               })
             }
-          />
+          /> : <p className="text-muted-foreground text-sm">Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como trabajo pendiente de configurar.</p>}
           {estimate.conversionDestination === 'contract' ? (
             <SelectField
-              label="Precio de la propuesta por periodo"
+              label="El importe presupuestado corresponde a"
               value={estimate.contractBillingFrequency ?? 'monthly'}
-              options={[
-                { value: 'monthly', label: 'Mensual' },
-                { value: 'quarterly', label: 'Trimestral' },
-                { value: 'yearly', label: 'Anual' },
-              ]}
+              options={Object.entries(contractBillingLabels).map(([value, label]) => ({ value, label }))}
               onChange={(value) =>
                 patchEstimate(estimate.id, {
                   contractBillingFrequency: value as NonNullable<

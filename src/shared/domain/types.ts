@@ -98,7 +98,8 @@ export type Estimate = {
   status: EstimateStatus
   /** Conversion route agreed in the published proposal. Legacy proposals use work. */
   conversionDestination?: 'work' | 'contract'
-  contractBillingFrequency?: 'monthly' | 'quarterly' | 'yearly'
+  contractBillingFrequency?: 'once' | 'monthly' | 'quarterly' | 'yearly'
+  automaticContract?: boolean
   lines: EstimateLine[]
   /** Whole-estimate discount: a percentage, or an amount in cents. */
   discountType: 'none' | 'percent' | 'amount'
