@@ -22,7 +22,7 @@ describe('SaveStatusNotice', () => {
     )
 
     expect(saving).toContain('Guardando cambios…')
-    expect(saved).toContain('Cambios guardados')
+    expect(saved).toContain('Autoguardado al día')
     expect(saving).toContain('aria-live="polite"')
     expect(saved).toContain('aria-live="polite"')
     expect(saving.match(/class="([^"]+)"/)?.[1]).toBe(saved.match(/class="([^"]+)"/)?.[1])
