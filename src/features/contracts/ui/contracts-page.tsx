@@ -46,7 +46,6 @@ export function ContractsPage() {
   const [showForm, setShowForm] = useState(false)
   const [clientId, setClientId] = useState('')
   const [locationId, setLocationId] = useState('')
-  const [assetId, setAssetId] = useState('')
   const [title, setTitle] = useState('')
   const [startsOn, setStartsOn] = useState(todayInMadrid)
   const [endsOn, setEndsOn] = useState('')
@@ -59,17 +58,11 @@ export function ContractsPage() {
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
     clientId,
-    locationId,
     onClientCreated: (id) => {
       setClientId(id)
       setLocationId('')
-      setAssetId('')
     },
-    onLocationCreated: (id) => {
-      setLocationId(id)
-      setAssetId('')
-    },
-    onPoolCreated: setAssetId,
+    onLocationCreated: setLocationId,
   })
   const query = useQuery({
     queryKey: ['service-contracts', tenant.id, page],
@@ -87,6 +80,9 @@ export function ContractsPage() {
   const priceCents = parseEuros(price)
   const valid =
     Boolean(clientId && locationId && title.trim() && startsOn) &&
+    targets.isSuccess &&
+    targets.data.locations.some((location) => location.id === locationId) &&
+    !related.pending &&
     (!price.trim() || /^\d+(?:[.,]\d{1,2})?$/.test(price.trim())) &&
     Number.isSafeInteger(priceCents) &&
     priceCents >= 0 &&
@@ -98,7 +94,7 @@ export function ContractsPage() {
       tenantId: tenant.id,
       clientId,
       locationId,
-      assetId: assetId || null,
+      assetId: null,
       title: title.trim(),
       startsOn,
       endsOn: endsOn || null,
@@ -155,6 +151,7 @@ export function ContractsPage() {
               <div className="flex flex-col gap-1.5">
                 <SelectField
                   label="Cliente"
+                  isDisabled={busy || related.pending || related.creating !== null}
                   value={clientId}
                   options={[
                     { value: '', label: 'Selecciona un cliente' },
@@ -165,58 +162,52 @@ export function ContractsPage() {
                   onChange={(value) => {
                     setClientId(value)
                     setLocationId('')
-                    setAssetId('')
                   }}
                 />
                 {related.allowed ? (
                   <RelatedCreateButton
                     label="Crear cliente"
+                    disabled={busy || related.pending || related.creating !== null}
                     onPress={() => related.start('client')}
                   />
                 ) : null}
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="grid content-start gap-1">
                 <SelectField
                   label="Centro principal · obligatorio"
+                  isDisabled={!clientId || busy || targets.isPending || targets.isError || related.pending}
                   value={locationId}
                   options={[
-                    { value: '', label: 'Selecciona una ubicación' },
+                    { value: '', label: 'Selecciona un centro' },
                     ...(targets.data?.locations ?? []).map((location) => ({
                       value: location.id,
                       label: location.name,
                     })),
                   ]}
-                  onChange={(value) => {
-                    setLocationId(value)
-                    setAssetId('')
-                  }}
+                  onChange={setLocationId}
                 />
-                {related.allowed && clientId ? (
+                {related.allowed ? (
                   <RelatedCreateButton
-                    label="Crear ubicación"
-                    disabled={related.pending}
+                    label="Crear centro"
+                    disabled={!clientId || busy || related.pending}
                     onPress={() => related.start('location')}
                   />
                 ) : null}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <SelectField
-                  label="Piscina o activo"
-                  value={assetId}
-                  options={[
-                    { value: '', label: 'Sin activo concreto' },
-                    ...(targets.data?.assets ?? [])
-                      .filter((asset) => asset.location_id === locationId)
-                      .map((asset) => ({ value: asset.id, label: asset.name })),
-                  ]}
-                  onChange={setAssetId}
-                />
-                {related.allowed && locationId ? (
-                  <RelatedCreateButton
-                    label="Crear piscina"
-                    disabled={related.pending}
-                    onPress={() => related.start('pool')}
-                  />
+                {!clientId ? (
+                  <p className="text-muted-foreground text-xs">Selecciona primero un cliente.</p>
+                ) : targets.isPending ? (
+                  <output className="text-muted-foreground text-xs">Cargando centros…</output>
+                ) : targets.isError ? (
+                  <div role="alert" className="text-destructive text-sm">
+                    <p>No se pudieron cargar los centros: {targets.error.message}</p>
+                    <Button variant="outline" onPress={() => void targets.refetch()}>
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : targets.data?.locations.length === 0 ? (
+                  <p className="text-muted-foreground text-xs">
+                    Este cliente aún no tiene centros. Crea uno para continuar.
+                  </p>
                 ) : null}
               </div>
               <TextField
@@ -272,7 +263,7 @@ export function ContractsPage() {
                 label="Servicios incluidos, uno por línea"
                 value={included}
                 onChange={setIncluded}
-                placeholder="Revisión de agua y depuradora"
+                placeholder="Limpieza de suelos y escaleras"
                 className="sm:col-span-2"
               />
             </div>

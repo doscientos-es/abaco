@@ -110,6 +110,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
+          {canWrite ? (
+            <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
+          ) : null}
           <Link to="/clientes" className="text-primary text-sm font-medium hover:underline">
             Volver a clientes
           </Link>
@@ -182,9 +185,6 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
               <h2 id="locations-title" className="text-xl font-semibold">
                 Centros e instalaciones
               </h2>
-              {canWrite ? (
-                <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
-              ) : null}
             </div>
             {data.locations.filter((location) => location.active).length === 0 ? (
               <p className="border-border text-muted-foreground rounded-lg border border-dashed p-6 text-sm">
@@ -293,6 +293,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           onCreated={() => {
             setCreating(null)
             void queryClient.invalidateQueries({ queryKey })
+            void queryClient.invalidateQueries({
+              queryKey: ['work-target-options', tenant.id, clientId],
+            })
           }}
           onError={() => void queryClient.invalidateQueries({ queryKey })}
         />
