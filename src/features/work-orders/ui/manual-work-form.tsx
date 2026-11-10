@@ -67,7 +67,7 @@ export function ManualWorkForm({
   const targets = useQuery({
     queryKey: ['work-target-options', tenantId, clientId],
     queryFn: () => loadWorkTargetOptions(tenantId, clientId),
-    enabled: Boolean(clientId) && !related.pending,
+    enabled: Boolean(clientId) && !related.storePending,
   })
   const locations = targets.data?.locations ?? []
   const assets = (targets.data?.assets ?? []).filter((asset) => asset.location_id === locationId)

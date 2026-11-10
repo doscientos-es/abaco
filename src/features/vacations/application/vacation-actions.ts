@@ -4,6 +4,8 @@ export {
   listVacationRequests,
   listVacationCoverage,
   submitVacationRequest,
+  requestAbsenceInformation,
+  respondAbsenceInformation,
 } from '../infrastructure/vacation-repository'
 export type {
   ApprovedVacationRange,

@@ -1,25 +1,32 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-import type { VacationRequest, VacationRequestStatus } from '../domain/vacation-request'
+import type {
+  AbsenceType,
+  VacationRequest,
+  VacationRequestStatus,
+} from '../domain/vacation-request'
 
 type VacationRequestRow = {
   id: string
   requester_id: string
   requester_name: string
+  absence_type: AbsenceType
   start_date: string
-  end_date: string
+  end_date: string | null
   requester_comment: string
   status: VacationRequestStatus
   submitted_at: string
   decision_comment: string
   decided_at: string | null
   decided_by_name: string
+  information_request_comment: string
+  requester_response_comment: string
 }
 
 export type ApprovedVacationRange = {
   userId: string
   startDate: string
-  endDate: string
+  endDate: string | null
 }
 
 export type VacationCoverageCandidate = {
@@ -67,6 +74,7 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
     id: row.id,
     requesterId: row.requester_id,
     requesterName: row.requester_name,
+    absenceType: row.absence_type ?? 'vacation',
     startDate: row.start_date,
     endDate: row.end_date,
     comment: row.requester_comment,
@@ -75,14 +83,16 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
     decisionComment: row.decision_comment,
     decidedAt: row.decided_at,
     decidedByName: row.decided_by_name,
+    informationRequestComment: row.information_request_comment ?? '',
+    requesterResponseComment: row.requester_response_comment ?? '',
   }
 }
 
 export async function listVacationRequests(tenantId: string): Promise<VacationRequest[]> {
   const { data, error } = await createBrowserSupabaseClient()
-    .from('vacation_requests')
+    .from('absence_requests')
     .select(
-      'id, requester_id, requester_name, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name',
+      'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment',
     )
     .eq('tenant_id', tenantId)
     .order('submitted_at', { ascending: false })
@@ -96,12 +106,13 @@ export async function listApprovedVacationRanges(
   to: string,
 ): Promise<ApprovedVacationRange[]> {
   const { data, error } = await createBrowserSupabaseClient()
-    .from('vacation_requests')
+    .from('absence_requests')
     .select('requester_id, start_date, end_date')
     .eq('tenant_id', tenantId)
     .eq('status', 'approved')
+    .in('absence_type', ['vacation', 'sick_leave'])
     .lte('start_date', to)
-    .gte('end_date', from)
+    .or(`end_date.is.null,end_date.gte.${from}`)
   if (error) throw new Error('No se pudieron cargar las ausencias aprobadas.')
   return (data ?? []).map((row) => ({
     userId: row.requester_id,
@@ -146,14 +157,16 @@ export async function listVacationCoverage(
 
 export async function submitVacationRequest(input: {
   tenantId: string
+  absenceType?: AbsenceType
   startDate: string
-  endDate: string
+  endDate: string | null
   comment: string
 }): Promise<string> {
-  const { data, error } = await createBrowserSupabaseClient().rpc('submit_vacation_request', {
+  const { data, error } = await createBrowserSupabaseClient().rpc('submit_absence_request', {
     p_tenant_id: input.tenantId,
+    p_absence_type: input.absenceType ?? 'vacation',
     p_start_date: input.startDate,
-    p_end_date: input.endDate,
+    p_end_date: input.endDate || null,
     p_comment: input.comment.trim(),
   })
   if (error || typeof data !== 'string')
@@ -175,5 +188,35 @@ export async function decideVacationRequest(input: {
   })
   if (error || typeof data !== 'string')
     throw new Error(error?.message ?? 'No se pudo guardar la decisión.')
+  return data
+}
+
+export async function requestAbsenceInformation(input: {
+  tenantId: string
+  requestId: string
+  comment: string
+}): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('request_absence_information', {
+    p_tenant_id: input.tenantId,
+    p_request_id: input.requestId,
+    p_comment: input.comment.trim(),
+  })
+  if (error || typeof data !== 'string')
+    throw new Error(error?.message ?? 'No se pudo solicitar información.')
+  return data
+}
+
+export async function respondAbsenceInformation(input: {
+  tenantId: string
+  requestId: string
+  comment: string
+}): Promise<string> {
+  const { data, error } = await createBrowserSupabaseClient().rpc('respond_absence_information', {
+    p_tenant_id: input.tenantId,
+    p_request_id: input.requestId,
+    p_comment: input.comment.trim(),
+  })
+  if (error || typeof data !== 'string')
+    throw new Error(error?.message ?? 'No se pudo enviar la respuesta.')
   return data
 }

@@ -30,8 +30,26 @@ export function useRelatedRecordCreation({
   const queryClient = useQueryClient()
   const saveStatus = useSaveStatus()
   const [creating, setCreating] = useState<RelatedKind | null>(null)
-  const pending = saveStatus.state !== 'saved'
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshFailed, setRefreshFailed] = useState(false)
+  const storePending = saveStatus.state !== 'saved'
+  const pending = storePending || refreshing || refreshFailed
   const allowed = can(session?.role, 'clients:write')
+
+  async function refreshTargets() {
+    setRefreshing(true)
+    setRefreshFailed(false)
+    try {
+      await queryClient.invalidateQueries(
+        { queryKey: ['work-target-options', tenantId, clientId] },
+        { throwOnError: true },
+      )
+    } catch {
+      setRefreshFailed(true)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   function start(kind: RelatedKind) {
     if (!allowed || (kind !== 'client' && (pending || !clientId))) return
@@ -48,6 +66,15 @@ export function useRelatedRecordCreation({
             Reintentar guardado
           </Button>
         </>
+      ) : refreshFailed ? (
+        <>
+          <p>No se pudieron actualizar las ubicaciones y piscinas.</p>
+          <Button type="button" variant="outline" onPress={() => void refreshTargets()}>
+            Reintentar actualización
+          </Button>
+        </>
+      ) : refreshing ? (
+        <p>Actualizando ubicaciones y piscinas…</p>
       ) : (
         <p>Esperando a que se guarden los cambios…</p>
       )}
@@ -74,9 +101,7 @@ export function useRelatedRecordCreation({
               else onPoolCreated(id)
             }
             setCreating(null)
-            void queryClient.invalidateQueries({
-              queryKey: ['work-target-options', tenantId, clientId],
-            })
+            void refreshTargets()
           }}
           onError={() => {
             void queryClient.invalidateQueries({
@@ -88,7 +113,7 @@ export function useRelatedRecordCreation({
     </>
   )
 
-  return { creating, start, allowed, pending, status, dialogs }
+  return { creating, start, allowed, pending, storePending, status, dialogs }
 }
 
 export function RelatedCreateButton({

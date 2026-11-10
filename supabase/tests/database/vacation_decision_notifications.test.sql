@@ -14,8 +14,8 @@ insert into public.memberships (tenant_id, user_id, role) values
 
 set local role authenticated;
 set local request.jwt.claim.sub = '82000000-0000-4000-8000-000000000003';
-select set_config('test.notice_request', public.submit_vacation_request(
-  '82000000-0000-4000-8000-000000000001', current_date, current_date, '')::text, true);
+select set_config('test.notice_request', public.submit_absence_request(
+  '82000000-0000-4000-8000-000000000001', 'vacation', current_date, current_date, '')::text, true);
 select is((select count(*) from public.vacation_decision_notifications), 0::bigint,
   'A pending request creates no decision notification');
 set local request.jwt.claim.sub = '82000000-0000-4000-8000-000000000002';

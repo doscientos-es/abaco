@@ -6,6 +6,12 @@
 
 ### Nuevas funciones
 
+- Add new features and fixes for upcoming release
+- Handle signup errors and improve user feedback messages
+- Implement listing all office visits with pagination feat(visits): add calendar view for agenda with date navigation feat(visits): validate search parameters for agenda and invoices test(visits): add tests for listing all office visits functionality test(visits): add tests for agenda calendar helpers and search validation
+- Show coverage and prevent schedule conflicts
+- Add ledger tabs and validation for search parameters
+- Improve UI spacing and text styles in invoice drafts
 - Add related record creation for clients and locations
 - Add vacation notification worker function
 - Add unique IDs to milestones in estimate creation
@@ -16,6 +22,9 @@
 
 ### Correcciones
 
+- Type coverage RPC rows
+- Prevent replanning active visits
+- Preserve contract generation during leave
 - Use UUIDs for default milestones
 - Use UUIDs for default milestones
 
