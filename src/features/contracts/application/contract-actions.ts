@@ -8,6 +8,7 @@ export {
   listServiceContracts,
   loadServiceContract,
   transitionServiceContract,
+  updateDraftContractDetails,
 } from '../infrastructure/contract-repository'
 export type {
   BillingFrequency,

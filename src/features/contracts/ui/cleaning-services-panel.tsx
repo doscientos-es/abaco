@@ -88,6 +88,7 @@ export function CleaningServicesPanel({
       await cache.invalidateQueries({ queryKey: ['cleaning-services', tenantId, contractId] })
       await cache.invalidateQueries({ queryKey: ['service-contract', tenantId, contractId] })
       await cache.invalidateQueries({ queryKey: ['service-contracts', tenantId] })
+      await cache.invalidateQueries({ queryKey: ['contract-jobs', tenantId] })
       setOpen(false)
       setForm(emptyContractJob(startsOn))
       setEditingId(null)
@@ -118,7 +119,7 @@ export function CleaningServicesPanel({
       ) : null}
       {services.data?.length === 0 ? <p>Aún no hay trabajos configurados.</p> : null}
       {services.data?.map((service) => (
-        <article key={service.id} className="space-y-2 border-b pb-4">
+        <article key={service.id} id={service.id} className="space-y-2 border-b pb-4">
           {!service.configured ? (
             <div><h3 className="font-semibold">{service.title}</h3><p>Pendiente de configurar · alcance aceptado: {service.tasks}</p></div>
           ) : <div

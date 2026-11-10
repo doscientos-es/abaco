@@ -3,25 +3,9 @@ import type { ContractJobDraft } from '../domain/contract-job'
 
 export type CleaningService = ContractJobDraft & {
   id: string
-  title: string
-  location_id: string | null
-  modality: 'fixed' | 'mobile'
-  service_type: 'ordinary' | 'windows' | 'garage' | 'other'
-  frequency: ContractJobDraft['frequency']
   configured: boolean
   source_line_id: string | null
-  anchor_on: string | null
-  ends_on: string | null
-  weekdays: number[]
-  tasks: string
-  weekly_tasks: Record<string, string>
-  instructions: string
-  requires_acceptance: boolean
-  duration_minutes: number
-  local_start: string
   time_known: boolean
-  assigned_user_id: string | null
-  work_team_id: string | null
   location?: {
     name: string
     address: string
@@ -47,10 +31,32 @@ export async function listCleaningServices(tenantId: string, contractId: string)
   })) as CleaningService[]
 }
 
+export type ContractJobListItem = Pick<CleaningService, 'id' | 'title' | 'configured' | 'frequency' | 'modality'> & {
+  contract: { id: string; title: string; client_id: string; status: string }
+  location: { name: string } | null
+}
+
+export async function listContractJobs(tenantId: string, page: number) {
+  const pageSize = 20
+  const { data, error, count } = await createBrowserSupabaseClient()
+    .from('service_contract_visit_rules')
+    .select('id,title,configured,frequency,modality,contract:service_contracts(id,title,client_id,status),location:service_locations(name)', { count: 'exact' })
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
+  if (error) throw new Error(error.message)
+  return {
+    items: (data ?? []).map((row) => ({ ...row,
+      contract: Array.isArray(row.contract) ? row.contract[0] : row.contract,
+      location: Array.isArray(row.location) ? (row.location[0] ?? null) : row.location,
+    })) as ContractJobListItem[], count: count ?? 0, pageSize,
+  }
+}
+
 export async function addCleaningService(
   tenantId: string,
   contractId: string,
-  service: Omit<CleaningService, 'id' | 'time_known'>,
+  service: ContractJobDraft,
   operationId: string,
 ) {
   const { error } = await createBrowserSupabaseClient().rpc('add_cleaning_service', {
