@@ -33,7 +33,7 @@ describe('recordManualApproval', () => {
       values.evidence,
     )
     expect(vi.mocked(publishEstimate).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(acceptEstimateManually).mock.invocationCallOrder[0]!,
+      vi.mocked(acceptEstimateManually).mock.invocationCallOrder[0] ?? 0,
     )
     expect(values.onPublished).toHaveBeenCalledOnce()
   })
