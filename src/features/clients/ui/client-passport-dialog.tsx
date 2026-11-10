@@ -197,6 +197,7 @@ export function CreatePassportItem({
           operationalContact,
           accessNotes,
           notes: locationNotes,
+          active: locationActive,
         })
       } else if (item.kind === 'pool') {
         createdId = await createPool({

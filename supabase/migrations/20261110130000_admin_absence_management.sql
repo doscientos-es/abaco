@@ -6,7 +6,7 @@ alter table public.absence_requests
   add constraint absence_requests_decision_consistency_check check(
     (status = 'pending' and decided_by is null and decided_by_name = '' and decided_at is null and decision_comment = '')
     or (status in ('approved','rejected','canceled') and decided_by is not null and decided_by_name <> '' and decided_at is not null)
-    or (status = 'needs_info' and information_requested_by is not null and information_requested_at is not null and information_request_comment <> '')
+    or (status = 'needs_info' and information_requested_by is not null and information_requested_by_name <> '' and information_requested_at is not null and information_request_comment <> '')
   );
 create trigger absence_requests_version before update on public.absence_requests
   for each row execute function public.touch_service_visit_version();
@@ -64,7 +64,7 @@ begin
     return prior.request_id;
   end if;
   if first_day is null or (last_day is not null and last_day < first_day) or kind is null or next_status is null
-    or kind not in ('vacation','personal_leave','sick_leave','other') or next_status not in ('pending','approved','rejected','canceled')
+    or kind not in ('vacation','personal_leave','sick_leave','other') or next_status not in ('pending','needs_info','approved','rejected','canceled')
     or length(coalesce(p_absence->>'comment','')) > 1000 or length(coalesce(p_absence->>'decision_comment','')) > 1000
     then raise exception 'Periodo, tipo o estado inválidos' using errcode = '22023'; end if;
   select left(coalesce(nullif(p.full_name,''),p.email),160) into person_name from public.profiles p
@@ -75,14 +75,17 @@ begin
     select * into r from public.absence_requests where id = p_request_id and tenant_id = p_tenant_id for update;
     if not found or p_expected_updated_at is null or r.updated_at <> p_expected_updated_at
       then raise exception 'El periodo cambió; vuelve a cargarlo' using errcode = 'P0409'; end if;
+    if next_status = 'needs_info' and r.status <> 'needs_info'
+      then raise exception 'Solicita información antes de usar este estado' using errcode = '22023'; end if;
     update public.absence_requests set requester_id = person,requester_name = person_name,start_date = first_day,end_date = last_day,
       absence_type = kind,requester_comment = coalesce(p_absence->>'comment',''),status = next_status,
-      decided_by = case when next_status <> 'pending' then auth.uid() end,
-      decided_by_name = case when next_status <> 'pending' then admin_name else '' end,
-      decided_at = case when next_status <> 'pending' then clock_timestamp() end,
-      decision_comment = case when next_status <> 'pending' then coalesce(p_absence->>'decision_comment','') else '' end
+      decided_by = case when next_status in ('approved','rejected','canceled') then auth.uid() end,
+      decided_by_name = case when next_status in ('approved','rejected','canceled') then admin_name else '' end,
+      decided_at = case when next_status in ('approved','rejected','canceled') then clock_timestamp() end,
+      decision_comment = case when next_status in ('approved','rejected','canceled') then coalesce(p_absence->>'decision_comment','') else '' end
       where id = r.id;
   else
+    if next_status = 'needs_info' then raise exception 'Solicita información antes de usar este estado' using errcode = '22023'; end if;
     insert into public.absence_requests(id,tenant_id,requester_id,requester_name,start_date,end_date,absence_type,requester_comment,status,
       decided_by,decided_by_name,decided_at,decision_comment)
       values(result_id,p_tenant_id,person,person_name,first_day,last_day,kind,coalesce(p_absence->>'comment',''),next_status,

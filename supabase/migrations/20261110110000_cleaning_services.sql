@@ -24,6 +24,10 @@ alter table public.service_contract_visit_rules
   add foreign key (work_team_id, tenant_id) references public.work_teams(id, tenant_id),
   add check (ends_on is null or ends_on >= anchor_on);
 
+-- Preserve the legacy seasonal-rule uniqueness without restricting independent services.
+create unique index service_contract_legacy_rule_key
+  on public.service_contract_visit_rules(contract_id,season,weekday) where frequency is null;
+
 alter table public.service_visits
   add column work_team_id uuid,
   add column route_order integer not null default 0 check (route_order between 0 and 10000),
@@ -37,6 +41,7 @@ returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   c public.service_contracts%rowtype;
   r public.service_contract_visit_rules%rowtype;
+  prior public.service_contract_events%rowtype;
   location uuid := (p_service->>'location_id')::uuid;
   person uuid := nullif(p_service->>'assigned_user_id', '')::uuid;
   team uuid := nullif(p_service->>'work_team_id', '')::uuid;
@@ -48,13 +53,18 @@ begin
   if auth.uid() is null or not public.has_role(p_tenant_id, array['owner','admin','editor']::public.app_role[])
     then raise exception 'No tienes permiso' using errcode = '42501'; end if;
   if not public.tenant_can_write(p_tenant_id) then raise exception 'Empresa no disponible' using errcode = 'P0402'; end if;
+  if p_operation_id is null or p_service->>'frequency' is null or p_service->>'modality' is null
+    then raise exception 'Faltan datos del servicio' using errcode = '22023'; end if;
   select * into c from public.service_contracts where id = p_contract_id and tenant_id = p_tenant_id for update;
-  if not found or c.status not in ('draft','active') then raise exception 'Contrato no editable' using errcode = 'P0409'; end if;
+  if not found then raise exception 'Contrato no editable' using errcode = 'P0409'; end if;
   select * into r from public.service_contract_visit_rules where id = p_operation_id;
   if found then
-    if r.tenant_id <> p_tenant_id or r.contract_id <> p_contract_id then raise exception 'Operación utilizada' using errcode = '23505'; end if;
+    select * into prior from public.service_contract_events where operation_id = p_operation_id;
+    if r.tenant_id <> p_tenant_id or r.contract_id <> p_contract_id
+      or prior.payload->'service' is distinct from p_service then raise exception 'Operación utilizada' using errcode = '23505'; end if;
     return r.id;
   end if;
+  if c.status not in ('draft','active') then raise exception 'Contrato no editable' using errcode = 'P0409'; end if;
   if not exists (select 1 from public.service_locations l where l.id = location and l.tenant_id = p_tenant_id
     and l.client_id = c.client_id and l.active and l.kind <> 'billing')
     then raise exception 'Centro no disponible' using errcode = '22023'; end if;
@@ -96,7 +106,7 @@ returns boolean language sql immutable set search_path = '' as $$
   select p_date >= p_anchor and case p_frequency
     when 'weekly' then extract(isodow from p_date)::smallint = any(p_days)
     when 'fortnightly' then extract(isodow from p_date)::smallint = any(p_days)
-      and mod((p_date - p_anchor) / 7, 2) = 0
+      and mod((date_trunc('week',p_date::timestamp)::date - date_trunc('week',p_anchor::timestamp)::date) / 7, 2) = 0
     when 'days15' then mod(p_date - p_anchor, 15) = 0
     when 'monthly' then extract(day from p_date) = least(extract(day from p_anchor),
       extract(day from (date_trunc('month',p_date) + interval '1 month - 1 day')))
@@ -114,7 +124,8 @@ begin
   end if;
   select * into r from public.service_contract_visit_rules where id = new.contract_rule_id and tenant_id = new.tenant_id;
   select jsonb_build_object('client',c.name,'center',coalesce(l.name,''),'address',coalesce(l.address,''),
-    'tasks',coalesce(r.tasks,''),'instructions',concat_ws(E'\n',nullif(l.operational_contact,''),nullif(l.access_notes,''),nullif(l.notes,''),nullif(l.opening_hours,''),nullif(r.instructions,''),nullif(new.notes,'')),
+    'tasks',concat_ws(E'\n',nullif(r.tasks,''),nullif(r.weekly_tasks->>extract(isodow from new.contract_occurrence_on)::integer::text,'')),
+    'instructions',concat_ws(E'\n',nullif(l.operational_contact,''),nullif(l.access_notes,''),nullif(l.notes,''),nullif(l.opening_hours,''),nullif(r.instructions,''),nullif(new.notes,'')),
     'requiresAcceptance',coalesce(r.requires_acceptance,true),'timeKnown',coalesce(r.time_known,true))
     into new.paper_snapshot from public.clients c left join public.service_locations l
       on l.id = new.location_id and l.tenant_id = c.tenant_id
@@ -159,7 +170,7 @@ begin
             values(p_tenant_id,c.id,r.id,day,c.schedule_version,'invalid_local_time','Hora local inexistente o ambigua') on conflict do nothing;
           continue;
         end if;
-        person := coalesce(r.assigned_user_id,c.default_assigned_user_id);
+        person := coalesce(r.assigned_user_id,case when r.work_team_id is null then c.default_assigned_user_id end);
         if person is not null then
           perform pg_advisory_xact_lock(hashtextextended(p_tenant_id::text || ':' || person::text,1));
           if not exists(select 1 from public.memberships where tenant_id = p_tenant_id and user_id = person and role in ('user','technician'))

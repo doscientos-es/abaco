@@ -246,6 +246,7 @@ export async function createLocation(input: {
   operationalContact?: string
   accessNotes?: string
   notes?: string
+  active?: boolean
 }): Promise<string> {
   const { data, error } = await createBrowserSupabaseClient()
     .from('service_locations')
@@ -259,6 +260,7 @@ export async function createLocation(input: {
       operational_contact: input.operationalContact?.trim() ?? '',
       access_notes: input.accessNotes?.trim() ?? '',
       notes: input.notes?.trim() ?? '',
+      active: input.active ?? true,
     })
     .select('id')
     .single()

@@ -108,16 +108,17 @@ export async function listVacationRequests(tenantId: string): Promise<VacationRe
   return data.map(toVacationRequest)
 }
 
-export type AdministrativeAbsence = {requester_id:string;start_date:string;end_date:string|null;absence_type:AbsenceType;status:'pending'|'approved'|'rejected'|'canceled';comment:string;decision_comment:string}
+export type AdministrativeAbsence = {requester_id:string;start_date:string;end_date:string|null;absence_type:AbsenceType;status:VacationRequestStatus;comment:string;decision_comment:string}
 export async function saveAdministrativeAbsence(tenantId:string, request:VacationRequest|null, absence:AdministrativeAbsence, operationId:string) {
   const {error} = await createBrowserSupabaseClient().rpc('save_administrative_absence',{p_tenant_id:tenantId,p_request_id:request?.id ?? null,p_expected_updated_at:request?.updatedAt ?? null,p_absence:absence,p_operation_id:operationId})
   if(error) throw new Error(error.message)
 }
 
+type AbsenceHistoryState = {start_date:string;end_date:string|null;status:VacationRequestStatus;requester_name:string;absence_type:AbsenceType;requester_comment:string;decision_comment:string}
 export async function listAbsenceHistory(tenantId:string, requestId:string) {
   const {data,error} = await createBrowserSupabaseClient().from('absence_request_history').select('id,before_state,after_state,actor_id,occurred_at').eq('tenant_id',tenantId).eq('request_id',requestId).order('occurred_at',{ascending:false})
   if(error) throw new Error(error.message)
-  return (data ?? []) as Array<{id:string;before_state:Record<string,unknown>|null;after_state:Record<string,unknown>;actor_id:string;occurred_at:string}>
+  return (data ?? []) as Array<{id:string;before_state:AbsenceHistoryState|null;after_state:AbsenceHistoryState;actor_id:string|null;occurred_at:string}>
 }
 
 export async function listApprovedVacationRanges(
