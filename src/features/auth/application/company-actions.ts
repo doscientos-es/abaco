@@ -26,6 +26,12 @@ export async function createCompany(name: string): Promise<ActionResult> {
         : 'No se pudo crear la empresa. Inténtalo de nuevo.',
     }
   }
-  await setPreferredCompanyId(data)
+  // The company already exists even if saving the preference fails; do not invite a retry
+  // that would create a duplicate. It remains available in the company menu.
+  try {
+    await setPreferredCompanyId(data)
+  } catch {
+    // Keep the existing active company when the preference cannot be saved.
+  }
   return { ok: true }
 }

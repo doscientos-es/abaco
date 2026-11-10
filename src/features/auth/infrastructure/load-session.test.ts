@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { completeWelcome } from '../application/welcome-actions'
 import { welcomePendingField } from '../domain/welcome'
+import { setPreferredCompanyId } from './active-company'
 import { loadSession } from './load-session'
 
 const { getSession, updateUser, rpc } = vi.hoisted(() => ({
@@ -78,5 +79,34 @@ describe('welcome state in the session', () => {
     await expect(completeWelcome()).resolves.toEqual({ ok: true })
     expect((await loadSession())?.needsWelcome).toBe(false)
     expect(rpc).toHaveBeenCalledWith('my_company_memberships')
+  })
+
+  it('uses only accessible companies and updates the role when switching', async () => {
+    const metadata: Record<string, unknown> = { active_company_id: 'company-1' }
+    getSession.mockImplementation(async () => ({
+      data: { session: { user: { id: 'user-1', user_metadata: metadata } } },
+    }))
+    rpc.mockResolvedValue({
+      data: [
+        { tenant_id: 'company-1', role: 'user', company_name: 'Uno' },
+        { tenant_id: 'company-2', role: 'admin', company_name: 'Dos' },
+      ],
+      error: null,
+    })
+    updateUser.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+      Object.assign(metadata, data)
+      return { error: null }
+    })
+
+    expect(await loadSession()).toMatchObject({ tenantId: 'company-1', role: 'user' })
+    await setPreferredCompanyId('company-2')
+    expect(await loadSession()).toMatchObject({ tenantId: 'company-2', role: 'admin' })
+    metadata.active_company_id = 'not-a-member'
+    expect(await loadSession()).toMatchObject({ tenantId: 'company-1', role: 'user' })
+  })
+
+  it('reports a failure to save the selected company', async () => {
+    updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
+    await expect(setPreferredCompanyId('company-2')).rejects.toThrow('No se pudo cambiar de empresa')
   })
 })

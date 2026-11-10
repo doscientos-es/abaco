@@ -36,6 +36,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       session?.role === 'user' &&
       !isPublicPath(path) &&
       !isPlatformPage &&
+      path !== '/ajustes' &&
       path !== '/mi-jornada' &&
       path !== '/mis-vacaciones' &&
       path !== '/nueva-contrasena'

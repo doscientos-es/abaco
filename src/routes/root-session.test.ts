@@ -86,4 +86,30 @@ describe('root session guard', () => {
     expect(hydrateStore).not.toHaveBeenCalled()
     queryClient.clear()
   })
+
+  it('allows workers to open settings without loading administrative data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const session = {
+      userId: 'worker-1',
+      email: 'worker@example.test',
+      fullName: 'Worker',
+      tenantId: 'company-1',
+      role: 'user',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    const visit = (path: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: path, href: path },
+      } as Parameters<typeof beforeLoad>[0])
+
+    await expect(visit('/ajustes')).resolves.toEqual({ session })
+    await expect(visit('/trabajos')).rejects.toMatchObject({ options: { to: '/mi-jornada' } })
+    expect(hydrateStore).not.toHaveBeenCalled()
+    queryClient.clear()
+  })
 })
