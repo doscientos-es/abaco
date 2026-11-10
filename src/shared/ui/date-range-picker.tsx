@@ -3,9 +3,11 @@ import { CalendarBlank } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { es } from 'react-day-picker/locale'
+
 import 'react-day-picker/style.css'
 
 import { calendarDate, dateRangePresets, dateValue, selectRangeDay } from '@/shared/lib/date-range'
+
 import './date-range-picker.css'
 
 export type DateRangePickerProps = {
@@ -80,22 +82,38 @@ export function DateRangeCalendar({
       </p>
       <div className="border-border flex flex-wrap gap-x-4 gap-y-2 border-t pt-3">
         {start || end ? (
-          <button type="button" onClick={() => onChange('', '')} className="text-primary text-xs font-medium underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => onChange('', '')}
+            className="text-primary text-xs font-medium underline underline-offset-2"
+          >
             Limpiar fechas
           </button>
         ) : null}
         {allowOpenStart && start ? (
-          <button type="button" onClick={() => onChange('', end || start)} className="text-primary text-xs font-medium underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => onChange('', end || start)}
+            className="text-primary text-xs font-medium underline underline-offset-2"
+          >
             Filtrar solo hasta
           </button>
         ) : null}
         {allowOpenStart && start && end ? (
-          <button type="button" onClick={() => onChange(start, '')} className="text-primary text-xs font-medium underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => onChange(start, '')}
+            className="text-primary text-xs font-medium underline underline-offset-2"
+          >
             Filtrar solo desde
           </button>
         ) : null}
         {allowOpenEnd && !allowOpenStart && end ? (
-          <button type="button" onClick={() => onChange(start, '')} className="text-primary text-xs font-medium underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => onChange(start, '')}
+            className="text-primary text-xs font-medium underline underline-offset-2"
+          >
             Dejar fin desconocido
           </button>
         ) : null}
@@ -108,7 +126,11 @@ export function DateRangePicker(props: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { start, end, label, allowOpenEnd } = props
   const startText = start ? dateFormat.format(calendarDate(start)) : 'Selecciona un día'
-  const endText = end ? dateFormat.format(calendarDate(end)) : allowOpenEnd && start ? 'Sin fecha de fin' : 'Selecciona un día'
+  const endText = end
+    ? dateFormat.format(calendarDate(end))
+    : allowOpenEnd && start
+      ? 'Sin fecha de fin'
+      : 'Selecciona un día'
 
   return (
     <div className="grid min-w-0 gap-2 sm:col-span-2">
@@ -119,15 +141,24 @@ export function DateRangePicker(props: DateRangePickerProps) {
         placement="bottom start"
         className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
         trigger={
-          <Button type="button" variant="outline" aria-label={`${label}. Desde ${startText}. Hasta ${endText}`} className="h-auto min-h-12 w-full justify-between gap-3 px-3 py-2 text-left font-normal">
-            <span className="min-w-0 truncate">{startText} <span aria-hidden="true">—</span> {endText}</span>
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={`${label}. Desde ${startText}. Hasta ${endText}`}
+            className="h-auto min-h-12 w-full justify-between gap-3 px-3 py-2 text-left font-normal"
+          >
+            <span className="min-w-0 truncate">
+              {startText} <span aria-hidden="true">—</span> {endText}
+            </span>
             <CalendarBlank aria-hidden="true" className="size-4 shrink-0" />
           </Button>
         }
       >
         <DateRangeCalendar {...props} />
         <div className="flex justify-end px-2 pb-2">
-          <Button type="button" size="sm" onPress={() => setIsOpen(false)}>Listo</Button>
+          <Button type="button" size="sm" onPress={() => setIsOpen(false)}>
+            Listo
+          </Button>
         </div>
       </Popover>
     </div>

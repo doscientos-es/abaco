@@ -1,19 +1,31 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import type * as React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { DayPicker } from 'react-day-picker'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import { DateRangeCalendar, DateRangePicker } from './date-range-picker'
 
 vi.mock('react', async (importOriginal) => {
   const actual = await importOriginal<typeof React>()
-  return { ...actual, useState: (initial: unknown) => [typeof initial === 'function' ? initial() : initial, vi.fn()] }
+  return {
+    ...actual,
+    useState: (initial: unknown) => [typeof initial === 'function' ? initial() : initial, vi.fn()],
+  }
 })
 
-type NodeProps = { children?: ReactNode; onClick?: () => void; onSelect?: (range: unknown, date: Date) => void; selected?: { from?: Date; to?: Date }; numberOfMonths?: number }
+type NodeProps = {
+  children?: ReactNode
+  onClick?: () => void
+  onSelect?: (range: unknown, date: Date) => void
+  selected?: { from?: Date; to?: Date }
+  numberOfMonths?: number
+}
 
-function find(node: ReactNode, predicate: (node: ReactElement<NodeProps>) => boolean): ReactElement<NodeProps> | undefined {
+function find(
+  node: ReactNode,
+  predicate: (node: ReactElement<NodeProps>) => boolean,
+): ReactElement<NodeProps> | undefined {
   let found: ReactElement<NodeProps> | undefined
   Children.forEach(node, (child) => {
     if (!found && isValidElement<NodeProps>(child)) {
@@ -64,7 +76,9 @@ describe('selector de fechas', () => {
   })
 
   it('mantiene el calendario cerrado hasta abrir el selector', () => {
-    const html = renderToStaticMarkup(<DateRangePicker start="" end="" onChange={() => {}} label="Fechas de la ausencia" />)
+    const html = renderToStaticMarkup(
+      <DateRangePicker start="" end="" onChange={() => {}} label="Fechas de la ausencia" />,
+    )
     expect(html).toContain('Fechas de la ausencia')
     expect(html).toContain('Selecciona un día')
     expect(html).not.toContain('La semana que viene')
