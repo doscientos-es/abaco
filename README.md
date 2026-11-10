@@ -42,6 +42,8 @@ Consulta la [guía de uso de la aplicación](./GUIA_DE_USO.md) para los pasos de
 
 ## Estado actual
 
+La adaptación para limpieza está descrita en la [guía de demo de Felipe del 13/11/2026](docs/FELIPE_DEMO_2026_11_13.md), con los dos recorridos de prueba, datos ficticios y bloqueos de validación. No está validada en una base de datos de staging.
+
 La primera ampliación transversal añade [equipos de trabajo](docs/WORK_TEAMS.md):
 grupos de miembros existentes gestionados en Ajustes, con edición y archivo,
 asignación opcional en la planificación del trabajo y filtros por equipo y estado.

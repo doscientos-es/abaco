@@ -112,7 +112,13 @@ Administración puede operar en su nombre; no exige que usen la aplicación o m�
 
 ## Validación técnica
 
-- Ejecutar `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm structure:check` y `pnpm build`.
+- Comprobaciones ejecutadas el 10/11/2026:
+  - `pnpm test`: **335 pruebas correctas en 84 archivos**.
+  - `pnpm build`: correcto, incluyendo `pnpm typecheck`.
+  - `pnpm lint`: correcto, con 5 avisos y 0 errores.
+  - `pnpm structure:check`: correcto.
+  - Formato comprobado en los archivos de este cierre; la comprobación global
+    `pnpm format:check` no está limpia. No se ha reformateado todo el proyecto.
 - Pruebas SQL nuevas: `cleaning_services.test.sql` y `admin_absence_management.test.sql`.
 - `supabase test db` está bloqueado: PostgreSQL local rechaza conexión en 127.0.0.1:60322;
   el entorno local de Supabase/Docker no está arrancado. SQL/RLS aún **no validados**.
@@ -120,15 +126,12 @@ Administración puede operar en su nombre; no exige que usen la aplicación o m�
   descarga de adjuntos, impresión física/PDF y ejecución programada del generador.
 - No se ha realizado una prueba interactiva de navegador ni un despliegue.
 
-## Pendientes funcionales y decisiones con Felipe
+## Pendientes funcionales
 
 - Revisar cómo se modifica una pauta completa a futuro: ahora se añaden servicios y
   se reprograman/cancelan ocurrencias, pero no hay editor versionado de una serie existente.
-- Confirmar qué entiende por quincenal: semanas alternas, 15 días o dos fechas del mes.
-- Confirmar días no laborables, festivos, meses cortos y reglas de fin/renovación del contrato.
-- Validar datos de plantilla, altas sin cuenta, jornadas parciales, fijos discontinuos y calendarios
-  escolares. Las notas no sustituyen un modelo laboral ni calculan consumo legal.
-- Confirmar quién aprueba, cupos, saldos, delegaciones y conservación de documentos.
+- No hay plantilla independiente sin cuenta, modelo de jornadas parciales, fijos discontinuos
+  ni calendarios escolares. Las notas no sustituyen un modelo laboral ni calculan consumo legal.
 - Equipos son una asignación operativa: no se garantiza disponibilidad de cada integrante,
   desplazamientos, optimización de rutas ni cobertura automática.
 - La disponibilidad existente bloquea vacaciones/bajas aprobadas al asignar una persona;
@@ -136,3 +139,14 @@ Administración puede operar en su nombre; no exige que usen la aplicación o m�
 - No hay fichaje ni obligación de teléfono personal. La firma es papel adjunto, no firma
   electrónica certificada. La impresión no acredita realización ni conformidad.
 - Los snapshots e historial nuevos empiezan con esta migración; no reconstruyen el pasado.
+
+## Decisiones a confirmar con Felipe
+
+- Qué entiende por quincenal: semanas alternas, 15 días o dos fechas del mes.
+- Tratamiento de días no laborables, festivos, meses cortos y fin/renovación del contrato.
+- Origen de los datos de plantilla y altas sin cuenta; jornadas parciales, fijos discontinuos
+  y calendarios escolares que deban representarse expresamente.
+- Quién aprueba, cupos, saldos, delegaciones y conservación de documentos.
+- Campos y destinatarios del papel, necesidad de conformidad y circuitos de devolución.
+- Reglas de cobertura y disponibilidad de equipos antes de automatizar asignaciones.
+- Requisitos laborales, privacidad y conservación aplicables, sin asumirlos como acordados.
