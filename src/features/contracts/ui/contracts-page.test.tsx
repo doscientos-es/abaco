@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type * as RelatedCreation from '@/features/clients/ui/related-record-creation'
 
 import { ContractsPage } from './contracts-page'
 
@@ -26,7 +29,7 @@ const mocks = vi.hoisted(() => ({
 // Keep hook state between server renders so tests can exercise the real page,
 // related-record hook and location dialog without adding a DOM dependency.
 vi.mock('react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react')>()
+  const actual = await importOriginal<typeof React>()
   return {
     ...actual,
     useState: (initial: unknown) => {
@@ -34,24 +37,36 @@ vi.mock('react', async (importOriginal) => {
       if (!(index in mocks.states)) {
         mocks.states[index] = typeof initial === 'function' ? initial() : initial
       }
-      return [mocks.states[index], (value: unknown) => {
-        mocks.states[index] = typeof value === 'function' ? value(mocks.states[index]) : value
-      }]
+      return [
+        mocks.states[index],
+        (value: unknown) => {
+          mocks.states[index] = typeof value === 'function' ? value(mocks.states[index]) : value
+        },
+      ]
     },
   }
 })
 vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children: ReactNode }) => <div>{children}</div>
   return {
-    Button: ({ children, onPress, isDisabled = false }: {
-      children: ReactNode; onPress: () => void; isDisabled?: boolean
+    Button: ({
+      children,
+      onPress,
+      isDisabled = false,
+    }: {
+      children: ReactNode
+      onPress: () => void
+      isDisabled?: boolean
     }) => {
       if (typeof children === 'string') {
         mocks.actions.set(children, { onPress, disabled: isDisabled })
       }
       return <button disabled={isDisabled}>{children}</button>
     },
-    Card: Container, CardContent: Container, CardHeader: Container, CardTitle: Container,
+    Card: Container,
+    CardContent: Container,
+    CardHeader: Container,
+    CardTitle: Container,
     toast: { success: vi.fn(), error: mocks.error },
   }
 })
@@ -65,7 +80,7 @@ vi.mock('@tanstack/react-query', () => ({
         isPending: !enabled || mocks.targetState === 'loading',
         isError: enabled && mocks.targetState === 'error',
         error: new Error('Sin conexión'),
-        data: ready ? { locations: mocks.locations[queryKey[2]] ?? [], assets: [] } : undefined,
+        data: ready ? { locations: mocks.locations[queryKey[2] ?? ''] ?? [], assets: [] } : undefined,
         refetch: mocks.refetch,
       }
     }
@@ -73,7 +88,7 @@ vi.mock('@tanstack/react-query', () => ({
   },
 }))
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  Link: ({ children }: { children: ReactNode }) => <a href="/contratos">{children}</a>,
   useNavigate: () => mocks.navigate,
 }))
 vi.mock('@/features/auth', () => ({
@@ -83,7 +98,10 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({
     tenant: { id: 'tenant-1' },
-    clients: [{ id: 'client-1', name: 'Alborán' }, { id: 'client-2', name: 'Otro cliente' }],
+    clients: [
+      { id: 'client-1', name: 'Alborán' },
+      { id: 'client-2', name: 'Otro cliente' },
+    ],
   }),
   useSaveStatus: () => ({ state: 'saved' }),
   retryStoreSaves: vi.fn(),
@@ -98,7 +116,7 @@ vi.mock('@/shared/ui/form', () => {
 vi.mock('@/shared/ui/form-dialog', () => ({
   FormDialog: (props: { children: ReactNode; onSubmit: () => void; submitDisabled: boolean }) => {
     mocks.dialog = props
-    return <div role="dialog">{props.children}</div>
+    return <dialog open>{props.children}</dialog>
   },
 }))
 vi.mock('@/shared/ui/page-states', () => ({
@@ -106,9 +124,15 @@ vi.mock('@/shared/ui/page-states', () => ({
 }))
 vi.mock('@/features/clients/ui/client-form-dialog', () => ({ ClientFormDialog: () => null }))
 vi.mock('@/features/clients/ui/related-record-creation', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/features/clients/ui/related-record-creation')>(),
-  RelatedCreateButton: ({ label, onPress, disabled }: {
-    label: string; onPress: () => void; disabled: boolean
+  ...(await importOriginal<typeof RelatedCreation>()),
+  RelatedCreateButton: ({
+    label,
+    onPress,
+    disabled,
+  }: {
+    label: string
+    onPress: () => void
+    disabled: boolean
   }) => {
     mocks.actions.set(label, { onPress, disabled })
     return <button disabled={disabled}>{label}</button>
@@ -193,23 +217,38 @@ describe('contract centre creation', () => {
   it('saves a centre for the selected client, selects it and creates a contract without an asset', async () => {
     openLocationForm()
     await saveLocation()
-    expect(mocks.createLocation).toHaveBeenCalledWith(expect.objectContaining({
-      tenantId: 'tenant-1', clientId: 'client-1', name: 'Portal A',
-      address: 'Calle de prueba 1', kind: 'service',
-    }))
+    expect(mocks.createLocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        clientId: 'client-1',
+        name: 'Portal A',
+        address: 'Calle de prueba 1',
+        kind: 'service',
+      }),
+    )
     expect(mocks.fields.get('Centro principal · obligatorio')?.value).toBe('location-new')
     for (const key of ['work-target-options', 'client-passport']) {
       expect(mocks.invalidate).toHaveBeenCalledWith(
-        { queryKey: [key, 'tenant-1', 'client-1'] }, { throwOnError: true },
+        { queryKey: [key, 'tenant-1', 'client-1'] },
+        { throwOnError: true },
       )
     }
     press('Crear borrador')
-    await vi.waitFor(() => expect(mocks.createContract).toHaveBeenCalledWith(
-      expect.objectContaining({ clientId: 'client-1', locationId: 'location-new', assetId: null }),
-    ))
-    await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
-      to: '/contratos/$contractId', params: { contractId: 'contract-1' },
-    }))
+    await vi.waitFor(() =>
+      expect(mocks.createContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          locationId: 'location-new',
+          assetId: null,
+        }),
+      ),
+    )
+    await vi.waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/contratos/$contractId',
+        params: { contractId: 'contract-1' },
+      }),
+    )
   })
 
   it('keeps the entered centre data and the dialog open when saving fails', async () => {

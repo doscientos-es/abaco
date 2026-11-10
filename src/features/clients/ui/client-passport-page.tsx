@@ -211,7 +211,7 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                         variant="ghost"
                         onPress={() => setCreating({ kind: 'editLocation', location })}
                       >
-                        Editar ubicación
+                        Editar centro
                       </Button>
                     ) : null}
                     {canWrite && location.kind !== 'billing' ? (
