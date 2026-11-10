@@ -343,7 +343,7 @@ export function InvoicesPage() {
                   )
                 })}
               </ul>
-              <Table containerClassName="hidden xl:block">
+              <Table containerClassName="max-xl:hidden">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nº</TableHead>

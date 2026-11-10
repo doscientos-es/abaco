@@ -659,7 +659,7 @@ export function LedgerPage() {
               ))}
             </ul>
 
-            <Table containerClassName="hidden md:block">
+            <Table containerClassName="max-md:hidden">
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
