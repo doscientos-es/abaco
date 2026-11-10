@@ -175,7 +175,9 @@ export function ContractsPage() {
               <div className="grid content-start gap-1">
                 <SelectField
                   label="Centro principal · obligatorio"
-                  isDisabled={!clientId || busy || targets.isPending || targets.isError || related.pending}
+                  isDisabled={
+                    !clientId || busy || targets.isPending || targets.isError || related.pending
+                  }
                   value={locationId}
                   options={[
                     { value: '', label: 'Selecciona un centro' },

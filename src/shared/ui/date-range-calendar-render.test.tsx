@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { DateRangeCalendar } from './date-range-picker'
+import { DateRangeCalendar, DateRangePicker } from './date-range-picker'
 
 describe('calendario de fechas', () => {
   it('renderiza dos meses localizados y días accesibles sin enviar el formulario', () => {
@@ -19,5 +19,15 @@ describe('calendario de fechas', () => {
     expect(html).toContain('aria-selected="true"')
     expect(html).toContain('tabindex="0"')
     expect(html).toContain('type="button"')
+  })
+
+  it('muestra solo el botón cuando el selector está cerrado', () => {
+    const html = renderToStaticMarkup(
+      <DateRangePicker start="" end="" onChange={() => {}} label="Fechas de la ausencia" />,
+    )
+    expect(html).toContain('Fechas de la ausencia')
+    expect(html).toContain('Selecciona un día')
+    expect(html).not.toContain('rdp-month_grid')
+    expect(html).not.toContain('La semana que viene')
   })
 })
