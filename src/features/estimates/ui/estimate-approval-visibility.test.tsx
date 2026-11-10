@@ -70,6 +70,16 @@ vi.mock('./estimate-document', () => ({ EstimateDocument: () => null }))
 vi.mock('./lines-editor', () => ({ LinesEditor: () => null }))
 vi.mock('./milestones-editor', () => ({ MilestonesEditor: () => null }))
 vi.mock('@/features/clients/ui/client-form-dialog', () => ({ ClientFormDialog: () => null }))
+vi.mock('@/features/clients/ui/related-record-creation', () => ({
+  RelatedCreateButton: ({ label }: { label: string }) => <button>{label}</button>,
+  useRelatedRecordCreation: () => ({
+    allowed: state.role === 'admin',
+    pending: false,
+    status: null,
+    dialogs: null,
+    start: vi.fn(),
+  }),
+}))
 
 import { EstimateEditorPage } from './estimate-editor-page'
 
@@ -111,6 +121,7 @@ describe('acceso a la aprobación del presupuesto', () => {
     state.status = 'accepted'
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
     expect(html).toContain('Crear contrato')
+    expect(html).toContain('Crear centro')
     expect(html).not.toContain('Piscina o activo')
   })
 })

@@ -29,7 +29,9 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as SuperadminRouteImport } from './routes/superadmin'
 import { Route as TrabajosRouteImport } from './routes/trabajos'
 import { Route as VacacionesRouteImport } from './routes/vacaciones'
+import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as ClientesClientIdRouteImport } from './routes/clientes.$clientId'
+import { Route as ClientesNuevoRouteImport } from './routes/clientes.nuevo'
 import { Route as ContratosContractIdRouteImport } from './routes/contratos.$contractId'
 import { Route as FacturasIndexRouteImport } from './routes/facturas.index'
 import { Route as FacturasInvoiceIdRouteImport } from './routes/facturas.$invoiceId'
@@ -39,6 +41,7 @@ import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.ind
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
 import { Route as TrabajosIndexRouteImport } from './routes/trabajos.index'
 import { Route as TrabajosWorkOrderIdRouteImport } from './routes/trabajos.$workOrderId'
+import { Route as ClientesClientIdEditarRouteImport } from './routes/clientes.$clientId_.editar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -140,9 +143,19 @@ const VacacionesRoute = VacacionesRouteImport.update({
   path: '/vacaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesIndexRoute = ClientesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientesRoute,
+} as any)
 const ClientesClientIdRoute = ClientesClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
+  getParentRoute: () => ClientesRoute,
+} as any)
+const ClientesNuevoRoute = ClientesNuevoRouteImport.update({
+  id: '/nuevo',
+  path: '/nuevo',
   getParentRoute: () => ClientesRoute,
 } as any)
 const ContratosContractIdRoute = ContratosContractIdRouteImport.update({
@@ -190,6 +203,11 @@ const TrabajosWorkOrderIdRoute = TrabajosWorkOrderIdRouteImport.update({
   path: '/$workOrderId',
   getParentRoute: () => TrabajosRoute,
 } as any)
+const ClientesClientIdEditarRoute = ClientesClientIdEditarRouteImport.update({
+  id: '/$clientId_/editar',
+  path: '/$clientId/editar',
+  getParentRoute: () => ClientesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -213,15 +231,18 @@ export interface FileRoutesByFullPath {
   '/trabajos': typeof TrabajosRouteWithChildren
   '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/clientes/nuevo': typeof ClientesNuevoRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
+  '/clientes/': typeof ClientesIndexRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
   '/trabajos/': typeof TrabajosIndexRoute
+  '/clientes/$clientId/editar': typeof ClientesClientIdEditarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -229,7 +250,6 @@ export interface FileRoutesByTo {
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
-  '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/contratos': typeof ContratosRouteWithChildren
@@ -243,15 +263,18 @@ export interface FileRoutesByTo {
   '/superadmin': typeof SuperadminRoute
   '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/clientes/nuevo': typeof ClientesNuevoRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
+  '/clientes': typeof ClientesIndexRoute
   '/facturas': typeof FacturasIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
   '/trabajos': typeof TrabajosIndexRoute
+  '/clientes/$clientId/editar': typeof ClientesClientIdEditarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -276,15 +299,18 @@ export interface FileRoutesById {
   '/trabajos': typeof TrabajosRouteWithChildren
   '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
+  '/clientes/nuevo': typeof ClientesNuevoRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
   '/facturas/$invoiceId': typeof FacturasInvoiceIdRoute
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
+  '/clientes/': typeof ClientesIndexRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
   '/trabajos/': typeof TrabajosIndexRoute
+  '/clientes/$clientId_/editar': typeof ClientesClientIdEditarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -310,15 +336,18 @@ export interface FileRouteTypes {
     | '/trabajos'
     | '/vacaciones'
     | '/clientes/$clientId'
+    | '/clientes/nuevo'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
+    | '/clientes/'
     | '/facturas/'
     | '/presupuestos/'
     | '/trabajos/'
+    | '/clientes/$clientId/editar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -326,7 +355,6 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
-    | '/clientes'
     | '/confirmar'
     | '/contabilidad'
     | '/contratos'
@@ -340,15 +368,18 @@ export interface FileRouteTypes {
     | '/superadmin'
     | '/vacaciones'
     | '/clientes/$clientId'
+    | '/clientes/nuevo'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
+    | '/clientes'
     | '/facturas'
     | '/presupuestos'
     | '/trabajos'
+    | '/clientes/$clientId/editar'
   id:
     | '__root__'
     | '/'
@@ -372,15 +403,18 @@ export interface FileRouteTypes {
     | '/trabajos'
     | '/vacaciones'
     | '/clientes/$clientId'
+    | '/clientes/nuevo'
     | '/contratos/$contractId'
     | '/facturas/$invoiceId'
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
+    | '/clientes/'
     | '/facturas/'
     | '/presupuestos/'
     | '/trabajos/'
+    | '/clientes/$clientId_/editar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -552,11 +586,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VacacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes/': {
+      id: '/clientes/'
+      path: '/'
+      fullPath: '/clientes/'
+      preLoaderRoute: typeof ClientesIndexRouteImport
+      parentRoute: typeof ClientesRoute
+    }
     '/clientes/$clientId': {
       id: '/clientes/$clientId'
       path: '/$clientId'
       fullPath: '/clientes/$clientId'
       preLoaderRoute: typeof ClientesClientIdRouteImport
+      parentRoute: typeof ClientesRoute
+    }
+    '/clientes/nuevo': {
+      id: '/clientes/nuevo'
+      path: '/nuevo'
+      fullPath: '/clientes/nuevo'
+      preLoaderRoute: typeof ClientesNuevoRouteImport
       parentRoute: typeof ClientesRoute
     }
     '/contratos/$contractId': {
@@ -622,15 +670,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrabajosWorkOrderIdRouteImport
       parentRoute: typeof TrabajosRoute
     }
+    '/clientes/$clientId_/editar': {
+      id: '/clientes/$clientId_/editar'
+      path: '/$clientId/editar'
+      fullPath: '/clientes/$clientId/editar'
+      preLoaderRoute: typeof ClientesClientIdEditarRouteImport
+      parentRoute: typeof ClientesRoute
+    }
   }
 }
 
 interface ClientesRouteChildren {
   ClientesClientIdRoute: typeof ClientesClientIdRoute
+  ClientesNuevoRoute: typeof ClientesNuevoRoute
+  ClientesIndexRoute: typeof ClientesIndexRoute
+  ClientesClientIdEditarRoute: typeof ClientesClientIdEditarRoute
 }
 
 const ClientesRouteChildren: ClientesRouteChildren = {
   ClientesClientIdRoute: ClientesClientIdRoute,
+  ClientesNuevoRoute: ClientesNuevoRoute,
+  ClientesIndexRoute: ClientesIndexRoute,
+  ClientesClientIdEditarRoute: ClientesClientIdEditarRoute,
 }
 
 const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
