@@ -23,6 +23,7 @@ select public.request_absence_information('84000000-0000-4000-8000-000000000001'
 select is((select status from public.absence_requests
   where id = current_setting('test.absence_followup')::uuid), 'needs_info',
   'Admin can request additional information');
+set local request.jwt.claim.sub = '84000000-0000-4000-8000-000000000003';
 select is((select decision from public.vacation_decision_notifications
   where request_id = current_setting('test.absence_followup')::uuid), 'needs_info',
   'Worker is notified when information is requested');
