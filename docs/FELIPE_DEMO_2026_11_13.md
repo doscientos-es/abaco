@@ -5,10 +5,13 @@ Actividad: limpieza en Melilla; aproximadamente 159 trabajadores según el encar
 
 ## Estado y alcance real
 
-**Implementado en código, pendiente de validación contra una base de datos de pruebas.**
-No se han aplicado migraciones remotas ni creado datos en ninguna empresa real.
+**Implementado y migrado al proyecto Supabase existente `abaco-doscientos`
+(`vqyicgarlksirpzrngut`), autorizado por el usuario.**
+Se han validado 66 aserciones SQL remotas con datos ficticios y `ROLLBACK`;
+no quedan usuarios ni empresas de prueba. No se ha reiniciado la base de datos.
 Los formularios usan Supabase, no un almacenamiento simulado como sustituto del servidor.
-Las pruebas con dobles de Supabase verifican contratos del código, no persistencia real ni RLS.
+La validación SQL comprueba funciones y permisos reales, pero no sustituye una prueba
+interactiva de navegador, recarga de pantalla ni subida/descarga efectiva de archivos.
 
 ### Base existente conservada
 
@@ -42,18 +45,23 @@ Las pruebas con dobles de Supabase verifican contratos del código, no persisten
 - Historial de ausencias con antes/después, autor y fecha; concurrencia y claves de reintento.
   No se permite transferir un periodo a otro empleado: cancelar y registrar uno nuevo.
 
-## Requisito antes de probar datos reales
+## Base de datos aplicada
 
-Se necesita identificar y autorizar un proyecto Supabase **de staging**.
-Aplicar allí las migraciones pendientes, en orden, tras revisar su estado:
+Aplicadas el 10/11/2026 mediante MCP `supabase backup05` al proyecto indicado,
+después de comprobar las migraciones anteriores y revisar el SQL:
 
 - `20261110110000_cleaning_services.sql`
 - `20261110120000_paper_visit_operations.sql`
 - `20261110130000_admin_absence_management.sql`
+- `20261110140000_restrict_expense_guard_execution.sql`
 
-Son extensiones del esquema existente; necesitan todas sus migraciones anteriores.
-No conectar esta versión del frontend a una base sin dichas columnas/RPC.
-No usar `db reset` en producción. No incorporar credenciales a este documento.
+La última restringe la ejecución directa de una función interna de gastos; el trigger
+conserva su protección de modificaciones y borrados, verificada con pruebas.
+El bucket `signed-work-sheets` es privado, con límite de 15 MiB y tipos PDF/JPEG/PNG/WebP.
+RLS está habilitado en las tablas nuevas y las RPC nuevas no son ejecutables por `anon`.
+No se ha confirmado que este proyecto sea un entorno separado de staging:
+introducir únicamente datos ficticios en una empresa expresamente autorizada para demo.
+No usar `db reset` ni incorporar credenciales a este documento.
 
 ## Datos ficticios para introducir en staging
 
@@ -119,12 +127,31 @@ Administración puede operar en su nombre; no exige que usen la aplicación o m�
   - `pnpm structure:check`: correcto.
   - Formato comprobado en los archivos de este cierre; la comprobación global
     `pnpm format:check` no está limpia. No se ha reformateado todo el proyecto.
-- Pruebas SQL nuevas: `cleaning_services.test.sql` y `admin_absence_management.test.sql`.
+- Pruebas SQL remotas ejecutadas mediante MCP, recopilando resultados pgTAP
+  dentro de transacciones revertidas: **66 aserciones, 0 fallos**.
+  - `cleaning_services.test.sql`: 23; recurrencias, generación idempotente,
+    hoja fija sin ocurrencias, snapshot y registro administrativo de realización.
+  - `admin_absence_management.test.sql`: 17; registro, cancelación, historial,
+    versiones obsoletas, reintentos y aislamiento entre personas/empresas.
+  - `paper_visit_operations.test.sql`: 22; cancelación con motivo, reintentos,
+    estados cerrados y permisos de documentos/metadatos de Storage.
+  - `expense_guard_permissions.test.sql`: 4; ejecución directa denegada y
+    protección del trigger conservada para modificaciones y borrados.
 - `supabase test db` está bloqueado: PostgreSQL local rechaza conexión en 127.0.0.1:60322;
-  el entorno local de Supabase/Docker no está arrancado. SQL/RLS aún **no validados**.
-- Pendientes en entorno real: guardar/recargar, permisos, concurrencia, almacenamiento,
-  descarga de adjuntos, impresión física/PDF y ejecución programada del generador.
-- No se ha realizado una prueba interactiva de navegador ni un despliegue.
+  el entorno local de Supabase/Docker no está arrancado. No se ha ejecutado la suite SQL
+  completa local: los resultados anteriores corresponden a las comprobaciones remotas.
+- Las pruebas de Storage insertan únicamente metadatos transaccionales: no suben archivos.
+- Pendientes de validación: guardar/recargar desde la interfaz, sesiones concurrentes reales,
+  subida y descarga HTTP de adjuntos, impresión física/PDF y generador programado.
+- No se ha realizado una prueba interactiva de navegador ni un despliegue del frontend.
+- Avisos de plataforma pendientes: extensión `pg_net` en `public`
+  ([guía](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public))
+  y protección de contraseñas filtradas desactivada
+  ([guía](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)).
+  No se ha cambiado la configuración de Auth ni trasladado extensiones.
+- El asesor también enumera RPC autenticadas `SECURITY DEFINER` y tablas internas
+  con RLS sin políticas: no implica por sí solo exposición. No se han eliminado sus
+  controles ni declarado auditadas todas las RPC existentes.
 
 ## Pendientes funcionales
 
