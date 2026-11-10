@@ -8,6 +8,8 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Return first location from array if present",
+            "Update changelog with new features and improvements",
             "Add client visit history and improve paper visit panel",
             "Add cancellation label to absence type labels",
             "Add validation for absence occupancy and employee overlaps",
@@ -29,6 +31,20 @@
         }
       ],
       "changes": [
+        {
+          "sha": "466d9ac53f370f9226f867a2f8ea1cd680ea1682",
+          "type": "feat",
+          "scope": "cleaning-service",
+          "breaking": false,
+          "description": "Return first location from array if present"
+        },
+        {
+          "sha": "e0882b42ddf45b645e888b6bdb46cd536706b2f9",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and improvements"
+        },
         {
           "sha": "b240598ae2b01467f3a3c8c79af97b399f3ac9a6",
           "type": "feat",

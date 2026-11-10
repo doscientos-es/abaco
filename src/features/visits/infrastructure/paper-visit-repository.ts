@@ -36,26 +36,59 @@ export type VisitEvent = {
 }
 export type SignedDocument = { id: string; name: string; object_path: string; created_at: string }
 
-type ClientVisitRow = Pick<VisitSummary, 'id'|'title'|'status'|'priority'|'notes'|'scheduled_start_at'|'scheduled_end_at'|'updated_at'|'assigned_user_id'|'work_team_id'|'route_order'> & {
-  paper_snapshot:PaperSnapshot
-  location:{name:string;address:string;timezone:string}|{name:string;address:string;timezone:string}[]|null
-  work_teams:{name:string}|{name:string}[]|null
+type ClientVisitRow = Pick<
+  VisitSummary,
+  | 'id'
+  | 'title'
+  | 'status'
+  | 'priority'
+  | 'notes'
+  | 'scheduled_start_at'
+  | 'scheduled_end_at'
+  | 'updated_at'
+  | 'assigned_user_id'
+  | 'work_team_id'
+  | 'route_order'
+> & {
+  paper_snapshot: PaperSnapshot
+  location:
+    | { name: string; address: string; timezone: string }
+    | { name: string; address: string; timezone: string }[]
+    | null
+  work_teams: { name: string } | { name: string }[] | null
 }
 
-export async function listClientVisitHistory(tenantId:string,clientId:string,locationId:string|null,page:number):Promise<VisitSummary[]> {
-  let query = createBrowserSupabaseClient().from('service_visits')
-    .select('id,title,status,priority,notes,scheduled_start_at,scheduled_end_at,updated_at,assigned_user_id,work_team_id,route_order,paper_snapshot,location:service_locations(name,address,timezone),work_teams(name)')
-    .eq('tenant_id',tenantId).eq('client_id',clientId)
-  if(locationId) query = query.eq('location_id',locationId)
-  const {data,error} = await query.order('scheduled_start_at',{ascending:false}).order('id').range(page*25,(page+1)*25-1)
-  if(error) throw new Error(error.message)
-  return ((data ?? []) as ClientVisitRow[]).map(row => {
+export async function listClientVisitHistory(
+  tenantId: string,
+  clientId: string,
+  locationId: string | null,
+  page: number,
+): Promise<VisitSummary[]> {
+  let query = createBrowserSupabaseClient()
+    .from('service_visits')
+    .select(
+      'id,title,status,priority,notes,scheduled_start_at,scheduled_end_at,updated_at,assigned_user_id,work_team_id,route_order,paper_snapshot,location:service_locations(name,address,timezone),work_teams(name)',
+    )
+    .eq('tenant_id', tenantId)
+    .eq('client_id', clientId)
+  if (locationId) query = query.eq('location_id', locationId)
+  const { data, error } = await query
+    .order('scheduled_start_at', { ascending: false })
+    .order('id')
+    .range(page * 25, (page + 1) * 25 - 1)
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as ClientVisitRow[]).map((row) => {
     const location = Array.isArray(row.location) ? row.location[0] : row.location
     const team = Array.isArray(row.work_teams) ? row.work_teams[0] : row.work_teams
-    return {...row,
-      client_name:row.paper_snapshot.client ?? '',location_name:row.paper_snapshot.center ?? location?.name ?? '',
-      address:row.paper_snapshot.address ?? location?.address ?? '',timezone:location?.timezone ?? 'Europe/Madrid',
-      assigned_user_name:row.assigned_user_id ? 'Persona asignada' : '',work_team_name:team?.name ?? ''}
+    return {
+      ...row,
+      client_name: row.paper_snapshot.client ?? '',
+      location_name: row.paper_snapshot.center ?? location?.name ?? '',
+      address: row.paper_snapshot.address ?? location?.address ?? '',
+      timezone: location?.timezone ?? 'Europe/Madrid',
+      assigned_user_name: row.assigned_user_id ? 'Persona asignada' : '',
+      work_team_name: team?.name ?? '',
+    }
   })
 }
 
@@ -140,18 +173,16 @@ export async function uploadSignedDocument(
     .upload(path, file, { upsert: false, contentType: file.type })
   // An existing immutable path is safe on retry; registration still runs.
   if (upload.error && upload.error.statusCode !== '409') throw new Error(upload.error.message)
-  const { error } = await db
-    .from('visit_signed_documents')
-    .upsert(
-      {
-        id,
-        tenant_id: tenantId,
-        visit_id: visitId,
-        object_path: path,
-        name: file.name.slice(0, 240),
-      },
-      { onConflict: 'id', ignoreDuplicates: true },
-    )
+  const { error } = await db.from('visit_signed_documents').upsert(
+    {
+      id,
+      tenant_id: tenantId,
+      visit_id: visitId,
+      object_path: path,
+      name: file.name.slice(0, 240),
+    },
+    { onConflict: 'id', ignoreDuplicates: true },
+  )
   if (error) throw new Error(error.message)
 }
 

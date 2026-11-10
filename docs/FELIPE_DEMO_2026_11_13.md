@@ -57,18 +57,18 @@ No usar `db reset` en producción. No incorporar credenciales a este documento.
 
 ## Datos ficticios para introducir en staging
 
-| Entidad | Ejemplo — no son datos reales ni están precargados |
-| --- | --- |
-| Cliente | Comunidad Alborán DEMO |
-| Centros | Portal A DEMO y Garaje DEMO; direcciones ficticias en Melilla |
-| Personal | Ana DEMO, Bea DEMO; miembros con rol `user` |
-| Equipo | Móvil A DEMO |
-| Contrato | Limpieza Alborán DEMO; inicio 01/11/2026; precio cero si aún no hay precio pactado |
-| Hoja fija | Portal A; lunes/miércoles/viernes; 120 min estimados; suelos y escaleras |
-| Cristales | Portal A; móvil; mensual desde 10/11/2026; 120 min; equipo Móvil A |
-| Garaje | Garaje; móvil; cada 15 días desde 12/11/2026; 180 min; colocar carteles |
-| Ausencias | Ana: vacaciones aprobadas 16–20/11; asuntos propios pendientes el 18/11 |
-| Coincidencia | Bea: vacaciones aprobadas 19–23/11 |
+| Entidad      | Ejemplo — no son datos reales ni están precargados                                 |
+| ------------ | ---------------------------------------------------------------------------------- |
+| Cliente      | Comunidad Alborán DEMO                                                             |
+| Centros      | Portal A DEMO y Garaje DEMO; direcciones ficticias en Melilla                      |
+| Personal     | Ana DEMO, Bea DEMO; miembros con rol `user`                                        |
+| Equipo       | Móvil A DEMO                                                                       |
+| Contrato     | Limpieza Alborán DEMO; inicio 01/11/2026; precio cero si aún no hay precio pactado |
+| Hoja fija    | Portal A; lunes/miércoles/viernes; 120 min estimados; suelos y escaleras           |
+| Cristales    | Portal A; móvil; mensual desde 10/11/2026; 120 min; equipo Móvil A                 |
+| Garaje       | Garaje; móvil; cada 15 días desde 12/11/2026; 180 min; colocar carteles            |
+| Ausencias    | Ana: vacaciones aprobadas 16–20/11; asuntos propios pendientes el 18/11            |
+| Coincidencia | Bea: vacaciones aprobadas 19–23/11                                                 |
 
 El personal se selecciona de los miembros existentes de la empresa; no se ha creado
 una plantilla independiente sin cuenta ni una importación de los 159 trabajadores.

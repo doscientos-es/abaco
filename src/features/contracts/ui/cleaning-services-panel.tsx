@@ -128,13 +128,25 @@ export function CleaningServicesPanel({
               {service.title}
             </h3>
             <p>
-              {clientName} · {service.location?.name ?? targets.data?.locations.find((l) => l.id === service.location_id)?.name} ·{' '}
-              {service.location?.address ?? targets.data?.locations.find((l) => l.id === service.location_id)?.address}
+              {clientName} ·{' '}
+              {service.location?.name ??
+                targets.data?.locations.find((l) => l.id === service.location_id)?.name}{' '}
+              ·{' '}
+              {service.location?.address ??
+                targets.data?.locations.find((l) => l.id === service.location_id)?.address}
             </p>
             <p className="whitespace-pre-wrap">{service.location?.operational_contact}</p>
             <p className="whitespace-pre-wrap">{service.location?.access_notes}</p>
             <p className="whitespace-pre-wrap">{service.location?.notes}</p>
-            <p>{service.time_known ? `Hora prevista: ${service.local_start.slice(0, 5)}` : 'Sin horario fijo'} · {teams.data?.find(t => t.id === service.work_team_id)?.name || people.data?.find(p => p.id === service.assigned_user_id)?.label || 'Sin asignar'}</p>
+            <p>
+              {service.time_known
+                ? `Hora prevista: ${service.local_start.slice(0, 5)}`
+                : 'Sin horario fijo'}{' '}
+              ·{' '}
+              {teams.data?.find((t) => t.id === service.work_team_id)?.name ||
+                people.data?.find((p) => p.id === service.assigned_user_id)?.label ||
+                'Sin asignar'}
+            </p>
             <p>
               {service.frequency
                 ? frequencyLabels[service.frequency]

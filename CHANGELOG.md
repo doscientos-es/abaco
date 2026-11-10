@@ -6,6 +6,8 @@
 
 ### Nuevas funciones
 
+- Return first location from array if present
+- Update changelog with new features and improvements
 - Add client visit history and improve paper visit panel
 - Add cancellation label to absence type labels
 - Add validation for absence occupancy and employee overlaps

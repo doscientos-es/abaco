@@ -123,7 +123,11 @@ export function VacationManagementPage() {
       {requests.isSuccess ? (
         <AbsenceOverview
           requests={(requests.data ?? []).filter(
-            (r) => (typeFilter === 'all' || r.absenceType === typeFilter) && r.requesterName.toLocaleLowerCase('es').includes(search.trim().toLocaleLowerCase('es')),
+            (r) =>
+              (typeFilter === 'all' || r.absenceType === typeFilter) &&
+              r.requesterName
+                .toLocaleLowerCase('es')
+                .includes(search.trim().toLocaleLowerCase('es')),
           )}
           from={dateFrom}
           through={dateTo}
@@ -259,9 +263,9 @@ export function VacationManagementPage() {
               <AbsenceHistory tenantId={tenantId} requestId={request.id} />
             ) : null}
             {request.status !== 'rejected' &&
-              request.status !== 'canceled' &&
-              (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
-              tenantId ? (
+            request.status !== 'canceled' &&
+            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+            tenantId ? (
               <VacationCoverage
                 tenantId={tenantId}
                 requestId={request.id}
