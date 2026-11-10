@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { calendarDate, dateValue, monthWeeks, moveDays, moveMonths, selectAbsenceDay } from './absence-calendar'
+import {
+  calendarDate,
+  dateValue,
+  monthWeeks,
+  moveDays,
+  moveMonths,
+  selectAbsenceDay,
+} from './absence-calendar'
 
 describe('calendario de ausencias', () => {
   it('mantiene fechas locales al cruzar meses, años y cambios horarios', () => {
@@ -13,14 +20,39 @@ describe('calendario de ausencias', () => {
 
   it('crea semanas de lunes a domingo incluyendo el 29 de febrero', () => {
     const weeks = monthWeeks('2024-02-10')
-    expect(weeks[0]).toEqual([null, null, null, '2024-02-01', '2024-02-02', '2024-02-03', '2024-02-04'])
-    expect(weeks.at(-1)).toEqual(['2024-02-26', '2024-02-27', '2024-02-28', '2024-02-29', null, null, null])
+    expect(weeks[0]).toEqual([
+      null,
+      null,
+      null,
+      '2024-02-01',
+      '2024-02-02',
+      '2024-02-03',
+      '2024-02-04',
+    ])
+    expect(weeks.at(-1)).toEqual([
+      '2024-02-26',
+      '2024-02-27',
+      '2024-02-28',
+      '2024-02-29',
+      null,
+      null,
+      null,
+    ])
   })
 
   it('permite rangos invertidos, de un día y empezar una nueva selección', () => {
     expect(selectAbsenceDay('', '', '2026-11-10')).toEqual({ start: '2026-11-10', end: '' })
-    expect(selectAbsenceDay('2026-11-10', '', '2026-11-08')).toEqual({ start: '2026-11-08', end: '2026-11-10' })
-    expect(selectAbsenceDay('2026-11-10', '', '2026-11-10')).toEqual({ start: '2026-11-10', end: '2026-11-10' })
-    expect(selectAbsenceDay('2026-11-08', '2026-11-10', '2026-12-01')).toEqual({ start: '2026-12-01', end: '' })
+    expect(selectAbsenceDay('2026-11-10', '', '2026-11-08')).toEqual({
+      start: '2026-11-08',
+      end: '2026-11-10',
+    })
+    expect(selectAbsenceDay('2026-11-10', '', '2026-11-10')).toEqual({
+      start: '2026-11-10',
+      end: '2026-11-10',
+    })
+    expect(selectAbsenceDay('2026-11-08', '2026-11-10', '2026-12-01')).toEqual({
+      start: '2026-12-01',
+      end: '',
+    })
   })
 })

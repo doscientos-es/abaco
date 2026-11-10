@@ -1,4 +1,10 @@
-import { Children, isValidElement, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import {
+  Children,
+  isValidElement,
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react'
 import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,7 +15,10 @@ vi.mock('react', async (importOriginal) => {
   const actual = await importOriginal<typeof React>()
   return {
     ...actual,
-    useState: (initial: () => string) => [initial(), hooks.index++ === 0 ? hooks.setFocused : hooks.setVisible],
+    useState: (initial: () => string) => [
+      initial(),
+      hooks.index++ === 0 ? hooks.setFocused : hooks.setVisible,
+    ],
     useRef: (value: unknown) => ({ current: value }),
     useEffect: () => {},
     useId: () => 'calendar-instructions',
@@ -28,14 +37,24 @@ function button(node: ReactNode, label: string): ReactElement<ButtonProps> | und
   let result: ReactElement<ButtonProps> | undefined
   Children.forEach(node, (child) => {
     if (result || !isValidElement<ButtonProps>(child)) return
-    if (child.type === 'button' && (child.props['aria-label'] === label || child.props.children === label)) result = child
+    if (
+      child.type === 'button' &&
+      (child.props['aria-label'] === label || child.props.children === label)
+    )
+      result = child
     else result = button(child.props.children, label)
   })
   return result
 }
 
-const dateLabel = (date: string) => new Intl.DateTimeFormat('es-ES', { dateStyle: 'full' }).format(new Date(`${date}T12:00:00`))
-const renderPicker = (start: string, end: string, endOptional: boolean, onChange: (start: string, end: string) => void) => {
+const dateLabel = (date: string) =>
+  new Intl.DateTimeFormat('es-ES', { dateStyle: 'full' }).format(new Date(`${date}T12:00:00`))
+const renderPicker = (
+  start: string,
+  end: string,
+  endOptional: boolean,
+  onChange: (start: string, end: string) => void,
+) => {
   hooks.index = 0
   return AbsenceDateRangePicker({ start, end, endOptional, onChange })
 }
@@ -54,7 +73,9 @@ describe('selector de fechas de ausencia', () => {
     expect(onChange).toHaveBeenLastCalledWith('2026-11-10', '')
     button(tree, 'Limpiar fechas')?.props.onClick?.()
     expect(onChange).toHaveBeenLastCalledWith('', '')
-    expect(button(renderPicker('2026-11-10', '2026-11-12', false, onChange), 'Dejar fin desconocido')).toBeUndefined()
+    expect(
+      button(renderPicker('2026-11-10', '2026-11-12', false, onChange), 'Dejar fin desconocido'),
+    ).toBeUndefined()
   })
 
   it('navega entre meses con el teclado sin enviar el formulario', () => {
@@ -62,7 +83,10 @@ describe('selector de fechas de ausencia', () => {
     const day = button(tree, `${dateLabel('2026-11-30')}, inicio`)
     expect(day?.props.tabIndex).toBe(0)
     const preventDefault = vi.fn()
-    day?.props.onKeyDown?.({ key: 'ArrowRight', preventDefault } as unknown as KeyboardEvent<HTMLButtonElement>)
+    day?.props.onKeyDown?.({
+      key: 'ArrowRight',
+      preventDefault,
+    } as unknown as KeyboardEvent<HTMLButtonElement>)
     expect(preventDefault).toHaveBeenCalledOnce()
     expect(hooks.setFocused).toHaveBeenCalledWith('2026-12-01')
     expect(hooks.setVisible).toHaveBeenCalledWith('2026-12-01')

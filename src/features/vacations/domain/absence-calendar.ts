@@ -42,7 +42,9 @@ export function monthWeeks(value: string): (string | null)[][] {
     cells.push(dateValue(first))
   }
   while (cells.length % 7) cells.push(null)
-  return Array.from({ length: cells.length / 7 }, (_, index) => cells.slice(index * 7, index * 7 + 7))
+  return Array.from({ length: cells.length / 7 }, (_, index) =>
+    cells.slice(index * 7, index * 7 + 7),
+  )
 }
 
 export function selectAbsenceDay(start: string, end: string, day: string) {
