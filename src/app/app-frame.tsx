@@ -32,24 +32,10 @@ import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
+import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { navIcons } from './nav-icons'
 import { SaveStatusNotice } from './save-status-notice'
 
-type NavTo =
-  | '/'
-  | '/presupuestos'
-  | '/clientes'
-  | '/trabajos'
-  | '/contratos'
-  | '/agenda'
-  | '/vacaciones'
-  | '/catalogo'
-  | '/facturas'
-  | '/contabilidad'
-  | '/ajustes'
-  | '/personalizar'
-  | '/superadmin'
-type NavItem = { to: NavTo; label: string; icon: ReactNode }
 type NavGroup = { label: string; items: NavItem[] }
 
 const navGroups: NavGroup[] = [
@@ -120,17 +106,6 @@ const navPermission: Partial<Record<NavTo, Permission>> = {
   '/contabilidad': 'ledger:read',
   '/ajustes': 'settings:write',
   '/personalizar': 'settings:write',
-}
-
-function initials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word[0]?.toUpperCase())
-      .join('') || '?'
-  )
 }
 
 function readableTextColor(hex: string) {
@@ -220,10 +195,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       style={
         tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
           ? ({
-            '--primary': tenant.brandColor,
-            '--primary-foreground': readableTextColor(tenant.brandColor),
-            '--ring': tenant.brandColor,
-          } as CSSProperties)
+              '--primary': tenant.brandColor,
+              '--primary-foreground': readableTextColor(tenant.brandColor),
+              '--ring': tenant.brandColor,
+            } as CSSProperties)
           : undefined
       }
     >
@@ -366,21 +341,5 @@ export function AppFrame({ children }: { children: ReactNode }) {
       </nav>
       <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
     </AppShell>
-  )
-}
-
-function SidebarLink({ to, label, icon }: NavItem) {
-  return (
-    <Link
-      to={to}
-      activeOptions={{ exact: to === '/' }}
-      activeProps={{
-        className: 'bg-accent text-accent-foreground font-medium',
-      }}
-      className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors"
-    >
-      {icon}
-      {label}
-    </Link>
   )
 }
