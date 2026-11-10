@@ -14,24 +14,36 @@ export function UserFrame({ children }: { children: ReactNode }) {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <header className="border-border bg-card border-b">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-3">
           <div>
             <p className="text-primary text-lg font-semibold">{brand.name}</p>
             <p className="text-muted-foreground text-xs">
               {company?.name ?? 'Mi empresa'} · Usuario
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <nav aria-label="Navegación de usuario" className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/mi-jornada"
+              className="text-primary rounded-md px-2 py-2 text-sm font-medium underline"
+            >
+              Mi jornada
+            </Link>
             <Link
               to="/mis-vacaciones"
               className="text-primary rounded-md px-2 py-2 text-sm font-medium underline"
             >
               Mis vacaciones
             </Link>
+            <Link
+              to="/ajustes"
+              className="text-primary rounded-md px-2 py-2 text-sm font-medium underline"
+            >
+              Ajustes
+            </Link>
             <Button variant="outline" onPress={() => void signOut()}>
               Cerrar sesión
             </Button>
-          </div>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>

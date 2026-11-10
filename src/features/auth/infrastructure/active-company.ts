@@ -12,6 +12,8 @@ export function getPreferredCompanyId(user: User): string | null {
 }
 
 export async function setPreferredCompanyId(id: string): Promise<void> {
-  // A failure only means the first company is used next time.
-  await createBrowserSupabaseClient().auth.updateUser({ data: { [activeCompanyField]: id } })
+  const { error } = await createBrowserSupabaseClient().auth.updateUser({
+    data: { [activeCompanyField]: id },
+  })
+  if (error) throw new Error('No se pudo cambiar de empresa. Inténtalo de nuevo.')
 }

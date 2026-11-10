@@ -12,6 +12,7 @@ import {
   AppShellMain,
   AppShellMobileHeader,
   AppShellSidebar,
+  toast,
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
@@ -184,7 +185,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <DropdownMenuItem
           key={company.id}
           onAction={() => {
-            if (company.id !== session?.tenantId) void switchTo(company.id)
+            if (company.id !== session?.tenantId) {
+              void switchTo(company.id).catch(() => toast.error('No se pudo cambiar de empresa.'))
+            }
           }}
         >
           {company.id === session?.tenantId ? '✓ ' : ''}
@@ -217,10 +220,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       style={
         tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
           ? ({
-              '--primary': tenant.brandColor,
-              '--primary-foreground': readableTextColor(tenant.brandColor),
-              '--ring': tenant.brandColor,
-            } as CSSProperties)
+            '--primary': tenant.brandColor,
+            '--primary-foreground': readableTextColor(tenant.brandColor),
+            '--ring': tenant.brandColor,
+          } as CSSProperties)
           : undefined
       }
     >
