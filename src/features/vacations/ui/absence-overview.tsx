@@ -1,61 +1,63 @@
-import { Button } from '@doscientos/ui'
+import { Button, toast } from '@doscientos/ui'
 import { useState } from 'react'
 
-import { monthWeeks, moveMonths } from '../domain/absence-calendar'
+import { calendarDate, dateValue } from '@/shared/lib/date-range'
+import { calendarDays, type EventCalendarView } from '@/shared/lib/event-calendar'
+import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
+import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
+import { EventCalendar } from '@/shared/ui/event-calendar'
+
+import {
+  absenceEvents,
+  absenceCalendarProposal,
+  type AbsenceCalendarProposal,
+} from '../domain/absence-events'
 import { absenceOccupancy } from '../domain/absence-occupancy'
-import { absenceTypeLabels, type VacationRequest } from '../domain/vacation-request'
+import {
+  absenceTypeLabels,
+  vacationRequestStatusLabels,
+  type VacationRequest,
+} from '../domain/vacation-request'
 
 export function AbsenceOverview({
   requests,
   from,
   through,
   onRange,
+  onEdit,
 }: {
   requests: VacationRequest[]
   from: string
   through: string
   onRange: (from: string, through: string) => void
+  onEdit?: ((request: VacationRequest, proposal?: AbsenceCalendarProposal) => void) | undefined
 }) {
-  const [month, setMonth] = useState(() =>
-    new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date()).slice(0, 7),
+  const [date, setDate] = useState(() =>
+    calendarDate(
+      new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date()),
+    ),
   )
-  const weeks = monthWeeks(`${month}-01`)
-  const days = weeks.flat().filter((day): day is string => Boolean(day))
-  const start = from || days[0] || ''
-  const end = through || days.at(-1) || ''
+  const [view, setView] = useState<EventCalendarView>('month')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const days = calendarDays(date, view)
+  const month = dateValue(date).slice(0, 7)
+  const lastMonthDay = dateValue(new Date(date.getFullYear(), date.getMonth() + 1, 0, 12))
+  const start = from || (view === 'month' ? `${month}-01` : dateValue(days[0] ?? date))
+  const end = through || (view === 'month' ? lastMonthDay : dateValue(days.at(-1) ?? date))
   const totals = absenceOccupancy(requests, start, end)
+  const selected = requests.find((request) => request.id === selectedId)
   return (
     <section
       className="space-y-3 rounded-lg border p-4"
       aria-label="Calendario de vacaciones y asuntos propios"
     >
       <h2 className="font-semibold">Calendario y coincidencias</h2>
+      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          onPress={() => setMonth(moveMonths(`${month}-01`, -1).slice(0, 7))}
-        >
-          Mes anterior
-        </Button>
-        <input
-          aria-label="Mes de ausencias"
-          type="month"
-          value={month}
-          onChange={(e) => {
-            if (e.target.value) setMonth(e.target.value)
-          }}
-          className="bg-background rounded border p-2"
-        />
-        <Button
-          variant="outline"
-          onPress={() => setMonth(moveMonths(`${month}-01`, 1).slice(0, 7))}
-        >
-          Mes siguiente
-        </Button>
         <Button variant="outline" onPress={() => onRange(`${month}-01`, `${month}-15`)}>
           Primera quincena
         </Button>
-        <Button variant="outline" onPress={() => onRange(`${month}-16`, days.at(-1) ?? '')}>
+        <Button variant="outline" onPress={() => onRange(`${month}-16`, lastMonthDay)}>
           Segunda quincena
         </Button>
       </div>
@@ -63,42 +65,70 @@ export function AbsenceOverview({
         Cada casilla cuenta personas únicas: aprobadas / pendientes. Pulsa un día para ver nombres.
         No se calculan saldos ni cupos.
       </p>
-      <table className="w-full table-fixed text-center text-sm">
-        <thead>
-          <tr>
-            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, i) => (
-              <th key={i} scope="col">
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {weeks.map((week, i) => (
-            <tr key={i}>
-              {week.map((day, j) => {
-                if (!day) return <td key={j} aria-label="Fuera de mes" />
-                const count = absenceOccupancy(requests, day, day)
-                return (
-                  <td key={day} className="border p-1">
-                    <button
-                      type="button"
-                      className={`w-full rounded p-2 ${day >= start && day <= end ? 'bg-accent text-accent-foreground' : ''}`}
-                      onClick={() => onRange(day, day)}
-                      aria-label={`${day}: ${count.approvedPeople} personas aprobadas, ${count.pendingPeople} pendientes`}
-                    >
-                      <span className="block">{Number(day.slice(8))}</span>
-                      <span className="text-xs">
-                        {count.approvedPeople} / {count.pendingPeople}
-                      </span>
-                    </button>
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <p className="text-muted-foreground text-sm">
+        Las ausencias ocupan días completos. Los periodos sin fin se muestran hasta el final de la
+        vista, sin cerrar su fecha.
+      </p>
+      <EventCalendar
+        allDayOnly
+        key={`${view}:${dateValue(date)}`}
+        value={date}
+        view={view}
+        aria-label="Calendario de ausencias"
+        items={absenceEvents(requests, dateValue(days.at(-1) ?? date), Boolean(onEdit))}
+        onItemClick={(item) => setSelectedId(item.id)}
+        onItemChange={
+          onEdit
+            ? (change) => {
+                const request = requests.find((request) => request.id === change.item.id)
+                if (request && request.status !== 'rejected' && request.status !== 'canceled') {
+                  if (request.updatedAt !== change.item.revision) {
+                    toast.error('El periodo ha cambiado. Revisa los datos antes de editarlo.')
+                    return
+                  }
+                  setSelectedId(null)
+                  onEdit(request, absenceCalendarProposal(request, change))
+                }
+              }
+            : undefined
+        }
+        onDayClick={(day) => onRange(dateValue(day), dateValue(day))}
+        renderDaySummary={(day) => {
+          const count = absenceOccupancy(requests, dateValue(day), dateValue(day))
+          return (
+            <span
+              className="text-muted-foreground text-xs"
+              aria-label={`${count.approvedPeople} personas aprobadas, ${count.pendingPeople} pendientes`}
+            >
+              {count.approvedPeople} / {count.pendingPeople}
+            </span>
+          )
+        }}
+      />
+      {selected ? (
+        <CalendarDetailsDialog
+          title={selected.requesterName}
+          description={absenceTypeLabels[selected.absenceType]}
+          onClose={() => setSelectedId(null)}
+        >
+          <p>
+            {selected.startDate} — {selected.endDate ?? 'Sin fin confirmado'} ·{' '}
+            {vacationRequestStatusLabels[selected.status]}
+          </p>
+          <p className="whitespace-pre-wrap">{selected.comment}</p>
+          <p className="whitespace-pre-wrap">{selected.decisionComment}</p>
+          {onEdit ? (
+            <Button
+              onPress={() => {
+                setSelectedId(null)
+                onEdit(selected)
+              }}
+            >
+              Editar / cancelar
+            </Button>
+          ) : null}
+        </CalendarDetailsDialog>
+      ) : null}
       <h3 className="font-medium">
         {start} — {end}
       </h3>

@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { useSession } from '@/features/auth'
 import { VisitFieldEntriesPanel } from '@/features/field-entries/ui/visit-field-entries-panel'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
-import { VisitMeasurementsPanel } from '@/features/measurements/ui/visit-measurements-panel'
 import { TextareaField } from '@/shared/ui/form'
 
 import type { VisitSummary } from '../application/visit-actions'
@@ -341,12 +340,6 @@ export function VisitReportEditor({
             </p>
           </div>
         )}
-        <VisitMeasurementsPanel
-          tenantId={tenantId}
-          visitId={visit.id}
-          userId={userId}
-          closed={closed}
-        />
         <VisitPhotosPanel tenantId={tenantId} visitId={visit.id} userId={userId} closed={closed} />
         {visit.status === 'completed' && session?.role === 'admin' ? (
           <VisitReportShares tenantId={tenantId} visitId={visit.id} />

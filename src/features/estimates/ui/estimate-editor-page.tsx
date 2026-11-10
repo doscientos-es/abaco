@@ -29,6 +29,7 @@ import {
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { convertAcceptedEstimate, findWorkOrderForEstimate } from '@/features/work-orders'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
+import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import {
   clampPercent,
   estimateTotals,
@@ -37,7 +38,6 @@ import {
   paidForEstimate,
 } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
-import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
@@ -228,7 +228,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         tenantId: tenant.id,
         estimateId,
         locationId: contractLocationId,
-        assetId: null,
         startsOn: contractStart,
         endsOn: contractEnd || null,
         defaultAssignedUserId: contractTechnicianId || null,
@@ -358,9 +357,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Link>
             ) : null}
             {estimate.status === 'accepted' &&
-              publication.data.estimate.conversionDestination !== 'contract' &&
-              !existingWork.data &&
-              can(session?.role, 'work:write') ? (
+            publication.data.estimate.conversionDestination !== 'contract' &&
+            !existingWork.data &&
+            can(session?.role, 'work:write') ? (
               <Button
                 isDisabled={converting || existingWork.isPending}
                 onPress={() => void convertToWork()}
@@ -425,10 +424,10 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
-          !publication.data.estimate.automaticContract &&
-          publication.data.estimate.conversionDestination === 'contract' &&
-          !existingContract.data &&
-          can(session?.role, 'contracts:write') ? (
+        !publication.data.estimate.automaticContract &&
+        publication.data.estimate.conversionDestination === 'contract' &&
+        !existingContract.data &&
+        can(session?.role, 'contracts:write') ? (
           <Card>
             <CardHeader>
               <CardTitle>Crear contrato desde la versión aceptada</CardTitle>
@@ -493,10 +492,18 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </CardContent>
           </Card>
         ) : null}
-        {estimate.status === 'accepted' && publication.data.estimate.automaticContract && !existingContract.data ? (
+        {estimate.status === 'accepted' &&
+        publication.data.estimate.automaticContract &&
+        !existingContract.data ? (
           <div className="rounded-lg border p-4" aria-live="polite">
-            <p>{existingContract.isPending ? 'Cargando el contrato creado al aceptar…' : 'No se pudo recuperar el contrato. Recarga para consultar el resultado; no vuelvas a aceptar el presupuesto.'}</p>
-            <Button variant="outline" onPress={() => void existingContract.refetch()}>Recargar contrato</Button>
+            <p>
+              {existingContract.isPending
+                ? 'Cargando el contrato creado al aceptar…'
+                : 'No se pudo recuperar el contrato. Recarga para consultar el resultado; no vuelvas a aceptar el presupuesto.'}
+            </p>
+            <Button variant="outline" onPress={() => void existingContract.refetch()}>
+              Recargar contrato
+            </Button>
           </div>
         ) : null}
         <p className="text-muted-foreground text-sm">
@@ -658,27 +665,37 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             value={estimate.validUntil}
             onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
           />
-          {!estimate.automaticContract ? <SelectField
-            label="Destino tras la aceptación"
-            className={
-              estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
-            }
-            value={estimate.conversionDestination ?? 'work'}
-            options={[
-              { value: 'work', label: 'Trabajo' },
-              { value: 'contract', label: 'Contrato recurrente' },
-            ]}
-            onChange={(value) =>
-              patchEstimate(estimate.id, {
-                conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
-              })
-            }
-          /> : <p className="text-muted-foreground text-sm">Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como trabajo pendiente de configurar.</p>}
+          {!estimate.automaticContract ? (
+            <SelectField
+              label="Destino tras la aceptación"
+              className={
+                estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
+              }
+              value={estimate.conversionDestination ?? 'work'}
+              options={[
+                { value: 'work', label: 'Trabajo' },
+                { value: 'contract', label: 'Contrato recurrente' },
+              ]}
+              onChange={(value) =>
+                patchEstimate(estimate.id, {
+                  conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
+                })
+              }
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como
+              trabajo pendiente de configurar.
+            </p>
+          )}
           {estimate.conversionDestination === 'contract' ? (
             <SelectField
               label="El importe presupuestado corresponde a"
               value={estimate.contractBillingFrequency ?? 'monthly'}
-              options={Object.entries(contractBillingLabels).map(([value, label]) => ({ value, label }))}
+              options={Object.entries(contractBillingLabels).map(([value, label]) => ({
+                value,
+                label,
+              }))}
               onChange={(value) =>
                 patchEstimate(estimate.id, {
                   contractBillingFrequency: value as NonNullable<

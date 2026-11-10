@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,7 +12,24 @@ const mocks = vi.hoisted(() => ({
   done: vi.fn(),
   error: vi.fn(),
   submit: undefined as undefined | (() => void),
+  decisionOverride: undefined as string | undefined,
+  fields: new Map<string, string>(),
 }))
+vi.mock('react', async (load) => {
+  const actual = await load<typeof React>()
+  return {
+    ...actual,
+    useState: (initial: unknown) =>
+      actual.useState(
+        mocks.decisionOverride !== undefined &&
+          typeof initial === 'object' &&
+          initial !== null &&
+          'requester_id' in initial
+          ? { ...initial, decision_comment: mocks.decisionOverride }
+          : initial,
+      ),
+  }
+})
 vi.mock('@doscientos/ui', () => ({
   Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
   toast: { success: vi.fn(), error: mocks.error },
@@ -27,7 +45,10 @@ vi.mock('../application/vacation-actions', () => ({
 vi.mock('@/features/visits/application/visit-actions', () => ({ listTechnicians: vi.fn() }))
 vi.mock('@/shared/ui/form', () => ({
   SelectField: ({ label }: { label: string }) => <span>{label}</span>,
-  TextField: () => null,
+  TextField: ({ label, value }: { label: string; value: string }) => {
+    mocks.fields.set(label, value)
+    return null
+  },
   TextareaField: () => null,
 }))
 vi.mock('@/shared/ui/form-dialog', () => ({
@@ -60,6 +81,8 @@ describe('administrative absence persistence', () => {
     vi.clearAllMocks()
     mocks.save.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
+    mocks.decisionOverride = undefined
+    mocks.fields.clear()
   })
 
   it('preserves needs_info, normalizes an open end date and refreshes affected queries', async () => {
@@ -110,5 +133,36 @@ describe('administrative absence persistence', () => {
     )
     mocks.submit?.()
     expect(mocks.save).not.toHaveBeenCalled()
+  })
+
+  it('prefills a calendar proposal but requires a new change reason before saving', async () => {
+    const props = {
+      tenantId: 'tenant',
+      request,
+      requests: [request],
+      onDone: mocks.done,
+      proposal: { startDate: '2026-11-20', endDate: null },
+    }
+    renderToStaticMarkup(<AdminAbsenceForm {...props} />)
+    expect(mocks.fields.get('Inicio · obligatorio')).toBe('2026-11-20')
+    expect(mocks.fields.get('Fin inclusivo')).toBe('')
+    mocks.submit?.()
+    expect(mocks.save).not.toHaveBeenCalled()
+    mocks.decisionOverride = 'Cambio de fechas acordado'
+    renderToStaticMarkup(<AdminAbsenceForm {...props} />)
+    mocks.submit?.()
+    await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
+    expect(mocks.save).toHaveBeenCalledWith(
+      'tenant',
+      request,
+      expect.objectContaining({
+        start_date: '2026-11-20',
+        end_date: null,
+        status: 'needs_info',
+        decision_comment: 'Cambio de fechas acordado',
+      }),
+      expect.any(String),
+    )
+    expect(request.updatedAt).toBe('2026-11-10T09:00:00Z')
   })
 })

@@ -8,23 +8,19 @@ import { retryStoreSaves, useSaveStatus } from '@/shared/store/store'
 import { ClientFormDialog } from './client-form-dialog'
 import { CreatePassportItem } from './client-passport-dialog'
 
-type RelatedKind = 'client' | 'location' | 'pool'
+type RelatedKind = 'client' | 'location'
 
 /** Create related records without leaving the current form. */
 export function useRelatedRecordCreation({
   tenantId,
   clientId,
-  locationId = '',
   onClientCreated,
   onLocationCreated,
-  onPoolCreated,
 }: {
   tenantId: string
   clientId: string
-  locationId?: string
   onClientCreated?: (id: string) => void
   onLocationCreated: (id: string) => void
-  onPoolCreated?: (id: string) => void
 }) {
   const session = useSession()
   const queryClient = useQueryClient()
@@ -58,11 +54,9 @@ export function useRelatedRecordCreation({
   function start(kind: RelatedKind) {
     if (!allowed || (kind !== 'client' && (pending || !clientId))) return
     if (kind === 'client' && !onClientCreated) return
-    if (kind === 'pool' && (!locationId || !onPoolCreated)) return
     setCreating(kind)
   }
 
-  const targetLabel = onPoolCreated ? 'centros y piscinas' : 'centros'
   const status = pending ? (
     <output className="text-muted-foreground block space-y-1 text-sm sm:col-span-2">
       {saveStatus.state === 'error' ? (
@@ -74,13 +68,13 @@ export function useRelatedRecordCreation({
         </>
       ) : refreshFailed ? (
         <>
-          <p>No se pudieron actualizar los {targetLabel}.</p>
+          <p>No se pudieron actualizar los centros.</p>
           <Button type="button" variant="outline" onPress={() => void refreshTargets()}>
             Reintentar actualización
           </Button>
         </>
       ) : refreshing ? (
-        <p>Actualizando {targetLabel}…</p>
+        <p>Actualizando centros…</p>
       ) : (
         <p>Esperando a que se guarden los cambios…</p>
       )}
@@ -96,18 +90,15 @@ export function useRelatedRecordCreation({
           onSaved={onClientCreated}
         />
       ) : null}
-      {creating === 'location' || creating === 'pool' ? (
+      {creating === 'location' ? (
         <CreatePassportItem
-          item={creating === 'location' ? { kind: 'location' } : { kind: 'pool', locationId }}
+          item={{ kind: 'location' }}
           tenantId={tenantId}
           clientId={clientId}
           serviceLocationOnly
           onClose={() => setCreating(null)}
           onCreated={(id) => {
-            if (id) {
-              if (creating === 'location') onLocationCreated(id)
-              else onPoolCreated?.(id)
-            }
+            if (id) onLocationCreated(id)
             setCreating(null)
             void refreshTargets()
           }}

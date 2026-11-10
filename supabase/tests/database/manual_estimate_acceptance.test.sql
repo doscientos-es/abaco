@@ -7,13 +7,14 @@ insert into public.tenants (id, name) values
 insert into public.clients (id, tenant_id, name) values
   ('41000000-0000-4000-8000-000000000002',
     '41000000-0000-4000-8000-000000000001', 'Cliente manual');
-insert into public.estimates (id, tenant_id, client_id, title, valid_until) values
+-- These fixtures represent proposals published before automatic contracts.
+insert into public.estimates (id, tenant_id, client_id, title, valid_until, automatic_contract, conversion_destination) values
   ('41000000-0000-4000-8000-000000000003',
     '41000000-0000-4000-8000-000000000001',
-    '41000000-0000-4000-8000-000000000002', 'Trabajo acordado', current_date + 30),
+    '41000000-0000-4000-8000-000000000002', 'Trabajo acordado', current_date + 30, false, 'work'),
   ('41000000-0000-4000-8000-000000000004',
     '41000000-0000-4000-8000-000000000001',
-    '41000000-0000-4000-8000-000000000002', 'Otro borrador', current_date + 30);
+    '41000000-0000-4000-8000-000000000002', 'Otro borrador', current_date + 30, false, 'work');
 update public.estimates set status = 'sent'
 where id = '41000000-0000-4000-8000-000000000003';
 insert into auth.users (id, email) values

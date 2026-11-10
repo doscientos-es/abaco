@@ -6,9 +6,9 @@ insert into public.tenants (id, name) values
   ('10000000-0000-4000-8000-000000000001', 'Cobros Test');
 insert into public.clients (id, tenant_id, name) values
   ('10000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Cliente');
-insert into public.estimates (id, tenant_id, client_id, title, status, valid_until) values
+insert into public.estimates (id, tenant_id, client_id, title, status, valid_until, automatic_contract, conversion_destination) values
   ('10000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
-   '10000000-0000-4000-8000-000000000002', 'Servicio', 'draft', current_date + 30);
+   '10000000-0000-4000-8000-000000000002', 'Servicio', 'draft', current_date + 30, false, 'work');
 insert into public.estimate_lines
   (tenant_id, estimate_id, description, kind, quantity, unit_price_cents) values
   ('10000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000003',

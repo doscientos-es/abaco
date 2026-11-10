@@ -2,13 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 
 import { loadClosedVisitReport } from '../application/visit-report-actions'
 
-const assessmentLabels: Record<string, string> = {
-  below: 'Por debajo del rango',
-  within: 'Dentro del rango',
-  above: 'Por encima del rango',
-  unconfigured: 'Sin rango configurado',
-}
-
 const activityLabels: Record<string, string> = {
   labor: 'Tiempo',
   travel: 'Desplazamiento',
@@ -79,19 +72,6 @@ export function ClosedVisitReport({ tenantId, visitId }: { tenantId: string; vis
             {snapshot.tasks.map((task) => (
               <li key={task.id}>
                 {task.phase} · {task.title} · {task.status}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {snapshot.measurements.length ? (
-        <div>
-          <h4 className="font-medium">Mediciones</h4>
-          <ul className="list-inside list-disc">
-            {snapshot.measurements.map((reading) => (
-              <li key={reading.id}>
-                {reading.label}: {reading.value} {reading.unit} ·{' '}
-                {assessmentLabels[reading.assessment] ?? reading.assessment}
               </li>
             ))}
           </ul>

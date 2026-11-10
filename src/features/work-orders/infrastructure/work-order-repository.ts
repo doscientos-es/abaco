@@ -48,7 +48,6 @@ export type WorkOrderDetail = WorkOrder & {
   scope: Estimate | null
   customerName: string
   locationName: string | null
-  assetName: string | null
   acceptance: {
     mode: 'public_link' | 'office_manual' | 'legacy_unverified'
     responded_at: string | null
@@ -107,7 +106,6 @@ export async function loadWorkOrder(tenantId: string, workOrderId: string) {
     estimate?: EstimateRow
     client?: { name?: string }
     location?: { name?: string } | null
-    asset?: { name?: string } | null
     origin_kind?: 'manual' | 'incident'
     incident_id?: string
     acceptance?: WorkOrderDetail['acceptance']
@@ -135,7 +133,6 @@ export async function loadWorkOrder(tenantId: string, workOrderId: string) {
     scope: snapshot.estimate ? estimateFromRow(snapshot.estimate) : null,
     customerName: snapshot.client?.name ?? '',
     locationName: snapshot.location?.name ?? null,
-    assetName: snapshot.asset?.name ?? null,
     acceptance: snapshot.acceptance ?? null,
     publicationSource: snapshot.estimate ? (snapshot.publication_source ?? 'migration') : null,
     events: (history ?? []) as WorkOrderEvent[],
@@ -144,7 +141,6 @@ export async function loadWorkOrder(tenantId: string, workOrderId: string) {
 
 export type WorkTargetOptions = {
   locations: Array<{ id: string; name: string; address: string; timezone: string }>
-  assets: Array<{ id: string; location_id: string; name: string }>
 }
 
 export async function loadWorkTargetOptions(
@@ -160,42 +156,7 @@ export async function loadWorkTargetOptions(
     .eq('active', true)
     .order('name')
   if (locationError) throw new Error(locationError.message)
-  const locationIds = (locations ?? []).map((location) => location.id)
-  if (!locationIds.length) return { locations: locations ?? [], assets: [] }
-  const { data: assets, error: assetError } = await db
-    .from('service_assets')
-    .select('id,location_id,name')
-    .eq('tenant_id', tenantId)
-    .in('location_id', locationIds)
-    .neq('status', 'retired')
-    .order('name')
-  if (assetError) throw new Error(assetError.message)
-  return { locations: locations ?? [], assets: assets ?? [] }
-}
-
-export async function createManualWorkOrder(input: {
-  tenantId: string
-  clientId: string
-  title: string
-  kind: WorkOrder['kind']
-  locationId: string | null
-  assetId: string | null
-  description: string
-  operationId: string
-}): Promise<string> {
-  const { data, error } = await createBrowserSupabaseClient().rpc('create_manual_work_order', {
-    p_tenant_id: input.tenantId,
-    p_client_id: input.clientId,
-    p_title: input.title.trim(),
-    p_kind: input.kind,
-    p_location_id: input.locationId,
-    p_asset_id: input.assetId,
-    p_description: input.description.trim(),
-    p_operation_id: input.operationId,
-  })
-  if (error || typeof data !== 'string')
-    throw new Error(error?.message ?? 'No se pudo crear el trabajo.')
-  return data
+  return { locations: locations ?? [] }
 }
 
 export type WorkMemberOption = { id: string; label: string }

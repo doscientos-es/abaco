@@ -2,10 +2,15 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
-import { RelatedCreateButton, useRelatedRecordCreation } from '@/features/clients/ui/related-record-creation'
+import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
+import { calendarDate, dateValue, moveDays } from '@/shared/lib/date-range'
+import { calendarDays } from '@/shared/lib/event-calendar'
 import { printDocument } from '@/shared/lib/print-document'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -15,9 +20,17 @@ import {
   listCleaningServices,
   type CleaningService,
 } from '../application/cleaning-service-actions'
-import { contractJobError, emptyContractJob, jobFrequencyLabels, normalizeContractJob, type ContractJobDraft } from '../domain/contract-job'
+import {
+  contractJobError,
+  emptyContractJob,
+  jobFrequencyLabels,
+  normalizeContractJob,
+  type ContractJobDraft,
+} from '../domain/contract-job'
+import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
+import { WeeklyScheduleEditor } from './weekly-schedule-editor'
 
-const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const days = scheduleDays
 export const frequencyLabels = jobFrequencyLabels
 
 export function CleaningServicesPanel({
@@ -60,7 +73,9 @@ export function CleaningServicesPanel({
   const [form, setForm] = useState<ContractJobDraft>(() => emptyContractJob(startsOn))
   const [editingId, setEditingId] = useState<string | null>(null)
   const related = useRelatedRecordCreation({
-    tenantId, clientId, onLocationCreated: (id) => set('location_id', id),
+    tenantId,
+    clientId,
+    onLocationCreated: (id) => set('location_id', id),
   })
   const operation = useRef(new Map<string, string>())
   const sheets = useRef(new Map<string, HTMLElement>())
@@ -68,11 +83,33 @@ export function CleaningServicesPanel({
     setForm((current) => ({ ...current, [key]: value }))
   }
   const error = contractJobError(form, startsOn, endsOn)
+  const weekly = form.frequency === 'weekly' || form.frequency === 'fortnightly'
   function edit(service: CleaningService) {
     const initial = emptyContractJob(startsOn)
-    const values = Object.fromEntries(Object.keys(initial).map((key) => [key, service[key as keyof ContractJobDraft]])) as ContractJobDraft
-    setForm(service.configured ? { ...values, local_start: service.time_known ? values.local_start.slice(0, 5) : '' }
-      : { ...initial, title: service.title, tasks: service.tasks })
+    const values = Object.fromEntries(
+      Object.keys(initial).map((key) => [key, service[key as keyof ContractJobDraft]]),
+    ) as ContractJobDraft
+    setForm(
+      service.configured
+        ? {
+            ...values,
+            weekly_slots: service.weekly_slots?.length
+              ? service.weekly_slots
+              : (service.frequency === 'weekly' || service.frequency === 'fortnightly') &&
+                  service.time_known
+                ? service.weekdays.map((weekday) => ({
+                    id: `legacy-${weekday}`,
+                    weekday,
+                    start_minute:
+                      Number(service.local_start.slice(0, 2)) * 60 +
+                      Number(service.local_start.slice(3, 5)),
+                    duration_minutes: service.duration_minutes,
+                  }))
+                : [],
+            local_start: service.time_known ? values.local_start.slice(0, 5) : '',
+          }
+        : { ...initial, title: service.title, tasks: service.tasks },
+    )
     setEditingId(service.id)
     setOpen(true)
   }
@@ -84,11 +121,20 @@ export function CleaningServicesPanel({
     operation.current.set(key, id)
     setBusy(true)
     try {
-      await saveContractJob({ tenantId, contractId, jobId: editingId, expectedUpdatedAt: updatedAt, service, operationId: id })
+      await saveContractJob({
+        tenantId,
+        contractId,
+        jobId: editingId,
+        expectedUpdatedAt: updatedAt,
+        service,
+        operationId: id,
+      })
       await cache.invalidateQueries({ queryKey: ['cleaning-services', tenantId, contractId] })
       await cache.invalidateQueries({ queryKey: ['service-contract', tenantId, contractId] })
       await cache.invalidateQueries({ queryKey: ['service-contracts', tenantId] })
       await cache.invalidateQueries({ queryKey: ['contract-jobs', tenantId] })
+      await cache.invalidateQueries({ queryKey: ['office-visits', tenantId] })
+      operation.current.delete(key)
       setOpen(false)
       setForm(emptyContractJob(startsOn))
       setEditingId(null)
@@ -105,8 +151,9 @@ export function CleaningServicesPanel({
     <section className="space-y-4 rounded-lg border p-4" aria-label="Trabajos del contrato">
       <h2 className="text-lg font-semibold">Trabajos contratados</h2>
       <p className="text-muted-foreground text-sm">
-        Cada partida aceptada es un trabajo. Configura qué hacer, dónde y si se realiza una vez o periódicamente.
-        La hoja permanente del centro no genera partes diarios; las visitas móviles generan órdenes individuales.
+        Cada partida aceptada es un trabajo. Configura qué hacer, dónde y si se realiza una vez o
+        periódicamente. La hoja permanente del centro no genera partes diarios; las visitas móviles
+        generan órdenes individuales.
       </p>
       {services.isPending ? <output>Cargando servicios…</output> : null}
       {services.isError ? (
@@ -121,56 +168,82 @@ export function CleaningServicesPanel({
       {services.data?.map((service) => (
         <article key={service.id} id={service.id} className="space-y-2 border-b pb-4">
           {!service.configured ? (
-            <div><h3 className="font-semibold">{service.title}</h3><p>Pendiente de configurar · alcance aceptado: {service.tasks}</p></div>
-          ) : <div
-            ref={(node) => {
-              if (node) sheets.current.set(service.id, node)
-              else sheets.current.delete(service.id)
-            }}
-            className="paper-sheet space-y-3"
-          >
-            <h3 className="font-semibold">
-              {service.modality === 'fixed' ? 'Hoja permanente del centro' : service.frequency === 'once' ? 'Trabajo puntual' : 'Trabajo periódico móvil'} ·{' '}
-              {service.title}
-            </h3>
-            <p>
-              {clientName} ·{' '}
-              {service.location?.name ??
-                targets.data?.locations.find((l) => l.id === service.location_id)?.name}{' '}
-              ·{' '}
-              {service.location?.address ??
-                targets.data?.locations.find((l) => l.id === service.location_id)?.address}
-            </p>
-            <p className="whitespace-pre-wrap">{service.location?.operational_contact}</p>
-            <p className="whitespace-pre-wrap">{service.location?.access_notes}</p>
-            <p className="whitespace-pre-wrap">{service.location?.notes}</p>
-            <p>
-              {service.time_known
-                ? `Hora prevista: ${service.local_start.slice(0, 5)}`
-                : 'Sin horario fijo'}{' '}
-              ·{' '}
-              {teams.data?.find((t) => t.id === service.work_team_id)?.name ||
-                people.data?.find((p) => p.id === service.assigned_user_id)?.label ||
-                'Sin asignar'}
-            </p>
-            <p>
-              {service.frequency
-                ? frequencyLabels[service.frequency]
-                : 'Pauta por temporada existente'}{' '}
-              · Desde {service.anchor_on ?? startsOn}
-              {service.ends_on ? ` hasta ${service.ends_on}` : ''} · {service.duration_minutes} min
-            </p>
-            <p className="whitespace-pre-wrap">{service.tasks}</p>
-            {service.weekdays.map((day) => (
-              <p key={day}>
-                <strong>{days[day - 1]}: </strong>
-                {service.weekly_tasks[String(day)] || service.tasks}
+            <div>
+              <h3 className="font-semibold">{service.title}</h3>
+              <p>Pendiente de configurar · alcance aceptado: {service.tasks}</p>
+            </div>
+          ) : (
+            <div
+              ref={(node) => {
+                if (node) sheets.current.set(service.id, node)
+                else sheets.current.delete(service.id)
+              }}
+              className="paper-sheet space-y-3"
+            >
+              <h3 className="font-semibold">
+                {service.modality === 'fixed'
+                  ? 'Hoja permanente del centro'
+                  : service.frequency === 'once'
+                    ? 'Trabajo puntual'
+                    : 'Trabajo periódico móvil'}{' '}
+                · {service.title}
+              </h3>
+              <p>
+                {clientName} ·{' '}
+                {service.location?.name ??
+                  targets.data?.locations.find((l) => l.id === service.location_id)?.name}{' '}
+                ·{' '}
+                {service.location?.address ??
+                  targets.data?.locations.find((l) => l.id === service.location_id)?.address}
               </p>
-            ))}
-            <p className="whitespace-pre-wrap">{service.instructions}</p>
-            <p className="whitespace-pre-wrap">Material: {service.materials || 'Sin especificar'}</p>
-            <p>Conformidad del cliente: {service.requires_acceptance ? 'Sí, al finalizar' : 'No requerida'}</p>
-          </div>}
+              <p className="whitespace-pre-wrap">{service.location?.operational_contact}</p>
+              <p className="whitespace-pre-wrap">{service.location?.access_notes}</p>
+              <p className="whitespace-pre-wrap">{service.location?.notes}</p>
+              <p>
+                {service.time_known
+                  ? `Hora prevista: ${service.local_start.slice(0, 5)}`
+                  : 'Sin horario fijo'}{' '}
+                ·{' '}
+                {teams.data?.find((t) => t.id === service.work_team_id)?.name ||
+                  people.data?.find((p) => p.id === service.assigned_user_id)?.label ||
+                  'Sin asignar'}
+              </p>
+              <p>
+                {service.frequency
+                  ? frequencyLabels[service.frequency]
+                  : 'Pauta por temporada existente'}{' '}
+                · Desde {service.anchor_on ?? startsOn}
+                {service.ends_on ? ` hasta ${service.ends_on}` : ''} · {service.duration_minutes}{' '}
+                min
+              </p>
+              {service.weekly_slots?.length ? (
+                <ul className="text-sm">
+                  {service.weekly_slots.map((slot) => (
+                    <li key={slot.id}>
+                      {days[slot.weekday - 1]} · {minuteLabel(slot.start_minute)}–
+                      {minuteLabel(slot.start_minute + slot.duration_minutes)}
+                      {slot.start_minute + slot.duration_minutes >= 1440 ? ' (+1 día)' : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="whitespace-pre-wrap">{service.tasks}</p>
+              {service.weekdays.map((day) => (
+                <p key={day}>
+                  <strong>{days[day - 1]}: </strong>
+                  {service.weekly_tasks[String(day)] || service.tasks}
+                </p>
+              ))}
+              <p className="whitespace-pre-wrap">{service.instructions}</p>
+              <p className="whitespace-pre-wrap">
+                Material: {service.materials || 'Sin especificar'}
+              </p>
+              <p>
+                Conformidad del cliente:{' '}
+                {service.requires_acceptance ? 'Sí, al finalizar' : 'No requerida'}
+              </p>
+            </div>
+          )}
           {service.configured && service.modality === 'fixed' ? (
             <Button
               variant="outline"
@@ -193,19 +266,32 @@ export function CleaningServicesPanel({
         </article>
       ))}
       {editable ? (
-        <Button variant="outline" onPress={() => { setForm(emptyContractJob(startsOn)); setEditingId(null); setOpen(true) }}>
+        <Button
+          variant="outline"
+          onPress={() => {
+            setForm(emptyContractJob(startsOn))
+            setEditingId(null)
+            setOpen(true)
+          }}
+        >
           Añadir trabajo
         </Button>
       ) : null}
       <FormDialog
         open={open}
+        wide={form.frequency !== 'once'}
         onOpenChange={setOpen}
         title={editingId ? 'Configurar trabajo contratado' : 'Añadir trabajo'}
         submitLabel="Guardar trabajo"
         onSubmit={() => void save()}
         isSubmitting={busy}
         isDirty={Boolean(form.title)}
-        submitDisabled={Boolean(error) || related.pending || !targets.isSuccess || !targets.data.locations.some((l) => l.id === form.location_id)}
+        submitDisabled={
+          Boolean(error) ||
+          related.pending ||
+          !targets.isSuccess ||
+          !targets.data.locations.some((l) => l.id === form.location_id)
+        }
       >
         <TextField
           label="Nombre · obligatorio"
@@ -223,8 +309,21 @@ export function CleaningServicesPanel({
           ]}
           onChange={(v) => set('location_id', v)}
         />
-        {related.allowed ? <RelatedCreateButton label="Crear centro" disabled={busy || related.pending} onPress={() => related.start('location')} /> : null}
-        {targets.isError ? <p role="alert">No se pudieron cargar los centros. <Button variant="outline" onPress={() => void targets.refetch()}>Reintentar</Button></p> : null}
+        {related.allowed ? (
+          <RelatedCreateButton
+            label="Crear centro"
+            disabled={busy || related.pending}
+            onPress={() => related.start('location')}
+          />
+        ) : null}
+        {targets.isError ? (
+          <p role="alert">
+            No se pudieron cargar los centros.{' '}
+            <Button variant="outline" onPress={() => void targets.refetch()}>
+              Reintentar
+            </Button>
+          </p>
+        ) : null}
         {related.status}
         <SelectField
           label="Tipo"
@@ -251,49 +350,77 @@ export function CleaningServicesPanel({
           label="Frecuencia"
           value={form.frequency ?? 'weekly'}
           options={Object.entries(frequencyLabels).map(([value, label]) => ({ value, label }))}
-          onChange={(v) => setForm((current) => ({ ...current, frequency: v as ContractJobDraft['frequency'], modality: v === 'once' ? 'mobile' : current.modality }))}
+          onChange={(v) =>
+            setForm((current) => ({
+              ...current,
+              frequency: v as ContractJobDraft['frequency'],
+              modality: v === 'once' ? 'mobile' : current.modality,
+            }))
+          }
         />
         <TextField
-          label={form.frequency === 'once' ? 'Fecha prevista · obligatorio' : 'Inicio y fecha de referencia · obligatorio'}
+          label={
+            form.frequency === 'once'
+              ? 'Fecha prevista · obligatorio'
+              : 'Inicio y fecha de referencia · obligatorio'
+          }
           type="date"
           value={form.anchor_on ?? ''}
           onChange={(v) => set('anchor_on', v)}
           placeholder="Fecha"
         />
-        {form.frequency !== 'once' ? <TextField
-          label="Fin opcional"
-          type="date"
-          value={form.ends_on ?? ''}
-          onChange={(v) => set('ends_on', v || null)}
-          placeholder="Sin fin"
-        /> : null}
-        <TextField
-          label="Duración estimada (min)"
-          type="number"
-          min={15}
-          max={720}
-          value={String(form.duration_minutes)}
-          onChange={(v) => set('duration_minutes', Number(v))}
-          placeholder="120"
-        />
-        <TextField
-          label="Hora prevista opcional"
-          type="time"
-          value={form.local_start}
-          onChange={(v) => set('local_start', v)}
-          placeholder="Sin horario fijo"
-        />
+        {form.frequency !== 'once' ? (
+          <TextField
+            label="Fin del trabajo (por defecto, fin del contrato)"
+            type="date"
+            value={form.ends_on ?? ''}
+            onChange={(v) => set('ends_on', v || null)}
+            placeholder={endsOn ?? 'Guarda primero el fin del contrato'}
+          />
+        ) : null}
+        {form.frequency === 'once' ? (
+          <>
+            <TextField
+              label="Duración estimada (min)"
+              type="number"
+              min={15}
+              max={720}
+              value={String(form.duration_minutes)}
+              onChange={(v) => set('duration_minutes', Number(v))}
+              placeholder="120"
+            />
+            <TextField
+              label="Hora prevista opcional"
+              type="time"
+              value={form.local_start}
+              onChange={(v) => set('local_start', v)}
+              placeholder="Sin horario fijo"
+            />
+          </>
+        ) : null}
+        {form.frequency === 'once' || form.modality === 'fixed' ? (
+          <SelectField
+            label="Persona habitual"
+            value={form.assigned_user_id ?? ''}
+            options={[
+              { value: '', label: 'Sin asignar' },
+              ...(people.data ?? []).map((p) => ({ value: p.id, label: p.label })),
+            ]}
+            onChange={(v) =>
+              setForm((current) => ({
+                ...current,
+                assigned_user_id: v || null,
+                work_team_id: v ? null : current.work_team_id,
+              }))
+            }
+          />
+        ) : null}
         <SelectField
-          label="Persona habitual"
-          value={form.assigned_user_id ?? ''}
-          options={[
-            { value: '', label: 'Sin asignar' },
-            ...(people.data ?? []).map((p) => ({ value: p.id, label: p.label })),
-          ]}
-          onChange={(v) => setForm((current) => ({ ...current, assigned_user_id: v || null, work_team_id: v ? null : current.work_team_id }))}
-        />
-        <SelectField
-          label="Equipo habitual"
+          label={
+            form.frequency !== 'once' && form.modality === 'mobile'
+              ? 'Equipo asignado · obligatorio'
+              : 'Equipo habitual'
+          }
           value={form.work_team_id ?? ''}
           options={[
             { value: '', label: 'Sin asignar' },
@@ -301,8 +428,75 @@ export function CleaningServicesPanel({
               .filter((t) => !t.archived)
               .map((t) => ({ value: t.id, label: t.name })),
           ]}
-          onChange={(v) => setForm((current) => ({ ...current, work_team_id: v || null, assigned_user_id: v ? null : current.assigned_user_id }))}
+          onChange={(v) =>
+            setForm((current) => ({
+              ...current,
+              work_team_id: v || null,
+              assigned_user_id: v ? null : current.assigned_user_id,
+            }))
+          }
         />
+        {teams.isError ? (
+          <p role="alert">
+            No se pudieron cargar los equipos.{' '}
+            <Button variant="outline" onPress={() => void teams.refetch()}>
+              Reintentar
+            </Button>
+          </p>
+        ) : null}
+        {weekly ? (
+          <WeeklyScheduleEditor
+            value={form.weekly_slots}
+            startsOn={form.anchor_on ?? startsOn}
+            endsOn={form.ends_on ?? endsOn ?? ''}
+            alternate={form.frequency === 'fortnightly'}
+            onChange={(slots) =>
+              setForm((current) => ({
+                ...current,
+                weekly_slots: slots,
+                weekdays: [...new Set(slots.map((slot) => slot.weekday))],
+              }))
+            }
+          />
+        ) : null}
+        {!weekly && form.frequency !== 'once' ? (
+          <WeeklyScheduleEditor
+            value={
+              form.local_start
+                ? [
+                    {
+                      id: 'reference',
+                      weekday: ((calendarDate(form.anchor_on ?? startsOn).getDay() + 6) % 7) + 1,
+                      start_minute:
+                        Number(form.local_start.slice(0, 2)) * 60 +
+                        Number(form.local_start.slice(3, 5)),
+                      duration_minutes: form.duration_minutes,
+                    },
+                  ]
+                : []
+            }
+            startsOn={form.anchor_on ?? startsOn}
+            endsOn={form.ends_on ?? endsOn ?? ''}
+            referenceDate={form.anchor_on ?? startsOn}
+            recurrenceLabel={
+              form.frequency === 'monthly' ? 'cada mes en el día de referencia' : 'cada 15 días'
+            }
+            onChange={(slots) => {
+              const slot = slots[0]
+              if (!slot) {
+                set('local_start', '')
+                return
+              }
+              const week = calendarDays(calendarDate(form.anchor_on ?? startsOn), 'week')[0]
+              setForm((current) => ({
+                ...current,
+                local_start: minuteLabel(slot.start_minute),
+                duration_minutes: slot.duration_minutes,
+                anchor_on: week ? moveDays(dateValue(week), slot.weekday - 1) : current.anchor_on,
+              }))
+            }}
+          />
+        ) : null}
         <TextareaField
           label="Tareas y alcance"
           value={form.tasks}
@@ -312,27 +506,14 @@ export function CleaningServicesPanel({
         />
         {form.frequency === 'weekly' || form.frequency === 'fortnightly' ? (
           <fieldset className="space-y-2 sm:col-span-2">
-            <legend>Días y tareas específicas</legend>
+            <legend>Tareas específicas de cada día (opcional)</legend>
             {days.map((label, index) => {
               const day = index + 1
+              if (!form.weekly_slots.some((slot) => slot.weekday === day)) return null
               return (
                 <div key={day} className="flex items-center gap-3">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={form.weekdays.includes(day)}
-                      onChange={(e) =>
-                        set(
-                          'weekdays',
-                          e.target.checked
-                            ? [...form.weekdays, day].sort((a, b) => a - b)
-                            : form.weekdays.filter((d) => d !== day),
-                        )
-                      }
-                    />{' '}
-                    {label}
-                  </label>
-                  {form.weekdays.includes(day) ? (
+                  <span>{label}</span>
+                  {form.weekly_slots.some((slot) => slot.weekday === day) ? (
                     <input
                       aria-label={`Tareas del ${label}`}
                       className="bg-background min-w-0 flex-1 rounded border p-2"
@@ -347,7 +528,13 @@ export function CleaningServicesPanel({
             })}
           </fieldset>
         ) : null}
-        <TextareaField label="Material y maquinaria" value={form.materials} onChange={(v) => set('materials', v)} maxLength={2000} placeholder="Quién aporta los productos, útiles y maquinaria" />
+        <TextareaField
+          label="Material y maquinaria"
+          value={form.materials}
+          onChange={(v) => set('materials', v)}
+          maxLength={2000}
+          placeholder="Quién aporta los productos, útiles y maquinaria"
+        />
         <TextareaField
           label="Instrucciones de acceso y observaciones"
           value={form.instructions}
@@ -365,8 +552,10 @@ export function CleaningServicesPanel({
         </label>
         {error ? <p className="text-muted-foreground text-sm">{error}</p> : null}
         <p className="text-muted-foreground text-sm sm:col-span-2">
-          {form.modality === 'fixed' ? 'Genera una hoja permanente para dejar en el centro y facilitar sustituciones.' : 'Genera una orden por fecha prevista. Cada cambio de fecha conserva la referencia original, el motivo y el historial.'}
-          {' '}La frecuencia del trabajo es independiente del periodo de facturación.
+          {form.modality === 'fixed'
+            ? 'Genera una hoja permanente para dejar en el centro y facilitar sustituciones.'
+            : 'Genera una orden por fecha prevista. Cada cambio de fecha conserva la referencia original, el motivo y el historial.'}{' '}
+          La frecuencia del trabajo es independiente del periodo de facturación.
         </p>
       </FormDialog>
       {related.dialogs}

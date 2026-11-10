@@ -29,21 +29,24 @@ export function VisitReplanForm({
   technicians,
   onDone,
   onCancel,
+  proposal,
 }: {
   tenantId: string
   visit: VisitSummary
   technicians: TechnicianOption[]
   onDone: () => Promise<void>
   onCancel: () => void
+  proposal?: { localStart: string; durationMinutes: number } | undefined
 }) {
-  const [localStart, setLocalStart] = useState(() =>
-    localDateTime(visit.scheduled_start_at, visit.timezone),
+  const [localStart, setLocalStart] = useState(
+    () => proposal?.localStart ?? localDateTime(visit.scheduled_start_at, visit.timezone),
   )
   const [duration, setDuration] = useState(() =>
     String(
-      Math.round(
-        (Date.parse(visit.scheduled_end_at) - Date.parse(visit.scheduled_start_at)) / 60_000,
-      ),
+      proposal?.durationMinutes ??
+        Math.round(
+          (Date.parse(visit.scheduled_end_at) - Date.parse(visit.scheduled_start_at)) / 60_000,
+        ),
     ),
   )
   const [assignedUserId, setAssignedUserId] = useState(visit.assigned_user_id ?? '')
@@ -94,6 +97,12 @@ export function VisitReplanForm({
   return (
     <div className="bg-muted/40 mt-3 w-full space-y-3 rounded-lg border p-4">
       <p className="font-medium">Reprogramar «{visit.title}»</p>
+      {proposal ? (
+        <p className="text-muted-foreground text-sm">
+          Cambio propuesto desde el calendario. Comprueba las fechas y añade el motivo antes de
+          guardar. Todavía no se ha modificado el trabajo.
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <TextField
           label="Nuevo inicio local"

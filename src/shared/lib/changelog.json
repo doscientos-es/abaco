@@ -8,6 +8,11 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add updateDraftContractDetails function and integrate it",
+            "Add automatic contract handling and job configuration",
+            "Add related record creation for locations in contracts page",
+            "Add react-day-picker package to project",
+            "Update changelog with new features and improvements",
             "Update demo documentation with implementation details and validations",
             "Add tests for expense guard permissions and functionality",
             "Add validation logs and tests for Felipe",
@@ -37,6 +42,41 @@
         }
       ],
       "changes": [
+        {
+          "sha": "08ce1dc02432037a59703167e2a4e35bffd7be82",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add updateDraftContractDetails function and integrate it"
+        },
+        {
+          "sha": "f0429e349feda7fbe2b9959c8324e366bb894dd9",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add automatic contract handling and job configuration"
+        },
+        {
+          "sha": "fde8569a264d001e0fb1182f544745b843091a15",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add related record creation for locations in contracts page"
+        },
+        {
+          "sha": "cea6f1e086d7b360d503fbf7db257331864e68a3",
+          "type": "feat",
+          "scope": "dependencies",
+          "breaking": false,
+          "description": "Add react-day-picker package to project"
+        },
+        {
+          "sha": "4506e9c7b0b383de6a62530bb150d4e0e7eaafa7",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and improvements"
+        },
         {
           "sha": "f67b35b943e68bdb3df422175fd4bb0f1ee884ad",
           "type": "feat",

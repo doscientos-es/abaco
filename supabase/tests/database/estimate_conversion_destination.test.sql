@@ -15,16 +15,16 @@ insert into public.service_locations
    'Piscina', 'Calle Sol 3', 'Europe/Madrid');
 insert into public.estimates
   (id, tenant_id, client_id, title, valid_until,
-   conversion_destination, contract_billing_frequency, discount_type, discount_value)
+   conversion_destination, contract_billing_frequency, discount_type, discount_value, automatic_contract)
 values
   ('51000000-0000-4000-8000-000000000004',
    '51000000-0000-4000-8000-000000000001',
    '51000000-0000-4000-8000-000000000002',
-   'Mantenimiento anual', current_date + 30, 'contract', 'quarterly', 'percent', 10),
+   'Mantenimiento anual', current_date + 30, 'contract', 'quarterly', 'percent', 10, false),
   ('51000000-0000-4000-8000-000000000005',
    '51000000-0000-4000-8000-000000000001',
    '51000000-0000-4000-8000-000000000002',
-   'Reparación puntual', current_date + 30, 'work', 'monthly', 'none', 0);
+   'Reparación puntual', current_date + 30, 'work', 'monthly', 'none', 0, false);
 insert into public.estimate_lines
   (tenant_id, estimate_id, description, kind, quantity, unit_price_cents)
 values

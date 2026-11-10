@@ -35,7 +35,7 @@ select public.add_cleaning_service('74000000-0000-4000-8000-000000000001',curren
   '74000000-0000-4000-8000-000000000007');
 select public.transition_service_contract('74000000-0000-4000-8000-000000000001',current_setting('test.cleaning_contract')::uuid,
   (select updated_at from public.service_contracts where id=current_setting('test.cleaning_contract')::uuid),'active','','74000000-0000-4000-8000-000000000008');
-select is(public.generate_contract_visits('74000000-0000-4000-8000-000000000001','2027-01-01','2027-03-31'),3,'Only mobile services generate occurrences');
+select is((select count(*) from public.service_visits where contract_id=current_setting('test.cleaning_contract')::uuid),3::bigint,'Activation generates the full mobile service term');
 select is(public.generate_contract_visits('74000000-0000-4000-8000-000000000001','2027-01-01','2027-03-31'),0,'Generation is idempotent');
 select is((select count(*) from public.service_visits where contract_rule_id='74000000-0000-4000-8000-000000000006'),0::bigint,'Fixed sheets generate no daily visits');
 select set_config('test.cleaning_visit',(select id from public.service_visits where contract_id=current_setting('test.cleaning_contract')::uuid and contract_occurrence_on='2027-01-31')::text,true);

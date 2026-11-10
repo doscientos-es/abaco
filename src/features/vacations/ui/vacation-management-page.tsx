@@ -11,6 +11,7 @@ import {
   requestAbsenceInformation,
 } from '../application/vacation-actions'
 import { calendarDate } from '../domain/absence-calendar'
+import type { AbsenceCalendarProposal } from '../domain/absence-events'
 import {
   absenceTypeLabels,
   absenceTypes,
@@ -45,6 +46,9 @@ export function VacationManagementPage() {
   const [dateTo, setDateTo] = useState('')
   const [editing, setEditing] = useState<VacationRequest | null | undefined>(undefined)
   const [historyId, setHistoryId] = useState<string | null>(null)
+  const [calendarProposal, setCalendarProposal] = useState<AbsenceCalendarProposal | undefined>(
+    undefined,
+  )
   const requests = useQuery({
     queryKey: requestQueryKey(tenantId),
     enabled: Boolean(tenantId),
@@ -119,7 +123,14 @@ export function VacationManagementPage() {
         </p>
       </header>
 
-      <Button onPress={() => setEditing(null)}>Registrar ausencia</Button>
+      <Button
+        onPress={() => {
+          setCalendarProposal(undefined)
+          setEditing(null)
+        }}
+      >
+        Registrar ausencia
+      </Button>
       {requests.isSuccess ? (
         <AbsenceOverview
           requests={(requests.data ?? []).filter(
@@ -131,6 +142,14 @@ export function VacationManagementPage() {
           )}
           from={dateFrom}
           through={dateTo}
+          onEdit={
+            session?.role === 'admin'
+              ? (request, proposal) => {
+                  setCalendarProposal(proposal)
+                  setEditing(request)
+                }
+              : undefined
+          }
           onRange={(from, through) => {
             setDateFrom(from)
             setDateTo(through)
@@ -140,10 +159,11 @@ export function VacationManagementPage() {
       ) : null}
       {tenantId && editing !== undefined ? (
         <AdminAbsenceForm
-          key={editing?.id ?? 'new'}
+          key={`${editing?.id ?? 'new'}:${calendarProposal?.startDate}:${calendarProposal?.endDate}`}
           tenantId={tenantId}
           request={editing}
           requests={requests.data ?? []}
+          proposal={calendarProposal}
           onDone={() => setEditing(undefined)}
         />
       ) : null}
@@ -249,7 +269,13 @@ export function VacationManagementPage() {
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onPress={() => setEditing(request)}>
+              <Button
+                variant="outline"
+                onPress={() => {
+                  setCalendarProposal(undefined)
+                  setEditing(request)
+                }}
+              >
                 Editar / cancelar
               </Button>
               <Button
