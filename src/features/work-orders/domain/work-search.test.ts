@@ -3,6 +3,34 @@ import { describe, expect, it } from 'vitest'
 import { parseWorkSearch } from './work-search'
 
 describe('shareable work filters', () => {
+  it('keeps planning and historical filters together without mixing their statuses', () => {
+    expect(
+      parseWorkSearch({
+        view: 'calendar',
+        date: '2026-11-13',
+        period: 'week',
+        team: 'unassigned',
+        technician: 'unassigned',
+        status: 'skipped',
+        q: 'Oficina principal',
+        equipo: 'unassigned',
+        estado: 'ready',
+        pagina: '2',
+      }),
+    ).toEqual({
+      view: 'calendar',
+      date: '2026-11-13',
+      period: 'week',
+      team: 'unassigned',
+      technician: 'unassigned',
+      status: 'skipped',
+      q: 'Oficina principal',
+      equipo: 'unassigned',
+      estado: 'ready',
+      pagina: 2,
+    })
+  })
+
   it('retains a valid team, status and page from a copied URL', () => {
     const equipo = '63000000-0000-4000-8000-000000000001'
     expect(parseWorkSearch({ equipo, estado: 'in_progress', pagina: '2' })).toEqual({

@@ -1,11 +1,20 @@
-import { Button, ConfirmDialog, Input, toast } from '@doscientos/ui'
+import { Button, ConfirmDialog, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
 import { centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
+import { calendarDate, dateValue, moveDays } from '@/shared/lib/date-range'
+import {
+  atCalendarMinutes,
+  type CalendarEvent,
+  type EventCalendarView,
+} from '@/shared/lib/event-calendar'
 import { newId, refreshStore, useSaveStatus } from '@/shared/store/store'
+import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
+import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
+import { EventCalendar } from '@/shared/ui/event-calendar'
 import { TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
@@ -40,12 +49,15 @@ export function PaymentCalendar({
   tenantId: string
   defaultVatRate: number
 }) {
-  const [month, setMonth] = useState(() => localToday().slice(0, 7))
+  const [date, setDate] = useState(() => calendarDate(localToday()))
   const [form, setForm] = useState<PaymentForm | null>(null)
   const [paying, setPaying] = useState<ScheduledPayment | null>(null)
   const [paidOn, setPaidOn] = useState(localToday)
   const [cancelling, setCancelling] = useState<ScheduledPayment | null>(null)
   const [busy, setBusy] = useState(false)
+  const [view, setView] = useState<EventCalendarView>('month')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const month = dateValue(date).slice(0, 7)
   const saveStatus = useSaveStatus()
   const queryClient = useQueryClient()
   const queryKey = ['payment-calendar', tenantId]
@@ -55,9 +67,24 @@ export function PaymentCalendar({
   const summary = calendarSummary(items, month, today)
   const monthly = items.filter((item) => item.date.startsWith(month))
   const earlierOverdue = summary.overdue.filter((item) => !item.date.startsWith(month))
-  const [year, monthNumber] = month.split('-').map(Number)
-  const days = new Date(Date.UTC(year ?? 0, monthNumber ?? 1, 0)).getUTCDate()
-  const offset = (new Date(Date.UTC(year ?? 0, (monthNumber ?? 1) - 1, 1)).getUTCDay() + 6) % 7
+  const events: CalendarEvent[] = items.map((item) => ({
+    id: `${item.kind}:${item.id}`,
+    title: `${item.concept} · ${formatEuros(item.amount)}`,
+    start: atCalendarMinutes(calendarDate(item.date), 0),
+    end: atCalendarMinutes(calendarDate(moveDays(item.date, 1)), 0),
+    allDay: true,
+    editable: Boolean(item.payment && !item.paid && !busy),
+    resizable: false,
+    tone: item.paid
+      ? 'muted'
+      : item.date < today
+        ? 'danger'
+        : item.kind === 'income'
+          ? 'success'
+          : 'warning',
+    description: `${item.kind === 'income' ? 'Cobro' : 'Pago'} · ${item.party}`,
+  }))
+  const selected = items.find((item) => `${item.kind}:${item.id}` === selectedId)
   const amount = parseEuros(form?.amount ?? '')
   const vatRate = Number((form?.vatRate ?? '').replace(',', '.'))
   const valid =
@@ -75,7 +102,8 @@ export function PaymentCalendar({
     vatRate <= 100 &&
     /^\d{4}-\d{2}-\d{2}$/.test(form.dueDate)
 
-  function edit(payment?: ScheduledPayment) {
+  function edit(payment?: ScheduledPayment, dueDate?: string) {
+    setSelectedId(null)
     setForm(
       payment
         ? {
@@ -85,7 +113,7 @@ export function PaymentCalendar({
             category: payment.category,
             amount: centsToInput(payment.amount_cents),
             vatRate: String(payment.vat_rate),
-            dueDate: payment.due_date,
+            dueDate: dueDate ?? payment.due_date,
           }
         : {
             id: newId(),
@@ -174,7 +202,10 @@ export function PaymentCalendar({
               size="sm"
               variant="ghost"
               isDisabled={busy}
-              onPress={() => setCancelling(item.payment ?? null)}
+              onPress={() => {
+                setSelectedId(null)
+                setCancelling(item.payment ?? null)
+              }}
             >
               Anular
             </Button>
@@ -183,6 +214,7 @@ export function PaymentCalendar({
               variant="outline"
               isDisabled={busy || saveStatus.state !== 'saved'}
               onPress={() => {
+                setSelectedId(null)
                 setPaidOn(localToday())
                 setPaying(item.payment ?? null)
               }}
@@ -204,17 +236,9 @@ export function PaymentCalendar({
             Vencimientos previstos; no son movimientos bancarios confirmados.
           </p>
         </div>
-        <Input
-          type="month"
-          aria-label="Mes del calendario"
-          className="w-44"
-          value={month}
-          onChange={(event) => {
-            if (event.target.value) setMonth(event.target.value)
-          }}
-        />
         <Button onPress={() => edit()}>Prever pago</Button>
       </div>
+      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
       {query.isPending ? (
         <p className="text-sm">Cargando calendario…</p>
       ) : query.isError ? (
@@ -237,35 +261,36 @@ export function PaymentCalendar({
               Vencidos en total: <strong>{summary.overdue.length}</strong>
             </p>
           </div>
-          <div
-            className="grid grid-cols-7 gap-1 text-center text-xs"
-            aria-label={`Calendario de ${month}`}
-          >
-            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, index) => (
-              <span key={index} className="text-muted-foreground font-medium">
-                {day}
-              </span>
-            ))}
-            {Array.from({ length: offset }, (_, index) => (
-              <span key={`empty-${index}`} />
-            ))}
-            {Array.from({ length: days }, (_, index) => {
-              const date = `${month}-${String(index + 1).padStart(2, '0')}`
-              const due = monthly.filter((item) => item.date === date && !item.paid)
-              return (
-                <div
-                  key={date}
-                  className="border-border min-h-14 rounded border p-1"
-                  aria-label={`${date}: ${due.length} vencimientos pendientes`}
-                >
-                  <span className="block font-medium">{index + 1}</span>
-                  {due.length ? (
-                    <span className="text-muted-foreground">{due.length} pend.</span>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
+          <p className="text-muted-foreground text-xs">
+            Los vencimientos son de día completo y no tienen duración. Arrastrar un pago pendiente
+            propone otra fecha; las facturas se consultan en su detalle.
+          </p>
+          <EventCalendar
+            allDayOnly
+            key={`${view}:${dateValue(date)}`}
+            value={date}
+            view={view}
+            items={events}
+            aria-label="Calendario de cobros y pagos"
+            onItemClick={(item) => setSelectedId(item.id)}
+            onItemChange={(change) => {
+              const item = items.find((item) => `${item.kind}:${item.id}` === change.item.id)
+              if (item?.payment && !item.paid && !busy) edit(item.payment, dateValue(change.start))
+            }}
+            onDayClick={(day) => {
+              setDate(day)
+              setView('day')
+            }}
+          />
+          {selected ? (
+            <CalendarDetailsDialog
+              title="Detalle del vencimiento"
+              description={selected.concept}
+              onClose={() => setSelectedId(null)}
+            >
+              <ul>{renderItem(selected)}</ul>
+            </CalendarDetailsDialog>
+          ) : null}
           {earlierOverdue.length ? (
             <div>
               <h3 className="font-semibold">Otros vencidos</h3>

@@ -1,7 +1,9 @@
-import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
+import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-export type ContractStatus = 'draft' | 'active' | 'paused' | 'expired' | 'canceled'
+import type { ContractStatus } from '../domain/contract-status'
+
+export type { ContractStatus } from '../domain/contract-status'
 export type BillingFrequency = ContractBillingFrequency
 
 export type ServiceContract = {
@@ -53,6 +55,7 @@ export type ContractVisit = {
   scheduled_start_at: string
   status: string
   assigned_user_id: string | null
+  work_team_id: string | null
 }
 
 export type GenerationIssue = {
@@ -78,13 +81,22 @@ export async function findContractForEstimate(tenantId: string, estimateId: stri
 }
 
 export async function updateDraftContractDetails(input: {
-  contract: ServiceContract; startsOn: string; endsOn: string; renewal: ServiceContract['renewal_mode']; notes: string; operationId: string
+  contract: ServiceContract
+  startsOn: string
+  endsOn: string
+  renewal: ServiceContract['renewal_mode']
+  notes: string
+  operationId: string
 }) {
   const { contract } = input
   const { error } = await createBrowserSupabaseClient().rpc('update_draft_contract_details', {
-    p_tenant_id: contract.tenant_id, p_contract_id: contract.id,
-    p_expected_updated_at: contract.updated_at, p_starts_on: input.startsOn,
-    p_ends_on: input.endsOn || null, p_renewal_mode: input.renewal, p_notes: input.notes,
+    p_tenant_id: contract.tenant_id,
+    p_contract_id: contract.id,
+    p_expected_updated_at: contract.updated_at,
+    p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn || null,
+    p_renewal_mode: input.renewal,
+    p_notes: input.notes,
     p_operation_id: input.operationId,
   })
   if (error) throw new Error(error.message)
@@ -94,7 +106,6 @@ export async function convertAcceptedEstimateToContract(input: {
   tenantId: string
   estimateId: string
   locationId: string
-  assetId: string | null
   startsOn: string
   endsOn: string | null
   defaultAssignedUserId: string | null
@@ -106,7 +117,7 @@ export async function convertAcceptedEstimateToContract(input: {
       p_tenant_id: input.tenantId,
       p_estimate_id: input.estimateId,
       p_location_id: input.locationId,
-      p_asset_id: input.assetId,
+      p_asset_id: null,
       p_starts_on: input.startsOn,
       p_ends_on: input.endsOn,
       p_default_assigned_user_id: input.defaultAssignedUserId,
@@ -158,7 +169,7 @@ export async function loadServiceContract(tenantId: string, contractId: string) 
       db
         .from('service_visits')
         .select(
-          'id,title,contract_occurrence_on,contract_schedule_version,scheduled_start_at,status,assigned_user_id',
+          'id,title,contract_occurrence_on,contract_schedule_version,scheduled_start_at,status,assigned_user_id,work_team_id',
         )
         .eq('tenant_id', tenantId)
         .eq('contract_id', contractId)
@@ -191,7 +202,6 @@ export async function createManualServiceContract(input: {
   tenantId: string
   clientId: string
   locationId: string
-  assetId: string | null
   title: string
   startsOn: string
   endsOn: string | null
@@ -207,7 +217,7 @@ export async function createManualServiceContract(input: {
       p_tenant_id: input.tenantId,
       p_client_id: input.clientId,
       p_location_id: input.locationId,
-      p_asset_id: input.assetId,
+      p_asset_id: null,
       p_title: input.title.trim(),
       p_starts_on: input.startsOn,
       p_ends_on: input.endsOn,
@@ -274,7 +284,11 @@ export async function transitionServiceContract(input: {
   if (error) throw new Error(error.message)
 }
 
-export async function generateContractVisits(tenantId: string, from: string | null = null, through: string | null = null) {
+export async function generateContractVisits(
+  tenantId: string,
+  from: string | null = null,
+  through: string | null = null,
+) {
   const { data, error } = await createBrowserSupabaseClient().rpc('generate_contract_visits', {
     p_tenant_id: tenantId,
     p_from: from,

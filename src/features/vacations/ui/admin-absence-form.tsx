@@ -11,6 +11,7 @@ import {
   saveAdministrativeAbsence,
   type AdministrativeAbsence,
 } from '../application/vacation-actions'
+import type { AbsenceCalendarProposal } from '../domain/absence-events'
 import { overlappingEmployeeAbsences } from '../domain/absence-occupancy'
 import {
   absenceTypes,
@@ -25,11 +26,13 @@ export function AdminAbsenceForm({
   request,
   requests,
   onDone,
+  proposal,
 }: {
   tenantId: string
   request: VacationRequest | null
   requests: VacationRequest[]
   onDone: () => void
+  proposal?: AbsenceCalendarProposal | undefined
 }) {
   const cache = useQueryClient()
   const people = useQuery({
@@ -38,12 +41,12 @@ export function AdminAbsenceForm({
   })
   const [form, setForm] = useState<AdministrativeAbsence>({
     requester_id: request?.requesterId ?? '',
-    start_date: request?.startDate ?? '',
-    end_date: request?.endDate ?? '',
+    start_date: proposal?.startDate ?? request?.startDate ?? '',
+    end_date: proposal ? proposal.endDate : (request?.endDate ?? ''),
     absence_type: request?.absenceType ?? 'vacation',
     status: request?.status ?? 'pending',
     comment: request?.comment ?? '',
-    decision_comment: request?.decisionComment ?? '',
+    decision_comment: proposal ? '' : (request?.decisionComment ?? ''),
   })
   const [busy, setBusy] = useState(false)
   const operations = useRef(new Map<string, string>())
@@ -58,7 +61,12 @@ export function AdminAbsenceForm({
     request?.id,
   )
   async function save() {
-    if (busy || !form.requester_id || !isValidAbsencePeriod(form.start_date, form.end_date ?? ''))
+    if (
+      busy ||
+      !form.requester_id ||
+      !isValidAbsencePeriod(form.start_date, form.end_date ?? '') ||
+      (proposal && !form.decision_comment.trim())
+    )
       return
     const key = JSON.stringify(form)
     const operation = operations.current.get(key) ?? crypto.randomUUID()
@@ -101,10 +109,18 @@ export function AdminAbsenceForm({
       isSubmitting={busy}
       isDirty
       submitDisabled={
-        !form.requester_id || !isValidAbsencePeriod(form.start_date, form.end_date ?? '')
+        !form.requester_id ||
+        !isValidAbsencePeriod(form.start_date, form.end_date ?? '') ||
+        Boolean(proposal && !form.decision_comment.trim())
       }
       onSubmit={() => void save()}
     >
+      {proposal ? (
+        <p className="text-muted-foreground sm:col-span-2">
+          Cambio propuesto desde el calendario, pendiente de guardar. Revisa las fechas y explica el
+          motivo en la anotación de administración.
+        </p>
+      ) : null}
       {request ? (
         <p>Empleado: {request.requesterName}</p>
       ) : (

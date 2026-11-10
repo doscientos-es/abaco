@@ -267,7 +267,7 @@ export function ClientsPage() {
         title="¿Archivar cliente?"
         description={
           toArchive
-            ? `«${toArchive.name}» se ocultará de la lista activa. Sus instalaciones y documentos se conservarán.`
+            ? `«${toArchive.name}» se ocultará de la lista activa. Sus centros y documentos se conservarán.`
             : null
         }
         confirmLabel="Archivar"

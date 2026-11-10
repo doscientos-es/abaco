@@ -239,7 +239,6 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
           <CardContent className="space-y-2 text-sm">
             <p>Cliente: {order.customerName}</p>
             {order.locationName ? <p>Ubicación: {order.locationName}</p> : null}
-            {order.assetName ? <p>Activo: {order.assetName}</p> : null}
             {order.description ? <p className="whitespace-pre-line">{order.description}</p> : null}
           </CardContent>
         </Card>

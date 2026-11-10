@@ -76,9 +76,9 @@ begin
   -- Technical placeholders are NEVER scheduled or shown as agreed operational data.
   -- The administrator must explicitly configure each quoted item before activation.
   for line in select * from jsonb_array_elements(p.snapshot #> '{estimate,estimate_lines}') loop
-    insert into public.service_contract_visit_rules(tenant_id,contract_id,season,months,weekday,
+    insert into public.service_contract_visit_rules(tenant_id,contract_id,season,months,weekday,frequency,
       local_start,duration_minutes,title,tasks,configured,source_line_id)
-      values(e.tenant_id,contract_id,'high',array[1,2,3,4,5,6,7,8,9,10,11,12]::smallint[],1,
+      values(e.tenant_id,contract_id,'high',array[1,2,3,4,5,6,7,8,9,10,11,12]::smallint[],1,'once',
         '09:00',60,left(line->>'description',200),line->>'description',false,(line->>'id')::uuid);
   end loop;
   return null;
@@ -259,7 +259,7 @@ $$;
 alter function app_private.generate_contract_billing_periods(uuid,uuid,date) rename to generate_recurring_contract_billing_periods;
 create function app_private.generate_contract_billing_periods(p_tenant_id uuid,p_contract_id uuid,p_through_on date)
 returns integer language plpgsql security definer set search_path='' as $$
-declare c public.service_contracts%rowtype; vat numeric; inserted uuid;
+declare c public.service_contracts%rowtype; vat numeric; inserted uuid; needs_review boolean;
 begin
   select * into c from public.service_contracts where id=p_contract_id and tenant_id=p_tenant_id for update;
   if not found then raise exception 'Contrato no encontrado' using errcode='P0002'; end if;
@@ -272,12 +272,20 @@ begin
   vat := (c.source_snapshot #>> '{estimate,vat_rate}')::numeric;
   if vat is null or vat not between 0 and 100 then raise exception 'IVA contractual no disponible' using errcode='P0410'; end if;
   if c.price_cents+round(c.price_cents*vat/100)>9000000000000000 then raise exception 'Importe de cuota fuera de rango' using errcode='22003'; end if;
+  needs_review := c.status<>'active' or exists (
+    select 1 from public.service_contract_events e where e.contract_id=c.id and e.kind='status_changed'
+      and e.payload->>'to' in ('paused','expired','canceled')
+      and (e.occurred_at at time zone c.timezone)::date between c.starts_on and coalesce(c.ends_on,p_through_on)
+  ) or not exists (
+    select 1 from public.service_contract_events e where e.contract_id=c.id and e.kind='status_changed'
+      and e.payload->>'to'='active' and (e.occurred_at at time zone c.timezone)::date<=c.starts_on
+  );
   insert into public.contract_billing_periods(tenant_id,contract_id,cycle_index,period_start_on,period_end_on,
     net_cents,vat_rate,pricing_status,review_reason)
     values(p_tenant_id,c.id,0,c.starts_on,coalesce(c.ends_on,c.starts_on),
-      case when c.status='active' then c.price_cents end,vat,
-      case when c.status='active' then 'priced' else 'requires_review' end,
-      case when c.status<>'active' then 'Contrato interrumpido: revisar el importe único' end)
+      case when not needs_review then c.price_cents end,vat,
+      case when not needs_review then 'priced' else 'requires_review' end,
+      case when needs_review then 'Contrato interrumpido o anterior a su activación: revisar el importe único' end)
     on conflict(contract_id,cycle_index) do nothing returning id into inserted;
   return case when inserted is null then 0 else 1 end;
 end;

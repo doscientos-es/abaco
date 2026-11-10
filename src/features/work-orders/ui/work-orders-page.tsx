@@ -1,19 +1,18 @@
 import {
   Button,
   PageHeader,
-  PageHeaderActions,
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Skeleton,
 } from '@doscientos/ui'
-import { ClipboardTextIcon, PlusIcon } from '@phosphor-icons/react'
+import { ClipboardTextIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
-import { ContractJobsPage } from '@/features/contracts/ui/contract-jobs-page'
+import { ContractJobsPage } from '@/features/contracts'
+import { AgendaPage } from '@/features/visits'
 import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField } from '@/shared/ui/form'
@@ -21,18 +20,31 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 
 import { listWorkOrders } from '../application/work-order-actions'
 import type { WorkSearch } from '../domain/work-search'
-import { ManualWorkForm } from './manual-work-form'
 import { WorkOrdersList } from './work-orders-list'
 import { workStatusLabels } from './work-status-badge'
 
 export function WorkOrdersPage() {
-  return <div className="space-y-6">
-    <ContractJobsPage />
-    <details className="rounded-lg border p-4">
-      <summary className="cursor-pointer font-medium">Trabajos anteriores e independientes (modelo anterior)</summary>
-      <div className="mt-4"><LegacyWorkOrdersPage /></div>
-    </details>
-  </div>
+  return (
+    <div className="space-y-6">
+      <AgendaPage />
+      <details className="rounded-lg border p-4">
+        <summary className="cursor-pointer font-medium">
+          Partidas contratadas y configuración
+        </summary>
+        <div className="mt-4">
+          <ContractJobsPage />
+        </div>
+      </details>
+      <details className="rounded-lg border p-4">
+        <summary className="cursor-pointer font-medium">
+          Trabajos anteriores e independientes (modelo anterior)
+        </summary>
+        <div className="mt-4">
+          <LegacyWorkOrdersPage />
+        </div>
+      </details>
+    </div>
+  )
 }
 
 function LegacyWorkOrdersPage() {
@@ -41,42 +53,37 @@ function LegacyWorkOrdersPage() {
   const search = useSearch({ from: '/trabajos' })
   const navigate = useNavigate()
   const page = search.pagina ?? 0
-  const [showManualForm, setShowManualForm] = useState(false)
+  const legacyFilters = { equipo: search.equipo, estado: search.estado }
   const teams = useQuery(workTeamsQuery(tenant.id))
   const orders = useQuery({
-    queryKey: ['work-orders', tenant.id, search],
-    queryFn: () => listWorkOrders(tenant.id, page, 20, search),
+    queryKey: ['work-orders', tenant.id, page, legacyFilters],
+    queryFn: () => listWorkOrders(tenant.id, page, 20, legacyFilters),
   })
   const teamLabelById = new Map((teams.data ?? []).map((team) => [team.id, workTeamLabel(team)]))
   const clientById = new Map(clients.map((client) => [client.id, client.name]))
   const filtered = Boolean(search.equipo || search.estado)
-  const setSearch = (next: WorkSearch) => void navigate({ to: '/trabajos', search: next })
+  const setSearch = (next: WorkSearch) =>
+    void navigate({
+      to: '/trabajos',
+      search: (previous) => ({
+        ...previous,
+        equipo: next.equipo,
+        estado: next.estado,
+        pagina: next.pagina,
+      }),
+    })
 
   return (
     <div className="space-y-6">
       <PageHeader>
         <PageHeaderHeading>
-          <PageHeaderTitle>Trabajos</PageHeaderTitle>
+          <PageHeaderTitle>Trabajos anteriores</PageHeaderTitle>
           <PageHeaderDescription>
-            Organiza los trabajos de tus clientes, asigna equipos y sigue su ejecución.
+            Consulta y termina los registros del modelo anterior. Los nuevos trabajos se configuran
+            en su contrato.
           </PageHeaderDescription>
         </PageHeaderHeading>
-        {can(session?.role, 'work:write') ? (
-          <PageHeaderActions>
-            <Button onPress={() => setShowManualForm(true)}>
-              <PlusIcon aria-hidden="true" />
-              Nuevo trabajo
-            </Button>
-          </PageHeaderActions>
-        ) : null}
       </PageHeader>
-      {showManualForm ? (
-        <ManualWorkForm
-          tenantId={tenant.id}
-          clients={clients}
-          onClose={() => setShowManualForm(false)}
-        />
-      ) : null}
       <section aria-label="Filtros de trabajos" className="space-y-2">
         <div className="grid gap-2 sm:max-w-2xl sm:grid-cols-2">
           <SelectField
@@ -163,14 +170,14 @@ function LegacyWorkOrdersPage() {
               ? 'No hay trabajos en esta página'
               : filtered
                 ? 'Sin trabajos con estos filtros'
-                : 'Todo empieza con un trabajo'
+                : 'No hay trabajos anteriores'
           }
           description={
             page > 0
               ? 'El listado ha cambiado. Vuelve al inicio para ver los trabajos disponibles.'
               : filtered
                 ? 'Prueba otro equipo o estado, o limpia los filtros para ver todos los trabajos.'
-                : 'Crea tu primer trabajo o parte de un presupuesto aceptado. Después podrás organizar equipo, fechas y tareas.'
+                : 'Los nuevos trabajos se crean desde las partidas del presupuesto aceptado y se configuran en su contrato.'
           }
         >
           {page > 0 ? (
@@ -181,8 +188,6 @@ function LegacyWorkOrdersPage() {
             <Button variant="outline" onPress={() => setSearch({})}>
               Limpiar filtros
             </Button>
-          ) : can(session?.role, 'work:write') ? (
-            <Button onPress={() => setShowManualForm(true)}>Crear primer trabajo</Button>
           ) : null}
           {!filtered && page === 0 ? (
             <Link to="/presupuestos" className="text-primary text-sm underline">

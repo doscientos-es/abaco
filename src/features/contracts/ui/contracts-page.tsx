@@ -9,18 +9,8 @@ import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { EmptyPanel } from '@/shared/ui/page-states'
 
-import {
-  listServiceContracts,
-  type ContractStatus,
-} from '../application/contract-actions'
-
-const statusLabels: Record<ContractStatus, string> = {
-  draft: 'Borrador',
-  active: 'Activo',
-  paused: 'Pausado',
-  expired: 'Vencido',
-  canceled: 'Cancelado',
-}
+import { listServiceContracts } from '../application/contract-actions'
+import { contractStatusLabels as statusLabels } from '../domain/contract-status'
 
 export function ContractsPage() {
   const { tenant, clients } = useTenantData()
@@ -34,10 +24,13 @@ export function ContractsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Contratos de servicio</h1>
         <p className="text-muted-foreground text-sm">
-          Un presupuesto aceptado crea su contrato. Cada contrato contiene los trabajos puntuales o periódicos y sus centros.
+          Un presupuesto aceptado crea su contrato. Cada contrato contiene los trabajos puntuales o
+          periódicos y sus centros.
         </p>
       </div>
-      <Link to="/presupuestos" className="text-primary text-sm underline">Crear o revisar presupuesto</Link>
+      <Link to="/presupuestos" className="text-primary text-sm underline">
+        Crear o revisar presupuesto
+      </Link>
       {query.isPending ? <output>Cargando contratos…</output> : null}
       {query.isError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -79,7 +72,8 @@ export function ContractsPage() {
                     · {statusLabels[contract.status]}
                   </p>
                   <p className="text-sm">
-                    {formatEuros(contract.price_cents)} · {contractBillingLabels[contract.billing_frequency]}
+                    {formatEuros(contract.price_cents)} ·{' '}
+                    {contractBillingLabels[contract.billing_frequency]}
                   </p>
                 </CardContent>
               </Card>

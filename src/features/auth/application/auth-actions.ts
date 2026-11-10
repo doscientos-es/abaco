@@ -6,6 +6,8 @@ import { can, type Permission } from '../domain/permissions'
 import { welcomePendingField } from '../domain/welcome'
 import { loadSession } from '../infrastructure/load-session'
 
+export { clearLegacyMeasurementQueues } from '../infrastructure/legacy-measurement-storage'
+
 export const sessionQuery = queryOptions({
   queryKey: ['auth', 'session'],
   queryFn: loadSession,

@@ -6,6 +6,11 @@
 
 ### Nuevas funciones
 
+- Add updateDraftContractDetails function and integrate it
+- Add automatic contract handling and job configuration
+- Add related record creation for locations in contracts page
+- Add react-day-picker package to project
+- Update changelog with new features and improvements
 - Update demo documentation with implementation details and validations
 - Add tests for expense guard permissions and functionality
 - Add validation logs and tests for Felipe

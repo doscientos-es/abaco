@@ -37,6 +37,7 @@ import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
+import { Route as TrabajosIndexRouteImport } from './routes/trabajos.index'
 import { Route as TrabajosWorkOrderIdRouteImport } from './routes/trabajos.$workOrderId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -179,6 +180,11 @@ const PresupuestosEstimateIdRoute = PresupuestosEstimateIdRouteImport.update({
   path: '/presupuestos/$estimateId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrabajosIndexRoute = TrabajosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TrabajosRoute,
+} as any)
 const TrabajosWorkOrderIdRoute = TrabajosWorkOrderIdRouteImport.update({
   id: '/$workOrderId',
   path: '/$workOrderId',
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
+  '/trabajos/': typeof TrabajosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -234,7 +241,6 @@ export interface FileRoutesByTo {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/superadmin': typeof SuperadminRoute
-  '/trabajos': typeof TrabajosRouteWithChildren
   '/vacaciones': typeof VacacionesRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
   '/contratos/$contractId': typeof ContratosContractIdRoute
@@ -245,6 +251,7 @@ export interface FileRoutesByTo {
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas': typeof FacturasIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
+  '/trabajos': typeof TrabajosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -277,6 +284,7 @@ export interface FileRoutesById {
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
+  '/trabajos/': typeof TrabajosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -310,6 +318,7 @@ export interface FileRouteTypes {
     | '/trabajos/$workOrderId'
     | '/facturas/'
     | '/presupuestos/'
+    | '/trabajos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -329,7 +338,6 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/superadmin'
-    | '/trabajos'
     | '/vacaciones'
     | '/clientes/$clientId'
     | '/contratos/$contractId'
@@ -340,6 +348,7 @@ export interface FileRouteTypes {
     | '/trabajos/$workOrderId'
     | '/facturas'
     | '/presupuestos'
+    | '/trabajos'
   id:
     | '__root__'
     | '/'
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/trabajos/$workOrderId'
     | '/facturas/'
     | '/presupuestos/'
+    | '/trabajos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -598,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosEstimateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trabajos/': {
+      id: '/trabajos/'
+      path: '/'
+      fullPath: '/trabajos/'
+      preLoaderRoute: typeof TrabajosIndexRouteImport
+      parentRoute: typeof TrabajosRoute
+    }
     '/trabajos/$workOrderId': {
       id: '/trabajos/$workOrderId'
       path: '/$workOrderId'
@@ -648,10 +665,12 @@ const FacturasRouteWithChildren = FacturasRoute._addFileChildren(
 
 interface TrabajosRouteChildren {
   TrabajosWorkOrderIdRoute: typeof TrabajosWorkOrderIdRoute
+  TrabajosIndexRoute: typeof TrabajosIndexRoute
 }
 
 const TrabajosRouteChildren: TrabajosRouteChildren = {
   TrabajosWorkOrderIdRoute: TrabajosWorkOrderIdRoute,
+  TrabajosIndexRoute: TrabajosIndexRoute,
 }
 
 const TrabajosRouteWithChildren = TrabajosRoute._addFileChildren(

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { can } from '@/features/auth/domain/permissions'
 import type { Estimate } from '@/shared/domain/types'
 
-const state = vi.hoisted(() => ({ status: 'draft', role: 'admin' }))
+const state = vi.hoisted(() => ({ status: 'draft', role: 'admin', automaticContract: false }))
 const estimate = {
   id: 'estimate',
   tenantId: 'tenant',
@@ -32,11 +32,18 @@ vi.mock('@tanstack/react-query', () => ({
     data:
       queryKey[0] === 'estimate-publication'
         ? {
-          estimate: { ...estimate, status: state.status },
-          client: { name: 'Cliente' },
-          tenant: { name: 'Empresa' },
-        }
-        : null,
+            estimate: {
+              ...estimate,
+              status: state.status,
+              automaticContract: state.automaticContract,
+              conversionDestination: 'contract',
+            },
+            client: { name: 'Cliente' },
+            tenant: { name: 'Empresa' },
+          }
+        : queryKey[0] === 'work-target-options'
+          ? { locations: [], assets: [] }
+          : null,
     isPending: false,
   }),
 }))
@@ -45,7 +52,14 @@ vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({
     tenant: { id: 'tenant', name: 'Empresa' },
     clients: [{ id: 'client', name: 'Cliente' }],
-    estimates: [{ ...estimate, status: state.status }],
+    estimates: [
+      {
+        ...estimate,
+        status: state.status,
+        automaticContract: state.automaticContract,
+        conversionDestination: 'contract',
+      },
+    ],
     catalog: [],
     ledger: [],
   }),
@@ -62,6 +76,7 @@ import { EstimateEditorPage } from './estimate-editor-page'
 beforeEach(() => {
   state.status = 'draft'
   state.role = 'admin'
+  state.automaticContract = false
 })
 
 describe('acceso a la aprobación del presupuesto', () => {
@@ -81,5 +96,21 @@ describe('acceso a la aprobación del presupuesto', () => {
     state.role = 'user'
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
     expect(html).not.toContain('Marcar como aprobado')
+  })
+
+  it('does not offer a second manual conversion for an automatically accepted contract', () => {
+    state.status = 'accepted'
+    state.automaticContract = true
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).not.toContain('Crear contrato')
+    expect(html).toContain('Recargar contrato')
+    expect(html).not.toContain('Piscina o activo')
+  })
+
+  it('preserves conversion for legacy published proposals', () => {
+    state.status = 'accepted'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('Crear contrato')
+    expect(html).not.toContain('Piscina o activo')
   })
 })

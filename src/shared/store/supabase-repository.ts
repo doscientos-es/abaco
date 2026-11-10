@@ -152,7 +152,7 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
       invoices: diff(a.invoices, b.invoices),
     }
     if (d.clients.removed.length) {
-      throw new Error('Los clientes se archivan para conservar instalaciones y documentos.')
+      throw new Error('Los clientes se archivan para conservar centros y documentos.')
     }
     // Children are deleted before parents and written after them (foreign keys).
     await remove('invoices', d.invoices.removed)

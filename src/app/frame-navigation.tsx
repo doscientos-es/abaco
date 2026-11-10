@@ -7,7 +7,6 @@ export type NavTo =
   | '/clientes'
   | '/trabajos'
   | '/contratos'
-  | '/agenda'
   | '/vacaciones'
   | '/catalogo'
   | '/facturas'

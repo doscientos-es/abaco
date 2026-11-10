@@ -142,8 +142,6 @@ export async function createIncident(input: {
   tenantId: string
   clientId: string | null
   locationId: string | null
-  assetId: string | null
-  equipmentId: string | null
   sourceVisitId: string | null
   title: string
   description: string
@@ -156,8 +154,8 @@ export async function createIncident(input: {
     p_tenant_id: input.tenantId,
     p_client_id: input.clientId,
     p_location_id: input.locationId,
-    p_asset_id: input.assetId,
-    p_equipment_id: input.equipmentId,
+    p_asset_id: null,
+    p_equipment_id: null,
     p_source_visit_id: input.sourceVisitId,
     p_title: input.title,
     p_description: input.description,

@@ -98,7 +98,6 @@ export async function createServiceVisit(input: {
   tenantId: string
   clientId: string
   locationId: string | null
-  assetId: string | null
   workOrderId: string | null
   title: string
   assignedUserId: string | null
@@ -113,7 +112,7 @@ export async function createServiceVisit(input: {
     p_tenant_id: input.tenantId,
     p_client_id: input.clientId,
     p_location_id: input.locationId,
-    p_asset_id: input.assetId,
+    p_asset_id: null,
     p_work_order_id: input.workOrderId,
     p_title: input.title.trim(),
     p_assigned_user_id: input.assignedUserId,

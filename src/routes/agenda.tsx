@@ -1,11 +1,17 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { requirePermission } from '@/features/auth'
-import { AgendaPage } from '@/features/visits'
-import { validateAgendaSearch } from '@/features/visits/ui/agenda-search'
+import { parseWorkSearch } from '@/features/work-orders'
 
 export const Route = createFileRoute('/agenda')({
   beforeLoad: requirePermission('visits:read'),
-  validateSearch: validateAgendaSearch,
-  component: AgendaPage,
+  validateSearch: parseWorkSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps }) => {
+    throw redirect({
+      to: '/trabajos',
+      search: { ...deps, view: deps.view ?? 'calendar' },
+      replace: true,
+    })
+  },
 })

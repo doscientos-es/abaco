@@ -27,6 +27,13 @@ vi.mock('@/shared/store/store', () => ({
 import { AppFrame } from './app-frame'
 
 describe('estado de guardado en la aplicación', () => {
+  it('offers one operations destination for both work views, on desktop and mobile', () => {
+    const html = renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
+    expect(html).toContain('href="/trabajos"')
+    expect(html).not.toContain('href="/agenda"')
+    expect(html).not.toContain('>Agenda<')
+  })
+
   it('lo sitúa en la barra lateral y la cabecera móvil, fuera del contenido', () => {
     const html = renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
     const main = html.indexOf('data-slot="app-shell-main"')

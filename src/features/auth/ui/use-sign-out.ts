@@ -4,11 +4,10 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { clearFieldEntryQueues } from '@/features/field-entries/application/field-entry-queue'
 import { clearVisitIncidentQueues } from '@/features/incidents/application/incident-queue'
-import { clearMeasurementQueues } from '@/features/measurements/application/measurement-queue'
 import { clearPendingVisitPhotos } from '@/features/visits/application/visit-photo-queue'
 import { clearVisitReportLocalDrafts } from '@/features/visits/application/visit-report-local-draft'
 
-import { signOut } from '../application/auth-actions'
+import { clearLegacyMeasurementQueues, signOut } from '../application/auth-actions'
 
 /** Signs out, wipes every cached query (another user must never see this data) and goes to /entrar. */
 export function useSignOut() {
@@ -23,7 +22,7 @@ export function useSignOut() {
     }
     await signOut()
     clearVisitReportLocalDrafts()
-    clearMeasurementQueues()
+    clearLegacyMeasurementQueues()
     clearFieldEntryQueues()
     clearVisitIncidentQueues()
     queryClient.clear()
