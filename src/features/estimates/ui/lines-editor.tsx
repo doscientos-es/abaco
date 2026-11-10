@@ -26,7 +26,9 @@ const gridCols =
 
 /** Visible field label when there is not enough room for the column headers. */
 function MobileLabel({ children }: { children: string }) {
-  return <span className="text-muted-foreground mb-1 block text-xs @min-[46rem]:hidden">{children}</span>
+  return (
+    <span className="text-muted-foreground mb-1 block text-xs @min-[46rem]:hidden">{children}</span>
+  )
 }
 
 type PickerItem = { key: string; label: string; meta?: string; free?: boolean }
