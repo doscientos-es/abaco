@@ -52,7 +52,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
   )
 
   return (
-    <AppShell className="flex h-svh flex-col overflow-hidden md:flex-row">
+    <AppShell className="user-frame">
       <AppShellSidebar className="hidden h-full w-64 shrink-0 flex-col md:flex">
         <div className="shrink-0 px-3 pt-4 pb-3">
           <Link
@@ -103,7 +103,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
           </DropdownMenuTrigger>
         </div>
       </AppShellSidebar>
-      <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+      <AppShellMain className="user-frame__main">
         <AppShellMobileHeader className="hidden max-md:flex">
           <Link to="/mi-jornada" className="min-w-0 leading-tight" aria-label="Ir a mi jornada">
             <span className="block truncate text-sm font-semibold tracking-tight">
@@ -123,8 +123,16 @@ export function UserFrame({ children }: { children: ReactNode }) {
             {userMenu('bottom end')}
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
-        <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">
-          {children}
+        <AppShellContent
+          size="full"
+          padded={false}
+          scrollable
+          className="user-frame__content"
+          role="region"
+          aria-label="Contenido principal"
+          tabIndex={0}
+        >
+          <div className="user-frame__page">{children}</div>
         </AppShellContent>
       </AppShellMain>
       <nav

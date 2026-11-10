@@ -36,12 +36,28 @@ vi.mock('@/features/auth', () => ({
   roleLabels: { user: 'Usuario', admin: 'Administrador' },
 }))
 vi.mock('@doscientos/ui', () => {
-  const box = ({ children, ...props }: { children?: ReactNode; [key: string]: unknown }) => (
+  const box = ({ children, ...props }: { children?: ReactNode;[key: string]: unknown }) => (
     <div {...props}>{children}</div>
   )
   return {
     AppShell: box,
-    AppShellContent: box,
+    AppShellContent: ({
+      children,
+      size,
+      padded,
+      scrollable,
+      ...props
+    }: {
+      children?: ReactNode
+      size?: string
+      padded?: boolean
+      scrollable?: boolean
+      [key: string]: unknown
+    }) => (
+      <div data-size={size} data-padded={padded} data-scrollable={scrollable} {...props}>
+        {children}
+      </div>
+    ),
     AppShellMain: box,
     AppShellMobileHeader: box,
     AppShellSidebar: box,
@@ -95,6 +111,21 @@ describe('worker navigation', () => {
       expect(html).not.toContain(`href="${path}"`)
     }
     expect(html).toContain('Menú de usuario')
+  })
+
+  it('keeps the page in a dedicated keyboard-accessible content region', () => {
+    const html = renderToStaticMarkup(<UserFrame>Final de la página</UserFrame>)
+
+    expect(html).toContain('class="user-frame"')
+    expect(html).toContain('class="user-frame__main"')
+    expect(html).toContain('data-size="full"')
+    expect(html).toContain('data-padded="false"')
+    expect(html).toContain('data-scrollable="true"')
+    expect(html).toContain('class="user-frame__content"')
+    expect(html).toContain('role="region"')
+    expect(html).toContain('aria-label="Contenido principal"')
+    expect(html).toContain('tabindex="0"')
+    expect(html).toContain('<div class="user-frame__page">Final de la página</div>')
   })
 
   it('opens personal settings and password change, and signs out from the menu', () => {
