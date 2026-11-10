@@ -12,6 +12,10 @@ describe('agenda search', () => {
   })
 
   it('drops unknown views, invalid dates and periods', () => {
-    expect(validateAgendaSearch({ view: 'grid', date: '2026-02-30', period: 'month' })).toEqual({})
+    expect(validateAgendaSearch({ view: 'grid', date: '2026-02-30', period: 'year' })).toEqual({})
+  })
+
+  it('preserves the monthly planning period in direct links', () => {
+    expect(validateAgendaSearch({view:'calendar',date:'2026-11-13',period:'month'})).toEqual({view:'calendar',date:'2026-11-13',period:'month'})
   })
 })
