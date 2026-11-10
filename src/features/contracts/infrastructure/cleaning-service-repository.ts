@@ -19,14 +19,20 @@ export type CleaningService = {
   time_known: boolean
   assigned_user_id: string | null
   work_team_id: string | null
-  location?: {name:string;address:string;operational_contact:string;access_notes:string;notes:string} | null
+  location?: {
+    name: string
+    address: string
+    operational_contact: string
+    access_notes: string
+    notes: string
+  } | null
 }
 
 export async function listCleaningServices(tenantId: string, contractId: string) {
   const { data, error } = await createBrowserSupabaseClient()
     .from('service_contract_visit_rules')
     .select(
-        'id,title,location_id,modality,service_type,frequency,anchor_on,ends_on,weekdays,tasks,weekly_tasks,instructions,requires_acceptance,duration_minutes,local_start,time_known,assigned_user_id,work_team_id,location:service_locations(name,address,operational_contact,access_notes,notes)',
+      'id,title,location_id,modality,service_type,frequency,anchor_on,ends_on,weekdays,tasks,weekly_tasks,instructions,requires_acceptance,duration_minutes,local_start,time_known,assigned_user_id,work_team_id,location:service_locations(name,address,operational_contact,access_notes,notes)',
     )
     .eq('tenant_id', tenantId)
     .eq('contract_id', contractId)
@@ -34,7 +40,7 @@ export async function listCleaningServices(tenantId: string, contractId: string)
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => ({
     ...row,
-    location: Array.isArray(row.location) ? row.location[0] ?? null : row.location,
+    location: Array.isArray(row.location) ? (row.location[0] ?? null) : row.location,
   })) as CleaningService[]
 }
 

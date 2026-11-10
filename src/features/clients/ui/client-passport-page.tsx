@@ -105,7 +105,8 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
         <PageHeaderHeading>
           <PageHeaderTitle>{client.name}</PageHeaderTitle>
           <PageHeaderDescription>
-            Contactos, centros, servicios y partes del cliente. Las instalaciones existentes se conservan.
+            Contactos, centros, servicios y partes del cliente. Las instalaciones existentes se
+            conservan.
           </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
@@ -260,7 +261,13 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
               </Card>
             ))}
           </section>
-          <ClientVisitHistory key={`${tenant.id}:${clientId}`} tenantId={tenant.id} clientId={clientId} clientName={client.name} locations={data.locations} />
+          <ClientVisitHistory
+            key={`${tenant.id}:${clientId}`}
+            tenantId={tenant.id}
+            clientId={clientId}
+            clientName={client.name}
+            locations={data.locations}
+          />
           {canWrite && session?.userId ? (
             <Card>
               <CardContent>
