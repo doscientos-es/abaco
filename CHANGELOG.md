@@ -2,10 +2,14 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-09 — Sin publicar
+## 2026-11-10 — Sin publicar
 
 ### Nuevas funciones
 
+- Enhance refresh logic and improve pending state handling
+- Complete absence review workflow
+- Improve worker absence experience
+- Expand vacation requests to absences
 - Add new features and fixes for upcoming release
 - Handle signup errors and improve user feedback messages
 - Implement listing all office visits with pagination feat(visits): add calendar view for agenda with date navigation feat(visits): validate search parameters for agenda and invoices test(visits): add tests for listing all office visits functionality test(visits): add tests for agenda calendar helpers and search validation
@@ -22,6 +26,12 @@
 
 ### Correcciones
 
+- Satisfy type import lint rule
+- Resolve stacked PR database and UI checks
+- Disable final decisions while awaiting info
+- Clarify optional absence end date
+- Recreate visit guard after table rename
+- Split constraint rename statements
 - Type coverage RPC rows
 - Prevent replanning active visits
 - Preserve contract generation during leave
