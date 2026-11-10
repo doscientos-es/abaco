@@ -1,13 +1,17 @@
 {
   "releases": [
     {
-      "version": null,
-      "date": "2026-11-09",
-      "title": "Sin publicar",
+      "version": "0.0.9",
+      "date": "2026-11-10",
+      "title": "v0.0.9",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Enhance refresh logic and improve pending state handling",
+            "Complete absence review workflow",
+            "Improve worker absence experience",
+            "Expand vacation requests to absences",
             "Handle signup errors and improve user feedback messages",
             "Implement listing all office visits with pagination feat(visits): add calendar view for agenda with date navigation feat(visits): validate search parameters for agenda and invoices test(visits): add tests for listing all office visits functionality test(visits): add tests for agenda calendar helpers and search validation",
             "Show coverage and prevent schedule conflicts",
@@ -21,6 +25,12 @@
         {
           "title": "Correcciones",
           "items": [
+            "Satisfy type import lint rule",
+            "Resolve stacked PR database and UI checks",
+            "Disable final decisions while awaiting info",
+            "Clarify optional absence end date",
+            "Recreate visit guard after table rename",
+            "Split constraint rename statements",
             "Type coverage RPC rows",
             "Prevent replanning active visits",
             "Preserve contract generation during leave",
@@ -29,6 +39,76 @@
         }
       ],
       "changes": [
+        {
+          "sha": "4f3aee1ed12fb30011355e5f25815814f82c22dc",
+          "type": "fix",
+          "scope": "DEV-20",
+          "breaking": false,
+          "description": "Satisfy type import lint rule"
+        },
+        {
+          "sha": "bf8ea845d3190f969945d9f53b57bc4cc9da16e9",
+          "type": "fix",
+          "scope": "DEV-18",
+          "breaking": false,
+          "description": "Resolve stacked PR database and UI checks"
+        },
+        {
+          "sha": "3f9617caea87308a980ffec9a42c53a70e6ee4bd",
+          "type": "fix",
+          "scope": "DEV-20",
+          "breaking": false,
+          "description": "Disable final decisions while awaiting info"
+        },
+        {
+          "sha": "6f1aa10b37f5518125e3cbf16a7da7846bd09f54",
+          "type": "feat",
+          "scope": "related-records",
+          "breaking": false,
+          "description": "Enhance refresh logic and improve pending state handling"
+        },
+        {
+          "sha": "0228f2e3a2e9542a0952de661c9b702b985b532d",
+          "type": "feat",
+          "scope": "DEV-20",
+          "breaking": false,
+          "description": "Complete absence review workflow"
+        },
+        {
+          "sha": "b267d66c1de23e530325ae1f6d903ea2784e3019",
+          "type": "feat",
+          "scope": "DEV-19",
+          "breaking": false,
+          "description": "Improve worker absence experience"
+        },
+        {
+          "sha": "a284f394e1daffa2b732ef636a75be4cc51ca5e7",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Clarify optional absence end date"
+        },
+        {
+          "sha": "a8402508f18446c0fbc0385a0afdcb8a917fac98",
+          "type": "fix",
+          "scope": "DEV-18",
+          "breaking": false,
+          "description": "Recreate visit guard after table rename"
+        },
+        {
+          "sha": "01dae5e0b3bf48e38f13a4e35dd998cb7277ee69",
+          "type": "fix",
+          "scope": "DEV-18",
+          "breaking": false,
+          "description": "Split constraint rename statements"
+        },
+        {
+          "sha": "47fe0d3fc945ca5b45510b0cbc9947cd878cb0df",
+          "type": "feat",
+          "scope": "DEV-18",
+          "breaking": false,
+          "description": "Expand vacation requests to absences"
+        },
         {
           "sha": "7bcfeb5813307aeabb1396d74647be4978b298fe",
           "type": "feat",
