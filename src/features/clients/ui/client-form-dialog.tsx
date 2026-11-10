@@ -41,15 +41,15 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
-          name: client.name,
-          kind: client.kind ?? 'person',
-          taxId: client.taxId,
-          email: client.email,
-          phone: client.phone,
-          address: client.address,
-          billingAddress: client.billingAddress ?? '',
-          notes: client.notes,
-        }
+        name: client.name,
+        kind: client.kind ?? 'person',
+        taxId: client.taxId,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        billingAddress: client.billingAddress ?? '',
+        notes: client.notes,
+      }
       : empty,
   )
   const set = (key: keyof ClientInput) => (value: string) =>
@@ -166,7 +166,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
         onChange={set('email')}
       />
       <TextField
-        label="Dirección de la obra"
+        label="Dirección principal de servicio"
         maxLength={formLimits.address}
         className="sm:col-span-2"
         placeholder="C/ Mayor 12, 2º, Barcelona"
@@ -187,7 +187,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<Props, 'open'>) {
         label="Notas"
         maxLength={formLimits.notes}
         className="sm:col-span-2"
-        placeholder="Preferencias, horarios, acceso a la obra…"
+        placeholder="Preferencias, horarios, observaciones…"
         value={form.notes}
         onChange={set('notes')}
       />

@@ -90,7 +90,7 @@ export function AgendaPage() {
   const view: AgendaView = search.view ?? 'list'
   const period: AgendaPeriod = search.period ?? (view === 'calendar' ? 'month' : 'day')
   const [filterTechnicianId, setFilterTechnicianId] = useState('')
-  const [page, setPage] = useState(0)
+  const [, setPage] = useState(0)
   const [selectedCalendarVisitId, setSelectedCalendarVisitId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [initialLocalStart, setInitialLocalStart] = useState(() => `${todayInMadrid()}T09:00`)
@@ -490,8 +490,8 @@ export function AgendaPage() {
                     updateSearch({ view: nextView })
                   }}
                   className={`focus-visible:outline-ring rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${view === nextView
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                 >
                   {nextView === 'list' ? 'Lista' : 'Calendario'}

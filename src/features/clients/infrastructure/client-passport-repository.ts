@@ -18,6 +18,9 @@ export type ServiceLocation = {
   city: string
   postal_code: string
   opening_hours: string
+  operational_contact: string
+  access_notes: string
+  notes: string
   active: boolean
   updated_at: string
 }
@@ -131,7 +134,7 @@ export async function loadClientPassport(
       .order('created_at'),
     db
       .from('service_locations')
-      .select('id,name,kind,address,city,postal_code,opening_hours,active,updated_at')
+      .select('id,name,kind,address,city,postal_code,opening_hours,operational_contact,access_notes,notes,active,updated_at')
       .eq('tenant_id', tenantId)
       .eq('client_id', clientId)
       .order('created_at'),
@@ -240,6 +243,9 @@ export async function createLocation(input: {
   kind: ServiceLocation['kind']
   address: string
   city: string
+  operationalContact?: string
+  accessNotes?: string
+  notes?: string
 }): Promise<string> {
   const { data, error } = await createBrowserSupabaseClient()
     .from('service_locations')
@@ -250,6 +256,9 @@ export async function createLocation(input: {
       kind: input.kind,
       address: input.address.trim(),
       city: input.city.trim(),
+      operational_contact: input.operationalContact?.trim() ?? '',
+      access_notes: input.accessNotes?.trim() ?? '',
+      notes: input.notes?.trim() ?? '',
     })
     .select('id')
     .single()
@@ -329,7 +338,7 @@ export async function updateContact(
 export async function updateLocation(
   tenantId: string,
   location: ServiceLocation,
-  input: Pick<ServiceLocation, 'name' | 'kind' | 'address' | 'city'>,
+  input: Pick<ServiceLocation, 'name' | 'kind' | 'address' | 'city' | 'operational_contact' | 'access_notes' | 'notes' | 'active'>,
 ): Promise<void> {
   assertOne(
     await createBrowserSupabaseClient()
@@ -339,6 +348,10 @@ export async function updateLocation(
         kind: input.kind,
         address: input.address.trim(),
         city: input.city.trim(),
+        operational_contact: input.operational_contact.trim(),
+        access_notes: input.access_notes.trim(),
+        notes: input.notes.trim(),
+        active: input.active,
       })
       .eq('tenant_id', tenantId)
       .eq('id', location.id)

@@ -25,10 +25,10 @@ export type NewItem =
   | { kind: 'editContact'; contact: ClientPassport['contacts'][number] }
   | { kind: 'editLocation'; location: ClientPassport['locations'][number] }
   | {
-      kind: 'editPool'
-      asset: ClientPassport['assets'][number]
-      profile: ClientPassport['pools'][number]
-    }
+    kind: 'editPool'
+    asset: ClientPassport['assets'][number]
+    profile: ClientPassport['pools'][number]
+  }
   | { kind: 'editEquipment'; equipment: ClientPassport['equipment'][number] }
   | { kind: 'replaceEquipment'; equipment: ClientPassport['equipment'][number] }
 
@@ -91,6 +91,10 @@ export function CreatePassportItem({
   const [phone, setPhone] = useState(contact?.phone ?? '')
   const [address, setAddress] = useState(location?.address ?? '')
   const [city, setCity] = useState(location?.city ?? '')
+  const [operationalContact, setOperationalContact] = useState(location?.operational_contact ?? '')
+  const [accessNotes, setAccessNotes] = useState(location?.access_notes ?? '')
+  const [locationNotes, setLocationNotes] = useState(location?.notes ?? '')
+  const [locationActive, setLocationActive] = useState(location?.active ?? true)
   const [locationKind, setLocationKind] = useState(location?.kind ?? 'service')
   const [volume, setVolume] = useState(pool?.profile.volume_m3?.toString() ?? '')
   const [treatment, setTreatment] = useState(pool?.profile.treatment ?? '')
@@ -162,6 +166,10 @@ export function CreatePassportItem({
           kind: locationKind as ClientPassport['locations'][number]['kind'],
           address,
           city,
+          operational_contact: operationalContact,
+          access_notes: accessNotes,
+          notes: locationNotes,
+          active: locationActive,
         })
       } else if (item.kind === 'editPool') {
         await updatePool(tenantId, item.asset, item.profile, poolFields)
@@ -186,6 +194,9 @@ export function CreatePassportItem({
           kind: locationKind as 'service' | 'billing' | 'both',
           address,
           city,
+          operationalContact,
+          accessNotes,
+          notes: locationNotes,
         })
       } else if (item.kind === 'pool') {
         createdId = await createPool({
@@ -289,7 +300,7 @@ export function CreatePassportItem({
               setLocationKind(value as ClientPassport['locations'][number]['kind'])
             }
           />
-          <TextField label="Ciudad" value={city} onChange={setCity} placeholder="Barcelona" />
+          <TextField label="Ciudad" value={city} onChange={setCity} placeholder="Melilla" />
           <TextField
             label="Dirección"
             value={address}
@@ -298,6 +309,10 @@ export function CreatePassportItem({
             maxLength={500}
             className="sm:col-span-2"
           />
+          <TextField label="Contacto operativo del centro" value={operationalContact} onChange={setOperationalContact} placeholder="Nombre, teléfono o correo · opcional" maxLength={1000} />
+          <TextareaField label="Acceso al centro" value={accessNotes} onChange={setAccessNotes} placeholder="Llaves, acceso, horarios" maxLength={2000} />
+          <TextareaField label="Observaciones del centro" value={locationNotes} onChange={setLocationNotes} placeholder="Indicaciones" maxLength={2000} />
+          <label><input type="checkbox" checked={locationActive} onChange={e => setLocationActive(e.target.checked)} /> Centro activo</label>
         </>
       ) : null}
       {isPool ? (
