@@ -263,9 +263,9 @@ export function VacationManagementPage() {
               <AbsenceHistory tenantId={tenantId} requestId={request.id} />
             ) : null}
             {request.status !== 'rejected' &&
-              request.status !== 'canceled' &&
-              (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
-              tenantId ? (
+            request.status !== 'canceled' &&
+            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+            tenantId ? (
               <VacationCoverage
                 tenantId={tenantId}
                 requestId={request.id}

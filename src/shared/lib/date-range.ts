@@ -42,6 +42,10 @@ export function dateRangePresets(today: string) {
     { label: 'Ayer', start: moveDays(today, -1), end: moveDays(today, -1) },
     { label: 'Esta semana', start: monday, end: moveDays(monday, 6) },
     { label: 'La semana que viene', start: moveDays(monday, 7), end: moveDays(monday, 13) },
-    { label: 'Este mes', start: `${today.slice(0, 7)}-01`, end: moveDays(moveMonths(`${today.slice(0, 7)}-01`, 1), -1) },
+    {
+      label: 'Este mes',
+      start: `${today.slice(0, 7)}-01`,
+      end: moveDays(moveMonths(`${today.slice(0, 7)}-01`, 1), -1),
+    },
   ]
 }

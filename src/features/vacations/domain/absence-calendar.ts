@@ -1,6 +1,12 @@
 import { calendarDate, dateValue } from '@/shared/lib/date-range'
 
-export { calendarDate, dateValue, moveDays, moveMonths, selectRangeDay as selectAbsenceDay } from '@/shared/lib/date-range'
+export {
+  calendarDate,
+  dateValue,
+  moveDays,
+  moveMonths,
+  selectRangeDay as selectAbsenceDay,
+} from '@/shared/lib/date-range'
 
 /** Monday-first calendar, with empty cells before the first day. */
 export function monthWeeks(value: string): (string | null)[][] {
@@ -18,4 +24,3 @@ export function monthWeeks(value: string): (string | null)[][] {
     cells.slice(index * 7, index * 7 + 7),
   )
 }
-

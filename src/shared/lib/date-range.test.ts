@@ -15,14 +15,25 @@ describe('rangos de fechas locales', () => {
       start: '2024-02-01',
       end: '2024-02-29',
     })
-    expect(dateRangePresets('2026-03-30').find((preset) => preset.label === 'Ayer')?.start).toBe('2026-03-29')
+    expect(dateRangePresets('2026-03-30').find((preset) => preset.label === 'Ayer')?.start).toBe(
+      '2026-03-29',
+    )
   })
 
   it('selecciona un día, un rango invertido y reinicia tras un rango completo', () => {
     expect(selectRangeDay('', '', '2026-11-10')).toEqual({ start: '2026-11-10', end: '' })
-    expect(selectRangeDay('2026-11-10', '', '2026-11-10')).toEqual({ start: '2026-11-10', end: '2026-11-10' })
-    expect(selectRangeDay('2026-11-10', '', '2026-11-08')).toEqual({ start: '2026-11-08', end: '2026-11-10' })
-    expect(selectRangeDay('2026-11-08', '2026-11-10', '2026-12-01')).toEqual({ start: '2026-12-01', end: '' })
+    expect(selectRangeDay('2026-11-10', '', '2026-11-10')).toEqual({
+      start: '2026-11-10',
+      end: '2026-11-10',
+    })
+    expect(selectRangeDay('2026-11-10', '', '2026-11-08')).toEqual({
+      start: '2026-11-08',
+      end: '2026-11-10',
+    })
+    expect(selectRangeDay('2026-11-08', '2026-11-10', '2026-12-01')).toEqual({
+      start: '2026-12-01',
+      end: '',
+    })
     expect(selectRangeDay('', '2026-11-10', '2026-12-01')).toEqual({ start: '2026-12-01', end: '' })
   })
 })
