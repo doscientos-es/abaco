@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react')>()
+  const actual = await importOriginal<typeof React>()
   return {
     ...actual,
     useState: (initial: unknown) => {
