@@ -32,7 +32,10 @@ export async function listCleaningServices(tenantId: string, contractId: string)
     .eq('contract_id', contractId)
     .order('created_at')
   if (error) throw new Error(error.message)
-  return (data ?? []) as CleaningService[]
+  return (data ?? []).map((row) => ({
+    ...row,
+    location: Array.isArray(row.location) ? row.location[0] ?? null : row.location,
+  })) as CleaningService[]
 }
 
 export async function addCleaningService(

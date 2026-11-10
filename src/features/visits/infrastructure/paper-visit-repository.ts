@@ -38,8 +38,8 @@ export type SignedDocument = { id: string; name: string; object_path: string; cr
 
 type ClientVisitRow = Pick<VisitSummary, 'id'|'title'|'status'|'priority'|'notes'|'scheduled_start_at'|'scheduled_end_at'|'updated_at'|'assigned_user_id'|'work_team_id'|'route_order'> & {
   paper_snapshot:PaperSnapshot
-  location:{name:string;address:string;timezone:string}|null
-  work_teams:{name:string}|null
+  location:{name:string;address:string;timezone:string}|{name:string;address:string;timezone:string}[]|null
+  work_teams:{name:string}|{name:string}[]|null
 }
 
 export async function listClientVisitHistory(tenantId:string,clientId:string,locationId:string|null,page:number):Promise<VisitSummary[]> {
@@ -49,10 +49,14 @@ export async function listClientVisitHistory(tenantId:string,clientId:string,loc
   if(locationId) query = query.eq('location_id',locationId)
   const {data,error} = await query.order('scheduled_start_at',{ascending:false}).order('id').range(page*25,(page+1)*25-1)
   if(error) throw new Error(error.message)
-  return ((data ?? []) as unknown as ClientVisitRow[]).map(row => ({...row,
-    client_name:row.paper_snapshot.client ?? '',location_name:row.paper_snapshot.center ?? row.location?.name ?? '',
-    address:row.paper_snapshot.address ?? row.location?.address ?? '',timezone:row.location?.timezone ?? 'Europe/Madrid',
-    assigned_user_name:row.assigned_user_id ? 'Persona asignada' : '',work_team_name:row.work_teams?.name ?? ''}))
+  return ((data ?? []) as ClientVisitRow[]).map(row => {
+    const location = Array.isArray(row.location) ? row.location[0] : row.location
+    const team = Array.isArray(row.work_teams) ? row.work_teams[0] : row.work_teams
+    return {...row,
+      client_name:row.paper_snapshot.client ?? '',location_name:row.paper_snapshot.center ?? location?.name ?? '',
+      address:row.paper_snapshot.address ?? location?.address ?? '',timezone:location?.timezone ?? 'Europe/Madrid',
+      assigned_user_name:row.assigned_user_id ? 'Persona asignada' : '',work_team_name:team?.name ?? ''}
+  })
 }
 
 export async function loadPaperSnapshots(tenantId: string, ids: string[]) {
