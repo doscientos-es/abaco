@@ -47,25 +47,25 @@ export function ClientForm({
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
-          name: client.name,
-          kind: client.kind ?? 'person',
-          taxId: client.taxId,
-          email: client.email,
-          phone: client.phone,
-          address: client.address,
-          billingAddress: client.billingAddress ?? '',
-          notes: client.notes,
-        }
+        name: client.name,
+        kind: client.kind ?? 'person',
+        taxId: client.taxId,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        billingAddress: client.billingAddress ?? '',
+        notes: client.notes,
+      }
       : empty,
   )
-  const initialForm = useRef(JSON.stringify(form))
+  const [initialForm] = useState(() => JSON.stringify(form))
   const saved = useRef(false)
   const set = (key: keyof ClientInput) => (value: string) => {
     saved.current = false
     setForm((previous) => ({ ...previous, [key]: value }))
   }
   const duplicates = findPotentialClientDuplicates(form, clients, client?.id)
-  const isDirty = JSON.stringify(form) !== initialForm.current
+  const isDirty = JSON.stringify(form) !== initialForm
 
   function save() {
     if (saved.current) return
@@ -186,7 +186,6 @@ export function ClientForm({
             label="Email"
             maxLength={formLimits.email}
             type="email"
-            className="sm:col-span-2"
             placeholder="cliente@ejemplo.com"
             icon={fieldIcons.mail}
             helper="Aquí se envían presupuestos y facturas."
