@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
@@ -27,15 +27,12 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
-import { ClientFormDialog } from './client-form-dialog'
-
 export function ClientsPage() {
   const { clients } = useTenantData()
+  const navigate = useNavigate()
   const [importOpen, setImportOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<Client | null>(null)
   const [toArchive, setToArchive] = useState<Client | null>(null)
 
   const visible = clients.filter(
@@ -45,19 +42,12 @@ export function ClientsPage() {
   )
   const pager = usePagination(visible, query)
 
-  function reset() {
-    setDialogOpen(false)
-    setEditing(null)
-  }
-
   function create() {
-    setEditing(null)
-    setDialogOpen(true)
+    void navigate({ to: '/clientes/nuevo' })
   }
 
   function edit(client: Client) {
-    setEditing(client)
-    setDialogOpen(true)
+    void navigate({ to: '/clientes/$clientId/editar', params: { clientId: client.id } })
   }
 
   return (
@@ -75,7 +65,6 @@ export function ClientsPage() {
         </PageHeaderActions>
       </PageHeader>
 
-      <ClientFormDialog open={dialogOpen} client={editing} onClose={reset} />
       <ImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

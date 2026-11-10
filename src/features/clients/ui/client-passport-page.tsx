@@ -60,7 +60,16 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
         </PageHeaderHeading>
         <PageHeaderActions>
           {canWrite ? (
-            <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
+            <>
+              <Link
+                to="/clientes/$clientId/editar"
+                params={{ clientId }}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                Editar cliente
+              </Link>
+              <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
+            </>
           ) : null}
           <Link to="/clientes" className="text-primary text-sm font-medium hover:underline">
             Volver a clientes

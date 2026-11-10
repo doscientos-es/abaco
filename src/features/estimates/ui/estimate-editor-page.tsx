@@ -23,6 +23,10 @@ import { useRef, useState } from 'react'
 import { can, useSession } from '@/features/auth'
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
+import {
   convertAcceptedEstimateToContract,
   findContractForEstimate,
 } from '@/features/contracts/application/contract-actions'
@@ -109,6 +113,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
     queryKey: ['estimate-manual-acceptance', tenant.id, estimateId],
     queryFn: () => loadManualEstimateAcceptance(tenant.id, estimateId),
     enabled: estimate?.status === 'accepted' && can(session?.role, 'estimates:write'),
+  })
+  const related = useRelatedRecordCreation({
+    tenantId: tenant.id,
+    clientId: estimate?.clientId ?? '',
+    onLocationCreated: setContractLocationId,
   })
 
   if (!estimate) {
@@ -217,7 +226,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   async function convertToContract() {
     if (
       converting ||
-      !contractLocationId ||
+      related.pending ||
+      !contractTargets.data?.locations.some((location) => location.id === contractLocationId) ||
       !contractStart ||
       (contractEnd && contractEnd < contractStart)
     )
@@ -438,18 +448,27 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                 que aceptó el cliente. Elige dónde y cuándo comenzará el servicio.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <SelectField
-                  label="Centro"
-                  value={contractLocationId}
-                  options={[
-                    { value: '', label: 'Selecciona un centro' },
-                    ...(contractTargets.data?.locations ?? []).map((location) => ({
-                      value: location.id,
-                      label: location.name,
-                    })),
-                  ]}
-                  onChange={setContractLocationId}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <SelectField
+                    label="Centro"
+                    value={contractLocationId}
+                    options={[
+                      { value: '', label: 'Selecciona un centro' },
+                      ...(contractTargets.data?.locations ?? []).map((location) => ({
+                        value: location.id,
+                        label: location.name,
+                      })),
+                    ]}
+                    onChange={setContractLocationId}
+                  />
+                  {related.allowed ? (
+                    <RelatedCreateButton
+                      label="Crear centro"
+                      disabled={converting || related.pending || !estimate.clientId}
+                      onPress={() => related.start('location')}
+                    />
+                  ) : null}
+                </div>
                 <TextField
                   label="Inicio"
                   type="date"
@@ -477,11 +496,23 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                   onChange={setContractTechnicianId}
                 />
               </div>
+              {contractTargets.isError ? (
+                <p role="alert">
+                  No se pudieron cargar los centros.{' '}
+                  <Button variant="outline" onPress={() => void contractTargets.refetch()}>
+                    Reintentar
+                  </Button>
+                </p>
+              ) : null}
+              {related.status}
               <Button
                 isDisabled={
                   converting ||
                   existingContract.isPending ||
-                  !contractLocationId ||
+                  related.pending ||
+                  !contractTargets.data?.locations.some(
+                    (location) => location.id === contractLocationId,
+                  ) ||
                   !contractStart ||
                   Boolean(contractEnd && contractEnd < contractStart)
                 }
@@ -540,6 +571,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </CardContent>
           </Card>
         ) : null}
+        {related.dialogs}
       </div>
     )
   }
@@ -649,13 +681,15 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               ]}
               onChange={(clientId) => patchEstimate(estimate.id, { clientId })}
             />
-            <button
-              type="button"
-              className="text-primary self-start text-xs font-medium hover:underline"
-              onClick={() => setCreatingClient(true)}
-            >
-              {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
-            </button>
+            {can(session?.role, 'clients:write') ? (
+              <button
+                type="button"
+                className="text-primary self-start text-xs font-medium hover:underline"
+                onClick={() => setCreatingClient(true)}
+              >
+                {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
+              </button>
+            ) : null}
           </div>
           <TextField
             label="Válido hasta"
