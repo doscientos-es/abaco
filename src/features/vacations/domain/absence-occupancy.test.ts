@@ -49,9 +49,9 @@ describe('absence occupancy', () => {
   })
 
   it('includes boundary dates and open periods without projecting them before their start', () => {
-    expect(absencesInRange([requests[0]!], '2026-11-10', '2026-11-10')).toHaveLength(1)
-    expect(absencesInRange([requests[2]!], '2026-11-11', '2026-11-11')).toHaveLength(0)
-    expect(absencesInRange([requests[2]!], '2027-03-01', '2027-03-02')).toHaveLength(1)
+    expect(absencesInRange(requests.slice(0, 1), '2026-11-10', '2026-11-10')).toHaveLength(1)
+    expect(absencesInRange(requests.slice(2, 3), '2026-11-11', '2026-11-11')).toHaveLength(0)
+    expect(absencesInRange(requests.slice(2, 3), '2027-03-01', '2027-03-02')).toHaveLength(1)
     expect(absencesInRange(requests, '2026-11-12', '2026-11-10')).toEqual([])
   })
 
