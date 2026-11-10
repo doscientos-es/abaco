@@ -47,15 +47,15 @@ export function ClientForm({
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
-        name: client.name,
-        kind: client.kind ?? 'person',
-        taxId: client.taxId,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        billingAddress: client.billingAddress ?? '',
-        notes: client.notes,
-      }
+          name: client.name,
+          kind: client.kind ?? 'person',
+          taxId: client.taxId,
+          email: client.email,
+          phone: client.phone,
+          address: client.address,
+          billingAddress: client.billingAddress ?? '',
+          notes: client.notes,
+        }
       : empty,
   )
   const [initialForm] = useState(() => JSON.stringify(form))
