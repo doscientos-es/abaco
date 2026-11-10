@@ -7,8 +7,11 @@ import type { SaveStatus } from '@/shared/store/store'
 export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
   if (status.state !== 'error') {
     return (
-      <output aria-live="polite" className="text-muted-foreground flex h-7 shrink-0 items-end px-4 text-xs sm:px-10">
-        {status.state === 'saving' ? 'Guardando cambios…' : 'Cambios guardados'}
+      <output
+        aria-live="polite"
+        className="text-muted-foreground flex h-7 shrink-0 items-end px-4 text-xs sm:px-10"
+      >
+        {status.state === 'saving' ? 'Guardando cambios…' : 'Autoguardado al día'}
       </output>
     )
   }
