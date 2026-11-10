@@ -248,7 +248,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         </CardContent>
       </Card>
 
-      <CleaningServicesPanel tenantId={tenant.id} contractId={contract.id} clientId={contract.client_id} startsOn={contract.starts_on} editable={contract.status === 'draft' || contract.status === 'active'} />
+      <CleaningServicesPanel tenantId={tenant.id} contractId={contract.id} clientId={contract.client_id} clientName={clients.find(client => client.id === contract.client_id)?.name ?? 'Cliente'} startsOn={contract.starts_on} editable={contract.status === 'draft' || contract.status === 'active'} />
 
       {can(session?.role, 'work:costs') ? (
         <ContractBillingPanel

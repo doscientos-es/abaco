@@ -20,10 +20,10 @@ import {
   type VacationRequest,
 } from '../domain/vacation-request'
 import { AbsenceDateRangePicker } from './absence-date-range-picker'
-import { VacationCoverage } from './vacation-coverage'
-import { VacationRequestCard } from './vacation-request-card'
 import { AbsenceOverview } from './absence-overview'
 import { AbsenceHistory, AdminAbsenceForm } from './admin-absence-form'
+import { VacationCoverage } from './vacation-coverage'
+import { VacationRequestCard } from './vacation-request-card'
 
 type StatusFilter = 'all' | VacationRequestStatus
 
@@ -120,8 +120,29 @@ export function VacationManagementPage() {
       </header>
 
       <Button onPress={() => setEditing(null)}>Registrar ausencia</Button>
-      {requests.isSuccess ? <AbsenceOverview requests={(requests.data ?? []).filter(r => typeFilter === 'all' || r.absenceType === typeFilter)} from={dateFrom} through={dateTo} onRange={(from, through) => { setDateFrom(from); setDateTo(through); setFilter('all') }} /> : null}
-      {tenantId && editing !== undefined ? <AdminAbsenceForm key={editing?.id ?? 'new'} tenantId={tenantId} request={editing} requests={requests.data ?? []} onDone={() => setEditing(undefined)} /> : null}
+      {requests.isSuccess ? (
+        <AbsenceOverview
+          requests={(requests.data ?? []).filter(
+            (r) => (typeFilter === 'all' || r.absenceType === typeFilter) && r.requesterName.toLocaleLowerCase('es').includes(search.trim().toLocaleLowerCase('es')),
+          )}
+          from={dateFrom}
+          through={dateTo}
+          onRange={(from, through) => {
+            setDateFrom(from)
+            setDateTo(through)
+            setFilter('all')
+          }}
+        />
+      ) : null}
+      {tenantId && editing !== undefined ? (
+        <AdminAbsenceForm
+          key={editing?.id ?? 'new'}
+          tenantId={tenantId}
+          request={editing}
+          requests={requests.data ?? []}
+          onDone={() => setEditing(undefined)}
+        />
+      ) : null}
 
       <nav aria-label="Filtrar solicitudes" className="flex flex-wrap gap-2">
         {(['all', ...vacationRequestStatuses] as const).map((status) => (
@@ -223,9 +244,22 @@ export function VacationManagementPage() {
       <div className="space-y-3">
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
-            <div className="flex flex-wrap gap-2"><Button variant="outline" onPress={() => setEditing(request)}>Editar / cancelar</Button><Button variant="ghost" onPress={() => setHistoryId(historyId === request.id ? null : request.id)}>Historial</Button></div>
-            {tenantId && historyId === request.id ? <AbsenceHistory tenantId={tenantId} requestId={request.id} /> : null}
-            {request.status !== 'rejected' && request.status !== 'canceled' &&
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onPress={() => setEditing(request)}>
+                Editar / cancelar
+              </Button>
+              <Button
+                variant="ghost"
+                onPress={() => setHistoryId(historyId === request.id ? null : request.id)}
+              >
+                Historial
+              </Button>
+            </div>
+            {tenantId && historyId === request.id ? (
+              <AbsenceHistory tenantId={tenantId} requestId={request.id} />
+            ) : null}
+            {request.status !== 'rejected' &&
+              request.status !== 'canceled' &&
               (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
               tenantId ? (
               <VacationCoverage
