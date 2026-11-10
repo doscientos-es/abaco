@@ -11,6 +11,18 @@ alter table public.absence_requests
 create trigger absence_requests_version before update on public.absence_requests
   for each row execute function public.touch_service_visit_version();
 
+-- Administrative creation and date edits must serialize with visit assignment too.
+create or replace function app_private.lock_vacation_assignment_change() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform pg_advisory_xact_lock(hashtextextended(new.tenant_id::text || ':' || new.requester_id::text,2));
+  return new;
+end;
+$$;
+drop trigger vacation_requests_lock_assignment on public.absence_requests;
+create trigger absence_requests_lock_assignment before insert or update on public.absence_requests
+  for each row execute function app_private.lock_vacation_assignment_change();
+
 create table public.absence_request_history(
   id uuid primary key default gen_random_uuid(),tenant_id uuid not null,request_id uuid not null,
   before_state jsonb,after_state jsonb not null,actor_id uuid references public.profiles(id),
@@ -75,6 +87,7 @@ begin
     select * into r from public.absence_requests where id = p_request_id and tenant_id = p_tenant_id for update;
     if not found or p_expected_updated_at is null or r.updated_at <> p_expected_updated_at
       then raise exception 'El periodo cambió; vuelve a cargarlo' using errcode = 'P0409'; end if;
+    if person <> r.requester_id then raise exception 'No se puede cambiar el empleado; cancela y registra otro periodo' using errcode = '22023'; end if;
     if next_status = 'needs_info' and r.status <> 'needs_info'
       then raise exception 'Solicita información antes de usar este estado' using errcode = '22023'; end if;
     update public.absence_requests set requester_id = person,requester_name = person_name,start_date = first_day,end_date = last_day,

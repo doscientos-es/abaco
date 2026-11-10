@@ -592,13 +592,13 @@ export function AgendaPage() {
 
           {view === 'calendar' ? (
             <>
-              {!visits.isPending && !visits.isError && visits.data?.length === 0 ? (
+              {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
                 <output className="text-muted-foreground text-sm">
-                  No hay visitas esta semana. Puedes avanzar, volver o elegir otra fecha.
+                  No hay visitas en este periodo con estos filtros. Puedes elegir otra fecha.
                 </output>
               ) : null}
               <Calendar
-                aria-label={period === 'month' ? 'Calendario mensual de visitas' : 'Calendario semanal de visitas'}
+                aria-label={period === 'month' ? 'Calendario mensual de visitas' : period === 'day' ? 'Calendario diario de visitas' : 'Calendario semanal de visitas'}
                 view={period}
                 value={calendarDateValue(date)}
                 items={calendarItems}
