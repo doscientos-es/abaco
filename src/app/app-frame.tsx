@@ -34,7 +34,7 @@ import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/st
 
 import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { navIcons } from './nav-icons'
-import { SaveStatusNotice } from './save-status-notice'
+import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
 type NavGroup = { label: string; items: NavItem[] }
 
@@ -245,6 +245,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <PlanBanner placement="sidebar" />
 
         <div className="border-border mt-auto shrink-0 border-t p-3">
+          <div className="px-3 pt-1 pb-2">
+            <SaveStatusIndicator status={saveStatus} />
+          </div>
           <DropdownMenuTrigger>
             <Button
               variant="ghost"
@@ -268,7 +271,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
       <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <AppShellMobileHeader className="hidden max-md:flex">
-          <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
+          <Link to="/" className="min-w-0 flex-1 leading-tight" aria-label="Ir al resumen">
             {tenant.logoUrl ? (
               <img
                 src={tenant.logoUrl}
@@ -280,11 +283,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
               {tenant.name}
             </span>
           </Link>
+          <SaveStatusIndicator status={saveStatus} />
           <DropdownMenuTrigger>
             <Button
               variant="ghost"
               aria-label="Menú de usuario"
-              className="ml-auto h-auto rounded-full p-1"
+              className="h-auto rounded-full p-1"
             >
               <Avatar>
                 <AvatarFallback>{initials(userName)}</AvatarFallback>

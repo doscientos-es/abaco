@@ -1,20 +1,29 @@
 import { Button, buttonVariants } from '@doscientos/ui'
-import { Info } from '@phosphor-icons/react'
+import { CloudArrowUp, CloudCheck, Info, WarningCircle } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
 import type { SaveStatus } from '@/shared/store/store'
 
+export function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  const Icon =
+    status.state === 'saving' ? CloudArrowUp : status.state === 'error' ? WarningCircle : CloudCheck
+  const label =
+    status.state === 'saving' ? 'Guardando…' : status.state === 'error' ? 'Sin guardar' : 'Guardado'
+
+  return (
+    <output
+      aria-live="polite"
+      aria-atomic="true"
+      className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${status.state === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-muted/70 text-muted-foreground'}`}
+    >
+      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <span className="max-[360px]:sr-only">{label}</span>
+    </output>
+  )
+}
+
 export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
-  if (status.state !== 'error') {
-    return (
-      <output
-        aria-live="polite"
-        className="text-muted-foreground flex h-7 shrink-0 items-end px-4 text-xs sm:px-10"
-      >
-        {status.state === 'saving' ? 'Guardando cambios…' : 'Autoguardado al día'}
-      </output>
-    )
-  }
+  if (status.state !== 'error') return null
 
   const trialEnded = status.message?.includes('Tu prueba ha terminado') ?? false
   if (trialEnded) {
