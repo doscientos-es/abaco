@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   invalidate: vi.fn(),
   error: vi.fn(),
   navigate: vi.fn(),
-  search: {} as { view?: 'list' | 'calendar'; date?: string; period?: 'day' | 'week' },
+  search: {} as { view?: 'list' | 'calendar'; date?: string; period?: 'day' | 'week' | 'month' },
   calendarView: undefined as string | undefined,
   calendarValue: undefined as Date | undefined,
   buttons: new Map<string, () => void>(),
@@ -27,9 +27,9 @@ vi.mock('react', async (importOriginal) => {
     ...actual,
     useState: (initial: unknown) => {
       const index = mocks.stateIndex++
-      if (index === 3) return [mocks.open, mocks.setOpen]
-      if (index === 5 && mocks.valid) return ['client-1', vi.fn()]
-      if (index === 8 && mocks.valid) return ['Revisión', vi.fn()]
+      if (index === 2) return [mocks.open, mocks.setOpen]
+      if (index === 4 && mocks.valid) return ['client-1', vi.fn()]
+      if (index === 7 && mocks.valid) return ['Revisión', vi.fn()]
       return actual.useState(initial)
     },
   }
@@ -56,6 +56,7 @@ vi.mock('@doscientos/ui', () => {
   }
 })
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data: queryKey[0] === 'work-target-options' ? { locations: [], assets: [] } : [],
@@ -86,6 +87,7 @@ vi.mock('@/features/work-orders/application/work-order-actions', () => ({
 vi.mock('../application/visit-actions', () => ({
   createServiceVisit: mocks.create,
   listOfficeVisits: vi.fn(),
+  listAllOfficeVisits: vi.fn(),
   listTechnicians: vi.fn(),
 }))
 vi.mock('@/shared/ui/form', () => ({
@@ -105,6 +107,7 @@ vi.mock('@/shared/ui/form-dialog', () => ({
 }))
 vi.mock('./visit-replan-form', () => ({ VisitReplanForm: () => null }))
 vi.mock('./visit-report-editor', () => ({ VisitReportEditor: () => null }))
+vi.mock('./batch-work-sheets', () => ({ BatchWorkSheets: () => null }))
 
 function render() {
   mocks.stateIndex = 0
@@ -141,11 +144,20 @@ describe('AgendaPage: nueva visita', () => {
   })
 
   it('renders the calendar week for the date in the URL', () => {
-    mocks.search = { view: 'calendar', date: '2026-06-10' }
+    mocks.search = { view: 'calendar', date: '2026-06-10', period: 'week' }
 
     expect(render()).toContain('Calendario semanal de visitas')
     expect(mocks.calendarView).toBe('week')
     expect(mocks.calendarValue?.getDate()).toBe(10)
+  })
+
+  it('defaults the calendar to a month and supports a day view', () => {
+    mocks.search = { view: 'calendar', date: '2026-11-13' }
+    render()
+    expect(mocks.calendarView).toBe('month')
+    mocks.search.period = 'day'
+    render()
+    expect(mocks.calendarView).toBe('day')
   })
 
   it('guarda, actualiza la agenda y cierra el diálogo', async () => {

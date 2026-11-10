@@ -90,7 +90,6 @@ export function AgendaPage() {
   const view: AgendaView = search.view ?? 'list'
   const period: AgendaPeriod = search.period ?? (view === 'calendar' ? 'month' : 'day')
   const [filterTechnicianId, setFilterTechnicianId] = useState('')
-  const [, setPage] = useState(0)
   const [selectedCalendarVisitId, setSelectedCalendarVisitId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [initialLocalStart, setInitialLocalStart] = useState(() => `${todayInMadrid()}T09:00`)
@@ -126,8 +125,8 @@ export function AgendaPage() {
     onPoolCreated: setAssetId,
   })
   const calendarRange = period === 'month' ? calendarMonthRange(date) : calendarWeekRange(date)
-  const from = view === 'calendar' || period === 'month' ? calendarRange.from : date
-  const to = view === 'calendar' || period === 'month' ? calendarRange.to : period === 'week' ? addDays(date, 6) : date
+  const from = period === 'month' || (view === 'calendar' && period === 'week') ? calendarRange.from : date
+  const to = period === 'month' || (view === 'calendar' && period === 'week') ? calendarRange.to : period === 'week' ? addDays(date, 6) : date
   const queryPage = 'all'
   const queryKey = ['office-visits', tenant.id, from, to, filterTechnicianId, queryPage]
   const visits = useQuery({
@@ -231,7 +230,6 @@ export function AgendaPage() {
     try {
       await createServiceVisit({ ...payload, operationId })
       operations.current.delete(key)
-      setPage(0)
       await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
       resetCreateForm()
       setCreateOpen(false)
@@ -485,7 +483,6 @@ export function AgendaPage() {
                   type="button"
                   aria-pressed={view === nextView}
                   onClick={() => {
-                    setPage(0)
                     setSelectedCalendarVisitId(null)
                     updateSearch({ view: nextView })
                   }}
@@ -506,7 +503,6 @@ export function AgendaPage() {
               value={date}
               onChange={(value) => {
                 if (value) {
-                  setPage(0)
                   setSelectedCalendarVisitId(null)
                   updateSearch({ date: value })
                 }
@@ -523,7 +519,6 @@ export function AgendaPage() {
                   { value: 'month', label: 'Mes' },
                 ]}
                 onChange={(value) => {
-                  setPage(0)
                   updateSearch({ period: value as AgendaPeriod })
                 }}
               />
@@ -572,7 +567,6 @@ export function AgendaPage() {
               ]}
               onChange={(value) => {
                 setFilterTechnicianId(value)
-                setPage(0)
                 setSelectedCalendarVisitId(null)
               }}
             />
@@ -605,7 +599,7 @@ export function AgendaPage() {
               ) : null}
               <Calendar
                 aria-label={period === 'month' ? 'Calendario mensual de visitas' : 'Calendario semanal de visitas'}
-                view={period === 'month' ? 'month' : 'week'}
+                view={period}
                 value={calendarDateValue(date)}
                 items={calendarItems}
                 minuteStep={30}
