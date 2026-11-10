@@ -54,9 +54,10 @@ const renderPicker = (
   end: string,
   endOptional: boolean,
   onChange: (start: string, end: string) => void,
+  mode: 'absence' | 'filter' = 'absence',
 ) => {
   hooks.index = 0
-  return AbsenceDateRangePicker({ start, end, endOptional, onChange })
+  return AbsenceDateRangePicker({ start, end, endOptional, onChange, mode })
 }
 
 describe('selector de fechas de ausencia', () => {
@@ -90,5 +91,23 @@ describe('selector de fechas de ausencia', () => {
     expect(preventDefault).toHaveBeenCalledOnce()
     expect(hooks.setFocused).toHaveBeenCalledWith('2026-12-01')
     expect(hooks.setVisible).toHaveBeenCalledWith('2026-12-01')
+  })
+
+  it('permite filtros abiertos por cualquiera de los extremos y limpiarlos', () => {
+    const onChange = vi.fn()
+    let tree = renderPicker('2026-11-10', '2026-11-12', false, onChange, 'filter')
+    button(tree, 'Filtrar solo hasta')?.props.onClick?.()
+    expect(onChange).toHaveBeenLastCalledWith('', '2026-11-12')
+    button(tree, 'Filtrar solo desde')?.props.onClick?.()
+    expect(onChange).toHaveBeenLastCalledWith('2026-11-10', '')
+
+    tree = renderPicker('', '2026-11-12', false, onChange, 'filter')
+    expect(button(tree, `${dateLabel('2026-11-12')}, fin`)).toBeDefined()
+    button(tree, 'Limpiar fechas')?.props.onClick?.()
+    expect(onChange).toHaveBeenLastCalledWith('', '')
+
+    tree = renderPicker('2026-11-10', '', false, onChange, 'filter')
+    button(tree, 'Filtrar solo hasta')?.props.onClick?.()
+    expect(onChange).toHaveBeenLastCalledWith('', '2026-11-10')
   })
 })

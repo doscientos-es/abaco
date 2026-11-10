@@ -24,15 +24,17 @@ export function AbsenceDateRangePicker({
   start,
   end,
   endOptional,
+  mode = 'absence',
   onChange,
 }: {
   start: string
   end: string
   endOptional: boolean
+  mode?: 'absence' | 'filter'
   onChange: (start: string, end: string) => void
 }) {
-  const [focused, setFocused] = useState(() => start || dateValue(new Date()))
-  const [visible, setVisible] = useState(() => start || dateValue(new Date()))
+  const [focused, setFocused] = useState(() => start || end || dateValue(new Date()))
+  const [visible, setVisible] = useState(() => start || end || dateValue(new Date()))
   const dates = useRef<Record<string, HTMLButtonElement | null>>({})
   const shouldFocus = useRef(false)
   const instructionsId = useId()
@@ -97,26 +99,32 @@ export function AbsenceDateRangePicker({
     <div className="grid min-w-0 gap-2 sm:col-span-2">
       <div className="flex items-center gap-2 text-sm font-medium">
         <CalendarBlank aria-hidden="true" className="text-primary size-4" />
-        Fechas de la ausencia
+        {mode === 'filter' ? 'Filtrar por fechas' : 'Fechas de la ausencia'}
       </div>
       <div className="border-border bg-card overflow-hidden rounded-xl border">
         <div className="bg-muted/40 grid grid-cols-2 gap-3 border-b px-4 py-3">
           <div>
             <p className="text-muted-foreground text-xs">Desde</p>
             <p className="mt-1 text-sm font-medium">
-              {start ? dateFormat.format(calendarDate(start)) : 'Selecciona un día'}
+              {start
+                ? dateFormat.format(calendarDate(start))
+                : mode === 'filter'
+                  ? 'Sin límite'
+                  : 'Selecciona un día'}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">
-              Hasta, incluido{endOptional ? ' · opcional' : ''}
+              Hasta, incluido{endOptional && mode === 'absence' ? ' · opcional' : ''}
             </p>
             <p className="mt-1 text-sm font-medium">
               {end
                 ? dateFormat.format(calendarDate(end))
-                : endOptional && start
-                  ? 'Sin fecha de fin'
-                  : 'Selecciona un día'}
+                : mode === 'filter'
+                  ? 'Sin límite'
+                  : endOptional && start
+                    ? 'Sin fecha de fin'
+                    : 'Selecciona un día'}
             </p>
           </div>
         </div>
@@ -168,7 +176,9 @@ export function AbsenceDateRangePicker({
                 <tr key={index}>
                   {week.map((day, column) => {
                     if (!day) return <td key={column} aria-label="Sin fecha" />
-                    const selected = Boolean(start && day >= start && day <= (end || start))
+                    const selected = Boolean(
+                      (start && day >= start && day <= (end || start)) || (!start && day === end),
+                    )
                     const endpoint = day === start || day === end
                     return (
                       <td
@@ -204,16 +214,22 @@ export function AbsenceDateRangePicker({
         </div>
         <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3">
           <p id={instructionsId} className="text-muted-foreground text-xs">
-            {!start
-              ? 'Elige el primer día y después el último.'
-              : !end
-                ? endOptional
-                  ? 'Elige el último día o déjalo sin fecha de fin.'
-                  : 'Elige el último día. Para un solo día, selecciónalo de nuevo.'
-                : 'El último día está incluido. Elige otro día para empezar de nuevo.'}{' '}
+            {mode === 'filter'
+              ? !start && !end
+                ? 'Elige el primer día y después el último, o usa un solo límite.'
+                : !start || !end
+                  ? 'Elige otro día para completar o iniciar un rango.'
+                  : 'El último día está incluido. Elige otro día para empezar de nuevo.'
+              : !start
+                ? 'Elige el primer día y después el último.'
+                : !end
+                  ? endOptional
+                    ? 'Elige el último día o déjalo sin fecha de fin.'
+                    : 'Elige el último día. Para un solo día, selecciónalo de nuevo.'
+                  : 'El último día está incluido. Elige otro día para empezar de nuevo.'}{' '}
             Usa las flechas para moverte entre días y Av Pág o Re Pág para cambiar de mes.
           </p>
-          {start ? (
+          {start || end ? (
             <button
               type="button"
               onClick={() => onChange('', '')}
@@ -222,7 +238,25 @@ export function AbsenceDateRangePicker({
               Limpiar fechas
             </button>
           ) : null}
-          {endOptional && end ? (
+          {mode === 'filter' && start ? (
+            <button
+              type="button"
+              onClick={() => onChange('', end || start)}
+              className="text-primary text-xs font-medium underline underline-offset-2"
+            >
+              Filtrar solo hasta
+            </button>
+          ) : null}
+          {mode === 'filter' && start && end ? (
+            <button
+              type="button"
+              onClick={() => onChange(start, '')}
+              className="text-primary text-xs font-medium underline underline-offset-2"
+            >
+              Filtrar solo desde
+            </button>
+          ) : null}
+          {mode === 'absence' && endOptional && end ? (
             <button
               type="button"
               onClick={() => onChange(start, '')}

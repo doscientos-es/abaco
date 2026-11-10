@@ -5,11 +5,10 @@ import { Link } from '@tanstack/react-router'
 import type { SaveStatus } from '@/shared/store/store'
 
 export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
-  if (status.state === 'saved') return null
-  if (status.state === 'saving') {
+  if (status.state !== 'error') {
     return (
-      <output className="text-muted-foreground block px-4 pt-2 text-xs sm:px-10">
-        Guardando cambios…
+      <output aria-live="polite" className="text-muted-foreground flex h-7 shrink-0 items-end px-4 text-xs sm:px-10">
+        {status.state === 'saving' ? 'Guardando cambios…' : 'Cambios guardados'}
       </output>
     )
   }
