@@ -1,10 +1,342 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-11",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Implement PDF generation for closed visit reports feat(tests): add unit tests for visit report PDF generation feat(ui): add company settings tab with privacy options fix(database): update permissions for technician role"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Corregir validaciones de ubicacion y formato",
+            "Corregir errores en la validación de formularios de usuario"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "7b1031708260d5efb56e049ed14c2ac4ebacced8",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Corregir validaciones de ubicacion y formato"
+        },
+        {
+          "sha": "46970061ee180e576959e087779f5074008b5dda",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Corregir errores en la validación de formularios de usuario"
+        },
+        {
+          "sha": "dc54524d72135f8c3e1431ce690326b404d15e00",
+          "type": "feat",
+          "scope": "api",
+          "breaking": false,
+          "description": "Implement PDF generation for closed visit reports feat(tests): add unit tests for visit report PDF generation feat(ui): add company settings tab with privacy options fix(database): update permissions for technician role"
+        }
+      ]
+    },
+    {
       "version": "0.0.11",
       "date": "2026-11-11",
       "title": "v0.0.11",
       "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add client form page and related routes for CRUD operations",
+            "Add updateDraftContractDetails function and integrate it",
+            "Add automatic contract handling and job configuration",
+            "Add related record creation for locations in contracts page",
+            "Add react-day-picker package to project",
+            "Update changelog with new features and improvements",
+            "Update demo documentation with implementation details and validations",
+            "Add tests for expense guard permissions and functionality",
+            "Add validation logs and tests for Felipe",
+            "Add lint and test validation logs for Felipe",
+            "Add validation log for Felipe build and tests",
+            "Add tests for cleaning service center data",
+            "Return first location from array if present",
+            "Update changelog with new features and improvements",
+            "Add client visit history and improve paper visit panel",
+            "Add cancellation label to absence type labels",
+            "Add validation for absence occupancy and employee overlaps",
+            "Add month view and related calendar functionalities",
+            "Add validation cleaning tests log file",
+            "Add operational contact and notes fields to service locations",
+            "Add paper visit management and document handling features",
+            "Add SaveStatusIndicator for better save status display",
+            "Add manual approval functionality for estimates",
+            "Add filter mode to absence date range picker",
+            "Add absence date range picker component",
+            "Enhance accessibility and layout for user content",
+            "Implement user navigation and settings menu",
+            "Add user settings page and company switch functionality",
+            "Add invite functionality and team management UI",
+            "Add invite functionality and team management UI",
+            "Add superadmin panel with company and payment management"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Add missing final newlines",
+            "Update changelog for version 0.0.10 and corrections"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "9d87b763ce7f5cb13b94a2074331c79ccb0f4c77",
+          "type": "fix",
+          "scope": "ci",
+          "breaking": false,
+          "description": "Add missing final newlines"
+        },
+        {
+          "sha": "31514c43769fb94a624e3f9d0643004de9e17edf",
+          "type": "fix",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog for version 0.0.10 and corrections"
+        },
+        {
+          "sha": "f719ed81853d50e84234db5560552bbf34efdb4a",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add client form page and related routes for CRUD operations"
+        },
+        {
+          "sha": "817be7600a224862b27c7da264f25f1db99fd03c",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add updateDraftContractDetails function and integrate it"
+        },
+        {
+          "sha": "50763fbf82afcafa49894f8c0cc47654f846de68",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add automatic contract handling and job configuration"
+        },
+        {
+          "sha": "f4bb639a2c6ac653867e3db47fd33c105c337369",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add related record creation for locations in contracts page"
+        },
+        {
+          "sha": "62c73d7ab48975cc5feb3dbf1aeaaee05c61bd7a",
+          "type": "feat",
+          "scope": "dependencies",
+          "breaking": false,
+          "description": "Add react-day-picker package to project"
+        },
+        {
+          "sha": "ddf6cbcc4eab8ddcecd2f72c40b4663efca67df8",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and improvements"
+        },
+        {
+          "sha": "c015e1cc448cc1eda5a7b3bb959b573616af2787",
+          "type": "feat",
+          "scope": "docs",
+          "breaking": false,
+          "description": "Update demo documentation with implementation details and validations"
+        },
+        {
+          "sha": "7ba331a5014231b79e9af9edd36ca10665c91c3b",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add tests for expense guard permissions and functionality"
+        },
+        {
+          "sha": "79bac52cc8e13303232cf1bf8ac8c4dffdbcd297",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Add validation logs and tests for Felipe"
+        },
+        {
+          "sha": "e8923882eb70bf0733e75ff34e0eb5796b2d5532",
+          "type": "feat",
+          "scope": "validation",
+          "breaking": false,
+          "description": "Add lint and test validation logs for Felipe"
+        },
+        {
+          "sha": "deb88758db564d1963ed6de2a12d2072adbd8015",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add validation log for Felipe build and tests"
+        },
+        {
+          "sha": "5f2edd8d52473dfd56ba1549b3bc4b390fda4fe5",
+          "type": "feat",
+          "scope": "cleaning-service",
+          "breaking": false,
+          "description": "Add tests for cleaning service center data"
+        },
+        {
+          "sha": "92b1d8d5abde744ed13b849e502e6dfb5493ce24",
+          "type": "feat",
+          "scope": "cleaning-service",
+          "breaking": false,
+          "description": "Return first location from array if present"
+        },
+        {
+          "sha": "e200e57333145a181abf0774d40ca79b7539c1ba",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and improvements"
+        },
+        {
+          "sha": "9b4826d704c5c9ab271f4d53e2eee0b83f1d4449",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add client visit history and improve paper visit panel"
+        },
+        {
+          "sha": "5b3605627c90b0fe51e661257d35a1f330c2ad49",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add cancellation label to absence type labels"
+        },
+        {
+          "sha": "3da04b18367f03cfdd32e86520d27034f419b0b2",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add validation for absence occupancy and employee overlaps"
+        },
+        {
+          "sha": "e90c1d04ee86f9fe64d31af10bc237863502cdef",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add month view and related calendar functionalities"
+        },
+        {
+          "sha": "055e4055577c4fe27e92d1c537973e8df13885e0",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add validation cleaning tests log file"
+        },
+        {
+          "sha": "5e96f70da085909768f07bbf6c2010ccd5f1c552",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add operational contact and notes fields to service locations"
+        },
+        {
+          "sha": "f5566134a6d57313c1d6a9d92bbc0aa08fb7a13f",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add paper visit management and document handling features"
+        },
+        {
+          "sha": "24cf798c2fd3c1110c7fd063dae6686ba2811801",
+          "type": "feat",
+          "scope": "app-frame",
+          "breaking": false,
+          "description": "Add SaveStatusIndicator for better save status display"
+        },
+        {
+          "sha": "0521b7889facc6b0dfbc70b5e0d755c76875146c",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add manual approval functionality for estimates"
+        },
+        {
+          "sha": "70fc245b0f6a0b6ad8b196bace4b2c8aa104b368",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add filter mode to absence date range picker"
+        },
+        {
+          "sha": "4f2c4df840ca40de5317df8e5306d93d5b2967ba",
+          "type": "feat",
+          "scope": "vacations",
+          "breaking": false,
+          "description": "Add absence date range picker component"
+        },
+        {
+          "sha": "a7b8d5c83a61d15cc88daa111afc29146a6aabec",
+          "type": "feat",
+          "scope": "user-frame",
+          "breaking": false,
+          "description": "Enhance accessibility and layout for user content"
+        },
+        {
+          "sha": "cf05f7f8f3ef8803de37630c5535439ce6835e25",
+          "type": "feat",
+          "scope": "technician-frame",
+          "breaking": false,
+          "description": "Implement user navigation and settings menu"
+        },
+        {
+          "sha": "649c90779244b49086b0ca47633446c0c17a6c7d",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Add user settings page and company switch functionality"
+        },
+        {
+          "sha": "435cf6be792437c5aee5b8142544a685085feb4d",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add invite functionality and team management UI"
+        },
+        {
+          "sha": "70cb6568a7e28f30a576b32616cca46dc555d897",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add invite functionality and team management UI"
+        },
+        {
+          "sha": "2efc36464c15df36858f69d5e1b44c037d24b15f",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add superadmin panel with company and payment management"
+        }
+      ]
+    },
+    {
+      "version": "0.0.11",
+      "date": "2026-11-11",
+      "title": "v0.0.11",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add optional start location capture"
+          ]
+        },
         {
           "title": "Correcciones",
           "items": [
@@ -35,6 +367,13 @@
           "scope": "reports",
           "breaking": false,
           "description": "Restore public PDF and worker endpoints"
+        },
+        {
+          "sha": "39d4e21c1d4b59ac69aad6da570574e49c0ce416",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add optional start location capture"
         }
       ]
     },
