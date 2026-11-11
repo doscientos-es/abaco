@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-11 — Sin publicar
+
+### Nuevas funciones
+
+- Add member role change and removal functionality
+
 ## 2026-11-11 — v0.0.14
 
 ### Nuevas funciones
