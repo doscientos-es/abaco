@@ -2,10 +2,11 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-11 — Sin publicar
+## 2026-11-11 — v0.0.12
 
 ### Nuevas funciones
 
+- Update changelog with new features and corrections
 - Implement PDF generation for closed visit reports feat(tests): add unit tests for visit report PDF generation feat(ui): add company settings tab with privacy options fix(database): update permissions for technician role
 
 ### Correcciones

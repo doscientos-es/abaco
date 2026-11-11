@@ -1,13 +1,14 @@
 {
   "releases": [
     {
-      "version": null,
+      "version": "0.0.12",
       "date": "2026-11-11",
-      "title": "Sin publicar",
+      "title": "v0.0.12",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update changelog with new features and corrections",
             "Implement PDF generation for closed visit reports feat(tests): add unit tests for visit report PDF generation feat(ui): add company settings tab with privacy options fix(database): update permissions for technician role"
           ]
         },
@@ -20,6 +21,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "fb21515d6976e62efab3fc4648ee6f8f80752a53",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new features and corrections"
+        },
         {
           "sha": "7b1031708260d5efb56e049ed14c2ac4ebacced8",
           "type": "fix",
