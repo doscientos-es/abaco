@@ -49,6 +49,7 @@ import {
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
+import { ReportReviewInbox } from './report-review-inbox'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -387,6 +388,7 @@ export function AgendaPage() {
           Nueva visita
         </Button>
       </div>
+      {session?.role === 'admin' ? <ReportReviewInbox tenantId={tenant.id} /> : null}
       <FormDialog
         open={createOpen && !related.creating}
         onOpenChange={(open) => {

@@ -1,5 +1,6 @@
 export {
   loadClosedVisitReport,
+  loadClosedVisitReportVersion,
   loadVisitReport,
   saveVisitReport,
 } from '../infrastructure/visit-report-repository'

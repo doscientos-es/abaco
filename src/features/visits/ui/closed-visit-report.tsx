@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { loadClosedVisitReport } from '../application/visit-report-actions'
+import { loadClosedVisitReport, loadClosedVisitReportVersion } from '../application/visit-report-actions'
 
 const activityLabels: Record<string, string> = {
   labor: 'Tiempo',
@@ -11,10 +11,18 @@ const activityLabels: Record<string, string> = {
   corrective_action: 'Acción correctora',
 }
 
-export function ClosedVisitReport({ tenantId, visitId }: { tenantId: string; visitId: string }) {
+export function ClosedVisitReport({ tenantId, visitId, versionId }: {
+  tenantId: string
+  visitId: string
+  versionId?: string
+}) {
   const closed = useQuery({
-    queryKey: ['closed-visit-report', tenantId, visitId],
-    queryFn: () => loadClosedVisitReport(tenantId, visitId),
+    queryKey: versionId
+      ? ['closed-visit-report-version', tenantId, visitId, versionId]
+      : ['closed-visit-report', tenantId, visitId],
+    queryFn: () => versionId
+      ? loadClosedVisitReportVersion(tenantId, visitId, versionId)
+      : loadClosedVisitReport(tenantId, visitId),
   })
   if (closed.isPending) return <p>Cargando versión cerrada del parte…</p>
   if (closed.isError || !closed.data) {

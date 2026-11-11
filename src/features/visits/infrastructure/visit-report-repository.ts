@@ -67,6 +67,18 @@ export async function loadClosedVisitReport(tenantId: string, visitId: string) {
   return (data as ClosedVisitReport | null) ?? null
 }
 
+export async function loadClosedVisitReportVersion(tenantId: string, visitId: string, versionId: string) {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('service_visit_report_versions')
+    .select('id,version,closed_at,snapshot')
+    .eq('tenant_id', tenantId)
+    .eq('visit_id', visitId)
+    .eq('id', versionId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as ClosedVisitReport | null) ?? null
+}
+
 export async function loadVisitReport(tenantId: string, visitId: string) {
   const { data, error } = await createBrowserSupabaseClient()
     .from('service_visit_reports')

@@ -119,6 +119,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@/features/auth', () => ({
   useSession: () => ({ tenantId: 'tenant-1', role: mocks.role }),
 }))
+vi.mock('./report-review-inbox', () => ({ ReportReviewInbox: () => null }))
 vi.mock('@/features/clients/ui/related-record-creation', () => ({
   RelatedCreateButton: () => null,
   useRelatedRecordCreation: () => ({
