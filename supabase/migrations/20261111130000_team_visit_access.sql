@@ -11,7 +11,7 @@ language plpgsql stable security definer set search_path = ''
 as $$
 begin
   if (select auth.uid()) is null or not public.has_role(
-    p_tenant_id, array['technician']::public.app_role[]
+    p_tenant_id, array['technician', 'user']::public.app_role[]
   ) then
     raise exception 'No tienes permiso para consultar la jornada' using errcode = '42501';
   end if;
@@ -171,7 +171,7 @@ create policy service_visits_select on public.service_visits
   for select to authenticated using (
     public.has_role(tenant_id, array['owner', 'admin', 'editor']::public.app_role[])
     or (
-      public.has_role(tenant_id, array['technician']::public.app_role[])
+      public.has_role(tenant_id, array['technician', 'user']::public.app_role[])
       and (
         assigned_user_id = (select auth.uid())
         or (assigned_user_id is null and work_team_id is not null and exists (
