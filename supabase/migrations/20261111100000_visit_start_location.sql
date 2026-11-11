@@ -50,7 +50,7 @@ begin
   office := public.has_role(p_tenant_id,
     array['owner', 'admin', 'editor']::public.app_role[]);
   technician := target.assigned_user_id = (select auth.uid())
-    and public.has_role(p_tenant_id, array['technician']::public.app_role[]);
+    and public.has_role(p_tenant_id, array['technician', 'user']::public.app_role[]);
   if not office and not technician then
     raise exception 'No tienes permiso para cambiar la visita' using errcode = '42501';
   end if;
