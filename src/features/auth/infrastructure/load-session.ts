@@ -4,12 +4,18 @@ import { isRole, type Role } from '../domain/permissions'
 import { needsWelcome } from '../domain/welcome'
 import { activeCompanyField, getPreferredCompanyId } from './active-company'
 
-export type Company = { id: string; name: string; role: Role }
+export type Company = {
+  id: string
+  name: string
+  role: Role
+  collectVisitStartLocation: boolean
+}
 
 type MembershipRow = {
   tenant_id: string
   role: string
   company_name: string
+  collect_visit_start_location: boolean
 }
 
 export type AuthSession = {
@@ -35,7 +41,12 @@ async function fetchCompanies(): Promise<Company[]> {
   const companies: Company[] = []
   for (const row of (memberships ?? []) as unknown as MembershipRow[]) {
     if (!isRole(row.role)) continue
-    companies.push({ id: row.tenant_id, name: row.company_name || 'Empresa', role: row.role })
+    companies.push({
+      id: row.tenant_id,
+      name: row.company_name || 'Empresa',
+      role: row.role,
+      collectVisitStartLocation: row.collect_visit_start_location === true,
+    })
   }
   return companies
 }

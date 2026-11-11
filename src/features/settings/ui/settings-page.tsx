@@ -25,11 +25,12 @@ import { CompanyTab } from './company-tab'
 import { hexColor, isLogoOk, isWebsiteOk, percent, toForm, type Form } from './settings-form'
 import { TeamSection } from './team-section'
 
-export type SettingsTab = 'empresa' | 'documentos' | 'equipo' | 'plan' | 'novedades'
+export type SettingsTab = 'empresa' | 'documentos' | 'privacidad' | 'equipo' | 'plan' | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   documentos: 'Documentos y correos',
+  privacidad: 'Privacidad',
   equipo: 'Equipo',
   plan: 'Plan y facturación',
   novedades: 'Novedades',
@@ -45,12 +46,12 @@ export function SettingsPage() {
 
   const canTeam = Boolean(session?.tenantId && can(session.role, 'team:manage'))
   const canPlan = Boolean(session?.tenantId && session.role === 'admin')
-  const allowed: SettingsTab[] = ['empresa', 'documentos']
+  const allowed: SettingsTab[] = ['empresa', 'documentos', 'privacidad']
   if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
   const tab = requested && allowed.includes(requested) ? requested : 'empresa'
-  const editsCompany = tab === 'empresa' || tab === 'documentos'
+  const editsCompany = tab === 'empresa' || tab === 'documentos' || tab === 'privacidad'
 
   const set = (key: keyof Form) => (value: string) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -108,6 +109,7 @@ export function SettingsPage() {
       defaultDepositPercent: percent(form.defaultDepositPercent, tenant.defaultDepositPercent),
       autoReminders: form.autoReminders === 'yes',
       weeklySummary: form.weeklySummary === 'yes',
+      collectVisitStartLocation: form.collectVisitStartLocation === 'yes',
     })
     setSaved(true)
   }
@@ -141,6 +143,9 @@ export function SettingsPage() {
 
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'documentos' ? <BrandTab form={form} set={set} tenant={tenant} /> : null}
+      {tab === 'privacidad' ? (
+        <CompanyTab form={form} set={set} tenant={tenant} privacyOnly />
+      ) : null}
       {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />

@@ -38,6 +38,14 @@ con la base de datos. Redsys tramita el cobro de la suscripción de Ábaco.
 
 Consulta la [guía de uso de la aplicación](./GUIA_DE_USO.md) para los pasos de oficina y técnico en el estado actual del repositorio.
 
+El flujo operativo previsto y su estado por fase se mantienen en
+[`docs/FLUJO_OPERATIVO.md`](docs/FLUJO_OPERATIVO.md). Antes de afirmar que el flujo completo
+está listo, validar allí los hitos de implementación, entorno y uso real.
+
+El flujo operativo previsto y su estado por fase se mantienen en
+[`docs/FLUJO_OPERATIVO.md`](docs/FLUJO_OPERATIVO.md). Antes de afirmar que el flujo completo
+está listo, validar allí los hitos de implementación, entorno y uso real.
+
 Ábaco es una aplicación multiempresa para presupuestos, clientes, facturas y cobros de empresas de servicios, con operación de campo (trabajos, visitas, contratos e informes) en desarrollo. Las capacidades aún no implementadas no deben anunciarse como disponibles.
 
 ## Estado actual

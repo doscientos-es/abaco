@@ -5,51 +5,79 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { isWebsiteOk, Section, type FormProps } from './settings-form'
 
 /** Who the company is, where it gets paid and the defaults for new estimates. */
-export function CompanyTab({ form, set }: FormProps) {
+export function CompanyTab({
+  form,
+  set,
+  privacyOnly = false,
+}: FormProps & { privacyOnly?: boolean }) {
   return (
     <>
-      <Section title="Empresa" description="Cómo te identificas ante tus clientes.">
-        <TextField
-          label="Nombre comercial"
-          maxLength={formLimits.companyName}
-          placeholder="Reformas Abderrahim"
-          icon={fieldIcons.building}
-          helper={`Obligatorio · máximo ${formLimits.companyName} caracteres. Es el nombre que ve el cliente.`}
-          value={form.name}
-          onChange={set('name')}
-        />
-        <TextField
-          label="Razón social"
-          maxLength={160}
-          placeholder="Reformas Abderrahim S.L."
-          icon={fieldIcons.building}
-          helper="El nombre legal que aparece en las facturas."
-          value={form.legalName}
-          onChange={set('legalName')}
-        />
-        <TextField
-          label="NIF / CIF"
-          placeholder="B12345678"
-          maxLength={formLimits.taxId}
-          icon={fieldIcons.id}
-          value={form.taxId}
-          onChange={set('taxId')}
-        />
-        <TextField
-          label="Web"
-          placeholder="https://tuempresa.es"
-          icon={fieldIcons.globe}
-          type="url"
-          maxLength={2048}
-          helper={
-            isWebsiteOk(form.website)
-              ? 'Incluye https://, por ejemplo https://tuempresa.es.'
-              : 'Escribe una dirección web válida e incluye https://.'
-          }
-          value={form.website}
-          onChange={set('website')}
-        />
-      </Section>
+      {privacyOnly ? (
+        <Section
+          title="Privacidad de la jornada"
+          description="Controla si la empresa solicita una ubicación puntual al iniciar una visita."
+        >
+          <SelectField
+            className="sm:col-span-2"
+            label="Ubicación al iniciar visitas"
+            value={form.collectVisitStartLocation}
+            options={[
+              { value: 'no', label: 'No recopilar' },
+              { value: 'yes', label: 'Solicitar al técnico una vez al iniciar' },
+            ]}
+            onChange={set('collectVisitStartLocation')}
+          />
+          <p className="text-muted-foreground text-sm sm:col-span-2">
+            Si se activa, el técnico autoriza la ubicación del dispositivo. Se guarda una coordenada
+            al iniciar cada visita; no se hace seguimiento continuo.
+          </p>
+        </Section>
+      ) : (
+        <>
+          <Section title="Empresa" description="Cómo te identificas ante tus clientes.">
+            <TextField
+              label="Nombre comercial"
+              maxLength={formLimits.companyName}
+              placeholder="Reformas Abderrahim"
+              icon={fieldIcons.building}
+              helper={`Obligatorio · máximo ${formLimits.companyName} caracteres. Es el nombre que ve el cliente.`}
+              value={form.name}
+              onChange={set('name')}
+            />
+            <TextField
+              label="Razón social"
+              maxLength={160}
+              placeholder="Reformas Abderrahim S.L."
+              icon={fieldIcons.building}
+              helper="El nombre legal que aparece en las facturas."
+              value={form.legalName}
+              onChange={set('legalName')}
+            />
+            <TextField
+              label="NIF / CIF"
+              placeholder="B12345678"
+              maxLength={formLimits.taxId}
+              icon={fieldIcons.id}
+              value={form.taxId}
+              onChange={set('taxId')}
+            />
+            <TextField
+              label="Web"
+              placeholder="https://tuempresa.es"
+              icon={fieldIcons.globe}
+              type="url"
+              maxLength={2048}
+              helper={
+                isWebsiteOk(form.website)
+                  ? 'Incluye https://, por ejemplo https://tuempresa.es.'
+                  : 'Escribe una dirección web válida e incluye https://.'
+              }
+              value={form.website}
+              onChange={set('website')}
+            />
+          </Section>
+        </>
+      )}
 
       <Section
         title="Contacto"

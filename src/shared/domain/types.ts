@@ -34,6 +34,8 @@ export type Tenant = {
   autoReminders?: boolean
   /** Weekly email to the owner with invoiced, pending and open estimates. On unless turned off. */
   weeklySummary?: boolean
+  /** Explicit opt-in for collecting a technician's location when starting a visit. */
+  collectVisitStartLocation?: boolean
   defaultVatRate: number
   defaultDepositPercent: number
   nextEstimateNumber: number
