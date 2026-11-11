@@ -45,3 +45,71 @@ language sql security definer set search_path = '' as $$
 $$;
 revoke all on function public.remove_vacation_push_subscription(text) from public, anon;
 grant execute on function public.remove_vacation_push_subscription(text) to authenticated;
+
+create table public.vacation_notification_jobs (
+  notification_id uuid primary key references public.vacation_decision_notifications(id) on delete cascade,
+  status text not null default 'queued' check (status in ('queued', 'processing', 'retry', 'sent', 'failed')),
+  attempts integer not null default 0,
+  next_attempt_at timestamptz not null default clock_timestamp(),
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  delivery_channel text check (delivery_channel in ('push', 'email', 'skipped')),
+  last_error_code text,
+  created_at timestamptz not null default clock_timestamp(),
+  check ((lease_token is null) = (lease_expires_at is null)),
+  check ((status = 'processing') = (lease_token is not null))
+);
+create index vacation_notification_jobs_due_idx on public.vacation_notification_jobs (next_attempt_at)
+  where status in ('queued', 'retry', 'processing');
+alter table public.vacation_notification_jobs enable row level security;
+revoke all on public.vacation_notification_jobs from public, anon, authenticated;
+grant all on public.vacation_notification_jobs to service_role;
+
+create function public.enqueue_vacation_notification() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.vacation_notification_jobs (notification_id) values (new.id);
+  return new;
+end;
+$$;
+create trigger vacation_notification_enqueue after insert on public.vacation_decision_notifications
+  for each row execute function public.enqueue_vacation_notification();
+revoke all on function public.enqueue_vacation_notification() from public, anon, authenticated;
+
+create function public.claim_vacation_notification_job()
+returns setof public.vacation_notification_jobs language plpgsql security definer set search_path = '' as $$
+declare target uuid;
+begin
+  select notification_id into target from public.vacation_notification_jobs
+  where (status in ('queued', 'retry') and next_attempt_at <= clock_timestamp())
+    or (status = 'processing' and lease_expires_at <= clock_timestamp())
+  order by next_attempt_at, created_at for update skip locked limit 1;
+  if not found then return; end if;
+  return query update public.vacation_notification_jobs set status = 'processing', attempts = attempts + 1,
+    lease_token = gen_random_uuid(), lease_expires_at = clock_timestamp() + interval '5 minutes'
+  where notification_id = target returning *;
+end;
+$$;
+revoke all on function public.claim_vacation_notification_job() from public, anon, authenticated;
+grant execute on function public.claim_vacation_notification_job() to service_role;
+
+create function public.finish_vacation_notification_job(
+  p_id uuid, p_token uuid, p_channel text, p_error text default null
+) returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if p_channel is not null and p_channel not in ('push', 'email', 'skipped') then
+    raise exception 'Canal inválido' using errcode = '22023';
+  end if;
+  update public.vacation_notification_jobs set
+    status = case when p_channel is not null then 'sent' when attempts >= 8 then 'failed' else 'retry' end,
+    delivery_channel = p_channel,
+    next_attempt_at = case when p_channel is null then clock_timestamp() + interval '1 minute'
+      * least(60, power(2, least(attempts, 6))::integer) else next_attempt_at end,
+    last_error_code = case when p_channel is null then left(coalesce(p_error, 'delivery_failed'), 80) else null end,
+    lease_token = null, lease_expires_at = null
+  where notification_id = p_id and status = 'processing' and lease_token = p_token;
+  return found;
+end;
+$$;
+revoke all on function public.finish_vacation_notification_job(uuid, uuid, text, text) from public, anon, authenticated;
+grant execute on function public.finish_vacation_notification_job(uuid, uuid, text, text) to service_role;
