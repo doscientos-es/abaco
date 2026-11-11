@@ -12,10 +12,13 @@ export type PendingReportReview = {
 const pageSize = 20
 
 export async function listPendingReportReviews(tenantId: string, page: number) {
-  const { data, error } = await createBrowserSupabaseClient().rpc('list_pending_visit_report_reviews', {
-    p_tenant_id: tenantId,
-    p_offset: page * pageSize,
-  })
+  const { data, error } = await createBrowserSupabaseClient().rpc(
+    'list_pending_visit_report_reviews',
+    {
+      p_tenant_id: tenantId,
+      p_offset: page * pageSize,
+    },
+  )
   if (error) throw new Error(error.message)
   const rows = (data ?? []) as PendingReportReview[]
   return { items: rows.slice(0, pageSize), hasMore: rows.length > pageSize }
