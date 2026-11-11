@@ -18,12 +18,14 @@ describe('inviteCorsHeaders', () => {
       'https://preview.example.test',
     ]) {
       for (const method of ['OPTIONS', 'POST']) {
-        expect(inviteCorsHeaders(request(origin, method), appUrl, additionalOrigins)).toMatchObject({
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-          Vary: 'Origin',
-        })
+        expect(inviteCorsHeaders(request(origin, method), appUrl, additionalOrigins)).toMatchObject(
+          {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+            Vary: 'Origin',
+          },
+        )
       }
     }
   })
@@ -35,9 +37,9 @@ describe('inviteCorsHeaders', () => {
       'null',
       'https://evil.test',
     ]) {
-      expect(inviteCorsHeaders(request(origin), 'https://app.example.test', '*')).not.toHaveProperty(
-        'Access-Control-Allow-Origin',
-      )
+      expect(
+        inviteCorsHeaders(request(origin), 'https://app.example.test', '*'),
+      ).not.toHaveProperty('Access-Control-Allow-Origin')
     }
     expect(inviteCorsHeaders(request(), undefined, undefined)).not.toHaveProperty(
       'Access-Control-Allow-Origin',

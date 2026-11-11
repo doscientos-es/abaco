@@ -36,8 +36,9 @@ select is((select member_count from public.superadmin_companies('Uno')),
   1::bigint, 'Company results include the real member count');
 select is((select amount_cents from public.superadmin_payments('ad000000-0000-4000-8000-000000000012')),
   2420, 'Platform superadmin can see real failed payment amounts');
-select unlike(pg_get_function_result('public.superadmin_payments(uuid,integer,text)'::regprocedure),
-  '%merchant_order%', 'Payment results do not expose merchant references');
+select ok(position('merchant_order' in
+  pg_get_function_result('public.superadmin_payments(uuid,integer,text)'::regprocedure)) = 0,
+  'Payment results do not expose merchant references');
 
 reset role;
 delete from public.platform_superadmins where user_id = 'ad000000-0000-4000-8000-000000000001';

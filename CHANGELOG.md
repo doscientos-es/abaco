@@ -2,10 +2,17 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-10 — Sin publicar
+## 2026-11-11 — Sin publicar
+
+### Correcciones
+
+- Restore public PDF and worker endpoints
+
+## 2026-11-11 — v0.0.10
 
 ### Nuevas funciones
 
+- Add client form page and related routes for CRUD operations
 - Add updateDraftContractDetails function and integrate it
 - Add automatic contract handling and job configuration
 - Add related record creation for locations in contracts page
