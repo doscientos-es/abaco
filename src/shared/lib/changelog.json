@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-11",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Enable team visit access"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "6bf5ddd53b39f07521bcd15c9e04922fce5eccfa",
+          "type": "feat",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Enable team visit access"
+        }
+      ]
+    },
+    {
       "version": "0.0.14",
       "date": "2026-11-11",
       "title": "v0.0.14",
