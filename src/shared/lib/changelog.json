@@ -1,18 +1,31 @@
 {
   "releases": [
     {
-      "version": null,
+      "version": "0.0.15",
       "date": "2026-11-11",
-      "title": "Sin publicar",
+      "title": "v0.0.15",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
             "Enable team visit access"
           ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Respect current worker roles"
+          ]
         }
       ],
       "changes": [
+        {
+          "sha": "4df30ca63293430b3d57da90c82ebefed41116d6",
+          "type": "fix",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Respect current worker roles"
+        },
         {
           "sha": "6bf5ddd53b39f07521bcd15c9e04922fce5eccfa",
           "type": "feat",
