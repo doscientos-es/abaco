@@ -1,8 +1,8 @@
 # Equipos de trabajo
 
-Primera ampliación horizontal de la operativa de Ábaco. Una empresa puede agrupar
-sus cuentas existentes y asignar esos grupos a trabajos sin depender de un oficio.
-No sustituye las asignaciones individuales de visitas.
+Funcionalidad implementada en Ábaco. Una empresa puede agrupar sus miembros y asignar
+esos grupos a trabajos sin depender de un oficio. No sustituye las asignaciones
+individuales de visitas.
 
 ## Contrato
 
@@ -10,7 +10,9 @@ No sustituye las asignaciones individuales de visitas.
 - `application`: comandos con dependencias inyectables y claves de consulta por empresa.
 - `infrastructure`: adaptador Supabase; sin acceso desde los componentes.
 - `ui`: creación, edición, archivo y recuperación en Ajustes → Equipo.
-- Los trabajos conservan responsable individual y añaden un equipo opcional.
+- Los trabajos conservan responsable individual y añaden un equipo opcional. Los trabajos
+  contratados también guardan un equipo operativo para sus visitas; esto no asigna
+  automáticamente a todos sus miembros.
 - Los filtros de trabajos se ejecutan en el servidor antes de paginar y contar;
   equipo, estado y página pertenecen a la URL.
 
@@ -37,19 +39,32 @@ de guardado, y una referencia multiempresa desde los trabajos.
 La planificación completa usa una transacción y el historial inmutable de trabajos.
 La función anterior `update_work_order_plan` delega en el mismo comando, preserva
 el equipo y admite reintentos anteriores: no hay dos implementaciones de las reglas.
-No se crean visitas ni se modifican roles, precios o límites de suscripción.
+La integración actual también usa los equipos al proponer cobertura manual de visitas
+afectadas por vacaciones o bajas aprobadas: limita candidatos al equipo de la visita,
+si tiene uno. No comprueba competencias ni asigna a todo el equipo. Véase
+[ausencias y cobertura](COBERTURA_DE_VACACIONES.md).
 
-## Validación y activación
+## Estado, validación y despliegue
+
+La migración `20261103090000_work_teams.sql` y su prueba pgTAP están en este repositorio.
+Su presencia en Git no demuestra que se haya aplicado en cada entorno. Antes de desplegar
+una versión, comprobar el historial de migraciones del proyecto Supabase de destino.
 
 - Vitest cubre normalización, validación, opciones de asignación, filtros de URL y
   contratos del adaptador de trabajos.
 - `supabase/tests/database/work_teams.test.sql` cubre aislamiento, permisos, reintentos,
   versiones, archivo, claves compuestas y compatibilidad del comando anterior.
-- Ejecutar `pnpm quality` y `pnpm build` para la aplicación.
-- Ejecutar la suite pgTAP con Supabase local y probar los flujos con cuentas separadas
-  en staging antes de aplicar la migración a un entorno con datos reales.
-- Desplegar la migración validada antes que el frontend: este necesita la nueva columna,
-  tablas y comandos. No hay un fallback local ni se ocultan errores como datos vacíos.
+- Para validar cambios futuros, ejecutar `pnpm quality` y `pnpm build`, y la suite pgTAP
+  con Supabase local. Para despliegues, comprobar los flujos con cuentas separadas en
+  staging antes de aplicar cambios a un entorno con datos reales.
+- Si la migración falta en el entorno de destino, validar y aplicar primero la migración;
+  el frontend necesita la columna, tablas y comandos. No hay fallback local ni se ocultan
+  errores como datos vacíos.
 
-Pendiente: disponibilidad y ausencias, planificación de visitas por equipo, partes
-colectivos e instantáneas históricas de los participantes. No anunciarlos como disponibles.
+## Límites vigentes
+
+Disponibilidad por integrante, planificación directa de visitas por equipo, partes
+colectivos e instantáneas históricas de participantes no forman parte del comportamiento
+descrito aquí. La cobertura por vacaciones/bajas es manual y tiene los límites de la
+[ficha de ausencias](COBERTURA_DE_VACACIONES.md). No prometer estas capacidades como
+automatizadas.
