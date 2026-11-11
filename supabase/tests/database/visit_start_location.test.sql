@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(13);
 
 insert into public.tenants (id,name,collect_visit_start_location) values
   ('49000000-0000-4000-8000-000000000001','Ubicación opcional',true),
@@ -45,9 +45,14 @@ select is((select actual_start_latitude from public.service_visits
 select is((select actual_start_longitude from public.service_visits
   where id=current_setting('test.loc_visit')::uuid),2.1686::double precision,
   'Longitude is stored with the actual start');
+select is((select count(*) from public.service_visit_events
+  where operation_id='49000000-0000-4000-8000-000000000011'),0::bigint,
+  'Technicians cannot read office visit events');
+set local request.jwt.claim.sub = '49000000-0000-4000-8000-000000000004';
 select is((select payload->>'startLatitude' from public.service_visit_events
   where operation_id='49000000-0000-4000-8000-000000000011'),'41.3874',
   'Coordinates are included in the idempotent start event');
+set local request.jwt.claim.sub = '49000000-0000-4000-8000-000000000005';
 select throws_ok($$select public.transition_service_visit(
   '49000000-0000-4000-8000-000000000001',current_setting('test.loc_visit')::uuid,
   current_setting('test.loc_version')::timestamptz,'in_progress','','49000000-0000-4000-8000-000000000011',
@@ -58,6 +63,8 @@ select throws_ok($$select public.transition_service_visit(
   current_setting('test.loc_version')::timestamptz,'in_progress','','49000000-0000-4000-8000-000000000011',
   91,2)$$,'22023','Datos de cambio de visita inválidos',
   'Coordinates outside the valid range are rejected');
+select set_config('test.loc_version',(select updated_at from public.service_visits
+  where id=current_setting('test.loc_visit')::uuid)::text,true);
 select throws_ok($$select public.transition_service_visit(
   '49000000-0000-4000-8000-000000000001',current_setting('test.loc_visit')::uuid,
   current_setting('test.loc_version')::timestamptz,'completed','','49000000-0000-4000-8000-000000000012',
