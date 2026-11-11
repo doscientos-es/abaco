@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.14",
+      "date": "2026-11-11",
+      "title": "v0.0.14",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add report review functionality and inbox component"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "190715cc64a9c04b2d858a2f789d9f7b63d8c4d3",
+          "type": "feat",
+          "scope": "report-review",
+          "breaking": false,
+          "description": "Add report review functionality and inbox component"
+        }
+      ]
+    },
+    {
       "version": "0.0.13",
       "date": "2026-11-11",
       "title": "v0.0.13",

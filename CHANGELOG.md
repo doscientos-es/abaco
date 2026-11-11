@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-11 — v0.0.14
+
+### Nuevas funciones
+
+- Add report review functionality and inbox component
+
 ## 2026-11-11 — v0.0.13
 
 ### Nuevas funciones
