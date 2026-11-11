@@ -2,10 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-11 — Sin publicar
+## 2026-11-11 — v0.0.11
 
 ### Correcciones
 
+- Add missing final newlines
+- Update changelog for version 0.0.10 and corrections
 - Restore public PDF and worker endpoints
 
 ## 2026-11-11 — v0.0.10
