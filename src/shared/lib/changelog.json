@@ -1,18 +1,34 @@
 {
   "releases": [
     {
-      "version": null,
+      "version": "0.0.11",
       "date": "2026-11-11",
-      "title": "Sin publicar",
+      "title": "v0.0.11",
       "sections": [
         {
           "title": "Correcciones",
           "items": [
+            "Add missing final newlines",
+            "Update changelog for version 0.0.10 and corrections",
             "Restore public PDF and worker endpoints"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "84e3407b5be9f18c2d6b303cd8b354a3fc829307",
+          "type": "fix",
+          "scope": "ci",
+          "breaking": false,
+          "description": "Add missing final newlines"
+        },
+        {
+          "sha": "a88666390bbfe8f1067e815c516a41c77a0621aa",
+          "type": "fix",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog for version 0.0.10 and corrections"
+        },
         {
           "sha": "539f14113afc7b94447b66d31648548dd22101d3",
           "type": "fix",
