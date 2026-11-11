@@ -163,7 +163,9 @@ export function MyDayPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Mi jornada</h1>
-          <p className="text-muted-foreground text-sm">Aparecen las visitas asignadas a ti o a tus equipos.</p>
+          <p className="text-muted-foreground text-sm">
+            Aparecen las visitas asignadas a ti o a tus equipos.
+          </p>
         </div>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Día
@@ -209,7 +211,9 @@ export function MyDayPage() {
               · {statusLabels[visit.status]} · {visit.timezone}
             </p>
             <p>{visit.client_name}</p>
-            {visit.work_team_id ? <p className="text-muted-foreground">Visita de tu equipo</p> : null}
+            {visit.work_team_id ? (
+              <p className="text-muted-foreground">Visita de tu equipo</p>
+            ) : null}
             {visit.location_name ? <p>{visit.location_name}</p> : null}
             {visit.address ? (
               <div className="space-y-1">

@@ -6,7 +6,11 @@
 
 ### Nuevas funciones
 
+<<<<<<< HEAD
 - Add member role change and removal functionality
+=======
+- Enable team visit access
+>>>>>>> 4df30ca (fix(DEV-25): respect current worker roles)
 
 ## 2026-11-11 — v0.0.14
 
