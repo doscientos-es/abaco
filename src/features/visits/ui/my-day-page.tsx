@@ -60,6 +60,34 @@ export function MyDayPage() {
 
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
     if (!tenantId || busyId) return
+    let startLocation: { latitude: number; longitude: number } | null = null
+    if (
+      nextStatus === 'in_progress' &&
+      session?.companies.find((company) => company.id === tenantId)?.collectVisitStartLocation ===
+        true &&
+      session.role === 'user'
+    ) {
+      if (!navigator.geolocation) {
+        toast.error('Este dispositivo no permite compartir la ubicación requerida por la empresa.')
+        return
+      }
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 12_000,
+            maximumAge: 60_000,
+          })
+        })
+        startLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }
+      } catch {
+        toast.error('No se pudo obtener la ubicación. Autorízala para iniciar esta visita.')
+        return
+      }
+    }
     if (nextStatus === 'completed' && session?.userId) {
       try {
         if ((await listPendingVisitPhotos(session.userId, tenantId, visit.id)).length > 0) {
@@ -115,6 +143,7 @@ export function MyDayPage() {
         nextStatus,
         reason: '',
         operationId,
+        startLocation,
       })
       operations.current.delete(key)
       await queryClient.invalidateQueries({ queryKey })

@@ -5,7 +5,35 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { isWebsiteOk, Section, type FormProps } from './settings-form'
 
 /** Who the company is, where it gets paid and the defaults for new estimates. */
-export function CompanyTab({ form, set }: FormProps) {
+export function CompanyTab({
+  form,
+  set,
+  privacyOnly = false,
+}: FormProps & { privacyOnly?: boolean }) {
+  if (privacyOnly) {
+    return (
+      <Section
+        title="Privacidad de la jornada"
+        description="Controla si la empresa solicita una ubicación puntual al iniciar una visita."
+      >
+        <SelectField
+          className="sm:col-span-2"
+          label="Ubicación al iniciar visitas"
+          value={form.collectVisitStartLocation}
+          options={[
+            { value: 'no', label: 'No recopilar' },
+            { value: 'yes', label: 'Solicitar al técnico una vez al iniciar' },
+          ]}
+          onChange={set('collectVisitStartLocation')}
+        />
+        <p className="text-muted-foreground text-sm sm:col-span-2">
+          Si se activa, el técnico autoriza la ubicación del dispositivo. Se guarda una coordenada
+          al iniciar cada visita; no se hace seguimiento continuo.
+        </p>
+      </Section>
+    )
+  }
+
   return (
     <>
       <Section title="Empresa" description="Cómo te identificas ante tus clientes.">

@@ -6,7 +6,11 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [TanStackRouterVite({ autoCodeSplitting: true }), react(), tailwindcss()],
+  plugins: [
+    TanStackRouterVite({ autoCodeSplitting: true, routeFileIgnorePattern: '\\.test\\.[jt]sx?$' }),
+    react(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

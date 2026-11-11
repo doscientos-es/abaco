@@ -135,6 +135,7 @@ export async function transitionServiceVisit(input: {
   nextStatus: Exclude<VisitStatus, 'scheduled'>
   reason: string
   operationId: string
+  startLocation?: { latitude: number; longitude: number } | null
 }): Promise<void> {
   const { error } = await createBrowserSupabaseClient().rpc('transition_service_visit', {
     p_tenant_id: input.tenantId,
@@ -143,6 +144,8 @@ export async function transitionServiceVisit(input: {
     p_next_status: input.nextStatus,
     p_reason: input.reason.trim(),
     p_operation_id: input.operationId,
+    p_start_latitude: input.startLocation?.latitude ?? null,
+    p_start_longitude: input.startLocation?.longitude ?? null,
   })
   if (error) throw new Error(error.message)
 }

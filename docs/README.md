@@ -2,9 +2,11 @@
 
 Esta carpeta reúne documentación de producto, decisiones y preparación de demos.
 La guía operativa de la aplicación está en [`GUIA_DE_USO.md`](../GUIA_DE_USO.md).
+Comprueba los entornos y las migraciones antes de reutilizar cualquier instrucción de despliegue.
 
 ## Producto
 
+- [Flujo operativo](FLUJO_OPERATIVO.md): estado y pasos para completar el recorrido de presupuesto a parte cerrado.
 - [Plan comercial](producto/PLAN_COMERCIAL.md): cliente inicial, oferta, hipótesis y piloto.
 
 ## Decisiones y diseño funcional
