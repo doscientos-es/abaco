@@ -2,17 +2,60 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-11",
+      "date": "2026-11-12",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Enable team visit access"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Respect current worker roles"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "d610ddf77940c7f3ad900f7746ba5e2aed4db8c2",
+          "type": "fix",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Respect current worker roles"
+        },
+        {
+          "sha": "227bc6042bd1ef19c1d28c22b70f919208d3c03b",
+          "type": "feat",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Enable team visit access"
+        }
+      ]
+    },
+    {
+      "version": "0.0.15",
+      "date": "2026-11-12",
+      "title": "v0.0.15",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add member role change and removal functionality",
             "Add member role change and removal functionality"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "20af8e2d51b1fcb19c709712f9e9006fbb6927cc",
+          "type": "feat",
+          "scope": "team",
+          "breaking": false,
+          "description": "Add member role change and removal functionality"
+        },
         {
           "sha": "5dda3feb410d74668b2c375c5cef4cf82b1a80d4",
           "type": "feat",
