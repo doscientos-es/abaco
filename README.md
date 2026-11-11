@@ -14,7 +14,7 @@ no completar una configuración extensa.
 - Aceptación o rechazo desde el enlace del cliente, con nombre y fecha registrados.
 - Seguimiento de facturas y cobros pendientes; contabilidad básica.
 
-El [plan comercial](docs/COMMERCIAL_PLAN.md) define el cliente inicial, los límites
+El [plan comercial](docs/producto/PLAN_COMERCIAL.md) define el cliente inicial, los límites
 de la oferta, los escenarios económicos y el piloto de captación y retención.
 Las cifras de mercado y los tickets previstos son hipótesis, no resultados medidos.
 
@@ -42,22 +42,18 @@ El flujo operativo previsto y su estado por fase se mantienen en
 [`docs/FLUJO_OPERATIVO.md`](docs/FLUJO_OPERATIVO.md). Antes de afirmar que el flujo completo
 está listo, validar allí los hitos de implementación, entorno y uso real.
 
-El flujo operativo previsto y su estado por fase se mantienen en
-[`docs/FLUJO_OPERATIVO.md`](docs/FLUJO_OPERATIVO.md). Antes de afirmar que el flujo completo
-está listo, validar allí los hitos de implementación, entorno y uso real.
-
 Ábaco es una aplicación multiempresa para presupuestos, clientes, facturas y cobros de empresas de servicios, con operación de campo (trabajos, visitas, contratos e informes) en desarrollo. Las capacidades aún no implementadas no deben anunciarse como disponibles.
 
 ## Estado actual
 
-La adaptación para limpieza está descrita en la [guía de demo de Felipe del 13/11/2026](docs/FELIPE_DEMO_2026_11_13.md), con los dos recorridos de prueba, datos ficticios y bloqueos de validación. No está validada en una base de datos de staging.
+La preparación de la demo de limpieza de Felipe está documentada en una [ficha fechada el 10/11/2026](docs/demos/2026-11-13-felipe.md). Sus estados de migración y validación son históricos; confirma el entorno antes de reutilizar sus pasos.
 
-La primera ampliación transversal añade [equipos de trabajo](docs/WORK_TEAMS.md):
+La funcionalidad de [equipos de trabajo](docs/decisiones/WORK_TEAMS.md) permite:
 grupos de miembros existentes gestionados en Ajustes, con edición y archivo,
 asignación opcional en la planificación del trabajo y filtros por equipo y estado.
 Conserva el responsable individual y no cambia los permisos ni asigna visitas.
-La nueva migración y sus pruebas pgTAP requieren validación local y en staging
-antes de habilitar esta funcionalidad en producción.
+La migración está en el repositorio; su presencia aquí no confirma que esté aplicada
+en un entorno concreto. Comprueba el historial Supabase del destino antes de desplegar.
 
 La aplicación incluye acceso e invitaciones, selección de empresa, clientes, catálogo, presupuestos, aceptación por enlace, facturas por hitos, cobros manuales, libro de ingresos y gastos, correo y suscripción SaaS mediante Redsys. Las nuevas migraciones de integridad conservan instantáneas inmutables de facturas emitidas y presupuestos publicados, preparan un borrador del primer hito al recibir una aceptación pública, sin emitir ni numerar la factura y registran cobros de factura en una transacción con clave de operación. Email, WhatsApp y copia del enlace publican la misma versión; los presupuestos anteriores se identifican como reconstruidos durante la migración. La oficina puede registrar una aceptación manual con referencia a la evidencia conservada, diferenciada de una respuesta directa del cliente. La ampliación del pasaporte de cliente añade contactos, varias ubicaciones, piscinas con dimensiones, tratamiento y temporada, y equipos instalados. Los cambios de activos y equipos dejan historial; la sustitución y edición de piscinas son atómicas, y los costes internos tienen permisos separados. Los clientes se archivan sin perder sus referencias y el formulario señala posibles duplicados para revisión humana. Antes de publicar un presupuesto se elige si dará lugar a un trabajo o a un contrato recurrente, con periodicidad de precio en este último caso. Tras la aceptación, la oficina puede convertirlo manualmente una sola vez al destino publicado. La base de datos conserva la versión aceptada y evita que se creen ambos destinos para la misma propuesta. Su activación requiere aplicar y probar las migraciones en el entorno correspondiente.
 
@@ -141,7 +137,7 @@ GitHub se configuran aparte.
 3. Despliega el frontend con sus dos variables públicas; comprueba aceptación, envío, factura y cobro con cuentas de prueba separadas.
 4. Observa errores de guardado, operaciones pendientes, correo, renovaciones y webhooks. Un error de guardado deja el cambio visible y ofrece reintento; no equivale a confirmación del servidor.
 
-Las integraciones externas pendientes requieren proveedor elegido, credenciales, pruebas de contrato y validación productiva antes de activarse. El catálogo de planes se rige por el [plan comercial](docs/COMMERCIAL_PLAN.md), no por etiquetas de interfaz.
+Las integraciones externas pendientes requieren proveedor elegido, credenciales, pruebas de contrato y validación productiva antes de activarse. El catálogo de planes se rige por el [plan comercial](docs/producto/PLAN_COMERCIAL.md), no por etiquetas de interfaz.
 
 ## Versiones
 

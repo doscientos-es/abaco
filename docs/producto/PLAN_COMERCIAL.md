@@ -1,6 +1,9 @@
 # Ábaco — enfoque comercial y validación
 
 Actualizado el 15 de octubre de 2026. Documento de trabajo: las hipótesis no son resultados medidos.
+Esta fecha corresponde a la última revisión comercial registrada, no verifica que precios,
+mercado o piloto sigan vigentes. Antes de usarlo externamente, confirmar la oferta en código
+y contrastar las fuentes de mercado y el avance comercial.
 
 ## 1. Cliente inicial y propuesta
 
