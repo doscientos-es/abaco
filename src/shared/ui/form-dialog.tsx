@@ -30,6 +30,7 @@ export function FormDialog({
   isSubmitting = false,
   isDirty = false,
   compact = false,
+  wide = false,
   onSubmit,
   children,
 }: {
@@ -42,6 +43,7 @@ export function FormDialog({
   isSubmitting?: boolean
   isDirty?: boolean
   compact?: boolean
+  wide?: boolean
   onSubmit: () => void
   children: ReactNode
 }) {
@@ -63,9 +65,11 @@ export function FormDialog({
       <DialogRoot open={open} onOpenChange={requestOpenChange}>
         <DialogContent
           className={
-            compact
-              ? 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-lg'
-              : 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl'
+            wide
+              ? 'max-h-[94dvh] w-full max-w-full overflow-y-auto sm:max-w-6xl'
+              : compact
+                ? 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-lg'
+                : 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl'
           }
           showCloseButton={!isSubmitting}
         >

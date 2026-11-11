@@ -10,13 +10,13 @@ insert into public.clients (id, tenant_id, name) values
     '40000000-0000-4000-8000-000000000001', 'Cliente original'),
   ('40000000-0000-4000-8000-000000000004',
     '40000000-0000-4000-8000-000000000002', 'Cliente ajeno');
-insert into public.estimates (id, tenant_id, client_id, title, valid_until) values
+insert into public.estimates (id, tenant_id, client_id, title, valid_until, automatic_contract, conversion_destination) values
   ('40000000-0000-4000-8000-000000000005',
     '40000000-0000-4000-8000-000000000001',
-    '40000000-0000-4000-8000-000000000003', 'Reparación de piscina', current_date + 30),
+    '40000000-0000-4000-8000-000000000003', 'Reparación de piscina', current_date + 30, false, 'work'),
   ('40000000-0000-4000-8000-000000000006',
     '40000000-0000-4000-8000-000000000001',
-    '40000000-0000-4000-8000-000000000003', 'Otro presupuesto', current_date + 30);
+    '40000000-0000-4000-8000-000000000003', 'Otro presupuesto', current_date + 30, false, 'work');
 insert into public.estimate_lines (
   tenant_id, estimate_id, description, kind, quantity, unit_price_cents
 ) values (

@@ -1,13 +1,4 @@
-import {
-  Button,
-  Calendar,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  toast,
-  type CalendarItem,
-} from '@doscientos/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
 import { PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -23,14 +14,25 @@ import {
   visitOverlapsVacation,
 } from '@/features/vacations/application/vacation-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
+import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
+import type { WorkPlanningSearch } from '@/shared/domain/work-planning-search'
+import { dateValue } from '@/shared/lib/date-range'
+import {
+  calendarDays,
+  calendarLocalInput,
+  wallTimeNumber,
+  type CalendarEvent,
+  type CalendarEventChange,
+} from '@/shared/lib/event-calendar'
 import { useTenantData } from '@/shared/store/store'
+import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
+import { EventCalendar } from '@/shared/ui/event-calendar'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
 import {
   createServiceVisit,
-  listAllOfficeVisits,
-  listOfficeVisits,
+  listPlanningVisits,
   listTechnicians,
   type VisitPriority,
   type VisitSummary,
@@ -40,9 +42,13 @@ import {
   calendarDateValue,
   calendarWeekLabel,
   calendarWeekRange,
+  calendarMonthRange,
+  moveCalendarMonth,
   toCalendarWallTime,
 } from './agenda-calendar'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
+import { BatchWorkSheets } from './batch-work-sheets'
+import { PaperVisitPanel } from './paper-visit-panel'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -81,18 +87,19 @@ export function AgendaPage() {
   const session = useSession()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const search = useSearch({ from: '/agenda' })
+  const search = useSearch({ from: '/trabajos' })
   const date = search.date ?? todayInMadrid()
   const view: AgendaView = search.view ?? 'list'
-  const period: AgendaPeriod = search.period ?? 'day'
-  const [filterTechnicianId, setFilterTechnicianId] = useState('')
-  const [page, setPage] = useState(0)
+  const period: AgendaPeriod = search.period ?? 'month'
+  const filterTechnicianId = search.technician ?? ''
+  const teamFilter = search.team ?? ''
+  const statusFilter = search.status ?? ''
+  const textFilter = search.q ?? ''
   const [selectedCalendarVisitId, setSelectedCalendarVisitId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [initialLocalStart, setInitialLocalStart] = useState(() => `${todayInMadrid()}T09:00`)
   const [clientId, setClientId] = useState('')
   const [locationId, setLocationId] = useState('')
-  const [assetId, setAssetId] = useState('')
   const [title, setTitle] = useState('')
   const [assignedUserId, setAssignedUserId] = useState('')
   const [localStart, setLocalStart] = useState(initialLocalStart)
@@ -103,37 +110,70 @@ export function AgendaPage() {
   const [replanning, setReplanning] = useState<VisitSummary | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const operations = useRef(new Map<string, string>())
+  const [calendarProposal, setCalendarProposal] = useState<CalendarEventChange | null>(null)
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
     clientId,
-    locationId,
     onClientCreated: (id) => {
       setClientId(id)
       setLocationId('')
-      setAssetId('')
     },
-    onLocationCreated: (id) => {
-      setLocationId(id)
-      setAssetId('')
-    },
-    onPoolCreated: setAssetId,
+    onLocationCreated: setLocationId,
   })
-  const calendarRange = calendarWeekRange(date)
-  const from = view === 'calendar' ? calendarRange.from : date
-  const to = view === 'calendar' ? calendarRange.to : period === 'week' ? addDays(date, 6) : date
-  const queryPage = view === 'calendar' ? 'all' : page
+  const monthGrid =
+    view === 'calendar' && period === 'month'
+      ? calendarDays(calendarDateValue(date), 'month')
+      : null
+  const { from, to } = monthGrid
+    ? {
+        from: dateValue(monthGrid[0] ?? calendarDateValue(date)),
+        to: dateValue(monthGrid.at(-1) ?? calendarDateValue(date)),
+      }
+    : period === 'month'
+      ? calendarMonthRange(date)
+      : period === 'week'
+        ? calendarWeekRange(date)
+        : { from: date, to: date }
+  const queryPage = 'all'
   const queryKey = ['office-visits', tenant.id, from, to, filterTechnicianId, queryPage]
   const visits = useQuery({
     queryKey,
     queryFn: () =>
-      view === 'calendar'
-        ? listAllOfficeVisits(tenant.id, from, to, filterTechnicianId || null)
-        : listOfficeVisits(tenant.id, from, to, filterTechnicianId || null, page),
+      listPlanningVisits(
+        tenant.id,
+        from,
+        to,
+        filterTechnicianId === 'unassigned' ? null : filterTechnicianId || null,
+      ),
   })
+  const teams = useQuery(workTeamsQuery(tenant.id))
+  const visibleVisits = (visits.data ?? [])
+    .filter(
+      (visit) =>
+        (!teamFilter ||
+          (teamFilter === 'unassigned'
+            ? !visit.work_team_id
+            : visit.work_team_id === teamFilter)) &&
+        (!statusFilter || visit.status === statusFilter) &&
+        (filterTechnicianId !== 'unassigned' || (!visit.assigned_user_id && !visit.work_team_id)) &&
+        `${visit.client_name} ${visit.location_name} ${visit.address} ${visit.title}`
+          .toLocaleLowerCase('es')
+          .includes(textFilter.trim().toLocaleLowerCase('es')),
+    )
+    .sort(
+      (a, b) =>
+        a.scheduled_start_at.slice(0, 10).localeCompare(b.scheduled_start_at.slice(0, 10)) ||
+        (a.work_team_name || a.assigned_user_name || 'Sin asignar').localeCompare(
+          b.work_team_name || b.assigned_user_name || 'Sin asignar',
+        ) ||
+        (a.route_order ?? 0) - (b.route_order ?? 0) ||
+        a.scheduled_start_at.localeCompare(b.scheduled_start_at) ||
+        a.id.localeCompare(b.id),
+    )
   const approvedVacations = useQuery({
-    queryKey: ['approved-vacations', tenant.id, date, to],
+    queryKey: ['approved-vacations', tenant.id, from, to],
     enabled: session?.role === 'admin',
-    queryFn: () => listApprovedVacationRanges(tenant.id, date, to),
+    queryFn: () => listApprovedVacationRanges(tenant.id, from, to),
   })
   const technicians = useQuery({
     queryKey: ['technicians', tenant.id],
@@ -145,18 +185,25 @@ export function AgendaPage() {
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
-  const calendarItems: CalendarItem[] = (visits.data ?? []).map((visit) => ({
+  const calendarItems: CalendarEvent[] = visibleVisits.map((visit) => ({
     id: visit.id,
+    revision: visit.updated_at,
     title: visit.title,
     start: toCalendarWallTime(visit.scheduled_start_at, visit.timezone),
     end: toCalendarWallTime(visit.scheduled_end_at, visit.timezone),
-    status: visit.status,
-    priority: visit.priority,
-    clientName: visit.client_name,
-    assignedUserName: visit.assigned_user_name,
+    editable: session?.role === 'admin' && visit.status === 'scheduled',
+    tone:
+      visit.status === 'completed'
+        ? 'success'
+        : visit.status === 'canceled'
+          ? 'muted'
+          : visit.priority === 'urgent'
+            ? 'danger'
+            : 'primary',
+    description: `${visit.client_name} · ${visit.timezone} · ${statusLabels[visit.status]}`,
   }))
   const calendarVisitById = new Map((visits.data ?? []).map((visit) => [visit.id, visit]))
-  const selectedCalendarVisit = visits.data?.find((visit) => visit.id === selectedCalendarVisitId)
+  const selectedCalendarVisit = visibleVisits.find((visit) => visit.id === selectedCalendarVisitId)
   const timezone = selectedLocation?.timezone ?? 'Europe/Madrid'
   const durationMinutes = Number(duration)
   const validForm =
@@ -169,7 +216,6 @@ export function AgendaPage() {
   const isDirty = Boolean(
     clientId ||
     locationId ||
-    assetId ||
     title ||
     assignedUserId ||
     localStart !== initialLocalStart ||
@@ -183,7 +229,6 @@ export function AgendaPage() {
     setInitialLocalStart(nextLocalStart)
     setClientId('')
     setLocationId('')
-    setAssetId('')
     setTitle('')
     setAssignedUserId('')
     setLocalStart(nextLocalStart)
@@ -198,7 +243,6 @@ export function AgendaPage() {
       tenantId: tenant.id,
       clientId,
       locationId: locationId || null,
-      assetId: assetId || null,
       workOrderId: null,
       title: title.trim(),
       assignedUserId: assignedUserId || null,
@@ -218,7 +262,6 @@ export function AgendaPage() {
     try {
       await createServiceVisit({ ...payload, operationId })
       operations.current.delete(key)
-      setPage(0)
       await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
       resetCreateForm()
       setCreateOpen(false)
@@ -232,8 +275,12 @@ export function AgendaPage() {
     }
   }
 
-  function updateSearch(update: { view?: AgendaView; date?: string; period?: AgendaPeriod }) {
-    void navigate({ to: '/agenda', search: (previous) => ({ ...previous, ...update }) })
+  function updateSearch(update: WorkPlanningSearch) {
+    setSelectedCalendarVisitId(null)
+    void navigate({
+      to: '/trabajos',
+      search: (previous) => ({ ...previous, date, period, ...update }),
+    })
   }
 
   function hasApprovedVacationConflict(visit: VisitSummary) {
@@ -254,8 +301,14 @@ export function AgendaPage() {
   function renderVisitActions(visit: VisitSummary) {
     return (
       <div className="flex flex-wrap gap-2">
-        {visit.status === 'scheduled' ? (
-          <Button variant="outline" onPress={() => setReplanning(visit)}>
+        {visit.status === 'scheduled' && session?.role === 'admin' ? (
+          <Button
+            variant="outline"
+            onPress={() => {
+              setCalendarProposal(null)
+              setReplanning(visit)
+            }}
+          >
             Reprogramar
           </Button>
         ) : null}
@@ -274,19 +327,40 @@ export function AgendaPage() {
       <>
         {replanning?.id === visit.id ? (
           <VisitReplanForm
-            key={`${visit.id}:${visit.updated_at}`}
+            key={`${visit.id}:${visit.updated_at}:${calendarProposal?.start.getTime()}:${calendarProposal?.end.getTime()}`}
             tenantId={tenant.id}
             visit={visit}
             technicians={technicians.data ?? []}
+            proposal={
+              calendarProposal?.item.id === visit.id
+                ? {
+                    localStart: calendarLocalInput(calendarProposal.start),
+                    durationMinutes: Math.round(
+                      (wallTimeNumber(calendarProposal.end) -
+                        wallTimeNumber(calendarProposal.start)) /
+                        60000,
+                    ),
+                  }
+                : undefined
+            }
             onDone={async () => {
               setReplanning(null)
-              await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
+              setCalendarProposal(null)
+              await Promise.all(
+                ['office-visits', 'my-visits', 'vacation-coverage', 'visit-report'].map((key) =>
+                  queryClient.invalidateQueries({ queryKey: [key, tenant.id] }),
+                ),
+              )
             }}
-            onCancel={() => setReplanning(null)}
+            onCancel={() => {
+              setReplanning(null)
+              setCalendarProposal(null)
+            }}
           />
         ) : null}
         {openReportId === visit.id && session?.userId ? (
           <div className="w-full">
+            <PaperVisitPanel tenantId={tenant.id} visit={visit} />
             <VisitReportEditor
               key={`${session.userId}:${tenant.id}:${visit.id}`}
               visit={visit}
@@ -303,9 +377,9 @@ export function AgendaPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Agenda de visitas</h1>
+          <h1 className="text-2xl font-semibold">Trabajos</h1>
           <p className="text-muted-foreground text-sm">
-            Planifica una jornada y consulta las visitas por día, semana o técnico.
+            Una misma planificación en lista o calendario; asignación, reprogramaciones y partes.
           </p>
         </div>
         <Button onPress={() => setCreateOpen(true)}>
@@ -338,7 +412,6 @@ export function AgendaPage() {
             onChange={(value) => {
               setClientId(value)
               setLocationId('')
-              setAssetId('')
             }}
           />
           {related.allowed ? (
@@ -347,7 +420,7 @@ export function AgendaPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           <SelectField
-            label="Ubicación"
+            label="Centro"
             value={locationId}
             options={[
               { value: '', label: 'Sin ubicación' },
@@ -356,36 +429,13 @@ export function AgendaPage() {
                 label: location.name,
               })),
             ]}
-            onChange={(value) => {
-              setLocationId(value)
-              setAssetId('')
-            }}
+            onChange={setLocationId}
           />
           {related.allowed && clientId ? (
             <RelatedCreateButton
-              label="Crear ubicación"
+              label="Crear centro"
               disabled={related.pending}
               onPress={() => related.start('location')}
-            />
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <SelectField
-            label="Activo"
-            value={assetId}
-            options={[
-              { value: '', label: 'Sin activo' },
-              ...(targets.data?.assets ?? [])
-                .filter((asset) => asset.location_id === locationId)
-                .map((asset) => ({ value: asset.id, label: asset.name })),
-            ]}
-            onChange={setAssetId}
-          />
-          {related.allowed && locationId ? (
-            <RelatedCreateButton
-              label="Crear piscina"
-              disabled={related.pending}
-              onPress={() => related.start('pool')}
             />
           ) : null}
         </div>
@@ -405,7 +455,7 @@ export function AgendaPage() {
           label="Asunto"
           value={title}
           onChange={setTitle}
-          placeholder="Ejemplo: revisión de piscina"
+          placeholder="Ejemplo: cristales del centro"
           maxLength={200}
           className="sm:col-span-2"
         />
@@ -417,16 +467,14 @@ export function AgendaPage() {
           placeholder="Fecha y hora"
           helper={`Zona horaria: ${timezone}`}
         />
-        <SelectField
-          label="Duración"
+        <TextField
+          label="Duración estimada (minutos)"
+          type="number"
           value={duration}
-          options={[
-            { value: '30', label: '30 minutos' },
-            { value: '60', label: '1 hora' },
-            { value: '90', label: '1 hora y media' },
-            { value: '120', label: '2 horas' },
-          ]}
           onChange={setDuration}
+          min={15}
+          max={720}
+          placeholder="120"
         />
         <SelectField
           label="Prioridad"
@@ -455,36 +503,33 @@ export function AgendaPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <CardTitle>
-                {view === 'calendar' ? 'Calendario de visitas' : 'Lista de visitas'}
+                {view === 'calendar' ? 'Calendario de trabajos' : 'Lista de trabajos'}
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
-                {view === 'calendar'
-                  ? calendarWeekLabel(date)
-                  : period === 'day'
-                    ? 'Consulta las visitas de un día.'
-                    : 'Consulta las visitas de una semana.'}
+                {period === 'month'
+                  ? new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', {
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : period === 'week'
+                    ? calendarWeekLabel(date)
+                    : new Date(`${date}T12:00:00`).toLocaleDateString('es-ES')}
               </p>
             </div>
             <fieldset className="inline-flex rounded-lg border p-1">
-              <legend className="sr-only">Cambiar vista de agenda</legend>
+              <legend className="sr-only">Cambiar vista de trabajos</legend>
               {(['list', 'calendar'] as const).map((nextView) => (
-                <button
+                <Button
                   key={nextView}
-                  type="button"
+                  variant={view === nextView ? 'default' : 'ghost'}
                   aria-pressed={view === nextView}
-                  onClick={() => {
-                    setPage(0)
+                  onPress={() => {
                     setSelectedCalendarVisitId(null)
                     updateSearch({ view: nextView })
                   }}
-                  className={`focus-visible:outline-ring rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                    view === nextView
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
                 >
                   {nextView === 'list' ? 'Lista' : 'Calendario'}
-                </button>
+                </Button>
               ))}
             </fieldset>
           </div>
@@ -495,36 +540,39 @@ export function AgendaPage() {
               value={date}
               onChange={(value) => {
                 if (value) {
-                  setPage(0)
                   setSelectedCalendarVisitId(null)
                   updateSearch({ date: value })
                 }
               }}
               placeholder="Fecha"
             />
-            {view === 'list' ? (
+            <div className="space-y-3">
               <SelectField
                 label="Periodo"
                 value={period}
                 options={[
                   { value: 'day', label: 'Día' },
                   { value: 'week', label: 'Semana' },
+                  { value: 'month', label: 'Mes' },
                 ]}
                 onChange={(value) => {
-                  setPage(0)
                   updateSearch({ period: value as AgendaPeriod })
                 }}
               />
-            ) : (
               <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
                 <Button
                   variant="outline"
                   onPress={() => {
                     setSelectedCalendarVisitId(null)
-                    updateSearch({ date: addDays(date, -7) })
+                    updateSearch({
+                      date:
+                        period === 'month'
+                          ? moveCalendarMonth(date, -1)
+                          : addDays(date, period === 'day' ? -1 : -7),
+                    })
                   }}
                 >
-                  Semana anterior
+                  Periodo anterior
                 </Button>
                 <Button
                   variant="outline"
@@ -539,36 +587,89 @@ export function AgendaPage() {
                   variant="outline"
                   onPress={() => {
                     setSelectedCalendarVisitId(null)
-                    updateSearch({ date: addDays(date, 7) })
+                    updateSearch({
+                      date:
+                        period === 'month'
+                          ? moveCalendarMonth(date, 1)
+                          : addDays(date, period === 'day' ? 1 : 7),
+                    })
                   }}
                 >
-                  Semana siguiente
+                  Periodo siguiente
                 </Button>
               </div>
-            )}
+            </div>
             <SelectField
               label="Técnico"
               value={filterTechnicianId}
               options={[
                 { value: '', label: 'Todos' },
+                { value: 'unassigned', label: 'Sin persona ni equipo' },
                 ...(technicians.data ?? []).map((person) => ({
                   value: person.id,
                   label: person.label,
                 })),
               ]}
               onChange={(value) => {
-                setFilterTechnicianId(value)
-                setPage(0)
-                setSelectedCalendarVisitId(null)
+                updateSearch({ technician: value || undefined })
               }}
+            />
+            <SelectField
+              label="Equipo"
+              value={teamFilter}
+              onChange={(value) => updateSearch({ team: value || undefined })}
+              options={[
+                { value: '', label: 'Todos los equipos' },
+                { value: 'unassigned', label: 'Sin equipo' },
+                ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
+              ]}
+            />
+            <SelectField
+              label="Estado"
+              value={statusFilter}
+              onChange={(value) =>
+                updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
+              }
+              options={[
+                { value: '', label: 'Todos los estados' },
+                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+              ]}
+            />
+            <TextField
+              label="Buscar cliente o centro"
+              value={textFilter}
+              onChange={(value) => updateSearch({ q: value || undefined })}
+              placeholder="Nombre o dirección"
             />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {visits.isPending ? <output>Cargando agenda…</output> : null}
+          <p className="text-muted-foreground text-sm">
+            {visibleVisits.length} trabajos planificados ·{' '}
+            {Math.round(
+              visibleVisits
+                .filter((v) => v.status !== 'canceled' && v.status !== 'skipped')
+                .reduce(
+                  (total, v) =>
+                    total +
+                    (Date.parse(v.scheduled_end_at) - Date.parse(v.scheduled_start_at)) / 60000,
+                  0,
+                ),
+            )}{' '}
+            minutos estimados (no equivale a trabajo realizado)
+          </p>
+          {view === 'list' && period === 'day' ? (
+            <BatchWorkSheets
+              tenantId={tenant.id}
+              visits={visibleVisits.filter(
+                (v) => v.status !== 'canceled' && v.status !== 'skipped',
+              )}
+            />
+          ) : null}
+          {visits.isPending ? <output>Cargando trabajos…</output> : null}
           {visits.isError ? (
             <p role="alert" className="text-destructive text-sm">
-              No se pudo cargar la agenda: {visits.error.message}
+              No se pudieron cargar los trabajos: {visits.error.message}
             </p>
           ) : null}
           {approvedVacations.isError ? (
@@ -579,23 +680,51 @@ export function AgendaPage() {
 
           {view === 'calendar' ? (
             <>
-              {!visits.isPending && !visits.isError && visits.data?.length === 0 ? (
+              {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
                 <output className="text-muted-foreground text-sm">
-                  No hay visitas esta semana. Puedes avanzar, volver o elegir otra fecha.
+                  No hay trabajos en este periodo con estos filtros. Puedes elegir otra fecha.
                 </output>
               ) : null}
-              <Calendar
-                aria-label="Calendario semanal de visitas"
-                view="week"
+              <EventCalendar
+                key={`${period}:${date}`}
+                aria-label={
+                  period === 'month'
+                    ? 'Calendario mensual de trabajos'
+                    : period === 'day'
+                      ? 'Calendario diario de trabajos'
+                      : 'Calendario semanal de trabajos'
+                }
+                view={period}
                 value={calendarDateValue(date)}
                 items={calendarItems}
-                minuteStep={30}
-                dayStartHour={7}
-                dayEndHour={21}
+                minuteStep={15}
+                onDayClick={(day) =>
+                  updateSearch({ date: calendarLocalInput(day).slice(0, 10), period: 'day' })
+                }
                 onItemClick={(item) => {
                   setSelectedCalendarVisitId(item.id)
                   setOpenReportId(null)
+                  setReplanning(null)
+                  setCalendarProposal(null)
                 }}
+                onItemChange={
+                  session?.role === 'admin'
+                    ? (change) => {
+                        const visit = calendarVisitById.get(change.item.id)
+                        if (!visit || visit.status !== 'scheduled') return
+                        if (visit.updated_at !== change.item.revision) {
+                          toast.error(
+                            'El trabajo ha cambiado. Revisa los datos antes de reprogramar.',
+                          )
+                          return
+                        }
+                        setSelectedCalendarVisitId(visit.id)
+                        setOpenReportId(null)
+                        setReplanning(visit)
+                        setCalendarProposal(change)
+                      }
+                    : undefined
+                }
                 renderItem={(item) => {
                   const visit = calendarVisitById.get(item.id)
                   if (!visit) return typeof item.title === 'string' ? item.title : item.id
@@ -612,7 +741,7 @@ export function AgendaPage() {
                         }).format(item.start)}
                       </span>
                       <span className="truncate text-xs opacity-80">
-                        {visit.assigned_user_name || 'Pendiente de asignar'}
+                        {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'}
                         {visit.priority === 'urgent' ? ' · Urgente' : ''}
                       </span>
                       <span
@@ -625,9 +754,15 @@ export function AgendaPage() {
                 }}
               />
               {selectedCalendarVisit ? (
-                <section
-                  aria-label="Visita seleccionada"
-                  className="border-border bg-muted/30 space-y-3 rounded-lg border p-4"
+                <CalendarDetailsDialog
+                  title={selectedCalendarVisit.title}
+                  description={`Detalle del trabajo · ${selectedCalendarVisit.timezone}`}
+                  onClose={() => {
+                    setSelectedCalendarVisitId(null)
+                    setReplanning(null)
+                    setCalendarProposal(null)
+                    setOpenReportId(null)
+                  }}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -647,8 +782,10 @@ export function AgendaPage() {
                           : ''}
                       </p>
                       <p className="text-muted-foreground text-sm">
-                        {selectedCalendarVisit.assigned_user_name || 'Pendiente de asignar'} ·{' '}
-                        {statusLabels[selectedCalendarVisit.status]}
+                        {selectedCalendarVisit.work_team_name ||
+                          selectedCalendarVisit.assigned_user_name ||
+                          'Pendiente de asignar'}{' '}
+                        · {statusLabels[selectedCalendarVisit.status]}
                         {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
                       </p>
                       {hasApprovedVacationConflict(selectedCalendarVisit) ? (
@@ -663,17 +800,32 @@ export function AgendaPage() {
                     {renderVisitActions(selectedCalendarVisit)}
                   </div>
                   {renderVisitExpandedDetails(selectedCalendarVisit)}
-                </section>
+                </CalendarDetailsDialog>
               ) : null}
             </>
           ) : (
             <>
-              {visits.data?.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No hay visitas en este periodo.</p>
+              {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No hay trabajos en este periodo con estos filtros.
+                </p>
               ) : null}
               <ol className="divide-border divide-y">
-                {visits.data?.map((visit) => (
+                {visibleVisits.map((visit, index) => (
                   <li key={visit.id} className="space-y-3 py-4 text-sm">
+                    {index === 0 ||
+                    (visibleVisits[index - 1]?.work_team_id ??
+                      visibleVisits[index - 1]?.assigned_user_id) !==
+                      (visit.work_team_id ?? visit.assigned_user_id) ||
+                    visibleVisits[index - 1]?.scheduled_start_at.slice(0, 10) !==
+                      visit.scheduled_start_at.slice(0, 10) ? (
+                      <h3 className="text-primary font-semibold">
+                        {visit.work_team_name || visit.assigned_user_name || 'Sin asignar'} ·{' '}
+                        {new Date(visit.scheduled_start_at).toLocaleDateString('es-ES', {
+                          timeZone: visit.timezone,
+                        })}
+                      </h3>
+                    ) : null}
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{visit.title}</p>
@@ -695,8 +847,10 @@ export function AgendaPage() {
                           {visit.location_name ? ` · ${visit.location_name}` : ''}
                         </p>
                         <p className="text-muted-foreground">
-                          {visit.assigned_user_name || 'Pendiente de asignar'} ·{' '}
-                          {statusLabels[visit.status]}
+                          {visit.work_team_name ||
+                            visit.assigned_user_name ||
+                            'Pendiente de asignar'}{' '}
+                          · Orden {visit.route_order ?? 0} · {statusLabels[visit.status]}
                           {visit.priority === 'urgent' ? ' · Urgente' : ''}
                         </p>
                       </div>
@@ -706,25 +860,6 @@ export function AgendaPage() {
                   </li>
                 ))}
               </ol>
-              <div className="flex items-center justify-between text-sm">
-                <span>Página {page + 1}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    isDisabled={page === 0}
-                    onPress={() => setPage(page - 1)}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    isDisabled={(visits.data?.length ?? 0) < 50}
-                    onPress={() => setPage(page + 1)}
-                  >
-                    Siguiente
-                  </Button>
-                </div>
-              </div>
             </>
           )}
         </CardContent>

@@ -2,6 +2,48 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-11 — Sin publicar
+
+### Correcciones
+
+- Restore public PDF and worker endpoints
+
+## 2026-11-11 — v0.0.10
+
+### Nuevas funciones
+
+- Add client form page and related routes for CRUD operations
+- Add updateDraftContractDetails function and integrate it
+- Add automatic contract handling and job configuration
+- Add related record creation for locations in contracts page
+- Add react-day-picker package to project
+- Update changelog with new features and improvements
+- Update demo documentation with implementation details and validations
+- Add tests for expense guard permissions and functionality
+- Add validation logs and tests for Felipe
+- Add lint and test validation logs for Felipe
+- Add validation log for Felipe build and tests
+- Add tests for cleaning service center data
+- Return first location from array if present
+- Update changelog with new features and improvements
+- Add client visit history and improve paper visit panel
+- Add cancellation label to absence type labels
+- Add validation for absence occupancy and employee overlaps
+- Add month view and related calendar functionalities
+- Add validation cleaning tests log file
+- Add operational contact and notes fields to service locations
+- Add paper visit management and document handling features
+- Add SaveStatusIndicator for better save status display
+- Add manual approval functionality for estimates
+- Add filter mode to absence date range picker
+- Add absence date range picker component
+- Enhance accessibility and layout for user content
+- Implement user navigation and settings menu
+- Add user settings page and company switch functionality
+- Add invite functionality and team management UI
+- Add invite functionality and team management UI
+- Add superadmin panel with company and payment management
+
 ## 2026-11-10 — v0.0.9
 
 ### Nuevas funciones

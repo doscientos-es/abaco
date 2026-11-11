@@ -27,6 +27,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // Invalidated sessions must be refreshed before deciding whether to redirect.
     const session = await context.queryClient.fetchQuery(sessionQuery)
     const path = location.pathname
+    const isPlatformPage = path === '/superadmin'
     if (!session && !isPublicPath(path)) {
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })
     }
@@ -34,18 +35,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     if (
       session?.role === 'user' &&
       !isPublicPath(path) &&
+      !isPlatformPage &&
+      path !== '/ajustes' &&
       path !== '/mi-jornada' &&
       path !== '/mis-vacaciones' &&
       path !== '/nueva-contrasena'
     ) {
       throw redirect({ to: '/mi-jornada', replace: true })
     }
-    if (session && !isPublicPath(path)) {
+    if (session && !isPublicPath(path) && !isPlatformPage) {
       const destination = welcomeRedirect(session.needsWelcome, path)
       if (destination) throw redirect({ to: destination, replace: true })
     }
     // Screens read the store synchronously, so the data must be loaded before they render.
-    if (session?.role === 'admin' && !isPublicPath(path)) {
+    if (session?.role === 'admin' && !isPublicPath(path) && !isPlatformPage) {
       await hydrateStore()
       // Follows the company chosen in the session.
       if (session.tenantId) setActiveTenantId(session.tenantId)
@@ -80,6 +83,8 @@ function RootLayout() {
   }, [signedIn])
 
   if (isPublic || !session) return <Outlet />
+  // Platform access is independent of the user's current company membership.
+  if (pathname === '/superadmin') return <Outlet />
   if (!session.role) return <NoCompanyPage />
   if (pathname === '/bienvenida') return <Outlet />
   if (session.role === 'user') {

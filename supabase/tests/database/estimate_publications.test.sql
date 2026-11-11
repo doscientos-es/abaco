@@ -8,10 +8,10 @@ insert into public.tenants (id, name) values
 insert into public.clients (id, tenant_id, name) values
   ('30000000-0000-4000-8000-000000000003',
     '30000000-0000-4000-8000-000000000001', 'Cliente original');
-insert into public.estimates (id, tenant_id, client_id, title, valid_until) values
+insert into public.estimates (id, tenant_id, client_id, title, valid_until, automatic_contract, conversion_destination) values
   ('30000000-0000-4000-8000-000000000004',
     '30000000-0000-4000-8000-000000000001',
-    '30000000-0000-4000-8000-000000000003', 'Piscina nueva', current_date + 30);
+    '30000000-0000-4000-8000-000000000003', 'Piscina nueva', current_date + 30, false, 'work');
 insert into public.estimate_lines (
   id, tenant_id, estimate_id, position, description, kind, quantity, unit_price_cents
 ) values (

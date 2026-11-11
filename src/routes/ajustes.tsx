@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { requirePermission } from '@/features/auth'
-import { SettingsPage } from '@/features/settings'
+import { SettingsPage, UserSettingsPage } from '@/features/settings'
 
 const tabs = ['empresa', 'documentos', 'equipo', 'plan', 'novedades'] as const
 
 export const Route = createFileRoute('/ajustes')({
-  beforeLoad: requirePermission('settings:write'),
+  beforeLoad: requirePermission('settings:personal'),
   // `pago` lo añade Redsys al volver: lleva directo a la pestaña del plan.
   validateSearch: (
     search: Record<string, unknown>,
@@ -15,5 +15,11 @@ export const Route = createFileRoute('/ajustes')({
     const tab = tabs.find((t) => t === search.tab) ?? (pago ? 'plan' : undefined)
     return { ...(tab ? { tab } : {}), ...(pago ? { pago } : {}) }
   },
-  component: SettingsPage,
+  component: SettingsRoute,
 })
+
+function SettingsRoute() {
+  // The route context changes only after the root has loaded the admin store.
+  const { session } = Route.useRouteContext()
+  return session?.role === 'admin' ? <SettingsPage /> : <UserSettingsPage />
+}

@@ -12,7 +12,9 @@ import {
   AppShellMain,
   AppShellMobileHeader,
   AppShellSidebar,
+  toast,
 } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
@@ -26,26 +28,14 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
+import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
+import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { navIcons } from './nav-icons'
-import { SaveStatusNotice } from './save-status-notice'
+import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
-type NavTo =
-  | '/'
-  | '/presupuestos'
-  | '/clientes'
-  | '/trabajos'
-  | '/contratos'
-  | '/agenda'
-  | '/vacaciones'
-  | '/catalogo'
-  | '/facturas'
-  | '/contabilidad'
-  | '/ajustes'
-  | '/personalizar'
-type NavItem = { to: NavTo; label: string; icon: ReactNode }
 type NavGroup = { label: string; items: NavItem[] }
 
 const navGroups: NavGroup[] = [
@@ -66,7 +56,6 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/trabajos', label: 'Trabajos', icon: navIcons.work },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
-      { to: '/agenda', label: 'Agenda', icon: navIcons.visits },
       { to: '/vacaciones', label: 'Vacaciones', icon: navIcons.visits },
     ],
   },
@@ -82,6 +71,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
       { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
+      { to: '/superadmin', label: 'Administración de Ábaco', icon: navIcons.settings },
     ],
   },
 ]
@@ -95,7 +85,6 @@ const bottomOrder: NavTo[] = [
   '/clientes',
   '/trabajos',
   '/contratos',
-  '/agenda',
   '/vacaciones',
   '/facturas',
   '/catalogo',
@@ -109,23 +98,11 @@ const flatItems = bottomOrder.flatMap((to) =>
 const navPermission: Partial<Record<NavTo, Permission>> = {
   '/trabajos': 'work:read',
   '/contratos': 'contracts:read',
-  '/agenda': 'visits:read',
   '/vacaciones': 'vacations:manage',
   '/facturas': 'invoices:read',
   '/contabilidad': 'ledger:read',
   '/ajustes': 'settings:write',
   '/personalizar': 'settings:write',
-}
-
-function initials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word[0]?.toUpperCase())
-      .join('') || '?'
-  )
 }
 
 function readableTextColor(hex: string) {
@@ -144,12 +121,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const { tenant } = useTenantData()
   const saveStatus = useSaveStatus()
   const session = useSession()
+  const platformAccess = useQuery({
+    ...platformAccessQuery(session?.userId ?? ''),
+    enabled: Boolean(session?.userId),
+  })
   const signOut = useSignOut()
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
   const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
+    if (item.to === '/superadmin') return platformAccess.data === true
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
   }
@@ -175,7 +157,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <DropdownMenuItem
           key={company.id}
           onAction={() => {
-            if (company.id !== session?.tenantId) void switchTo(company.id)
+            if (company.id !== session?.tenantId) {
+              void switchTo(company.id).catch(() => toast.error('No se pudo cambiar de empresa.'))
+            }
           }}
         >
           {company.id === session?.tenantId ? '✓ ' : ''}
@@ -258,6 +242,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <PlanBanner placement="sidebar" />
 
         <div className="border-border mt-auto shrink-0 border-t p-3">
+          <div className="px-3 pt-1 pb-2">
+            <SaveStatusIndicator status={saveStatus} />
+          </div>
           <DropdownMenuTrigger>
             <Button
               variant="ghost"
@@ -281,7 +268,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
       <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
         <AppShellMobileHeader className="hidden max-md:flex">
-          <Link to="/" className="min-w-0 leading-tight" aria-label="Ir al resumen">
+          <Link to="/" className="min-w-0 flex-1 leading-tight" aria-label="Ir al resumen">
             {tenant.logoUrl ? (
               <img
                 src={tenant.logoUrl}
@@ -293,11 +280,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
               {tenant.name}
             </span>
           </Link>
+          <SaveStatusIndicator status={saveStatus} />
           <DropdownMenuTrigger>
             <Button
               variant="ghost"
               aria-label="Menú de usuario"
-              className="ml-auto h-auto rounded-full p-1"
+              className="h-auto rounded-full p-1"
             >
               <Avatar>
                 <AvatarFallback>{initials(userName)}</AvatarFallback>
@@ -354,21 +342,5 @@ export function AppFrame({ children }: { children: ReactNode }) {
       </nav>
       <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
     </AppShell>
-  )
-}
-
-function SidebarLink({ to, label, icon }: NavItem) {
-  return (
-    <Link
-      to={to}
-      activeOptions={{ exact: to === '/' }}
-      activeProps={{
-        className: 'bg-accent text-accent-foreground font-medium',
-      }}
-      className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors"
-    >
-      {icon}
-      {label}
-    </Link>
   )
 }

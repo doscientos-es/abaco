@@ -86,4 +86,65 @@ describe('root session guard', () => {
     expect(hydrateStore).not.toHaveBeenCalled()
     queryClient.clear()
   })
+
+  it('allows workers to open settings without loading administrative data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const session = {
+      userId: 'worker-1',
+      email: 'worker@example.test',
+      fullName: 'Worker',
+      tenantId: 'company-1',
+      role: 'user',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    const visit = (path: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: path, href: path },
+      } as Parameters<typeof beforeLoad>[0])
+
+    await expect(visit('/ajustes')).resolves.toEqual({ session })
+    await expect(visit('/trabajos')).rejects.toMatchObject({ options: { to: '/mi-jornada' } })
+    expect(hydrateStore).not.toHaveBeenCalled()
+    queryClient.clear()
+  })
+
+  it('loads administrative data before completing a switch to an admin company', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const session = {
+      userId: 'worker-1',
+      email: 'worker@example.test',
+      fullName: 'Worker',
+      tenantId: 'company-2',
+      role: 'admin',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    let finishHydration: () => void = () => undefined
+    hydrateStore.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishHydration = resolve
+      }),
+    )
+    let loaded = false
+    const visit = beforeLoad({
+      context: { queryClient },
+      location: { pathname: '/ajustes', href: '/ajustes' },
+    } as Parameters<typeof beforeLoad>[0]).then(() => {
+      loaded = true
+    })
+
+    await vi.waitFor(() => expect(hydrateStore).toHaveBeenCalledOnce())
+    expect(loaded).toBe(false)
+    finishHydration()
+    await expect(visit).resolves.toBeUndefined()
+    queryClient.clear()
+  })
 })

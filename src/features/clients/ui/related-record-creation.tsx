@@ -8,23 +8,19 @@ import { retryStoreSaves, useSaveStatus } from '@/shared/store/store'
 import { ClientFormDialog } from './client-form-dialog'
 import { CreatePassportItem } from './client-passport-dialog'
 
-type RelatedKind = 'client' | 'location' | 'pool'
+type RelatedKind = 'client' | 'location'
 
 /** Create related records without leaving the current form. */
 export function useRelatedRecordCreation({
   tenantId,
   clientId,
-  locationId,
   onClientCreated,
   onLocationCreated,
-  onPoolCreated,
 }: {
   tenantId: string
   clientId: string
-  locationId: string
-  onClientCreated: (id: string) => void
+  onClientCreated?: (id: string) => void
   onLocationCreated: (id: string) => void
-  onPoolCreated: (id: string) => void
 }) {
   const session = useSession()
   const queryClient = useQueryClient()
@@ -40,9 +36,13 @@ export function useRelatedRecordCreation({
     setRefreshing(true)
     setRefreshFailed(false)
     try {
-      await queryClient.invalidateQueries(
-        { queryKey: ['work-target-options', tenantId, clientId] },
-        { throwOnError: true },
+      await Promise.all(
+        ['work-target-options', 'client-passport'].map((key) =>
+          queryClient.invalidateQueries(
+            { queryKey: [key, tenantId, clientId] },
+            { throwOnError: true },
+          ),
+        ),
       )
     } catch {
       setRefreshFailed(true)
@@ -53,12 +53,12 @@ export function useRelatedRecordCreation({
 
   function start(kind: RelatedKind) {
     if (!allowed || (kind !== 'client' && (pending || !clientId))) return
-    if (kind === 'pool' && !locationId) return
+    if (kind === 'client' && !onClientCreated) return
     setCreating(kind)
   }
 
   const status = pending ? (
-    <div className="text-muted-foreground space-y-1 text-sm sm:col-span-2" role="status">
+    <output className="text-muted-foreground block space-y-1 text-sm sm:col-span-2">
       {saveStatus.state === 'error' ? (
         <>
           <p>No se pudieron guardar los cambios: {saveStatus.message}</p>
@@ -68,38 +68,37 @@ export function useRelatedRecordCreation({
         </>
       ) : refreshFailed ? (
         <>
-          <p>No se pudieron actualizar las ubicaciones y piscinas.</p>
+          <p>No se pudieron actualizar los centros.</p>
           <Button type="button" variant="outline" onPress={() => void refreshTargets()}>
             Reintentar actualización
           </Button>
         </>
       ) : refreshing ? (
-        <p>Actualizando ubicaciones y piscinas…</p>
+        <p>Actualizando centros…</p>
       ) : (
         <p>Esperando a que se guarden los cambios…</p>
       )}
-    </div>
+    </output>
   ) : null
 
   const dialogs = (
     <>
-      <ClientFormDialog
-        open={creating === 'client'}
-        onClose={() => setCreating(null)}
-        onSaved={onClientCreated}
-      />
-      {creating === 'location' || creating === 'pool' ? (
+      {onClientCreated ? (
+        <ClientFormDialog
+          open={creating === 'client'}
+          onClose={() => setCreating(null)}
+          onSaved={onClientCreated}
+        />
+      ) : null}
+      {creating === 'location' ? (
         <CreatePassportItem
-          item={creating === 'location' ? { kind: 'location' } : { kind: 'pool', locationId }}
+          item={{ kind: 'location' }}
           tenantId={tenantId}
           clientId={clientId}
           serviceLocationOnly
           onClose={() => setCreating(null)}
           onCreated={(id) => {
-            if (id) {
-              if (creating === 'location') onLocationCreated(id)
-              else onPoolCreated(id)
-            }
+            if (id) onLocationCreated(id)
             setCreating(null)
             void refreshTargets()
           }}

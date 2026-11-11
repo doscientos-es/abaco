@@ -1,4 +1,10 @@
-export const vacationRequestStatuses = ['pending', 'needs_info', 'approved', 'rejected'] as const
+export const vacationRequestStatuses = [
+  'pending',
+  'needs_info',
+  'approved',
+  'rejected',
+  'canceled',
+] as const
 
 export const absenceTypes = ['vacation', 'sick_leave', 'personal_leave', 'other'] as const
 
@@ -21,6 +27,7 @@ export type VacationRequest = Readonly<{
   decidedByName: string
   informationRequestComment: string
   requesterResponseComment: string
+  updatedAt?: string
 }>
 
 export const vacationRequestStatusLabels: Record<VacationRequestStatus, string> = {
@@ -28,12 +35,13 @@ export const vacationRequestStatusLabels: Record<VacationRequestStatus, string> 
   needs_info: 'Necesita información',
   approved: 'Aprobada',
   rejected: 'Rechazada',
+  canceled: 'Cancelada',
 }
 
 export const absenceTypeLabels: Record<AbsenceType, string> = {
   vacation: 'Vacaciones',
   sick_leave: 'Baja',
-  personal_leave: 'Permiso',
+  personal_leave: 'Asuntos propios',
   other: 'Otra ausencia',
 }
 

@@ -11,10 +11,6 @@ import {
   readVisitIncidentQueue,
   visitIncidentQueueKey,
 } from '@/features/incidents/application/incident-queue'
-import {
-  measurementQueueKey,
-  readMeasurementQueue,
-} from '@/features/measurements/application/measurement-queue'
 
 import {
   listMyVisits,
@@ -93,15 +89,6 @@ export function MyDayPage() {
     ) {
       setOpenReportId(visit.id)
       toast.error('Envía o descarta la actividad pendiente antes de completar la visita.')
-      return
-    }
-    if (
-      nextStatus === 'completed' &&
-      session?.userId &&
-      readMeasurementQueue(measurementQueueKey(session.userId, tenantId, visit.id)).length > 0
-    ) {
-      setOpenReportId(visit.id)
-      toast.error('Envía las mediciones pendientes antes de completar la visita.')
       return
     }
     if (

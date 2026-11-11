@@ -1,14 +1,17 @@
+import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-export type ContractStatus = 'draft' | 'active' | 'paused' | 'expired' | 'canceled'
-export type BillingFrequency = 'monthly' | 'quarterly' | 'yearly'
+import type { ContractStatus } from '../domain/contract-status'
+
+export type { ContractStatus } from '../domain/contract-status'
+export type BillingFrequency = ContractBillingFrequency
 
 export type ServiceContract = {
   id: string
   tenant_id: string
   client_id: string
   origin_estimate_id: string | null
-  location_id: string
+  location_id: string | null
   asset_id: string | null
   title: string
   status: ContractStatus
@@ -17,6 +20,8 @@ export type ServiceContract = {
   timezone: string
   price_cents: number
   billing_frequency: BillingFrequency
+  renewal_mode: 'pending' | 'manual' | 'automatic'
+  notes: string
   default_assigned_user_id: string | null
   included_scope: Array<{ description: string }>
   schedule_version: number
@@ -37,7 +42,7 @@ export type ContractVisitRule = {
 
 export type ContractEvent = {
   id: string
-  kind: 'created' | 'rule_added' | 'status_changed'
+  kind: 'created' | 'rule_added' | 'status_changed' | 'details_updated' | 'service_updated'
   payload: Record<string, unknown>
   occurred_at: string
 }
@@ -50,6 +55,7 @@ export type ContractVisit = {
   scheduled_start_at: string
   status: string
   assigned_user_id: string | null
+  work_team_id: string | null
 }
 
 export type GenerationIssue = {
@@ -61,7 +67,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,default_assigned_user_id,included_scope,schedule_version,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,default_assigned_user_id,included_scope,schedule_version,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()
@@ -74,11 +80,32 @@ export async function findContractForEstimate(tenantId: string, estimateId: stri
   return (data?.id as string | undefined) ?? null
 }
 
+export async function updateDraftContractDetails(input: {
+  contract: ServiceContract
+  startsOn: string
+  endsOn: string
+  renewal: ServiceContract['renewal_mode']
+  notes: string
+  operationId: string
+}) {
+  const { contract } = input
+  const { error } = await createBrowserSupabaseClient().rpc('update_draft_contract_details', {
+    p_tenant_id: contract.tenant_id,
+    p_contract_id: contract.id,
+    p_expected_updated_at: contract.updated_at,
+    p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn || null,
+    p_renewal_mode: input.renewal,
+    p_notes: input.notes,
+    p_operation_id: input.operationId,
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function convertAcceptedEstimateToContract(input: {
   tenantId: string
   estimateId: string
   locationId: string
-  assetId: string | null
   startsOn: string
   endsOn: string | null
   defaultAssignedUserId: string | null
@@ -90,7 +117,7 @@ export async function convertAcceptedEstimateToContract(input: {
       p_tenant_id: input.tenantId,
       p_estimate_id: input.estimateId,
       p_location_id: input.locationId,
-      p_asset_id: input.assetId,
+      p_asset_id: null,
       p_starts_on: input.startsOn,
       p_ends_on: input.endsOn,
       p_default_assigned_user_id: input.defaultAssignedUserId,
@@ -129,6 +156,8 @@ export async function loadServiceContract(tenantId: string, contractId: string) 
         .select('id,season,months,weekday,every_n_weeks,local_start,duration_minutes,title')
         .eq('tenant_id', tenantId)
         .eq('contract_id', contractId)
+        .is('frequency', null)
+        .eq('configured', true)
         .order('season'),
       db
         .from('service_contract_events')
@@ -140,7 +169,7 @@ export async function loadServiceContract(tenantId: string, contractId: string) 
       db
         .from('service_visits')
         .select(
-          'id,title,contract_occurrence_on,contract_schedule_version,scheduled_start_at,status,assigned_user_id',
+          'id,title,contract_occurrence_on,contract_schedule_version,scheduled_start_at,status,assigned_user_id,work_team_id',
         )
         .eq('tenant_id', tenantId)
         .eq('contract_id', contractId)
@@ -173,7 +202,6 @@ export async function createManualServiceContract(input: {
   tenantId: string
   clientId: string
   locationId: string
-  assetId: string | null
   title: string
   startsOn: string
   endsOn: string | null
@@ -189,7 +217,7 @@ export async function createManualServiceContract(input: {
       p_tenant_id: input.tenantId,
       p_client_id: input.clientId,
       p_location_id: input.locationId,
-      p_asset_id: input.assetId,
+      p_asset_id: null,
       p_title: input.title.trim(),
       p_starts_on: input.startsOn,
       p_ends_on: input.endsOn,
@@ -256,11 +284,15 @@ export async function transitionServiceContract(input: {
   if (error) throw new Error(error.message)
 }
 
-export async function generateContractVisits(tenantId: string) {
+export async function generateContractVisits(
+  tenantId: string,
+  from: string | null = null,
+  through: string | null = null,
+) {
   const { data, error } = await createBrowserSupabaseClient().rpc('generate_contract_visits', {
     p_tenant_id: tenantId,
-    p_from: null,
-    p_through: null,
+    p_from: from,
+    p_through: through,
   })
   if (error) throw new Error(error.message)
   return Number(data ?? 0)

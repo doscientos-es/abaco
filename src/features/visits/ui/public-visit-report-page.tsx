@@ -12,12 +12,6 @@ const phaseLabels: Record<string, string> = {
   after: 'Después',
   other: 'Otra evidencia',
 }
-const assessmentLabels: Record<string, string> = {
-  below: 'Por debajo del rango',
-  within: 'Dentro del rango',
-  above: 'Por encima del rango',
-  unconfigured: 'Sin rango configurado',
-}
 const activityLabels: Record<string, string> = {
   labor: 'Tiempo',
   travel: 'Desplazamiento',
@@ -106,16 +100,10 @@ export function PublicVisitReportPage({ token }: { token: string }) {
           </div>
           {value.location ? (
             <div>
-              <p className="text-muted-foreground">Ubicación</p>
+              <p className="text-muted-foreground">Centro</p>
               <p>
                 {value.location.name} · {value.location.address}
               </p>
-            </div>
-          ) : null}
-          {value.asset ? (
-            <div>
-              <p className="text-muted-foreground">Instalación</p>
-              <p>{value.asset.name}</p>
             </div>
           ) : null}
           {value.visit.actualStartAt ? (
@@ -144,26 +132,6 @@ export function PublicVisitReportPage({ token }: { token: string }) {
               {value.report.checklist.map((item, index) => (
                 <li key={`${item.label}-${index}`}>
                   {item.done ? '✓ Hecha' : 'Pendiente'} · {item.label}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {value.measurements.length ? (
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold">Mediciones</h2>
-            <ul className="divide-border divide-y">
-              {value.measurements.map((reading, index) => (
-                <li
-                  key={`${reading.label}-${index}`}
-                  className="flex flex-wrap justify-between gap-2 py-2"
-                >
-                  <span>
-                    {reading.label}: {reading.value ?? '—'} {reading.unit}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {assessmentLabels[reading.assessment] ?? reading.assessment}
-                  </span>
                 </li>
               ))}
             </ul>

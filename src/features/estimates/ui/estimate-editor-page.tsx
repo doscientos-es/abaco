@@ -23,12 +23,17 @@ import { useRef, useState } from 'react'
 import { can, useSession } from '@/features/auth'
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
+import {
   convertAcceptedEstimateToContract,
   findContractForEstimate,
 } from '@/features/contracts/application/contract-actions'
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { convertAcceptedEstimate, findWorkOrderForEstimate } from '@/features/work-orders'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
+import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import {
   clampPercent,
   estimateTotals,
@@ -49,13 +54,14 @@ import { StatusBadge } from '@/shared/ui/status-badge'
 
 import { deleteEstimate, duplicateEstimate, patchEstimate } from '../application/estimate-actions'
 import {
-  acceptEstimateManually,
   loadManualEstimateAcceptance,
   loadPublishedEstimate,
   publishEstimate,
 } from '../application/estimate-publication-actions'
+import { recordManualApproval } from '../application/record-manual-approval'
 import { EstimateDocument } from './estimate-document'
 import { LinesEditor } from './lines-editor'
+import { ManualAcceptanceCard } from './manual-acceptance-card'
 import { MilestonesEditor } from './milestones-editor'
 import { PriceInput } from './price-input'
 
@@ -68,7 +74,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [converting, setConverting] = useState(false)
   const conversionOperationId = useRef(crypto.randomUUID())
   const [contractLocationId, setContractLocationId] = useState('')
-  const [contractAssetId, setContractAssetId] = useState('')
   const [contractStart, setContractStart] = useState(() => new Date().toISOString().slice(0, 10))
   const [contractEnd, setContractEnd] = useState('')
   const [contractTechnicianId, setContractTechnicianId] = useState('')
@@ -108,6 +113,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
     queryKey: ['estimate-manual-acceptance', tenant.id, estimateId],
     queryFn: () => loadManualEstimateAcceptance(tenant.id, estimateId),
     enabled: estimate?.status === 'accepted' && can(session?.role, 'estimates:write'),
+  })
+  const related = useRelatedRecordCreation({
+    tenantId: tenant.id,
+    clientId: estimate?.clientId ?? '',
+    onLocationCreated: setContractLocationId,
   })
 
   if (!estimate) {
@@ -216,7 +226,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   async function convertToContract() {
     if (
       converting ||
-      !contractLocationId ||
+      related.pending ||
+      !contractTargets.data?.locations.some((location) => location.id === contractLocationId) ||
       !contractStart ||
       (contractEnd && contractEnd < contractStart)
     )
@@ -227,7 +238,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         tenantId: tenant.id,
         estimateId,
         locationId: contractLocationId,
-        assetId: contractAssetId || null,
         startsOn: contractStart,
         endsOn: contractEnd || null,
         defaultAssignedUserId: contractTechnicianId || null,
@@ -246,31 +256,55 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   }
 
   async function recordManualAcceptance() {
-    if (acceptingManually) return
+    if (!estimate || acceptingManually) return
     if (manualName.trim().length < 2 || manualEvidence.trim().length < 12) {
       toast.error('Indica quién aceptó y dónde se conserva la evidencia.')
       return
     }
     setAcceptingManually(true)
+    let published = false
     try {
-      await acceptEstimateManually(
-        tenant.id,
+      await recordManualApproval({
+        status: estimate.status,
+        tenantId: tenant.id,
         estimateId,
-        manualOperationId.current,
-        manualName,
-        manualEvidence,
-      )
-      await refreshStore()
+        operationId: manualOperationId.current,
+        name: manualName,
+        evidence: manualEvidence,
+        onPublished: () => {
+          published = true
+        },
+      })
       setShowManualAcceptance(false)
       toast.success('Aceptación manual registrada')
+      await refreshStore()
     } catch (error) {
       toast.error('No se pudo registrar la aceptación', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+        description: `${published ? 'El presupuesto quedó publicado. ' : estimate.status === 'draft' ? 'Comprueba si el presupuesto quedó publicado. ' : ''}${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`,
       })
+      await refreshStore()
     } finally {
       setAcceptingManually(false)
     }
   }
+
+  const manualAcceptanceCard = showManualAcceptance ? (
+    <ManualAcceptanceCard
+      draft={estimate.status === 'draft'}
+      name={manualName}
+      evidence={manualEvidence}
+      busy={acceptingManually}
+      onNameChange={(value) => {
+        setManualName(value)
+        manualOperationId.current = crypto.randomUUID()
+      }}
+      onEvidenceChange={(value) => {
+        setManualEvidence(value)
+        manualOperationId.current = crypto.randomUUID()
+      }}
+      onSubmit={() => void recordManualAcceptance()}
+    />
+  ) : null
 
   if (preview) {
     return (
@@ -320,7 +354,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           <PageHeaderActions>
             {estimate.status === 'sent' && can(session?.role, 'estimates:write') ? (
               <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
-                Registrar aceptación manual
+                Marcar como aprobado
               </Button>
             ) : null}
             {estimate.status === 'accepted' && existingWork.data ? (
@@ -391,45 +425,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           Las partidas y condiciones del presupuesto publicado están bloqueadas. Para cambiarlo,
           crea una revisión en borrador.
         </p>
-        {estimate.status === 'sent' && showManualAcceptance ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Aceptación recibida fuera del enlace</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Registra una aceptación que ya hayas recibido. Esta acción no representa una firma
-                del cliente en Ábaco y no se puede deshacer.
-              </p>
-              <TextField
-                label="Nombre de quien aceptó"
-                value={manualName}
-                onChange={(value) => {
-                  setManualName(value)
-                  manualOperationId.current = crypto.randomUUID()
-                }}
-                placeholder="Nombre comunicado por el cliente"
-                minLength={2}
-                maxLength={120}
-              />
-              <TextareaField
-                label="Referencia de la evidencia"
-                value={manualEvidence}
-                onChange={(value) => {
-                  setManualEvidence(value)
-                  manualOperationId.current = crypto.randomUUID()
-                }}
-                placeholder="Ejemplo: correo recibido el 21/10/2026, conservado en el expediente del cliente"
-                helper="Indica dónde se conserva el correo, documento o autorización original."
-                minLength={12}
-                maxLength={2000}
-              />
-              <Button isDisabled={acceptingManually} onPress={() => void recordManualAcceptance()}>
-                {acceptingManually ? 'Registrando…' : 'Confirmar aceptación manual'}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
+        {estimate.status === 'sent' ? manualAcceptanceCard : null}
         {estimate.status === 'accepted' && manualAcceptance.data ? (
           <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
             Aceptación registrada por oficina a nombre de {manualAcceptance.data.accepted_by} el{' '}
@@ -438,6 +434,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
+        !publication.data.estimate.automaticContract &&
         publication.data.estimate.conversionDestination === 'contract' &&
         !existingContract.data &&
         can(session?.role, 'contracts:write') ? (
@@ -451,32 +448,27 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                 que aceptó el cliente. Elige dónde y cuándo comenzará el servicio.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <SelectField
-                  label="Ubicación"
-                  value={contractLocationId}
-                  options={[
-                    { value: '', label: 'Selecciona una ubicación' },
-                    ...(contractTargets.data?.locations ?? []).map((location) => ({
-                      value: location.id,
-                      label: location.name,
-                    })),
-                  ]}
-                  onChange={(value) => {
-                    setContractLocationId(value)
-                    setContractAssetId('')
-                  }}
-                />
-                <SelectField
-                  label="Piscina o activo"
-                  value={contractAssetId}
-                  options={[
-                    { value: '', label: 'Sin activo concreto' },
-                    ...(contractTargets.data?.assets ?? [])
-                      .filter((asset) => asset.location_id === contractLocationId)
-                      .map((asset) => ({ value: asset.id, label: asset.name })),
-                  ]}
-                  onChange={setContractAssetId}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <SelectField
+                    label="Centro"
+                    value={contractLocationId}
+                    options={[
+                      { value: '', label: 'Selecciona un centro' },
+                      ...(contractTargets.data?.locations ?? []).map((location) => ({
+                        value: location.id,
+                        label: location.name,
+                      })),
+                    ]}
+                    onChange={setContractLocationId}
+                  />
+                  {related.allowed ? (
+                    <RelatedCreateButton
+                      label="Crear centro"
+                      disabled={converting || related.pending || !estimate.clientId}
+                      onPress={() => related.start('location')}
+                    />
+                  ) : null}
+                </div>
                 <TextField
                   label="Inicio"
                   type="date"
@@ -504,11 +496,23 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                   onChange={setContractTechnicianId}
                 />
               </div>
+              {contractTargets.isError ? (
+                <p role="alert">
+                  No se pudieron cargar los centros.{' '}
+                  <Button variant="outline" onPress={() => void contractTargets.refetch()}>
+                    Reintentar
+                  </Button>
+                </p>
+              ) : null}
+              {related.status}
               <Button
                 isDisabled={
                   converting ||
                   existingContract.isPending ||
-                  !contractLocationId ||
+                  related.pending ||
+                  !contractTargets.data?.locations.some(
+                    (location) => location.id === contractLocationId,
+                  ) ||
                   !contractStart ||
                   Boolean(contractEnd && contractEnd < contractStart)
                 }
@@ -518,6 +522,20 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Button>
             </CardContent>
           </Card>
+        ) : null}
+        {estimate.status === 'accepted' &&
+        publication.data.estimate.automaticContract &&
+        !existingContract.data ? (
+          <div className="rounded-lg border p-4" aria-live="polite">
+            <p>
+              {existingContract.isPending
+                ? 'Cargando el contrato creado al aceptar…'
+                : 'No se pudo recuperar el contrato. Recarga para consultar el resultado; no vuelvas a aceptar el presupuesto.'}
+            </p>
+            <Button variant="outline" onPress={() => void existingContract.refetch()}>
+              Recargar contrato
+            </Button>
+          </div>
         ) : null}
         <p className="text-muted-foreground text-sm">
           {estimate.emailSentAt
@@ -553,12 +571,13 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </CardContent>
           </Card>
         ) : null}
+        {related.dialogs}
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>
@@ -566,6 +585,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
+          {can(session?.role, 'estimates:write') ? (
+            <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
+              Marcar como aprobado
+            </Button>
+          ) : null}
           <Button onPress={() => void sendByEmail()}>
             <span className="inline-flex items-center gap-2">
               {fieldIcons.mail}
@@ -620,17 +644,19 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </PageHeaderActions>
       </PageHeader>
 
-      <Card>
+      {manualAcceptanceCard}
+
+      <Card className="@container">
         <CardHeader>
           <CardTitle>Datos generales</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-3 sm:grid-cols-2 @min-[44rem]:grid-cols-4">
           <TextField
-            label="Título de la obra"
+            label="Título del servicio o acuerdo"
             minLength={1}
             maxLength={formLimits.estimateTitle}
             className="sm:col-span-2"
-            placeholder="Ej. Reforma de baño"
+            placeholder="Ej. Limpieza de oficinas"
             icon={fieldIcons.file}
             helper={`Obligatorio · máximo ${formLimits.estimateTitle} caracteres.`}
             value={titleDraft}
@@ -643,7 +669,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               }
             }}
           />
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5 @min-[44rem]:col-span-2">
             <SelectField
               label="Cliente"
               value={estimate.clientId}
@@ -655,13 +681,15 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               ]}
               onChange={(clientId) => patchEstimate(estimate.id, { clientId })}
             />
-            <button
-              type="button"
-              className="text-primary self-start text-xs font-medium hover:underline"
-              onClick={() => setCreatingClient(true)}
-            >
-              {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
-            </button>
+            {can(session?.role, 'clients:write') ? (
+              <button
+                type="button"
+                className="text-primary self-start text-xs font-medium hover:underline"
+                onClick={() => setCreatingClient(true)}
+              >
+                {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
+              </button>
+            ) : null}
           </div>
           <TextField
             label="Válido hasta"
@@ -671,28 +699,37 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             value={estimate.validUntil}
             onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
           />
-          <SelectField
-            label="Destino tras la aceptación"
-            value={estimate.conversionDestination ?? 'work'}
-            options={[
-              { value: 'work', label: 'Trabajo' },
-              { value: 'contract', label: 'Contrato recurrente' },
-            ]}
-            onChange={(value) =>
-              patchEstimate(estimate.id, {
-                conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
-              })
-            }
-          />
+          {!estimate.automaticContract ? (
+            <SelectField
+              label="Destino tras la aceptación"
+              className={
+                estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
+              }
+              value={estimate.conversionDestination ?? 'work'}
+              options={[
+                { value: 'work', label: 'Trabajo' },
+                { value: 'contract', label: 'Contrato recurrente' },
+              ]}
+              onChange={(value) =>
+                patchEstimate(estimate.id, {
+                  conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
+                })
+              }
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como
+              trabajo pendiente de configurar.
+            </p>
+          )}
           {estimate.conversionDestination === 'contract' ? (
             <SelectField
-              label="Precio de la propuesta por periodo"
+              label="El importe presupuestado corresponde a"
               value={estimate.contractBillingFrequency ?? 'monthly'}
-              options={[
-                { value: 'monthly', label: 'Mensual' },
-                { value: 'quarterly', label: 'Trimestral' },
-                { value: 'yearly', label: 'Anual' },
-              ]}
+              options={Object.entries(contractBillingLabels).map(([value, label]) => ({
+                value,
+                label,
+              }))}
               onChange={(value) =>
                 patchEstimate(estimate.id, {
                   contractBillingFrequency: value as NonNullable<
@@ -722,73 +759,76 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="@container">
         <CardHeader>
           <CardTitle>Partidas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <LinesEditor estimate={estimate} catalog={catalog} />
-          <div className="border-border bg-surface-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3">
-            <SelectField
-              label="Descuento global"
-              value={estimate.discountType}
-              options={[
-                { value: 'none', label: 'Sin descuento' },
-                { value: 'percent', label: 'Porcentaje (%)' },
-                { value: 'amount', label: 'Importe (€)' },
-              ]}
-              onChange={(discountType) =>
-                patchEstimate(estimate.id, {
-                  discountType: discountType as Estimate['discountType'],
-                  discountValue: 0,
-                })
-              }
-            />
-            {estimate.discountType === 'percent' ? (
-              <FormField label="Porcentaje">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="any"
-                  value={estimate.discountValue || ''}
-                  onChange={(event) =>
-                    patchEstimate(estimate.id, {
-                      discountValue: clampPercent(Number(event.target.value) || 0),
-                    })
-                  }
-                />
-              </FormField>
-            ) : null}
-            {estimate.discountType === 'amount' ? (
-              <FormField label="Importe sin IVA (€)">
-                <PriceInput
-                  label="Importe del descuento"
-                  cents={estimate.discountValue}
-                  onCommit={(discountValue) => patchEstimate(estimate.id, { discountValue })}
-                />
-              </FormField>
-            ) : null}
-          </div>
-          <dl className="ml-auto w-full max-w-xs space-y-1 tabular-nums">
-            {totals.lineDiscountCents + totals.globalDiscountCents > 0 ? (
-              <>
-                <Line label="Suma de partidas" value={totals.grossCents} />
-                {totals.lineDiscountCents > 0 ? (
-                  <Line label="Descuentos por partida" value={-totals.lineDiscountCents} />
-                ) : null}
-                {totals.globalDiscountCents > 0 ? (
-                  <Line label="Descuento global" value={-totals.globalDiscountCents} />
-                ) : null}
-              </>
-            ) : null}
-            <Line label="Base imponible" value={totals.subtotalCents} />
-            <Line label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
-            <div className="flex justify-between border-t pt-2 text-lg font-semibold">
-              <dt>Total</dt>
-              <dd>{formatEuros(totals.totalCents)}</dd>
+          <div className="grid gap-4 @min-[36rem]:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)]">
+            <div className="border-border bg-surface-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3">
+              <SelectField
+                label="Descuento global"
+                className="w-full @min-[36rem]:max-w-56"
+                value={estimate.discountType}
+                options={[
+                  { value: 'none', label: 'Sin descuento' },
+                  { value: 'percent', label: 'Porcentaje (%)' },
+                  { value: 'amount', label: 'Importe (€)' },
+                ]}
+                onChange={(discountType) =>
+                  patchEstimate(estimate.id, {
+                    discountType: discountType as Estimate['discountType'],
+                    discountValue: 0,
+                  })
+                }
+              />
+              {estimate.discountType === 'percent' ? (
+                <FormField label="Porcentaje" className="w-28">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="any"
+                    value={estimate.discountValue || ''}
+                    onChange={(event) =>
+                      patchEstimate(estimate.id, {
+                        discountValue: clampPercent(Number(event.target.value) || 0),
+                      })
+                    }
+                  />
+                </FormField>
+              ) : null}
+              {estimate.discountType === 'amount' ? (
+                <FormField label="Importe sin IVA (€)" className="w-28">
+                  <PriceInput
+                    label="Importe del descuento"
+                    cents={estimate.discountValue}
+                    onCommit={(discountValue) => patchEstimate(estimate.id, { discountValue })}
+                  />
+                </FormField>
+              ) : null}
             </div>
-          </dl>
+            <dl className="ml-auto w-full max-w-xs space-y-1 tabular-nums">
+              {totals.lineDiscountCents + totals.globalDiscountCents > 0 ? (
+                <>
+                  <Line label="Suma de partidas" value={totals.grossCents} />
+                  {totals.lineDiscountCents > 0 ? (
+                    <Line label="Descuentos por partida" value={-totals.lineDiscountCents} />
+                  ) : null}
+                  {totals.globalDiscountCents > 0 ? (
+                    <Line label="Descuento global" value={-totals.globalDiscountCents} />
+                  ) : null}
+                </>
+              ) : null}
+              <Line label="Base imponible" value={totals.subtotalCents} />
+              <Line label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
+              <div className="flex justify-between border-t pt-2 text-lg font-semibold">
+                <dt>Total</dt>
+                <dd>{formatEuros(totals.totalCents)}</dd>
+              </div>
+            </dl>
+          </div>
         </CardContent>
       </Card>
 

@@ -7,10 +7,10 @@ insert into public.tenants (id, name) values
 insert into public.clients (id, tenant_id, name) values
   ('55000000-0000-4000-8000-000000000002',
    '55000000-0000-4000-8000-000000000001', 'Cliente');
-insert into public.estimates (id, tenant_id, client_id, title, valid_until) values
+insert into public.estimates (id, tenant_id, client_id, title, valid_until, automatic_contract, conversion_destination) values
   ('55000000-0000-4000-8000-000000000003',
    '55000000-0000-4000-8000-000000000001',
-   '55000000-0000-4000-8000-000000000002', 'Servicio', current_date + 30);
+   '55000000-0000-4000-8000-000000000002', 'Servicio', current_date + 30, false, 'work');
 insert into public.estimate_milestones (id, tenant_id, estimate_id, label, percent) values
   ('55000000-0000-4000-8000-000000000004',
    '55000000-0000-4000-8000-000000000001',

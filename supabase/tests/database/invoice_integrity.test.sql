@@ -15,8 +15,8 @@ insert into auth.users (id, email)
 select owner_id, 'invoice-draft-owner@example.test' from invoice_fixture;
 insert into public.memberships (tenant_id, user_id, role)
 select tenant_id, owner_id, 'owner' from invoice_fixture;
-insert into public.estimates (id, tenant_id, client_id, title, status, valid_until)
-select estimate_id, tenant_id, client_id, 'Mantenimiento', 'draft', current_date + 30
+insert into public.estimates (id, tenant_id, client_id, title, status, valid_until, automatic_contract, conversion_destination)
+select estimate_id, tenant_id, client_id, 'Mantenimiento', 'draft', current_date + 30, false, 'work'
 from invoice_fixture;
 insert into public.estimate_lines
   (tenant_id, estimate_id, description, kind, quantity, unit_price_cents)

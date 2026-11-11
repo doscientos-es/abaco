@@ -169,7 +169,7 @@ export function EstimateListPage() {
               </li>
             ))}
           </ul>
-          <Table containerClassName="hidden md:block">
+          <Table containerClassName="max-md:hidden">
             <TableHeader>
               <TableRow>
                 <TableHead>Nº</TableHead>

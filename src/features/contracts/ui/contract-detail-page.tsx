@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -17,6 +18,10 @@ import {
   type ContractStatus,
   type ContractVisitRule,
 } from '../application/contract-actions'
+import { contractStatusLabels as statusLabels } from '../domain/contract-status'
+import { contractDatesError } from '../domain/weekly-schedule'
+import { CleaningServicesPanel } from './cleaning-services-panel'
+import { ContractAgreementForm } from './contract-agreement-form'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
@@ -36,14 +41,6 @@ const monthNames = [
   'Diciembre',
 ]
 const weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-const statusLabels: Record<ContractStatus, string> = {
-  draft: 'Borrador',
-  active: 'Activo',
-  paused: 'Pausado',
-  expired: 'Vencido',
-  canceled: 'Cancelado',
-}
-
 function describeRule(rule: ContractVisitRule) {
   return `${weekdays[rule.weekday - 1]} a las ${rule.local_start.slice(0, 5)} · ${rule.duration_minutes} min · ${rule.every_n_weeks === 1 ? 'semanal' : `cada ${rule.every_n_weeks} semanas`}`
 }
@@ -62,6 +59,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const [ruleTitle, setRuleTitle] = useState('')
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const [generationMonth, setGenerationMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const operationIds = useRef(new Map<string, string>())
   const queryKey = ['service-contract', tenant.id, contractId]
   const query = useQuery({
@@ -101,6 +99,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ['service-contracts', tenant.id] }),
+      queryClient.invalidateQueries({ queryKey: ['contract-jobs', tenant.id] }),
     ])
   }
 
@@ -149,6 +148,11 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
 
   async function transition(nextStatus: Exclude<ContractStatus, 'draft'>) {
     if (!contract || busy) return
+    const dateError = contractDatesError(contract.starts_on, contract.ends_on ?? '')
+    if (nextStatus === 'active' && dateError) {
+      toast.error(dateError)
+      return
+    }
     if (nextStatus !== 'active' && !reason.trim()) return
     const payload = {
       tenantId: tenant.id,
@@ -181,7 +185,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     if (busy) return
     setBusy('generate')
     try {
-      const count = await generateContractVisits(tenant.id)
+      const first = `${generationMonth}-01`
+      const next = new Date(`${first}T12:00:00Z`)
+      next.setUTCMonth(next.getUTCMonth() + 1, 0)
+      const count = await generateContractVisits(tenant.id, first, next.toISOString().slice(0, 10))
       await refresh()
       await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
       toast.success(`${count} visitas nuevas generadas`)
@@ -223,15 +230,14 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           <p>
             Desde {contract.starts_on}
             {contract.ends_on ? ` hasta ${contract.ends_on}` : ' sin fecha de fin'} ·{' '}
-            {formatEuros(contract.price_cents)} /{' '}
-            {contract.billing_frequency === 'monthly'
-              ? 'mes'
-              : contract.billing_frequency === 'quarterly'
-                ? 'trimestre'
-                : 'año'}
+            {contract.price_cents > 0
+              ? formatEuros(contract.price_cents)
+              : 'Precio pendiente / no facturable'}{' '}
+            · {contractBillingLabels[contract.billing_frequency]}
           </p>
           <p className="text-muted-foreground">
-            El importe es la condición pactada. La generación de cuotas y facturas sigue pendiente.
+            El importe es la condición económica pactada, independiente de la frecuencia de cada
+            trabajo.
           </p>
           {contract.included_scope.length ? (
             <ul className="list-inside list-disc">
@@ -240,8 +246,47 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
               ))}
             </ul>
           ) : null}
+          {contract.origin_estimate_id ? (
+            <Link
+              to="/presupuestos/$estimateId"
+              params={{ estimateId: contract.origin_estimate_id }}
+              className="text-primary underline"
+            >
+              Ver presupuesto aceptado
+            </Link>
+          ) : null}
+          {contract.status === 'draft' && can(session?.role, 'contracts:write') ? (
+            <ContractAgreementForm key={contract.updated_at} contract={contract} />
+          ) : (
+            <>
+              <p>
+                Renovación:{' '}
+                {contract.renewal_mode === 'pending'
+                  ? 'Pendiente de acordar'
+                  : contract.renewal_mode === 'automatic'
+                    ? 'Automática, según acuerdo'
+                    : 'Manual'}
+              </p>
+              <p className="whitespace-pre-wrap">{contract.notes}</p>
+            </>
+          )}
         </CardContent>
       </Card>
+
+      <CleaningServicesPanel
+        tenantId={tenant.id}
+        contractId={contract.id}
+        clientId={contract.client_id}
+        clientName={clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+        startsOn={contract.starts_on}
+        endsOn={contract.ends_on}
+        updatedAt={contract.updated_at}
+        draft={contract.status === 'draft'}
+        editable={
+          can(session?.role, 'contracts:write') &&
+          (contract.status === 'draft' || contract.status === 'active')
+        }
+      />
 
       {can(session?.role, 'work:costs') ? (
         <ContractBillingPanel
@@ -265,131 +310,133 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         />
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Frecuencia por temporada</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {query.data.rules.length ? (
-            <ul className="space-y-2 text-sm">
-              {query.data.rules.map((rule) => (
-                <li key={rule.id} className="rounded-lg border p-3">
-                  <p className="font-medium">
-                    {rule.title} · {rule.season === 'high' ? 'Temporada alta' : 'Temporada baja'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {describeRule(rule)} · meses{' '}
-                    {rule.months.map((month) => monthNames[month - 1]).join(', ')}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Añade una frecuencia antes de activar el contrato.
-            </p>
-          )}
-          {contract.status === 'draft' ? (
-            <>
-              <Button variant="outline" onPress={() => setRuleOpen(true)}>
-                Añadir frecuencia
-              </Button>
-              <FormDialog
-                open={ruleOpen}
-                onOpenChange={(open) => {
-                  setRuleOpen(open)
-                  if (!open) resetRule()
-                }}
-                title="Añadir frecuencia"
-                submitLabel={busy === 'rule' ? 'Guardando…' : 'Añadir frecuencia'}
-                submitDisabled={Boolean(busy) || !validRule}
-                isSubmitting={busy === 'rule'}
-                isDirty={ruleDirty}
-                onSubmit={() => void addRule()}
-              >
-                <SelectField
-                  label="Temporada"
-                  value={season}
-                  options={[
-                    { value: 'high', label: 'Alta' },
-                    { value: 'low', label: 'Baja' },
-                  ]}
-                  onChange={(value) => {
-                    setSeason(value as ContractVisitRule['season'])
-                    setMonths(value === 'high' ? [6, 7, 8, 9] : [1, 2, 3, 4, 5, 10, 11, 12])
+      {query.data.rules.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pautas por temporada anteriores</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {query.data.rules.length ? (
+              <ul className="space-y-2 text-sm">
+                {query.data.rules.map((rule) => (
+                  <li key={rule.id} className="rounded-lg border p-3">
+                    <p className="font-medium">
+                      {rule.title} · {rule.season === 'high' ? 'Temporada alta' : 'Temporada baja'}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {describeRule(rule)} · meses{' '}
+                      {rule.months.map((month) => monthNames[month - 1]).join(', ')}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Añade una frecuencia antes de activar el contrato.
+              </p>
+            )}
+            {contract.status === 'draft' ? (
+              <>
+                <Button variant="outline" onPress={() => setRuleOpen(true)}>
+                  Añadir frecuencia
+                </Button>
+                <FormDialog
+                  open={ruleOpen}
+                  onOpenChange={(open) => {
+                    setRuleOpen(open)
+                    if (!open) resetRule()
                   }}
-                />
-                <TextField
-                  label="Nombre de la visita"
-                  value={ruleTitle}
-                  onChange={setRuleTitle}
-                  placeholder="Revisión de piscina"
-                  maxLength={200}
-                />
-                <SelectField
-                  label="Día"
-                  value={weekday}
-                  options={weekdays.map((name, index) => ({
-                    value: String(index + 1),
-                    label: name,
-                  }))}
-                  onChange={setWeekday}
-                />
-                <SelectField
-                  label="Periodicidad"
-                  value={everyNWeeks}
-                  options={[
-                    { value: '1', label: 'Cada semana' },
-                    { value: '2', label: 'Cada 2 semanas' },
-                    { value: '4', label: 'Cada 4 semanas' },
-                  ]}
-                  onChange={setEveryNWeeks}
-                />
-                <TextField
-                  label="Hora local"
-                  type="time"
-                  value={localStart}
-                  onChange={setLocalStart}
-                  placeholder="09:00"
-                />
-                <TextField
-                  label="Duración, minutos"
-                  type="number"
-                  value={duration}
-                  onChange={setDuration}
-                  placeholder="60"
-                  min={15}
-                  max={720}
-                />
-                <fieldset className="sm:col-span-2">
-                  <legend className="text-sm font-medium">Meses de aplicación</legend>
-                  <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {monthNames.map((name, index) => {
-                      const month = index + 1
-                      return (
-                        <label key={month} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={months.includes(month)}
-                            onChange={(event) =>
-                              setMonths((current) =>
-                                event.target.checked
-                                  ? [...current, month]
-                                  : current.filter((value) => value !== month),
-                              )
-                            }
-                          />
-                          {name}
-                        </label>
-                      )
-                    })}
-                  </div>
-                </fieldset>
-              </FormDialog>
-            </>
-          ) : null}
-        </CardContent>
-      </Card>
+                  title="Añadir frecuencia"
+                  submitLabel={busy === 'rule' ? 'Guardando…' : 'Añadir frecuencia'}
+                  submitDisabled={Boolean(busy) || !validRule}
+                  isSubmitting={busy === 'rule'}
+                  isDirty={ruleDirty}
+                  onSubmit={() => void addRule()}
+                >
+                  <SelectField
+                    label="Temporada"
+                    value={season}
+                    options={[
+                      { value: 'high', label: 'Alta' },
+                      { value: 'low', label: 'Baja' },
+                    ]}
+                    onChange={(value) => {
+                      setSeason(value as ContractVisitRule['season'])
+                      setMonths(value === 'high' ? [6, 7, 8, 9] : [1, 2, 3, 4, 5, 10, 11, 12])
+                    }}
+                  />
+                  <TextField
+                    label="Nombre de la visita"
+                    value={ruleTitle}
+                    onChange={setRuleTitle}
+                    placeholder="Limpieza del centro"
+                    maxLength={200}
+                  />
+                  <SelectField
+                    label="Día"
+                    value={weekday}
+                    options={weekdays.map((name, index) => ({
+                      value: String(index + 1),
+                      label: name,
+                    }))}
+                    onChange={setWeekday}
+                  />
+                  <SelectField
+                    label="Periodicidad"
+                    value={everyNWeeks}
+                    options={[
+                      { value: '1', label: 'Cada semana' },
+                      { value: '2', label: 'Cada 2 semanas' },
+                      { value: '4', label: 'Cada 4 semanas' },
+                    ]}
+                    onChange={setEveryNWeeks}
+                  />
+                  <TextField
+                    label="Hora local"
+                    type="time"
+                    value={localStart}
+                    onChange={setLocalStart}
+                    placeholder="09:00"
+                  />
+                  <TextField
+                    label="Duración, minutos"
+                    type="number"
+                    value={duration}
+                    onChange={setDuration}
+                    placeholder="60"
+                    min={15}
+                    max={720}
+                  />
+                  <fieldset className="sm:col-span-2">
+                    <legend className="text-sm font-medium">Meses de aplicación</legend>
+                    <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {monthNames.map((name, index) => {
+                        const month = index + 1
+                        return (
+                          <label key={month} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={months.includes(month)}
+                              onChange={(event) =>
+                                setMonths((current) =>
+                                  event.target.checked
+                                    ? [...current, month]
+                                    : current.filter((value) => value !== month),
+                                )
+                              }
+                            />
+                            {name}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
+                </FormDialog>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {contract.status !== 'expired' && contract.status !== 'canceled' ? (
         <Card>
@@ -397,6 +444,20 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             <CardTitle>Estado y generación</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <TextField
+              label="Mes que se va a preparar (todos los contratos activos)"
+              type="month"
+              value={generationMonth}
+              onChange={setGenerationMonth}
+              placeholder="Mes"
+            />
+            <Link
+              to="/trabajos"
+              search={{ view: 'calendar', period: 'month', date: `${generationMonth}-01` }}
+              className="text-primary text-sm underline"
+            >
+              Revisar visitas del mes
+            </Link>
             {contract.status !== 'draft' ? (
               <TextField
                 label="Motivo de la pausa o cancelación"
@@ -409,17 +470,19 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             <div className="flex flex-wrap gap-2">
               {contract.status === 'draft' || contract.status === 'paused' ? (
                 <Button isDisabled={Boolean(busy)} onPress={() => void transition('active')}>
-                  {contract.status === 'draft' ? 'Activar' : 'Reanudar'}
+                  {contract.status === 'draft'
+                    ? 'Activar y generar todos los trabajos'
+                    : 'Reanudar'}
                 </Button>
               ) : null}
               {contract.status === 'active' ? (
                 <>
                   <Button
                     variant="outline"
-                    isDisabled={Boolean(busy)}
+                    isDisabled={Boolean(busy) || !/^\d{4}-\d{2}$/.test(generationMonth)}
                     onPress={() => void generate()}
                   >
-                    Generar agenda de contratos
+                    Preparar mes
                   </Button>
                   <Button
                     variant="outline"
@@ -439,9 +502,11 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              La generación diaria incluye todos los contratos activos de la empresa y usa un
-              horizonte de 30 días por defecto. Repetirla no duplica visitas. Los conflictos quedan
-              pendientes de asignación.
+              Al activar se generan todos los trabajos de este contrato entre las fechas de inicio y
+              fin, con el equipo elegido. Los conflictos se muestran para revisión. Repetir no
+              duplica ni devuelve una visita reprogramada a su fecha original. «Preparar mes» solo
+              recupera fechas pendientes para todos los contratos activos. Las hojas fijas no emiten
+              visitas.
             </p>
           </CardContent>
         </Card>
@@ -464,7 +529,11 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                       timeZone: contract.timezone,
                     })}{' '}
                     · {visit.status} · versión {visit.contract_schedule_version}
-                    {visit.assigned_user_id ? '' : ' · Pendiente de asignar'}
+                    {visit.work_team_id
+                      ? ' · Equipo asignado'
+                      : visit.assigned_user_id
+                        ? ''
+                        : ' · Pendiente de asignar'}
                   </p>
                 </li>
               ))}
@@ -500,8 +569,12 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                 {event.kind === 'created'
                   ? 'Creado'
                   : event.kind === 'rule_added'
-                    ? 'Frecuencia añadida'
-                    : 'Estado cambiado'}
+                    ? 'Trabajo añadido'
+                    : event.kind === 'service_updated'
+                      ? 'Trabajo configurado'
+                      : event.kind === 'details_updated'
+                        ? 'Datos del contrato actualizados'
+                        : 'Estado cambiado'}
                 {typeof event.payload.reason === 'string' && event.payload.reason
                   ? ` · ${event.payload.reason}`
                   : ''}

@@ -103,19 +103,28 @@ export function EstimateDocument({
           <Row label="Base imponible" value={totals.subtotalCents} />
           <Row label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
           <div className="flex justify-between border-t pt-2 text-base font-semibold">
-            <dt>{estimate.conversionDestination === 'contract' ? 'Total por periodo' : 'Total'}</dt>
+            <dt>
+              {estimate.conversionDestination === 'contract' &&
+              estimate.contractBillingFrequency !== 'once'
+                ? 'Total por periodo'
+                : 'Total'}
+            </dt>
             <dd>{formatEuros(totals.totalCents)}</dd>
           </div>
         </dl>
         {estimate.conversionDestination === 'contract' ? (
           <p className="mt-3 text-sm font-medium">
-            Contrato recurrente · precio por periodo{' '}
-            {estimate.contractBillingFrequency === 'quarterly'
-              ? 'trimestral'
-              : estimate.contractBillingFrequency === 'yearly'
-                ? 'anual'
-                : 'mensual'}
-            . El inicio y la ubicación se concretarán al crear el contrato.
+            {estimate.contractBillingFrequency === 'once'
+              ? 'Contrato · importe único'
+              : 'Contrato · precio por periodo'}{' '}
+            {estimate.contractBillingFrequency === 'once'
+              ? ''
+              : estimate.contractBillingFrequency === 'quarterly'
+                ? 'trimestral'
+                : estimate.contractBillingFrequency === 'yearly'
+                  ? 'anual'
+                  : 'mensual'}
+            . La vigencia y la planificación de cada trabajo se concretarán en el contrato.
           </p>
         ) : null}
       </section>

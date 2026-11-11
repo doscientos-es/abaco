@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+import {
+  validateWorkPlanningSearch,
+  type WorkPlanningSearch,
+} from '@/shared/domain/work-planning-search'
+
 const workSearch = z.object({
   equipo: z
     .union([z.literal('unassigned'), z.string().uuid()])
@@ -12,8 +17,8 @@ const workSearch = z.object({
   pagina: z.coerce.number().int().min(0).max(100000).optional().catch(undefined),
 })
 
-export type WorkSearch = z.infer<typeof workSearch>
+export type WorkSearch = z.infer<typeof workSearch> & WorkPlanningSearch
 
 export function parseWorkSearch(search: Record<string, unknown>): WorkSearch {
-  return workSearch.parse(search)
+  return { ...workSearch.parse(search), ...validateWorkPlanningSearch(search) }
 }

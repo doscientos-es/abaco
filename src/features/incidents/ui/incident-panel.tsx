@@ -37,13 +37,7 @@ type Props = {
 
 function incidentContext(incident: Incident, passport?: ClientPassport) {
   if (!passport) return ''
-  return [
-    passport.locations.find((item) => item.id === incident.location_id)?.name,
-    passport.assets.find((item) => item.id === incident.asset_id)?.name,
-    passport.equipment.find((item) => item.id === incident.equipment_id)?.kind,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  return passport.locations.find((item) => item.id === incident.location_id)?.name ?? ''
 }
 
 export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }: Props) {
@@ -66,8 +60,6 @@ export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }:
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<IncidentPriority>('normal')
   const [locationId, setLocationId] = useState('')
-  const [assetId, setAssetId] = useState('')
-  const [equipmentId, setEquipmentId] = useState('')
   const [assignedUserId, setAssignedUserId] = useState('')
   const [dueAt, setDueAt] = useState('')
   const [busy, setBusy] = useState(false)
@@ -75,11 +67,6 @@ export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }:
   const queueKey = visitId ? visitIncidentQueueKey(userId, tenantId, visitId) : ''
   const [queue, setQueue] = useState(() => (visitId ? readVisitIncidentQueue(queueKey) : []))
   const [storageFailed, setStorageFailed] = useState(false)
-  const assetOptions = (passport?.assets ?? []).filter((asset) => asset.location_id === locationId)
-  const equipmentOptions = (passport?.equipment ?? []).filter(
-    (equipment) => equipment.asset_id === assetId,
-  )
-  const selectedEquipment = equipmentOptions.find((equipment) => equipment.id === equipmentId)
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ['incidents', tenantId, visitId ?? clientId] })
@@ -92,8 +79,6 @@ export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }:
       tenantId,
       clientId: null,
       locationId: null,
-      assetId: null,
-      equipmentId: null,
       sourceVisitId: visitId,
       title: item.title,
       description: item.description,
@@ -175,8 +160,6 @@ export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }:
       tenantId,
       clientId,
       locationId: locationId || null,
-      assetId: assetId || null,
-      equipmentId: equipmentId || null,
       sourceVisitId: null,
       title: title.trim(),
       description: description.trim(),
@@ -253,62 +236,19 @@ export function IncidentPanel({ tenantId, userId, clientId, visitId, passport }:
           {!visitId && passport ? (
             <>
               <label className="text-sm">
-                Ubicación{' '}
+                Centro{' '}
                 <select
                   className="border-input bg-background mt-1 w-full rounded-lg border p-2"
                   value={locationId}
-                  onChange={(event) => {
-                    setLocationId(event.target.value)
-                    setAssetId('')
-                    setEquipmentId('')
-                  }}
+                  onChange={(event) => setLocationId(event.target.value)}
                 >
-                  <option value="">Sin ubicación</option>
+                  <option value="">Sin centro</option>
                   {passport.locations.map((location) => (
                     <option key={location.id} value={location.id}>
                       {location.name}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="text-sm">
-                Activo{' '}
-                <select
-                  className="border-input bg-background mt-1 w-full rounded-lg border p-2"
-                  value={assetId}
-                  onChange={(event) => {
-                    setAssetId(event.target.value)
-                    setEquipmentId('')
-                  }}
-                >
-                  <option value="">Sin activo</option>
-                  {assetOptions.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                Equipo{' '}
-                <select
-                  className="border-input bg-background mt-1 w-full rounded-lg border p-2"
-                  value={equipmentId}
-                  onChange={(event) => setEquipmentId(event.target.value)}
-                >
-                  <option value="">Sin equipo</option>
-                  {equipmentOptions.map((equipment) => (
-                    <option key={equipment.id} value={equipment.id}>
-                      {equipment.kind} {equipment.model}
-                    </option>
-                  ))}
-                </select>
-                {selectedEquipment?.warranty_ends_at ? (
-                  <span className="text-muted-foreground block text-xs">
-                    Garantía registrada hasta {selectedEquipment.warranty_ends_at}; comprueba su
-                    cobertura.
-                  </span>
-                ) : null}
               </label>
               <label className="text-sm">
                 Responsable{' '}

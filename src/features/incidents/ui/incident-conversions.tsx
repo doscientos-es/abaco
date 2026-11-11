@@ -143,10 +143,11 @@ export function IncidentConversions({
             return (
               <Link
                 key={kind}
-                to="/agenda"
+                to="/trabajos"
+                search={{ view: 'calendar' }}
                 className="text-primary rounded-lg border px-3 py-1.5 font-medium underline"
               >
-                Ver visita en agenda
+                Ver en calendario de trabajos
               </Link>
             )
           }

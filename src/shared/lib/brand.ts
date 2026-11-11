@@ -4,7 +4,7 @@ export const brand = {
   maker: 'Doscientos',
   makerUrl: 'https://doscientos.es',
   tagline: 'Gestión unificada para servicios',
-  audience: 'Para autónomos y pequeñas empresas de instalaciones.',
+  audience: 'Para autónomos y pequeñas empresas de servicios.',
   promise:
     'Prepara presupuestos, facilita la respuesta de tu cliente y controla lo pendiente de cobrar.',
   /** "Ábaco · un producto de Doscientos" */

@@ -1,7 +1,6 @@
 /** Application boundary for work orders. Postgres owns conversion and lifecycle commands. */
 export {
   convertAcceptedEstimate,
-  createManualWorkOrder,
   findWorkOrderForEstimate,
   listWorkOrders,
   loadWorkMemberOptions,

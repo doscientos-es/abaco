@@ -1,4 +1,5 @@
-import { Button, Textarea, toast } from '@doscientos/ui'
+import { Button, Popover, Textarea, toast } from '@doscientos/ui'
+import { CalendarBlank } from '@phosphor-icons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 
@@ -9,19 +10,30 @@ import {
   listVacationRequests,
   requestAbsenceInformation,
 } from '../application/vacation-actions'
+import { calendarDate } from '../domain/absence-calendar'
+import type { AbsenceCalendarProposal } from '../domain/absence-events'
 import {
   absenceTypeLabels,
   absenceTypes,
   vacationRequestStatuses,
   vacationRequestStatusLabels,
   type VacationRequestStatus,
+  type VacationRequest,
 } from '../domain/vacation-request'
+import { AbsenceDateRangePicker } from './absence-date-range-picker'
+import { AbsenceOverview } from './absence-overview'
+import { AbsenceHistory, AdminAbsenceForm } from './admin-absence-form'
 import { VacationCoverage } from './vacation-coverage'
 import { VacationRequestCard } from './vacation-request-card'
 
 type StatusFilter = 'all' | VacationRequestStatus
 
 const requestQueryKey = (tenantId: string | null | undefined) => ['vacation-requests', tenantId]
+const filterDateFormat = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 export function VacationManagementPage() {
   const session = useSession()
@@ -32,6 +44,11 @@ export function VacationManagementPage() {
   const [search, setSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [editing, setEditing] = useState<VacationRequest | null | undefined>(undefined)
+  const [historyId, setHistoryId] = useState<string | null>(null)
+  const [calendarProposal, setCalendarProposal] = useState<AbsenceCalendarProposal | undefined>(
+    undefined,
+  )
   const requests = useQuery({
     queryKey: requestQueryKey(tenantId),
     enabled: Boolean(tenantId),
@@ -96,7 +113,7 @@ export function VacationManagementPage() {
       : (requests.data?.filter((request) => request.status === status).length ?? 0)
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="@container mx-auto max-w-4xl space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Solicitudes de ausencia</h1>
         <p className="text-muted-foreground text-sm">
@@ -105,6 +122,51 @@ export function VacationManagementPage() {
           cobertura.
         </p>
       </header>
+
+      <Button
+        onPress={() => {
+          setCalendarProposal(undefined)
+          setEditing(null)
+        }}
+      >
+        Registrar ausencia
+      </Button>
+      {requests.isSuccess ? (
+        <AbsenceOverview
+          requests={(requests.data ?? []).filter(
+            (r) =>
+              (typeFilter === 'all' || r.absenceType === typeFilter) &&
+              r.requesterName
+                .toLocaleLowerCase('es')
+                .includes(search.trim().toLocaleLowerCase('es')),
+          )}
+          from={dateFrom}
+          through={dateTo}
+          onEdit={
+            session?.role === 'admin'
+              ? (request, proposal) => {
+                  setCalendarProposal(proposal)
+                  setEditing(request)
+                }
+              : undefined
+          }
+          onRange={(from, through) => {
+            setDateFrom(from)
+            setDateTo(through)
+            setFilter('all')
+          }}
+        />
+      ) : null}
+      {tenantId && editing !== undefined ? (
+        <AdminAbsenceForm
+          key={`${editing?.id ?? 'new'}:${calendarProposal?.startDate}:${calendarProposal?.endDate}`}
+          tenantId={tenantId}
+          request={editing}
+          requests={requests.data ?? []}
+          proposal={calendarProposal}
+          onDone={() => setEditing(undefined)}
+        />
+      ) : null}
 
       <nav aria-label="Filtrar solicitudes" className="flex flex-wrap gap-2">
         {(['all', ...vacationRequestStatuses] as const).map((status) => (
@@ -121,23 +183,23 @@ export function VacationManagementPage() {
         ))}
       </nav>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="grid gap-1.5 text-sm font-medium">
+      <div className="grid gap-3 sm:grid-cols-2 @min-[40rem]:grid-cols-4">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Buscar trabajador
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Nombre del trabajador"
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           />
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
           Tipo de ausencia
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
+            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
           >
             <option value="all">Todos los tipos</option>
             {absenceTypes.map((type) => (
@@ -147,24 +209,49 @@ export function VacationManagementPage() {
             ))}
           </select>
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Desde
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
-          />
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Hasta
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
-            className="border-input bg-background min-h-10 rounded-md border px-3"
-          />
-        </label>
+        <div className="grid min-w-0 gap-1.5 sm:col-span-2">
+          <div aria-hidden="true" className="grid grid-cols-2 gap-3 text-sm font-medium">
+            <span>Desde</span>
+            <span>Hasta</span>
+          </div>
+          <Popover
+            placement="bottom end"
+            className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
+            trigger={
+              <Button
+                variant="ghost"
+                aria-label={`Filtrar por fechas. Desde ${dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : 'sin límite'} hasta ${dateTo ? filterDateFormat.format(calendarDate(dateTo)) : 'sin límite'}`}
+                className="grid h-auto min-h-10 w-full grid-cols-2 gap-3 overflow-hidden rounded-md p-0 text-left font-normal"
+              >
+                {[dateFrom, dateTo].map((date, index) => (
+                  <span
+                    key={index}
+                    className="border-input bg-background flex min-h-10 min-w-0 items-center justify-between gap-2 rounded-md border px-3"
+                  >
+                    <span className={`truncate ${date ? '' : 'text-muted-foreground'}`}>
+                      {date ? filterDateFormat.format(calendarDate(date)) : 'Cualquier fecha'}
+                    </span>
+                    <CalendarBlank
+                      aria-hidden="true"
+                      className="text-muted-foreground size-4 shrink-0"
+                    />
+                  </span>
+                ))}
+              </Button>
+            }
+          >
+            <AbsenceDateRangePicker
+              start={dateFrom}
+              end={dateTo}
+              endOptional={false}
+              mode="filter"
+              onChange={(start, end) => {
+                setDateFrom(start)
+                setDateTo(end)
+              }}
+            />
+          </Popover>
+        </div>
       </div>
 
       {requests.isPending ? <output>Cargando solicitudes…</output> : null}
@@ -181,7 +268,28 @@ export function VacationManagementPage() {
       <div className="space-y-3">
         {visibleRequests.map((request) => (
           <VacationRequestCard key={request.id} request={request} showRequester>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onPress={() => {
+                  setCalendarProposal(undefined)
+                  setEditing(request)
+                }}
+              >
+                Editar / cancelar
+              </Button>
+              <Button
+                variant="ghost"
+                onPress={() => setHistoryId(historyId === request.id ? null : request.id)}
+              >
+                Historial
+              </Button>
+            </div>
+            {tenantId && historyId === request.id ? (
+              <AbsenceHistory tenantId={tenantId} requestId={request.id} />
+            ) : null}
             {request.status !== 'rejected' &&
+            request.status !== 'canceled' &&
             (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
             tenantId ? (
               <VacationCoverage
