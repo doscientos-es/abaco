@@ -28,6 +28,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 vi.mock('@doscientos/ui', () => ({
   Button: button,
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  ConfirmDialog: () => null,
 }))
 vi.mock('@phosphor-icons/react', () => ({ UserPlusIcon: () => null, UsersThreeIcon: () => null }))
 vi.mock('@/features/auth', async (importOriginal) => ({
@@ -38,6 +39,7 @@ vi.mock('@/features/work-teams', () => ({ WorkTeamsSection: () => null }))
 vi.mock('@/shared/ui/field-icons', () => ({ fieldIcons: {} }))
 vi.mock('@/shared/ui/form', () => ({ TextField: field, SelectField: field }))
 vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: dialog }))
+vi.mock('./team-import-dialog', () => ({ TeamImportDialog: () => null }))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
   inviteMember: invite,

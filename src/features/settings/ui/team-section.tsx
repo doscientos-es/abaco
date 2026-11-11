@@ -1,4 +1,4 @@
-import { Badge, Button } from '@doscientos/ui'
+import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
 import { UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -21,8 +21,10 @@ import {
   inviteMember,
   removeMember,
   teamQuery,
+  type TeamMember,
   type TeamResult,
 } from '../application/team-actions'
+import { TeamImportDialog } from './team-import-dialog'
 
 /** Members of the company. Only rendered for people allowed to manage the team. */
 export function TeamSection({ tenantId }: { tenantId: string }) {
@@ -36,11 +38,28 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [removing, setRemoving] = useState<TeamMember | null>(null)
+  const [search, setSearch] = useState('')
+
+  async function refresh() {
+    await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
+    await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
+  }
 
   async function run(action: () => Promise<TeamResult>, success: string) {
     setBusy(true)
-    const result = await action()
-    setBusy(false)
+    let result: TeamResult
+    try {
+      result = await action()
+    } catch {
+      result = {
+        ok: false,
+        message: 'No se pudo confirmar la operación. Revisa el equipo antes de reintentar.',
+      }
+    } finally {
+      setBusy(false)
+    }
     if (!result.ok) {
       setMessage(result.message)
       return false
@@ -50,8 +69,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
         ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.'
         : success,
     )
-    await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
-    await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
+    await refresh()
     return true
   }
 
@@ -67,6 +85,12 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
       setInviteOpen(false)
     }
   }
+
+  const matching = (team.data ?? []).filter((member) =>
+    `${member.fullName} ${member.email} ${roleLabels[member.role]}`
+      .toLocaleLowerCase()
+      .includes(search.trim().toLocaleLowerCase()),
+  )
 
   return (
     <div className="space-y-6">
@@ -92,6 +116,13 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
               </Badge>
             ) : null}
             <Button
+              variant="outline"
+              isDisabled={busy || !team.isSuccess}
+              onPress={() => setImportOpen(true)}
+            >
+              Importar personas
+            </Button>
+            <Button
               aria-haspopup="dialog"
               aria-expanded={inviteOpen}
               isDisabled={busy}
@@ -106,8 +137,18 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
           </div>
         </div>
 
+        {team.isSuccess && team.data.length > 0 ? (
+          <div className="px-5 pt-4">
+            <TextField
+              label="Buscar personas"
+              value={search}
+              onChange={setSearch}
+              placeholder="Nombre, correo o rol"
+            />
+          </div>
+        ) : null}
         <ul className="divide-border divide-y">
-          {team.data?.map((member) => {
+          {matching.map((member) => {
             const isMe = member.userId === session?.userId
             const editable = !isMe && options.includes(member.role)
             const initials = (member.fullName.trim() || member.email)
@@ -154,12 +195,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                       size="sm"
                       isDisabled={busy}
                       aria-label={`Quitar a ${member.fullName || member.email} del equipo`}
-                      onPress={() =>
-                        void run(
-                          () => removeMember(tenantId, member.userId),
-                          'Persona quitada del equipo.',
-                        )
-                      }
+                      onPress={() => setRemoving(member)}
                     >
                       Quitar
                     </Button>
@@ -179,6 +215,11 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
           {team.isSuccess && team.data.length === 0 ? (
             <li className="text-muted-foreground px-5 py-4 text-sm">
               Todavía no hay personas en el equipo.
+            </li>
+          ) : null}
+          {team.isSuccess && team.data.length > 0 && matching.length === 0 ? (
+            <li className="text-muted-foreground px-5 py-4 text-sm">
+              No hay personas que coincidan con la búsqueda.
             </li>
           ) : null}
         </ul>
@@ -245,6 +286,44 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
           </p>
         ) : null}
       </FormDialog>
+      <TeamImportDialog
+        open={importOpen}
+        tenantId={tenantId}
+        existingEmails={(team.data ?? []).map((member) => member.email)}
+        onClose={() => setImportOpen(false)}
+        onResult={async (result) => {
+          setMessage(result)
+          try {
+            await refresh()
+          } catch {
+            setMessage(`${result} No se pudo actualizar la lista; recarga la página.`)
+          }
+        }}
+      />
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoving(null)
+        }}
+        title="¿Quitar a esta persona del equipo?"
+        description={
+          removing
+            ? `Se retirará el acceso de ${removing.fullName || removing.email} a esta empresa.`
+            : ''
+        }
+        confirmLabel="Quitar acceso"
+        destructive
+        pending={busy}
+        onConfirm={() => {
+          if (removing)
+            void run(
+              () => removeMember(tenantId, removing.userId),
+              'Persona quitada del equipo.',
+            ).then((ok) => {
+              if (ok) setRemoving(null)
+            })
+        }}
+      />
       <WorkTeamsSection
         key={tenantId}
         tenantId={tenantId}
