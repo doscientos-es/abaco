@@ -57,7 +57,12 @@ export async function inviteMember(input: {
     status?: 'invited' | 'added'
   }>('invite-member', { body: input })
   if (error) return { ok: false, message: await inviteErrorMessage(error.context) }
-  return data?.status ? { ok: true, status: data.status } : { ok: true }
+  if (data?.status === 'invited' || data?.status === 'added')
+    return { ok: true, status: data.status }
+  return {
+    ok: false,
+    message: 'No se pudo confirmar la invitación. Revisa el equipo antes de reintentar.',
+  }
 }
 
 export async function changeMemberRole(
@@ -65,19 +70,29 @@ export async function changeMemberRole(
   userId: string,
   role: Role,
 ): Promise<TeamResult> {
-  const { error } = await createBrowserSupabaseClient()
+  const { count, error } = await createBrowserSupabaseClient()
     .from('memberships')
-    .update({ role })
+    .update({ role }, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
-  return error ? { ok: false, message: 'No se pudo cambiar el rol.' } : { ok: true }
+  return error || count !== 1
+    ? {
+        ok: false,
+        message: 'No se pudo cambiar el rol. Actualiza el equipo y revisa tus permisos.',
+      }
+    : { ok: true }
 }
 
 export async function removeMember(tenantId: string, userId: string): Promise<TeamResult> {
-  const { error } = await createBrowserSupabaseClient()
+  const { count, error } = await createBrowserSupabaseClient()
     .from('memberships')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
-  return error ? { ok: false, message: 'No se pudo quitar a la persona.' } : { ok: true }
+  return error || count !== 1
+    ? {
+        ok: false,
+        message: 'No se pudo quitar a la persona. Actualiza el equipo y revisa tus permisos.',
+      }
+    : { ok: true }
 }

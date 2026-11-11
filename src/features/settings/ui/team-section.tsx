@@ -49,28 +49,29 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
 
   async function run(action: () => Promise<TeamResult>, success: string) {
     setBusy(true)
-    let result: TeamResult
     try {
-      result = await action()
-    } catch {
-      result = {
-        ok: false,
-        message: 'No se pudo confirmar la operación. Revisa el equipo antes de reintentar.',
+      const result = await action()
+      if (!result.ok) {
+        setMessage(result.message)
+        return false
       }
+      const confirmation =
+        result.status === 'added'
+          ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.'
+          : success
+      try {
+        await refresh()
+        setMessage(confirmation)
+      } catch {
+        setMessage(`${confirmation} No se pudo actualizar la lista; recarga la página.`)
+      }
+      return true
+    } catch {
+      setMessage('No se pudo confirmar la operación. Revisa el equipo antes de reintentar.')
+      return false
     } finally {
       setBusy(false)
     }
-    if (!result.ok) {
-      setMessage(result.message)
-      return false
-    }
-    setMessage(
-      result.status === 'added'
-        ? 'Esa persona ya tenía cuenta: la hemos añadido al equipo.'
-        : success,
-    )
-    await refresh()
-    return true
   }
 
   const invite = async () => {
@@ -319,9 +320,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
             void run(
               () => removeMember(tenantId, removing.userId),
               'Persona quitada del equipo.',
-            ).then((ok) => {
-              if (ok) setRemoving(null)
-            })
+            ).then(() => setRemoving(null))
         }}
       />
       <WorkTeamsSection
