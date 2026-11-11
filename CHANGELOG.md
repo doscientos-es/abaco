@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-11 — v0.0.13
+
+### Nuevas funciones
+
+- Add team import functionality and validation tests
+
 ## 2026-11-11 — v0.0.12
 
 ### Nuevas funciones

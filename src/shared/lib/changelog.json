@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.13",
+      "date": "2026-11-11",
+      "title": "v0.0.13",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add team import functionality and validation tests"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "db677276ba755ffdbb15aec85522ca110229879b",
+          "type": "feat",
+          "scope": "team",
+          "breaking": false,
+          "description": "Add team import functionality and validation tests"
+        }
+      ]
+    },
+    {
       "version": "0.0.12",
       "date": "2026-11-11",
       "title": "v0.0.12",
