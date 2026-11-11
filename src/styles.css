@@ -235,12 +235,29 @@ h3 {
 }
 
 /* Print: show only the document (invoice or estimate), not the app chrome. */
-@page { size: A4; margin: 14mm; }
-.paper-sheet { color: #171717; background: #fff; overflow-wrap: anywhere; }
-body.invoice-print { height: auto; overflow: visible; }
-body.invoice-print .paper-sheet { padding: 0; max-width: none; }
-body.invoice-print .paper-sheet + .paper-sheet { break-before: page; }
-body.invoice-print .paper-sheet section { break-inside: avoid; }
+@page {
+  size: A4;
+  margin: 14mm;
+}
+.paper-sheet {
+  color: #171717;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+body.invoice-print {
+  height: auto;
+  overflow: visible;
+}
+body.invoice-print .paper-sheet {
+  padding: 0;
+  max-width: none;
+}
+body.invoice-print .paper-sheet + .paper-sheet {
+  break-before: page;
+}
+body.invoice-print .paper-sheet section {
+  break-inside: avoid;
+}
 @media print {
   body * {
     visibility: hidden;
@@ -252,7 +269,9 @@ body.invoice-print .paper-sheet section { break-inside: avoid; }
     visibility: visible;
   }
   body.invoice-print,
-  body.invoice-print * { visibility: visible; }
+  body.invoice-print * {
+    visibility: visible;
+  }
   .invoice-document,
   .estimate-document {
     position: absolute;

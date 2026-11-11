@@ -2,12 +2,35 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-10",
+      "date": "2026-11-11",
       "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Correcciones",
+          "items": [
+            "Restore public PDF and worker endpoints"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "539f14113afc7b94447b66d31648548dd22101d3",
+          "type": "fix",
+          "scope": "reports",
+          "breaking": false,
+          "description": "Restore public PDF and worker endpoints"
+        }
+      ]
+    },
+    {
+      "version": "0.0.10",
+      "date": "2026-11-11",
+      "title": "v0.0.10",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add client form page and related routes for CRUD operations",
             "Add updateDraftContractDetails function and integrate it",
             "Add automatic contract handling and job configuration",
             "Add related record creation for locations in contracts page",
@@ -42,6 +65,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "107f8ac30d3b91631e2a63e119a9366eeb1d49cf",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add client form page and related routes for CRUD operations"
+        },
         {
           "sha": "08ce1dc02432037a59703167e2a4e35bffd7be82",
           "type": "feat",
