@@ -3,6 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
+import {
+  RelatedCreateButton,
+  useRelatedRecordCreation,
+} from '@/features/clients/ui/related-record-creation'
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
@@ -52,13 +56,28 @@ export function ContractsPage() {
   const [included, setIncluded] = useState('')
   const [busy, setBusy] = useState(false)
   const operationIds = useRef(new Map<string, string>())
+  const related = useRelatedRecordCreation({
+    tenantId: tenant.id,
+    clientId,
+    locationId,
+    onClientCreated: (id) => {
+      setClientId(id)
+      setLocationId('')
+      setAssetId('')
+    },
+    onLocationCreated: (id) => {
+      setLocationId(id)
+      setAssetId('')
+    },
+    onPoolCreated: setAssetId,
+  })
   const query = useQuery({
     queryKey: ['service-contracts', tenant.id, page],
     queryFn: () => listServiceContracts(tenant.id, page),
   })
   const targets = useQuery({
     queryKey: ['work-target-options', tenant.id, clientId],
-    enabled: Boolean(clientId),
+    enabled: Boolean(clientId) && !related.pending,
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const technicians = useQuery({
@@ -74,7 +93,7 @@ export function ContractsPage() {
     (!endsOn || endsOn >= startsOn)
 
   async function createContract() {
-    if (busy || !valid) return
+    if (busy || related.pending || !valid) return
     const payload = {
       tenantId: tenant.id,
       clientId,
@@ -131,48 +150,75 @@ export function ContractsPage() {
             <CardTitle>Nuevo contrato manual</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {related.status}
             <div className="grid gap-3 sm:grid-cols-2">
-              <SelectField
-                label="Cliente"
-                value={clientId}
-                options={[
-                  { value: '', label: 'Selecciona un cliente' },
-                  ...clients
-                    .filter((client) => !client.archivedAt)
-                    .map((client) => ({ value: client.id, label: client.name })),
-                ]}
-                onChange={(value) => {
-                  setClientId(value)
-                  setLocationId('')
-                  setAssetId('')
-                }}
-              />
-              <SelectField
-                label="Ubicación"
-                value={locationId}
-                options={[
-                  { value: '', label: 'Selecciona una ubicación' },
-                  ...(targets.data?.locations ?? []).map((location) => ({
-                    value: location.id,
-                    label: location.name,
-                  })),
-                ]}
-                onChange={(value) => {
-                  setLocationId(value)
-                  setAssetId('')
-                }}
-              />
-              <SelectField
-                label="Piscina o activo"
-                value={assetId}
-                options={[
-                  { value: '', label: 'Sin activo concreto' },
-                  ...(targets.data?.assets ?? [])
-                    .filter((asset) => asset.location_id === locationId)
-                    .map((asset) => ({ value: asset.id, label: asset.name })),
-                ]}
-                onChange={setAssetId}
-              />
+              <div className="flex flex-col gap-1.5">
+                <SelectField
+                  label="Cliente"
+                  value={clientId}
+                  options={[
+                    { value: '', label: 'Selecciona un cliente' },
+                    ...clients
+                      .filter((client) => !client.archivedAt)
+                      .map((client) => ({ value: client.id, label: client.name })),
+                  ]}
+                  onChange={(value) => {
+                    setClientId(value)
+                    setLocationId('')
+                    setAssetId('')
+                  }}
+                />
+                {related.allowed ? (
+                  <RelatedCreateButton
+                    label="Crear cliente"
+                    onPress={() => related.start('client')}
+                  />
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <SelectField
+                  label="Ubicación"
+                  value={locationId}
+                  options={[
+                    { value: '', label: 'Selecciona una ubicación' },
+                    ...(targets.data?.locations ?? []).map((location) => ({
+                      value: location.id,
+                      label: location.name,
+                    })),
+                  ]}
+                  onChange={(value) => {
+                    setLocationId(value)
+                    setAssetId('')
+                  }}
+                />
+                {related.allowed && clientId ? (
+                  <RelatedCreateButton
+                    label="Crear ubicación"
+                    disabled={related.pending}
+                    onPress={() => related.start('location')}
+                  />
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <SelectField
+                  label="Piscina o activo"
+                  value={assetId}
+                  options={[
+                    { value: '', label: 'Sin activo concreto' },
+                    ...(targets.data?.assets ?? [])
+                      .filter((asset) => asset.location_id === locationId)
+                      .map((asset) => ({ value: asset.id, label: asset.name })),
+                  ]}
+                  onChange={setAssetId}
+                />
+                {related.allowed && locationId ? (
+                  <RelatedCreateButton
+                    label="Crear piscina"
+                    disabled={related.pending}
+                    onPress={() => related.start('pool')}
+                  />
+                ) : null}
+              </div>
               <TextField
                 label="Título"
                 value={title}
@@ -230,12 +276,16 @@ export function ContractsPage() {
                 className="sm:col-span-2"
               />
             </div>
-            <Button isDisabled={busy || !valid} onPress={() => void createContract()}>
+            <Button
+              isDisabled={busy || related.pending || !valid}
+              onPress={() => void createContract()}
+            >
               {busy ? 'Creando…' : 'Crear borrador'}
             </Button>
           </CardContent>
         </Card>
       ) : null}
+      {related.dialogs}
       {query.isPending ? <output>Cargando contratos…</output> : null}
       {query.isError ? (
         <p role="alert" className="text-destructive text-sm">
