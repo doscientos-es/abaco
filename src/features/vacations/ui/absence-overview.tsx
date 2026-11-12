@@ -48,13 +48,11 @@ export function AbsenceOverview({
   const totals = absenceOccupancy(requests, start, end)
   const selected = requests.find((request) => request.id === selectedId)
   return (
-    <section
-      className="min-w-0 space-y-4 rounded-lg border p-4 sm:p-5"
-      aria-label="Calendario de vacaciones y asuntos propios"
-    >
+    <section className="min-w-0 space-y-4" aria-label="Calendario de ausencias">
+      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Calendario de ausencias</h2>
+          <span className="text-muted-foreground text-xs">Aprobadas / pendientes</span>
           <Popover
             placement="bottom start"
             className="w-[min(22rem,calc(100vw-2rem))] space-y-2 p-4 text-sm"
@@ -78,6 +76,7 @@ export function AbsenceOverview({
               Las ausencias sin fecha final se muestran hasta el final de la vista. Las vacaciones y
               bajas aprobadas bloquean nuevas visitas en esas fechas.
             </p>
+            <p>Selecciona un día o una quincena para consultar sus solicitudes.</p>
             {onEdit ? (
               <p>
                 Teclado: Alt + flechas mueve la ausencia; Alt + Mayús + flechas cambia su duración.
@@ -94,8 +93,6 @@ export function AbsenceOverview({
           </Button>
         </div>
       </div>
-      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
-      <p className="text-muted-foreground text-xs">Aprobadas / pendientes</p>
       <EventCalendar
         allDayOnly
         showInstructions={false}

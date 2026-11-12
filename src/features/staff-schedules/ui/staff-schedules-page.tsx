@@ -15,6 +15,7 @@ import {
   staffSchedulesQuery,
 } from '../application/staff-schedule-actions'
 import { scheduleOccurrences, type StaffPerson } from '../domain/staff-schedule'
+import { StaffPeopleFilter } from './staff-people-filter'
 import { StaffScheduleEditor } from './staff-schedule-editor'
 
 export function StaffSchedulesPage() {
@@ -156,59 +157,28 @@ function ScheduleView({
         <>
           {admin ? (
             <section
-              className="border-border bg-card space-y-3 rounded-xl border p-4"
+              className="flex flex-wrap items-center gap-2"
               aria-label="Filtrar trabajadores"
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-semibold">Personas y funciones</h2>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onPress={() => setSelected(null)}>
-                    Todas
-                  </Button>
-                  <Button variant="outline" size="sm" onPress={() => setSelected([])}>
-                    Ninguna
-                  </Button>
-                </div>
-              </div>
-              <label className="block text-sm">
-                Filtrar por función
-                <select
-                  className="bg-background ml-2 rounded border p-2"
-                  value={functionFilter}
-                  onChange={(event) => setFunctionFilter(event.target.value)}
-                >
-                  <option value="">Todas las funciones</option>
-                  {(functions.data ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {people.map((person) => (
-                  <li className="flex items-center gap-2" key={person.userId}>
-                    <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selected === null || selected.includes(person.userId)}
-                        onChange={(event) =>
-                          setSelected((previous) => {
-                            const ids = previous ?? people.map((item) => item.userId)
-                            return event.target.checked
-                              ? [...ids, person.userId]
-                              : ids.filter((id) => id !== person.userId)
-                          })
-                        }
-                      />
-                      <span className="truncate">{person.name}</span>
-                    </label>
-                    <Button variant="outline" size="sm" onPress={() => setEditingId(person.userId)}>
-                      Editar
-                    </Button>
-                  </li>
+              <StaffPeopleFilter
+                people={people}
+                selected={selected}
+                onChange={setSelected}
+                onEdit={setEditingId}
+              />
+              <select
+                aria-label="Filtrar por función"
+                className="border-border bg-background h-9 rounded-lg border px-3 text-sm"
+                value={functionFilter}
+                onChange={(event) => setFunctionFilter(event.target.value)}
+              >
+                <option value="">Todas las funciones</option>
+                {(functions.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
-              </ul>
+              </select>
             </section>
           ) : (
             <p className="text-sm">

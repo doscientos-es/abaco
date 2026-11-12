@@ -1,4 +1,13 @@
-import { Button, Popover, Textarea, toast } from '@doscientos/ui'
+import {
+  Button,
+  Popover,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
+  toast,
+} from '@doscientos/ui'
 import { CalendarBlank } from '@phosphor-icons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
@@ -49,6 +58,7 @@ export function VacationManagementPage() {
   const [calendarProposal, setCalendarProposal] = useState<AbsenceCalendarProposal | undefined>(
     undefined,
   )
+  const [tab, setTab] = useState<'calendar' | 'pending'>('calendar')
   const requests = useQuery({
     queryKey: requestQueryKey(tenantId),
     enabled: Boolean(tenantId),
@@ -126,32 +136,182 @@ export function VacationManagementPage() {
         </Button>
       </header>
 
-      {requests.isSuccess ? (
-        <AbsenceOverview
-          requests={(requests.data ?? []).filter(
-            (r) =>
-              (typeFilter === 'all' || r.absenceType === typeFilter) &&
-              r.requesterName
-                .toLocaleLowerCase('es')
-                .includes(search.trim().toLocaleLowerCase('es')),
-          )}
-          from={dateFrom}
-          through={dateTo}
-          onEdit={
-            session?.role === 'admin'
-              ? (request, proposal) => {
-                  setCalendarProposal(proposal)
-                  setEditing(request)
-                }
-              : undefined
-          }
-          onRange={(from, through) => {
-            setDateFrom(from)
-            setDateTo(through)
-            setFilter('all')
-          }}
-        />
+      {requests.isPending ? <output>Cargando solicitudes…</output> : null}
+      {requests.isError ? (
+        <p role="alert" className="text-destructive text-sm">
+          {requests.error.message}
+        </p>
       ) : null}
+      <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(key as 'calendar' | 'pending')}>
+        <TabsList aria-label="Secciones de ausencias" className="w-full sm:w-fit">
+          <TabsTrigger id="calendar">Calendario</TabsTrigger>
+          <TabsTrigger id="pending">Pendientes</TabsTrigger>
+        </TabsList>
+        <TabsContent id="calendar" shouldForceMount className="mt-4 data-[inert]:hidden">
+          {requests.isSuccess ? (
+            <AbsenceOverview
+              requests={requests.data ?? []}
+              from={dateFrom}
+              through={dateTo}
+              onEdit={
+                session?.role === 'admin'
+                  ? (request, proposal) => {
+                      setCalendarProposal(proposal)
+                      setEditing(request)
+                    }
+                  : undefined
+              }
+              onRange={(from, through) => {
+                setDateFrom(from)
+                setDateTo(through)
+                setFilter('all')
+                setTab('pending')
+              }}
+            />
+          ) : null}
+        </TabsContent>
+        <TabsContent id="pending" className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 @min-[50rem]:grid-cols-5">
+            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+              Estado
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as StatusFilter)}
+                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+              >
+                {(['all', ...vacationRequestStatuses] as const).map((status) => (
+                  <option key={status} value={status}>
+                    {status === 'all' ? 'Todas' : vacationRequestStatusLabels[status]} (
+                    {countFor(status)})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+              Buscar trabajador
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nombre del trabajador"
+                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+              />
+            </label>
+            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+              Tipo de ausencia
+              <select
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
+                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+              >
+                <option value="all">Todos los tipos</option>
+                {absenceTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {absenceTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid min-w-0 gap-1.5 sm:col-span-2">
+              <div aria-hidden="true" className="grid grid-cols-2 gap-3 text-sm font-medium">
+                <span>Desde</span>
+                <span>Hasta</span>
+              </div>
+              <Popover
+                placement="bottom end"
+                className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
+                trigger={
+                  <Button
+                    variant="ghost"
+                    aria-label={`Filtrar por fechas. Desde ${dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : 'sin límite'} hasta ${dateTo ? filterDateFormat.format(calendarDate(dateTo)) : 'sin límite'}`}
+                    className="grid h-auto min-h-10 w-full grid-cols-2 gap-3 overflow-hidden rounded-md p-0 text-left font-normal"
+                  >
+                    {[dateFrom, dateTo].map((date, index) => (
+                      <span
+                        key={index}
+                        className="border-input bg-background flex min-h-10 min-w-0 items-center justify-between gap-2 rounded-md border px-3"
+                      >
+                        <span className={`truncate ${date ? '' : 'text-muted-foreground'}`}>
+                          {date ? filterDateFormat.format(calendarDate(date)) : 'Cualquier fecha'}
+                        </span>
+                        <CalendarBlank
+                          aria-hidden="true"
+                          className="text-muted-foreground size-4 shrink-0"
+                        />
+                      </span>
+                    ))}
+                  </Button>
+                }
+              >
+                <AbsenceDateRangePicker
+                  start={dateFrom}
+                  end={dateTo}
+                  endOptional={false}
+                  mode="filter"
+                  onChange={(start, end) => {
+                    setDateFrom(start)
+                    setDateTo(end)
+                  }}
+                />
+              </Popover>
+            </div>
+          </div>
+
+          {!requests.isPending && !requests.isError && visibleRequests.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No hay solicitudes que coincidan con estos filtros.
+            </p>
+          ) : null}
+          <div className="space-y-3">
+            {visibleRequests.map((request) => (
+              <VacationRequestCard key={request.id} request={request} showRequester>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onPress={() => {
+                      setCalendarProposal(undefined)
+                      setEditing(request)
+                    }}
+                  >
+                    Editar / cancelar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onPress={() => setHistoryId(historyId === request.id ? null : request.id)}
+                  >
+                    Historial
+                  </Button>
+                </div>
+                {tenantId && historyId === request.id ? (
+                  <AbsenceHistory tenantId={tenantId} requestId={request.id} />
+                ) : null}
+                {request.status !== 'rejected' &&
+                request.status !== 'canceled' &&
+                (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
+                tenantId ? (
+                  <VacationCoverage
+                    tenantId={tenantId}
+                    requestId={request.id}
+                    approved={request.status === 'approved'}
+                  />
+                ) : null}
+                {request.status === 'pending' || request.status === 'needs_info' ? (
+                  <DecisionForm
+                    awaitingWorkerInformation={request.status === 'needs_info'}
+                    disabled={decide.isPending || requestInfo.isPending}
+                    onDecide={(decision, comment) =>
+                      decide.mutate({ requestId: request.id, decision, comment })
+                    }
+                    onRequestInfo={(comment) =>
+                      requestInfo.mutate({ requestId: request.id, comment })
+                    }
+                  />
+                ) : null}
+              </VacationRequestCard>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
       {tenantId && editing !== undefined ? (
         <AdminAbsenceForm
           key={`${editing?.id ?? 'new'}:${calendarProposal?.startDate}:${calendarProposal?.endDate}`}
@@ -162,151 +322,6 @@ export function VacationManagementPage() {
           onDone={() => setEditing(undefined)}
         />
       ) : null}
-
-      <h2 className="text-lg font-semibold">Solicitudes</h2>
-      <nav aria-label="Filtrar solicitudes" className="flex flex-wrap gap-2">
-        {(['all', ...vacationRequestStatuses] as const).map((status) => (
-          <Button
-            key={status}
-            type="button"
-            size="sm"
-            variant={filter === status ? 'default' : 'outline'}
-            aria-pressed={filter === status}
-            onPress={() => setFilter(status)}
-          >
-            {status === 'all' ? 'Todas' : vacationRequestStatusLabels[status]} ({countFor(status)})
-          </Button>
-        ))}
-      </nav>
-
-      <div className="grid gap-3 sm:grid-cols-2 @min-[40rem]:grid-cols-4">
-        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
-          Buscar trabajador
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Nombre del trabajador"
-            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
-          />
-        </label>
-        <label className="grid min-w-0 gap-1.5 text-sm font-medium">
-          Tipo de ausencia
-          <select
-            value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-            className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
-          >
-            <option value="all">Todos los tipos</option>
-            {absenceTypes.map((type) => (
-              <option key={type} value={type}>
-                {absenceTypeLabels[type]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="grid min-w-0 gap-1.5 sm:col-span-2">
-          <div aria-hidden="true" className="grid grid-cols-2 gap-3 text-sm font-medium">
-            <span>Desde</span>
-            <span>Hasta</span>
-          </div>
-          <Popover
-            placement="bottom end"
-            className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
-            trigger={
-              <Button
-                variant="ghost"
-                aria-label={`Filtrar por fechas. Desde ${dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : 'sin límite'} hasta ${dateTo ? filterDateFormat.format(calendarDate(dateTo)) : 'sin límite'}`}
-                className="grid h-auto min-h-10 w-full grid-cols-2 gap-3 overflow-hidden rounded-md p-0 text-left font-normal"
-              >
-                {[dateFrom, dateTo].map((date, index) => (
-                  <span
-                    key={index}
-                    className="border-input bg-background flex min-h-10 min-w-0 items-center justify-between gap-2 rounded-md border px-3"
-                  >
-                    <span className={`truncate ${date ? '' : 'text-muted-foreground'}`}>
-                      {date ? filterDateFormat.format(calendarDate(date)) : 'Cualquier fecha'}
-                    </span>
-                    <CalendarBlank
-                      aria-hidden="true"
-                      className="text-muted-foreground size-4 shrink-0"
-                    />
-                  </span>
-                ))}
-              </Button>
-            }
-          >
-            <AbsenceDateRangePicker
-              start={dateFrom}
-              end={dateTo}
-              endOptional={false}
-              mode="filter"
-              onChange={(start, end) => {
-                setDateFrom(start)
-                setDateTo(end)
-              }}
-            />
-          </Popover>
-        </div>
-      </div>
-
-      {requests.isPending ? <output>Cargando solicitudes…</output> : null}
-      {requests.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          {requests.error.message}
-        </p>
-      ) : null}
-      {!requests.isPending && !requests.isError && visibleRequests.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border p-4 text-sm">
-          No hay solicitudes que coincidan con estos filtros.
-        </p>
-      ) : null}
-      <div className="space-y-3">
-        {visibleRequests.map((request) => (
-          <VacationRequestCard key={request.id} request={request} showRequester>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onPress={() => {
-                  setCalendarProposal(undefined)
-                  setEditing(request)
-                }}
-              >
-                Editar / cancelar
-              </Button>
-              <Button
-                variant="ghost"
-                onPress={() => setHistoryId(historyId === request.id ? null : request.id)}
-              >
-                Historial
-              </Button>
-            </div>
-            {tenantId && historyId === request.id ? (
-              <AbsenceHistory tenantId={tenantId} requestId={request.id} />
-            ) : null}
-            {request.status !== 'rejected' &&
-            request.status !== 'canceled' &&
-            (request.absenceType === 'vacation' || request.absenceType === 'sick_leave') &&
-            tenantId ? (
-              <VacationCoverage
-                tenantId={tenantId}
-                requestId={request.id}
-                approved={request.status === 'approved'}
-              />
-            ) : null}
-            {request.status === 'pending' || request.status === 'needs_info' ? (
-              <DecisionForm
-                awaitingWorkerInformation={request.status === 'needs_info'}
-                disabled={decide.isPending || requestInfo.isPending}
-                onDecide={(decision, comment) =>
-                  decide.mutate({ requestId: request.id, decision, comment })
-                }
-                onRequestInfo={(comment) => requestInfo.mutate({ requestId: request.id, comment })}
-              />
-            ) : null}
-          </VacationRequestCard>
-        ))}
-      </div>
     </div>
   )
 }

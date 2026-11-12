@@ -1,4 +1,5 @@
-import { Button } from '@doscientos/ui'
+import { Button, IconButton } from '@doscientos/ui'
+import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 import { dateValue } from '@/shared/lib/date-range'
 import { calendarStep, type EventCalendarView } from '@/shared/lib/event-calendar'
@@ -17,23 +18,23 @@ export function CalendarToolbar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
+        <IconButton
           variant="outline"
-          aria-label="Periodo anterior"
+          label="Periodo anterior"
           onPress={() => onDateChange(calendarStep(value, view, -1))}
         >
-          Periodo anterior
-        </Button>
+          <CaretLeft aria-hidden="true" />
+        </IconButton>
         <Button variant="outline" onPress={() => onDateChange(new Date())}>
           Hoy
         </Button>
-        <Button
+        <IconButton
           variant="outline"
-          aria-label="Periodo siguiente"
+          label="Periodo siguiente"
           onPress={() => onDateChange(calendarStep(value, view, 1))}
         >
-          Periodo siguiente
-        </Button>
+          <CaretRight aria-hidden="true" />
+        </IconButton>
         <label className="text-sm">
           <span className="sr-only">Fecha del calendario</span>
           <input
