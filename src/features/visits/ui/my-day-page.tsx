@@ -11,6 +11,7 @@ import {
   readVisitIncidentQueue,
   visitIncidentQueueKey,
 } from '@/features/incidents/application/incident-queue'
+import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
 
 import {
   listMyVisits,
@@ -40,6 +41,13 @@ const statusLabels = {
   canceled: 'Cancelada',
 }
 
+const taskStatusLabels = {
+  pending: 'Pendiente',
+  in_progress: 'En curso',
+  done: 'Hecha',
+  skipped: 'No aplica',
+} as const
+
 export function MyDayPage() {
   const session = useSession()
   const tenantId = session?.tenantId
@@ -55,6 +63,15 @@ export function MyDayPage() {
     queryFn: () => {
       if (!tenantId) throw new Error('Selecciona una empresa.')
       return listMyVisits(tenantId, date, date)
+    },
+  })
+  const visitIds = visits.data?.map((visit) => visit.id) ?? []
+  const tasks = useQuery({
+    queryKey: ['my-day-tasks', tenantId, date, visits.data],
+    enabled: Boolean(tenantId) && visits.isSuccess && visitIds.length > 0,
+    queryFn: () => {
+      if (!tenantId || !visits.data) throw new Error('Selecciona una empresa.')
+      return listMyDayTasks(tenantId, visits.data)
     },
   })
 
@@ -229,6 +246,46 @@ export function MyDayPage() {
               </div>
             ) : null}
             {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
+            {visit.work_order_id ? (
+              <section aria-label="Tareas del servicio" className="space-y-2 rounded-lg border p-3">
+                <h3 className="font-medium">Tareas del servicio</h3>
+                {tasks.isPending ? <p className="text-muted-foreground">Cargando tareas…</p> : null}
+                {tasks.isError ? (
+                  <p role="alert" className="text-destructive">
+                    No se pudieron cargar las tareas: {tasks.error.message}
+                  </p>
+                ) : null}
+                {tasks.isSuccess &&
+                (tasks.data.find((entry) => entry.visitId === visit.id)?.tasks.length ?? 0) ===
+                  0 ? (
+                  <p className="text-muted-foreground">Este servicio no tiene tareas añadidas.</p>
+                ) : null}
+                {tasks.data
+                  ?.find((entry) => entry.visitId === visit.id)
+                  ?.tasks.map((task) => (
+                    <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <p className="font-medium">{task.title}</p>
+                        <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
+                          {taskStatusLabels[task.status]}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">{task.phaseTitle}</p>
+                      {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
+                      {task.checklist.length ? (
+                        <ul className="mt-1 space-y-1 pl-4">
+                          {task.checklist.map((item) => (
+                            <li key={item.id} className="flex gap-2">
+                              <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
+                              <span>{item.label}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+              </section>
+            ) : null}
             {visit.status === 'scheduled' ? (
               <Button
                 isDisabled={Boolean(busyId)}

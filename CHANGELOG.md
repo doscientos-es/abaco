@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-12 — Sin publicar
+
+### Nuevas funciones
+
+- Show service tasks in mobile day
+
 ## 2026-11-12 — v0.0.17
 
 ### Nuevas funciones

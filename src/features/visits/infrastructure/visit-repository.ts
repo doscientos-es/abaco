@@ -19,6 +19,7 @@ export type VisitSummary = {
   notes: string
   updated_at: string
   work_team_id?: string | null
+  work_order_id?: string | null
   work_team_name?: string
   route_order?: number
 }
@@ -91,7 +92,21 @@ export async function listMyVisits(
     p_to: to,
   })
   if (error) throw new Error(error.message)
-  return (data ?? []) as VisitSummary[]
+  const rows = (data ?? []) as VisitSummary[]
+  if (rows.length === 0) return rows
+  const extra = await createBrowserSupabaseClient()
+    .from('service_visits')
+    .select('id,work_order_id')
+    .eq('tenant_id', tenantId)
+    .in(
+      'id',
+      rows.map((row) => row.id),
+    )
+  if (extra.error) throw new Error(extra.error.message)
+  return rows.map((row) => ({
+    ...row,
+    work_order_id: extra.data?.find((visit) => visit.id === row.id)?.work_order_id ?? null,
+  }))
 }
 
 export async function createServiceVisit(input: {
