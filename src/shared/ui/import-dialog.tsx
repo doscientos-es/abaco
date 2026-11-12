@@ -69,7 +69,7 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
 
   return (
     <DialogRoot open={open} onOpenChange={(next) => (next ? undefined : close())}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="app-dialog w-full">
         <DialogHeader className="pr-8">
           <DialogTitle>Importar {schema.plural}</DialogTitle>
           <DialogDescription>

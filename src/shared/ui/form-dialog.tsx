@@ -66,10 +66,10 @@ export function FormDialog({
         <DialogContent
           className={
             wide
-              ? 'max-h-[94dvh] w-full max-w-full overflow-y-auto sm:max-w-6xl'
+              ? 'app-dialog app-dialog--wide max-h-[94dvh] w-full overflow-y-auto'
               : compact
-                ? 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-lg'
-                : 'max-h-[90dvh] w-full max-w-full overflow-y-auto sm:max-w-xl'
+                ? 'app-dialog app-dialog--compact max-h-[90dvh] w-full overflow-y-auto'
+                : 'app-dialog max-h-[90dvh] w-full overflow-y-auto'
           }
           showCloseButton={!isSubmitting}
         >
@@ -97,7 +97,7 @@ export function FormDialog({
         </DialogContent>
       </DialogRoot>
       <AlertDialog open={open && discardOpen} onOpenChange={setDiscardOpen}>
-        <AlertDialogContent size="sm">
+        <AlertDialogContent size="sm" className="app-dialog--alert">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Descartar los cambios?</AlertDialogTitle>
             <AlertDialogDescription>

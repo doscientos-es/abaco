@@ -140,6 +140,27 @@ h3 {
   border-bottom: 0;
 }
 
+/* Unlayered limits take precedence over the UI library's bundled width utilities. */
+.app-dialog {
+  max-width: min(100%, 36rem);
+}
+
+.app-dialog--compact {
+  max-width: min(100%, 32rem);
+}
+
+.app-dialog--alert {
+  max-width: min(100%, 20rem);
+}
+
+.app-dialog--details {
+  max-width: min(100%, 42rem);
+}
+
+.app-dialog--wide {
+  max-width: min(100%, 72rem);
+}
+
 /* Denser office layout on desktop; leave touch controls and custom-sized elements unchanged. */
 @media (min-width: 48rem) and (pointer: fine) {
   .admin-frame [data-slot='app-shell-content'] [data-slot='page-header'] {

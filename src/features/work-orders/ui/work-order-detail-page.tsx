@@ -149,7 +149,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
           if (!changing) setCancelOpen(open)
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent size="sm" className="app-dialog--alert">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cancelar este trabajo?</AlertDialogTitle>
             <AlertDialogDescription>

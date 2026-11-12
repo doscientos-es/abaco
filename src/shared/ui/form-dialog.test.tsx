@@ -71,6 +71,7 @@ describe('FormDialog interaction guards', () => {
       isDirty?: boolean
       submitDisabled?: boolean
       compact?: boolean
+      wide?: boolean
     } = {},
   ) =>
     renderToStaticMarkup(
@@ -125,12 +126,14 @@ describe('FormDialog interaction guards', () => {
     expect(html.match(/<button disabled=""/g)).toHaveLength(2)
   })
 
-  it('preserves the default width and allows a compact dialog', () => {
+  it('uses the default, compact and wide dialog limits while keeping viewport scrolling', () => {
     const defaultMarkup = render()
-    expect(defaultMarkup).toContain('sm:max-w-xl')
+    expect(defaultMarkup).toContain('app-dialog max-h-[90dvh] w-full overflow-y-auto')
 
     const compactMarkup = render({ compact: true })
-    expect(compactMarkup).toContain('sm:max-w-lg')
-    expect(compactMarkup).not.toContain('sm:max-w-xl')
+    expect(compactMarkup).toContain('app-dialog app-dialog--compact')
+
+    const wideMarkup = render({ wide: true })
+    expect(wideMarkup).toContain('app-dialog app-dialog--wide max-h-[94dvh] w-full overflow-y-auto')
   })
 })
