@@ -199,7 +199,6 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                       size="icon-lg"
                       isDisabled={busy}
                       aria-label={`Quitar a ${member.fullName || member.email} del equipo`}
-                      title={`Quitar a ${member.fullName || member.email} del equipo`}
                       onPress={() => setRemoving(member)}
                     >
                       <TrashIcon aria-hidden="true" className="size-4" />

@@ -7,6 +7,7 @@
 ### Nuevas funciones
 
 - Add new release section for CreatePassportItem enhancements
+- Add new release section for CreatePassportItem enhancements
 - Enhance CreatePassportItem and related record creation with status and submit blocking features
 
 ## 2026-11-12 — v0.0.19
