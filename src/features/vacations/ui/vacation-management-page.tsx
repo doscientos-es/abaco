@@ -165,6 +165,8 @@ export function VacationManagementPage() {
                 setDateFrom(from)
                 setDateTo(through)
                 setFilter('all')
+                setTypeFilter('all')
+                setSearch('')
                 setTab('pending')
               }}
             />

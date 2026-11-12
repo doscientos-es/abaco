@@ -9,6 +9,16 @@ const mocks = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
   filterNeedsInfo: false,
   stateIndex: 0,
+  tab: 'pending' as 'calendar' | 'pending',
+  setTab: vi.fn(),
+  setFilter: vi.fn(),
+  setType: vi.fn(),
+  setSearch: vi.fn(),
+  overview: null as null | {
+    requests: Array<Record<string, unknown>>
+    onRange: (from: string, through: string) => void
+  },
+  selectTab: null as null | ((key: string) => void),
   from: '',
   to: '',
   setFrom: vi.fn(),
@@ -28,17 +38,45 @@ vi.mock('react', async (importOriginal) => {
     useState: (initial: unknown) => {
       const [value, setValue] = actual.useState(initial)
       const index = mocks.stateIndex++
+      if (index === 0) return [mocks.filterNeedsInfo ? 'needs_info' : value, mocks.setFilter]
+      if (index === 1) return [value, mocks.setType]
+      if (index === 2) return [value, mocks.setSearch]
       if (index === 3) return [mocks.from, mocks.setFrom]
       if (index === 4) return [mocks.to, mocks.setTo]
-      return mocks.filterNeedsInfo && initial === 'pending'
-        ? ['needs_info', setValue]
-        : [value, setValue]
+      if (index === 8) return [mocks.tab, mocks.setTab]
+      return [value, setValue]
     },
   }
 })
 
 vi.mock('@doscientos/ui', () => ({
   Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+  Tabs: ({
+    children,
+    onSelectionChange,
+  }: {
+    children: ReactNode
+    onSelectionChange: (key: string) => void
+  }) => {
+    mocks.selectTab = onSelectionChange
+    return <div>{children}</div>
+  },
+  TabsList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  TabsTrigger: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+  TabsContent: ({
+    children,
+    id,
+    shouldForceMount,
+  }: {
+    children: ReactNode
+    id: string
+    shouldForceMount?: boolean
+  }) =>
+    id === mocks.tab ? (
+      <div>{children}</div>
+    ) : shouldForceMount ? (
+      <div hidden>{children}</div>
+    ) : null,
   Popover: ({ trigger, children }: { trigger: ReactNode; children: ReactNode }) => (
     <>
       {trigger}
@@ -50,7 +88,7 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useQuery: () => ({ data: mocks.data }),
+  useQuery: () => ({ data: mocks.data, isSuccess: true }),
   useMutation: () => ({ isPending: false, mutate: vi.fn() }),
 }))
 vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'tenant-1' }) }))
@@ -60,6 +98,12 @@ vi.mock('../application/vacation-actions', () => ({
   requestAbsenceInformation: vi.fn(),
 }))
 vi.mock('./vacation-coverage', () => ({ VacationCoverage: () => null }))
+vi.mock('./absence-overview', () => ({
+  AbsenceOverview: (props: NonNullable<typeof mocks.overview>) => {
+    mocks.overview = props
+    return <div>Vista del calendario</div>
+  },
+}))
 vi.mock('./absence-date-range-picker', () => ({
   AbsenceDateRangePicker: (props: NonNullable<typeof mocks.picker>) => {
     mocks.picker = props
@@ -86,6 +130,9 @@ describe('VacationManagementPage', () => {
     mocks.data = []
     mocks.filterNeedsInfo = false
     mocks.stateIndex = 0
+    mocks.tab = 'pending'
+    mocks.overview = null
+    mocks.selectTab = null
     mocks.from = ''
     mocks.to = ''
     mocks.picker = null
@@ -100,7 +147,7 @@ describe('VacationManagementPage', () => {
     expect(html).toContain('Desde')
     expect(html).toContain('Hasta')
     expect(html).toContain('@container')
-    expect(html).toContain('@min-[40rem]:grid-cols-4')
+    expect(html).toContain('@min-[50rem]:grid-cols-5')
     expect(html).not.toContain('max-w-4xl')
     expect(html).not.toContain('Revisa cada solicitud')
     expect(html).not.toContain('type="date"')
@@ -108,6 +155,35 @@ describe('VacationManagementPage', () => {
     mocks.picker?.onChange('2026-11-10', '2026-11-12')
     expect(mocks.setFrom).toHaveBeenCalledWith('2026-11-10')
     expect(mocks.setTo).toHaveBeenCalledWith('2026-11-12')
+  })
+
+  it('separates the calendar and inbox and transfers a selected period to the inbox', () => {
+    mocks.tab = 'calendar'
+    mocks.data = [
+      {
+        id: '1',
+        requesterName: 'Ana',
+        status: 'pending',
+        absenceType: 'other',
+        startDate: '2026-11-10',
+        endDate: null,
+      },
+    ]
+    const html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('Calendario')
+    expect(html).toContain('Pendientes')
+    expect(html).toContain('Vista del calendario')
+    expect(html).not.toContain('Buscar trabajador')
+    expect(mocks.overview?.requests).toEqual(mocks.data)
+    mocks.selectTab?.('pending')
+    expect(mocks.setTab).toHaveBeenCalledWith('pending')
+    mocks.overview?.onRange('2026-11-10', '2026-11-10')
+    expect(mocks.setFrom).toHaveBeenCalledWith('2026-11-10')
+    expect(mocks.setTo).toHaveBeenCalledWith('2026-11-10')
+    expect(mocks.setFilter).toHaveBeenCalledWith('all')
+    expect(mocks.setType).toHaveBeenCalledWith('all')
+    expect(mocks.setSearch).toHaveBeenCalledWith('')
+    expect(mocks.setTab).toHaveBeenCalledWith('pending')
   })
 
   it('filtra solapamientos inclusivos y ausencias sin fecha final', () => {

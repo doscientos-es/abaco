@@ -125,6 +125,8 @@ describe('absence overview calendar integration', () => {
     expect(onRange).toHaveBeenNthCalledWith(2, `${month}-16`, `${month}-${lastDay}`)
     expect(html).toContain('Aprobadas / pendientes')
     expect(html).toContain('no implica coincidencia en un mismo día')
+    expect(html).not.toContain('<h2')
+    expect(html).not.toContain('rounded-lg border p-4')
     expect(html).not.toContain('Pulsa un día')
   })
 })

@@ -162,18 +162,6 @@ export function AbsenceOverview({
           {totals.approvedPeople} personas aprobadas · {totals.pendingPeople} pendientes
         </p>
       </div>
-      <ul className="space-y-1 text-sm">
-        {[...totals.approved, ...totals.pending].map((r) => (
-          <li key={r.id}>
-            {r.requesterName} · {r.startDate} — {r.endDate ?? 'Sin fin confirmado'} ·{' '}
-            {absenceTypeLabels[r.absenceType]} ·{' '}
-            {r.status === 'approved' ? 'Aprobada' : 'Pendiente'}
-          </li>
-        ))}
-      </ul>
-      {!totals.approved.length && !totals.pending.length ? (
-        <p>No hay ausencias aprobadas ni pendientes en este intervalo.</p>
-      ) : null}
     </section>
   )
 }
