@@ -23,7 +23,7 @@ vi.mock('@doscientos/ui', () => {
     PageHeader: Container,
     PageHeaderDescription: Container,
     PageHeaderHeading: Container,
-    PageHeaderTitle: Container,
+    PageHeaderTitle: ({ children }: { children: ReactNode }) => <h1>{children}</h1>,
     Skeleton: () => null,
     Tabs: ({
       children,
@@ -92,7 +92,7 @@ describe('unified work module', () => {
   it.each([
     ['planificacion', 'Planificación compartida TEST'],
     ['revision', 'Revisión TEST'],
-    ['anteriores', 'Consulta y termina los registros del modelo anterior'],
+    ['anteriores', 'Gestionar equipos'],
   ] as const)('shows only the selected section for %s', (tab, content) => {
     state.search.tab = tab
     const html = renderToStaticMarkup(<WorkOrdersPage />)
@@ -103,6 +103,9 @@ describe('unified work module', () => {
     expect(html).toContain('Partes por revisar')
     expect(html).not.toContain('Trabajos contratados')
     expect(html).toContain('Trabajos anteriores')
+    expect(html.match(/<h1>Planificación<\/h1>/g)).toHaveLength(1)
+    expect(html).not.toContain('Organiza conjuntamente las visitas')
+    expect(html).not.toContain('Consulta y termina los registros del modelo anterior')
     if (tab !== 'anteriores') expect(state.queries).toEqual([])
   })
 

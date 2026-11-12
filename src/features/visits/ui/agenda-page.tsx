@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import { Button, toast } from '@doscientos/ui'
 import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -40,7 +40,6 @@ import {
 } from '../application/visit-actions'
 import {
   calendarDateValue,
-  calendarWeekLabel,
   calendarWeekRange,
   calendarMonthRange,
   moveCalendarMonth,
@@ -375,18 +374,6 @@ export function AgendaPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Planificación</h2>
-          <p className="text-muted-foreground text-sm">
-            Consulta las visitas de contratos e independientes en lista o calendario.
-          </p>
-        </div>
-        <Button onPress={() => setCreateOpen(true)}>
-          <PlusIcon aria-hidden="true" />
-          Nueva visita
-        </Button>
-      </div>
       <FormDialog
         open={createOpen && !related.creating}
         onOpenChange={(open) => {
@@ -498,401 +485,381 @@ export function AgendaPage() {
       </FormDialog>
       {related.dialogs}
 
-      <Card>
-        <CardHeader className="gap-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <CardTitle>
-                {view === 'calendar' ? 'Calendario de trabajos' : 'Lista de trabajos'}
-              </CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {period === 'month'
-                  ? new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', {
-                      month: 'long',
-                      year: 'numeric',
-                    })
-                  : period === 'week'
-                    ? calendarWeekLabel(date)
-                    : new Date(`${date}T12:00:00`).toLocaleDateString('es-ES')}
-              </p>
-            </div>
-            <fieldset className="inline-flex rounded-lg border p-1">
-              <legend className="sr-only">Cambiar vista de trabajos</legend>
-              {(['list', 'calendar'] as const).map((nextView) => (
-                <Button
-                  key={nextView}
-                  variant={view === nextView ? 'default' : 'ghost'}
-                  aria-pressed={view === nextView}
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ view: nextView })
-                  }}
-                >
-                  {nextView === 'list' ? 'Lista' : 'Calendario'}
-                </Button>
-              ))}
-            </fieldset>
+      <section aria-label="Controles de planificación" className="space-y-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="w-44 max-w-full">
+            <TextField
+              label="Fecha de referencia"
+              type="date"
+              value={date}
+              onChange={(value) => {
+                if (value) {
+                  setSelectedCalendarVisitId(null)
+                  updateSearch({ date: value })
+                }
+              }}
+              placeholder="Fecha"
+            />
           </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="w-full min-w-0 sm:w-44">
-              <TextField
-                label="Fecha de referencia"
-                type="date"
-                value={date}
-                onChange={(value) => {
-                  if (value) {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ date: value })
-                  }
-                }}
-                placeholder="Fecha"
-              />
-            </div>
-            <div className="w-32">
-              <SelectField
-                label="Periodo"
-                value={period}
-                options={[
-                  { value: 'day', label: 'Día' },
-                  { value: 'week', label: 'Semana' },
-                  { value: 'month', label: 'Mes' },
-                ]}
-                onChange={(value) => {
-                  updateSearch({ period: value as AgendaPeriod })
-                }}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="size-8 p-0"
-                aria-label="Periodo anterior"
-                onPress={() => {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({
-                    date:
-                      period === 'month'
-                        ? moveCalendarMonth(date, -1)
-                        : addDays(date, period === 'day' ? -1 : -7),
-                  })
-                }}
-              >
-                <CaretLeftIcon aria-hidden="true" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({ date: todayInMadrid() })
-                }}
-              >
-                Hoy
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="size-8 p-0"
-                aria-label="Periodo siguiente"
-                onPress={() => {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({
-                    date:
-                      period === 'month'
-                        ? moveCalendarMonth(date, 1)
-                        : addDays(date, period === 'day' ? 1 : 7),
-                  })
-                }}
-              >
-                <CaretRightIcon aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="w-36 max-w-full">
             <SelectField
-              label="Técnico"
-              value={filterTechnicianId}
+              label="Periodo"
+              value={period}
               options={[
-                { value: '', label: 'Todos' },
-                { value: 'unassigned', label: 'Sin persona ni equipo' },
-                ...(technicians.data ?? []).map((person) => ({
-                  value: person.id,
-                  label: person.label,
-                })),
+                { value: 'day', label: 'Día' },
+                { value: 'week', label: 'Semana' },
+                { value: 'month', label: 'Mes' },
               ]}
               onChange={(value) => {
-                updateSearch({ technician: value || undefined })
+                updateSearch({ period: value as AgendaPeriod })
               }}
             />
-            <SelectField
-              label="Equipo"
-              value={teamFilter}
-              onChange={(value) => updateSearch({ team: value || undefined })}
-              options={[
-                { value: '', label: 'Todos los equipos' },
-                { value: 'unassigned', label: 'Sin equipo' },
-                ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
-              ]}
-            />
-            <SelectField
-              label="Estado"
-              value={statusFilter}
-              onChange={(value) =>
-                updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
-              }
-              options={[
-                { value: '', label: 'Todos los estados' },
-                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-              ]}
-            />
-            <TextField
-              label="Buscar cliente o centro"
-              value={textFilter}
-              onChange={(value) => updateSearch({ q: value || undefined })}
-              placeholder="Nombre o dirección"
-            />
           </div>
-          {filterTechnicianId || teamFilter || statusFilter || textFilter ? (
-            <div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="size-8 p-0"
+              aria-label="Periodo anterior"
+              onPress={() => {
+                setSelectedCalendarVisitId(null)
+                updateSearch({
+                  date:
+                    period === 'month'
+                      ? moveCalendarMonth(date, -1)
+                      : addDays(date, period === 'day' ? -1 : -7),
+                })
+              }}
+            >
+              <CaretLeftIcon aria-hidden="true" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => {
+                setSelectedCalendarVisitId(null)
+                updateSearch({ date: todayInMadrid() })
+              }}
+            >
+              Hoy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="size-8 p-0"
+              aria-label="Periodo siguiente"
+              onPress={() => {
+                setSelectedCalendarVisitId(null)
+                updateSearch({
+                  date:
+                    period === 'month'
+                      ? moveCalendarMonth(date, 1)
+                      : addDays(date, period === 'day' ? 1 : 7),
+                })
+              }}
+            >
+              <CaretRightIcon aria-hidden="true" />
+            </Button>
+          </div>
+          <fieldset className="inline-flex rounded-lg border p-1">
+            <legend className="sr-only">Cambiar vista de trabajos</legend>
+            {(['list', 'calendar'] as const).map((nextView) => (
               <Button
-                variant="ghost"
-                size="sm"
-                onPress={() =>
-                  updateSearch({
-                    technician: undefined,
-                    team: undefined,
-                    status: undefined,
-                    q: undefined,
-                  })
-                }
+                key={nextView}
+                variant={view === nextView ? 'default' : 'ghost'}
+                aria-pressed={view === nextView}
+                onPress={() => {
+                  setSelectedCalendarVisitId(null)
+                  updateSearch({ view: nextView })
+                }}
               >
-                Limpiar filtros
+                {nextView === 'list' ? 'Lista' : 'Calendario'}
               </Button>
-            </div>
+            ))}
+          </fieldset>
+          <Button className="sm:ml-auto" onPress={() => setCreateOpen(true)}>
+            <PlusIcon aria-hidden="true" />
+            Nueva visita
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <SelectField
+            label="Técnico"
+            className="w-40 max-w-full"
+            value={filterTechnicianId}
+            options={[
+              { value: '', label: 'Todos los técnicos' },
+              { value: 'unassigned', label: 'Sin persona ni equipo' },
+              ...(technicians.data ?? []).map((person) => ({
+                value: person.id,
+                label: person.label,
+              })),
+            ]}
+            onChange={(value) => {
+              updateSearch({ technician: value || undefined })
+            }}
+          />
+          <SelectField
+            label="Equipo"
+            className="w-40 max-w-full"
+            value={teamFilter}
+            onChange={(value) => updateSearch({ team: value || undefined })}
+            options={[
+              { value: '', label: 'Todos los equipos' },
+              { value: 'unassigned', label: 'Sin equipo' },
+              ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
+            ]}
+          />
+          <SelectField
+            label="Estado"
+            className="w-40 max-w-full"
+            value={statusFilter}
+            onChange={(value) =>
+              updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
+            }
+            options={[
+              { value: '', label: 'Todos los estados' },
+              ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+            ]}
+          />
+          <TextField
+            label="Buscar cliente o centro"
+            className="w-52 max-w-full"
+            value={textFilter}
+            onChange={(value) => updateSearch({ q: value || undefined })}
+            placeholder="Nombre o dirección"
+          />
+          {filterTechnicianId || teamFilter || statusFilter || textFilter ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() =>
+                updateSearch({
+                  technician: undefined,
+                  team: undefined,
+                  status: undefined,
+                  q: undefined,
+                })
+              }
+            >
+              Limpiar filtros
+            </Button>
           ) : null}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            {visibleVisits.length} trabajos planificados ·{' '}
-            {Math.round(
-              visibleVisits
-                .filter((v) => v.status !== 'canceled' && v.status !== 'skipped')
-                .reduce(
-                  (total, v) =>
-                    total +
-                    (Date.parse(v.scheduled_end_at) - Date.parse(v.scheduled_start_at)) / 60000,
-                  0,
-                ),
-            )}{' '}
-            minutos estimados (no equivale a trabajo realizado)
+        </div>
+      </section>
+      <div className="space-y-4">
+        <p className="text-muted-foreground text-sm">
+          {visibleVisits.length} trabajos planificados ·{' '}
+          {Math.round(
+            visibleVisits
+              .filter((v) => v.status !== 'canceled' && v.status !== 'skipped')
+              .reduce(
+                (total, v) =>
+                  total +
+                  (Date.parse(v.scheduled_end_at) - Date.parse(v.scheduled_start_at)) / 60000,
+                0,
+              ),
+          )}{' '}
+          minutos estimados (no equivale a trabajo realizado)
+        </p>
+        {view === 'list' && period === 'day' ? (
+          <BatchWorkSheets
+            tenantId={tenant.id}
+            visits={visibleVisits.filter((v) => v.status !== 'canceled' && v.status !== 'skipped')}
+          />
+        ) : null}
+        {visits.isPending ? <output>Cargando trabajos…</output> : null}
+        {visits.isError ? (
+          <p role="alert" className="text-destructive text-sm">
+            No se pudieron cargar los trabajos: {visits.error.message}
           </p>
-          {view === 'list' && period === 'day' ? (
-            <BatchWorkSheets
-              tenantId={tenant.id}
-              visits={visibleVisits.filter(
-                (v) => v.status !== 'canceled' && v.status !== 'skipped',
-              )}
-            />
-          ) : null}
-          {visits.isPending ? <output>Cargando trabajos…</output> : null}
-          {visits.isError ? (
-            <p role="alert" className="text-destructive text-sm">
-              No se pudieron cargar los trabajos: {visits.error.message}
-            </p>
-          ) : null}
-          {approvedVacations.isError ? (
-            <p role="alert" className="text-destructive text-sm">
-              No se pudieron comprobar las vacaciones aprobadas: {approvedVacations.error.message}
-            </p>
-          ) : null}
+        ) : null}
+        {approvedVacations.isError ? (
+          <p role="alert" className="text-destructive text-sm">
+            No se pudieron comprobar las vacaciones aprobadas: {approvedVacations.error.message}
+          </p>
+        ) : null}
 
-          {view === 'calendar' ? (
-            <>
-              {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
-                <output className="text-muted-foreground text-sm">
-                  No hay trabajos en este periodo con estos filtros. Puedes elegir otra fecha.
-                </output>
-              ) : null}
-              <EventCalendar
-                key={`${period}:${date}`}
-                aria-label={
-                  period === 'month'
-                    ? 'Calendario mensual de trabajos'
-                    : period === 'day'
-                      ? 'Calendario diario de trabajos'
-                      : 'Calendario semanal de trabajos'
-                }
-                view={period}
-                value={calendarDateValue(date)}
-                items={calendarItems}
-                minuteStep={15}
-                onDayClick={(day) =>
-                  updateSearch({ date: calendarLocalInput(day).slice(0, 10), period: 'day' })
-                }
-                onItemClick={(item) => {
-                  setSelectedCalendarVisitId(item.id)
-                  setOpenReportId(null)
+        {view === 'calendar' ? (
+          <>
+            {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
+              <output className="text-muted-foreground text-sm">
+                No hay trabajos en este periodo con estos filtros. Puedes elegir otra fecha.
+              </output>
+            ) : null}
+            <EventCalendar
+              key={`${period}:${date}`}
+              aria-label={
+                period === 'month'
+                  ? 'Calendario mensual de trabajos'
+                  : period === 'day'
+                    ? 'Calendario diario de trabajos'
+                    : 'Calendario semanal de trabajos'
+              }
+              view={period}
+              value={calendarDateValue(date)}
+              items={calendarItems}
+              minuteStep={15}
+              onDayClick={(day) =>
+                updateSearch({ date: calendarLocalInput(day).slice(0, 10), period: 'day' })
+              }
+              onItemClick={(item) => {
+                setSelectedCalendarVisitId(item.id)
+                setOpenReportId(null)
+                setReplanning(null)
+                setCalendarProposal(null)
+              }}
+              onItemChange={
+                session?.role === 'admin'
+                  ? (change) => {
+                      const visit = calendarVisitById.get(change.item.id)
+                      if (!visit || visit.status !== 'scheduled') return
+                      if (visit.updated_at !== change.item.revision) {
+                        toast.error(
+                          'El trabajo ha cambiado. Revisa los datos antes de reprogramar.',
+                        )
+                        return
+                      }
+                      setSelectedCalendarVisitId(visit.id)
+                      setOpenReportId(null)
+                      setReplanning(visit)
+                      setCalendarProposal(change)
+                    }
+                  : undefined
+              }
+              renderItem={(item) => {
+                const visit = calendarVisitById.get(item.id)
+                if (!visit) return typeof item.title === 'string' ? item.title : item.id
+                return (
+                  <span
+                    className={`grid gap-1 border-l-2 pl-2 ${statusStyles[visit.status].border}`}
+                  >
+                    <span className="truncate font-semibold">{visit.title}</span>
+                    <span className="truncate text-xs opacity-80">
+                      {visit.client_name} ·{' '}
+                      {new Intl.DateTimeFormat('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }).format(item.start)}
+                    </span>
+                    <span className="truncate text-xs opacity-80">
+                      {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'}
+                      {visit.priority === 'urgent' ? ' · Urgente' : ''}
+                    </span>
+                    <span
+                      className={`w-fit rounded-full px-1.5 py-0.5 text-[10px] ${statusStyles[visit.status].badge}`}
+                    >
+                      {statusLabels[visit.status]}
+                    </span>
+                  </span>
+                )
+              }}
+            />
+            {selectedCalendarVisit ? (
+              <CalendarDetailsDialog
+                title={selectedCalendarVisit.title}
+                description={`Detalle del trabajo · ${selectedCalendarVisit.timezone}`}
+                onClose={() => {
+                  setSelectedCalendarVisitId(null)
                   setReplanning(null)
                   setCalendarProposal(null)
+                  setOpenReportId(null)
                 }}
-                onItemChange={
-                  session?.role === 'admin'
-                    ? (change) => {
-                        const visit = calendarVisitById.get(change.item.id)
-                        if (!visit || visit.status !== 'scheduled') return
-                        if (visit.updated_at !== change.item.revision) {
-                          toast.error(
-                            'El trabajo ha cambiado. Revisa los datos antes de reprogramar.',
-                          )
-                          return
-                        }
-                        setSelectedCalendarVisitId(visit.id)
-                        setOpenReportId(null)
-                        setReplanning(visit)
-                        setCalendarProposal(change)
-                      }
-                    : undefined
-                }
-                renderItem={(item) => {
-                  const visit = calendarVisitById.get(item.id)
-                  if (!visit) return typeof item.title === 'string' ? item.title : item.id
-                  return (
-                    <span
-                      className={`grid gap-1 border-l-2 pl-2 ${statusStyles[visit.status].border}`}
-                    >
-                      <span className="truncate font-semibold">{visit.title}</span>
-                      <span className="truncate text-xs opacity-80">
-                        {visit.client_name} ·{' '}
-                        {new Intl.DateTimeFormat('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }).format(item.start)}
-                      </span>
-                      <span className="truncate text-xs opacity-80">
-                        {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'}
-                        {visit.priority === 'urgent' ? ' · Urgente' : ''}
-                      </span>
-                      <span
-                        className={`w-fit rounded-full px-1.5 py-0.5 text-[10px] ${statusStyles[visit.status].badge}`}
-                      >
-                        {statusLabels[visit.status]}
-                      </span>
-                    </span>
-                  )
-                }}
-              />
-              {selectedCalendarVisit ? (
-                <CalendarDetailsDialog
-                  title={selectedCalendarVisit.title}
-                  description={`Detalle del trabajo · ${selectedCalendarVisit.timezone}`}
-                  onClose={() => {
-                    setSelectedCalendarVisitId(null)
-                    setReplanning(null)
-                    setCalendarProposal(null)
-                    setOpenReportId(null)
-                  }}
-                >
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">{selectedCalendarVisit.title}</h3>
+                    <p className="text-muted-foreground text-sm">
+                      {new Date(selectedCalendarVisit.scheduled_start_at).toLocaleString('es-ES', {
+                        timeZone: selectedCalendarVisit.timezone,
+                        dateStyle: 'full',
+                        timeStyle: 'short',
+                      })}{' '}
+                      · {selectedCalendarVisit.client_name}
+                      {selectedCalendarVisit.location_name
+                        ? ` · ${selectedCalendarVisit.location_name}`
+                        : ''}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedCalendarVisit.work_team_name ||
+                        selectedCalendarVisit.assigned_user_name ||
+                        'Pendiente de asignar'}{' '}
+                      · {statusLabels[selectedCalendarVisit.status]}
+                      {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
+                    </p>
+                    {hasApprovedVacationConflict(selectedCalendarVisit) ? (
+                      <p className="text-destructive text-sm font-medium">
+                        Vacaciones aprobadas · revisar cobertura en{' '}
+                        <Link to="/vacaciones" className="underline">
+                          Vacaciones
+                        </Link>
+                      </p>
+                    ) : null}
+                  </div>
+                  {renderVisitActions(selectedCalendarVisit)}
+                </div>
+                {renderVisitExpandedDetails(selectedCalendarVisit)}
+              </CalendarDetailsDialog>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No hay trabajos en este periodo con estos filtros.
+              </p>
+            ) : null}
+            <ol className="divide-border divide-y">
+              {visibleVisits.map((visit, index) => (
+                <li key={visit.id} className="space-y-3 py-4 text-sm">
+                  {index === 0 ||
+                  (visibleVisits[index - 1]?.work_team_id ??
+                    visibleVisits[index - 1]?.assigned_user_id) !==
+                    (visit.work_team_id ?? visit.assigned_user_id) ||
+                  visibleVisits[index - 1]?.scheduled_start_at.slice(0, 10) !==
+                    visit.scheduled_start_at.slice(0, 10) ? (
+                    <h3 className="text-primary font-semibold">
+                      {visit.work_team_name || visit.assigned_user_name || 'Sin asignar'} ·{' '}
+                      {new Date(visit.scheduled_start_at).toLocaleDateString('es-ES', {
+                        timeZone: visit.timezone,
+                      })}
+                    </h3>
+                  ) : null}
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{selectedCalendarVisit.title}</h3>
-                      <p className="text-muted-foreground text-sm">
-                        {new Date(selectedCalendarVisit.scheduled_start_at).toLocaleString(
-                          'es-ES',
-                          {
-                            timeZone: selectedCalendarVisit.timezone,
-                            dateStyle: 'full',
-                            timeStyle: 'short',
-                          },
-                        )}{' '}
-                        · {selectedCalendarVisit.client_name}
-                        {selectedCalendarVisit.location_name
-                          ? ` · ${selectedCalendarVisit.location_name}`
-                          : ''}
-                      </p>
-                      <p className="text-muted-foreground text-sm">
-                        {selectedCalendarVisit.work_team_name ||
-                          selectedCalendarVisit.assigned_user_name ||
-                          'Pendiente de asignar'}{' '}
-                        · {statusLabels[selectedCalendarVisit.status]}
-                        {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
-                      </p>
-                      {hasApprovedVacationConflict(selectedCalendarVisit) ? (
-                        <p className="text-destructive text-sm font-medium">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{visit.title}</p>
+                      {hasApprovedVacationConflict(visit) ? (
+                        <p className="text-destructive font-medium">
                           Vacaciones aprobadas · revisar cobertura en{' '}
                           <Link to="/vacaciones" className="underline">
                             Vacaciones
                           </Link>
                         </p>
                       ) : null}
-                    </div>
-                    {renderVisitActions(selectedCalendarVisit)}
-                  </div>
-                  {renderVisitExpandedDetails(selectedCalendarVisit)}
-                </CalendarDetailsDialog>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  No hay trabajos en este periodo con estos filtros.
-                </p>
-              ) : null}
-              <ol className="divide-border divide-y">
-                {visibleVisits.map((visit, index) => (
-                  <li key={visit.id} className="space-y-3 py-4 text-sm">
-                    {index === 0 ||
-                    (visibleVisits[index - 1]?.work_team_id ??
-                      visibleVisits[index - 1]?.assigned_user_id) !==
-                      (visit.work_team_id ?? visit.assigned_user_id) ||
-                    visibleVisits[index - 1]?.scheduled_start_at.slice(0, 10) !==
-                      visit.scheduled_start_at.slice(0, 10) ? (
-                      <h3 className="text-primary font-semibold">
-                        {visit.work_team_name || visit.assigned_user_name || 'Sin asignar'} ·{' '}
-                        {new Date(visit.scheduled_start_at).toLocaleDateString('es-ES', {
+                      <p className="text-muted-foreground">
+                        {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
                           timeZone: visit.timezone,
-                        })}
-                      </h3>
-                    ) : null}
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{visit.title}</p>
-                        {hasApprovedVacationConflict(visit) ? (
-                          <p className="text-destructive font-medium">
-                            Vacaciones aprobadas · revisar cobertura en{' '}
-                            <Link to="/vacaciones" className="underline">
-                              Vacaciones
-                            </Link>
-                          </p>
-                        ) : null}
-                        <p className="text-muted-foreground">
-                          {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
-                            timeZone: visit.timezone,
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })}{' '}
-                          · {visit.client_name}
-                          {visit.location_name ? ` · ${visit.location_name}` : ''}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {visit.work_team_name ||
-                            visit.assigned_user_name ||
-                            'Pendiente de asignar'}{' '}
-                          · Orden {visit.route_order ?? 0} · {statusLabels[visit.status]}
-                          {visit.priority === 'urgent' ? ' · Urgente' : ''}
-                        </p>
-                      </div>
-                      {renderVisitActions(visit)}
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}{' '}
+                        · {visit.client_name}
+                        {visit.location_name ? ` · ${visit.location_name}` : ''}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'}{' '}
+                        · Orden {visit.route_order ?? 0} · {statusLabels[visit.status]}
+                        {visit.priority === 'urgent' ? ' · Urgente' : ''}
+                      </p>
                     </div>
-                    {renderVisitExpandedDetails(visit)}
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                    {renderVisitActions(visit)}
+                  </div>
+                  {renderVisitExpandedDetails(visit)}
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -212,8 +212,19 @@ describe('AgendaPage: nueva visita', () => {
   it('muestra la agenda sin el formulario y lo abre mediante el botón', () => {
     const html = render()
     expect(html).toContain('Nueva visita')
-    expect(html).toContain('Lista de trabajos')
+    expect(html).not.toContain('Lista de trabajos')
+    expect(html).not.toContain('Consulta las visitas de contratos')
     expect(html).toContain('Calendario')
+    for (const field of [
+      'Fecha de referencia',
+      'Periodo',
+      'Técnico',
+      'Equipo',
+      'Estado',
+      'Buscar cliente o centro',
+    ]) {
+      expect(mocks.fields.has(field)).toBe(true)
+    }
     expect(html).not.toContain('Asunto')
     expect(mocks.dialog?.open).toBe(false)
     mocks.buttons.get('Nueva visita')?.()

@@ -2,6 +2,7 @@ import {
   Avatar,
   AvatarFallback,
   Button,
+  IconButton,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -29,6 +30,7 @@ import {
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
 import { platformAccessQuery } from '@/features/superadmin'
+import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
@@ -71,7 +73,6 @@ const navGroups: NavGroup[] = [
     label: 'Cuenta',
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
-      { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
       { to: '/superadmin', label: 'Administración de Ábaco', icon: navIcons.settings },
     ],
   },
@@ -190,7 +191,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      className="flex h-svh flex-col overflow-hidden md:flex-row"
+      className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
       style={
         tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
           ? ({
@@ -228,7 +229,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav aria-label="Principal" className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-1">
+        <nav aria-label="Principal" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1">
           {groups.map((group) => (
             <div key={group.label} className="space-y-1">
               <p className="text-muted-foreground/80 px-3 pb-1 text-[11px] font-medium tracking-wider uppercase">
@@ -244,8 +245,23 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <PlanBanner placement="sidebar" />
 
         <div className="border-border mt-auto shrink-0 border-t p-3">
-          <div className="px-3 pt-1 pb-2">
+          <div className="flex items-center gap-1 px-2 pb-2">
             <SaveStatusIndicator status={saveStatus} />
+            <div className="ml-auto flex items-center gap-1">
+              {can(session?.role, 'vacations:manage') && session?.tenantId ? (
+                <PendingAbsenceNotifications tenantId={session.tenantId} />
+              ) : null}
+              {canSeeSettings ? (
+                <IconButton
+                  label="Ajustes"
+                  variant="ghost"
+                  onPress={() => void navigate({ to: '/ajustes' })}
+                  className={pathname === '/ajustes' ? 'text-primary' : 'text-muted-foreground'}
+                >
+                  {navIcons.settings}
+                </IconButton>
+              ) : null}
+            </div>
           </div>
           <DropdownMenuTrigger>
             <Button
@@ -300,7 +316,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
         <AppShellContent
           size={pathname === '/vacaciones' ? 'full' : 'wide'}
-          className={`mx-auto p-4 sm:px-10 sm:py-10 ${pathname === '/vacaciones' ? 'max-w-none' : 'max-w-6xl'}`}
+          className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' ? 'max-w-none' : 'max-w-6xl'}`}
         >
           {children}
         </AppShellContent>

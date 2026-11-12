@@ -50,7 +50,9 @@ vi.mock('react', async (importOriginal) => {
 })
 
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+  Button: ({ children, ...props }: { children: ReactNode; 'aria-label'?: string }) => (
+    <button aria-label={props['aria-label']}>{children}</button>
+  ),
   Tabs: ({
     children,
     onSelectionChange,
@@ -144,10 +146,9 @@ describe('VacationManagementPage', () => {
     expect(html).toContain('Necesita información')
     expect(html).toContain('Buscar trabajador')
     expect(html).toContain('Todos los tipos')
-    expect(html).toContain('Desde')
-    expect(html).toContain('Hasta')
-    expect(html).toContain('@container')
-    expect(html).toContain('@min-[50rem]:grid-cols-5')
+    expect(html).toContain('Fechas')
+    expect(html).toContain('Cualquier fecha')
+    expect(html).toContain('Filtrar por fechas. Desde sin límite hasta sin límite')
     expect(html).not.toContain('max-w-4xl')
     expect(html).not.toContain('Revisa cada solicitud')
     expect(html).not.toContain('type="date"')
@@ -155,6 +156,27 @@ describe('VacationManagementPage', () => {
     mocks.picker?.onChange('2026-11-10', '2026-11-12')
     expect(mocks.setFrom).toHaveBeenCalledWith('2026-11-10')
     expect(mocks.setTo).toHaveBeenCalledWith('2026-11-12')
+  })
+
+  it('summarizes a complete or open-ended date filter in one accessible control', () => {
+    mocks.from = '2026-11-10'
+    mocks.to = '2026-11-12'
+    let html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('10 nov 2026 – 12 nov 2026')
+    expect(html).toContain('Filtrar por fechas. Desde 10 nov 2026 hasta 12 nov 2026')
+
+    mocks.stateIndex = 0
+    mocks.from = ''
+    html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('Hasta 12 nov 2026')
+    expect(html).toContain('Filtrar por fechas. Desde sin límite hasta 12 nov 2026')
+
+    mocks.stateIndex = 0
+    mocks.from = '2026-11-10'
+    mocks.to = ''
+    html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('Desde 10 nov 2026')
+    expect(html).toContain('Filtrar por fechas. Desde 10 nov 2026 hasta sin límite')
   })
 
   it('separates the calendar and inbox and transfers a selected period to the inbox', () => {

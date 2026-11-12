@@ -1,7 +1,6 @@
 import {
   Button,
   PageHeader,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Skeleton,
@@ -46,9 +45,6 @@ export function WorkOrdersPage() {
       <PageHeader className="py-0">
         <PageHeaderHeading>
           <PageHeaderTitle className="text-xl md:text-2xl">Planificación</PageHeaderTitle>
-          <PageHeaderDescription>
-            Organiza conjuntamente las visitas de contratos y las visitas independientes.
-          </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
       <Tabs
@@ -109,16 +105,7 @@ function LegacyWorkOrdersPage() {
     })
 
   return (
-    <div className="space-y-6">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Trabajos anteriores</PageHeaderTitle>
-          <PageHeaderDescription>
-            Consulta y termina los registros del modelo anterior, estén o no vinculados a un
-            contrato.
-          </PageHeaderDescription>
-        </PageHeaderHeading>
-      </PageHeader>
+    <div className="space-y-4">
       <section aria-label="Filtros de trabajos" className="space-y-2">
         <div className="grid gap-2 sm:max-w-2xl sm:grid-cols-2">
           <SelectField

@@ -21,12 +21,12 @@ import { saveDashboardConfig } from '@/features/dashboard/application/dashboard-
 import { estimateTotalCents, paidForEstimate } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
 import { monthlySeries } from '@/shared/domain/stats'
-import type { DashboardConfig, EstimateStatus, TenantData } from '@/shared/domain/types'
+import type { DashboardConfig, TenantData } from '@/shared/domain/types'
 import { useSaveStatus, useTenantData } from '@/shared/store/store'
-import { ChartCard, Donut, EmptyHint, MonthlyBars, type ChartTone } from '@/shared/ui/charts'
+import { ChartCard, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
-import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
+import { StatusBadge } from '@/shared/ui/status-badge'
 
 import {
   dashboardWidgets,
@@ -35,6 +35,7 @@ import {
   resolveDashboardWidgets,
   type DashboardWidgetId,
 } from '../domain/dashboard-config'
+import { EstimateStatusSummary } from './estimate-status-summary'
 import { SortableDashboardWidget } from './sortable-dashboard-widget'
 
 export function DashboardPage() {
@@ -71,19 +72,6 @@ export function DashboardPage() {
   )
   const winRate = decided.length ? Math.round((accepted.length / decided.length) * 100) : 0
   const months = monthlySeries(ledger)
-  const statusTones: Record<EstimateStatus, ChartTone> = {
-    draft: 'muted',
-    sent: 'info',
-    accepted: 'success',
-    rejected: 'danger',
-  }
-  const byStatus = (Object.keys(statusLabels) as EstimateStatus[]).map((status) => ({
-    label: statusLabels[status],
-    tone: statusTones[status],
-    value: estimates
-      .filter((estimate) => estimate.status === status)
-      .reduce((sum, estimate) => sum + estimateTotalCents(estimate), 0),
-  }))
   const data = {
     estimates,
     ledger,
@@ -93,7 +81,6 @@ export function DashboardPage() {
     owedTotal,
     overdueTotal,
     months,
-    byStatus,
     sentTotal,
     open,
     pendingCollection,
@@ -296,7 +283,6 @@ type DashboardData = {
   owedTotal: number
   overdueTotal: number
   months: ReturnType<typeof monthlySeries>
-  byStatus: { label: string; tone: ChartTone; value: number }[]
   sentTotal: number
   open: TenantData['estimates']
   pendingCollection: number
@@ -353,22 +339,7 @@ function DashboardWidget({ id, data }: { id: DashboardWidgetId; data: DashboardD
         </ChartCard>
       )
     case 'estimate-status':
-      return (
-        <ChartCard title="Presupuestos por estado" description="Importe total de cada grupo.">
-          <Donut
-            data={data.byStatus}
-            centerLabel="Total"
-            empty="Aún no hay presupuestos"
-            emptyDescription="Crea el primero y verás cuánto hay en borrador, enviado, aceptado o rechazado."
-            emptyIcon={fieldIcons.file}
-            emptyAction={
-              <Link to="/presupuestos" className="text-primary underline-offset-4 hover:underline">
-                Ir a presupuestos →
-              </Link>
-            }
-          />
-        </ChartCard>
-      )
+      return <EstimateStatusSummary estimates={data.estimates} />
     case 'receivables':
       return (
         <Card className="overflow-hidden">

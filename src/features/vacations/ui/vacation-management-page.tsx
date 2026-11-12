@@ -121,6 +121,18 @@ export function VacationManagementPage() {
     status === 'all'
       ? (requests.data?.length ?? 0)
       : (requests.data?.filter((request) => request.status === status).length ?? 0)
+  const fromLabel = dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : ''
+  const toLabel = dateTo ? filterDateFormat.format(calendarDate(dateTo)) : ''
+  const dateLabel =
+    fromLabel && toLabel
+      ? fromLabel === toLabel
+        ? fromLabel
+        : `${fromLabel} – ${toLabel}`
+      : fromLabel
+        ? `Desde ${fromLabel}`
+        : toLabel
+          ? `Hasta ${toLabel}`
+          : 'Cualquier fecha'
 
   return (
     <div className="@container min-w-0 space-y-6">
@@ -151,8 +163,6 @@ export function VacationManagementPage() {
           {requests.isSuccess ? (
             <AbsenceOverview
               requests={requests.data ?? []}
-              from={dateFrom}
-              through={dateTo}
               onEdit={
                 session?.role === 'admin'
                   ? (request, proposal) => {
@@ -173,13 +183,13 @@ export function VacationManagementPage() {
           ) : null}
         </TabsContent>
         <TabsContent id="pending" className="mt-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 @min-[50rem]:grid-cols-5">
-            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="grid w-36 max-w-full gap-1.5 text-sm font-medium">
               Estado
               <select
                 value={filter}
                 onChange={(event) => setFilter(event.target.value as StatusFilter)}
-                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+                className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
               >
                 {(['all', ...vacationRequestStatuses] as const).map((status) => (
                   <option key={status} value={status}>
@@ -189,22 +199,22 @@ export function VacationManagementPage() {
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+            <label className="grid w-48 max-w-full gap-1.5 text-sm font-medium">
               Buscar trabajador
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Nombre del trabajador"
-                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+                className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
               />
             </label>
-            <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+            <label className="grid w-44 max-w-full gap-1.5 text-sm font-medium">
               Tipo de ausencia
               <select
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-                className="border-input bg-background min-h-10 w-full min-w-0 rounded-md border px-3"
+                className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
               >
                 <option value="all">Todos los tipos</option>
                 {absenceTypes.map((type) => (
@@ -214,34 +224,28 @@ export function VacationManagementPage() {
                 ))}
               </select>
             </label>
-            <div className="grid min-w-0 gap-1.5 sm:col-span-2">
-              <div aria-hidden="true" className="grid grid-cols-2 gap-3 text-sm font-medium">
-                <span>Desde</span>
-                <span>Hasta</span>
-              </div>
+            <div className="grid w-64 max-w-full min-w-0 gap-1.5">
+              <span aria-hidden="true" className="text-sm font-medium">
+                Fechas
+              </span>
               <Popover
                 placement="bottom end"
                 className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
                 trigger={
                   <Button
-                    variant="ghost"
-                    aria-label={`Filtrar por fechas. Desde ${dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : 'sin límite'} hasta ${dateTo ? filterDateFormat.format(calendarDate(dateTo)) : 'sin límite'}`}
-                    className="grid h-auto min-h-10 w-full grid-cols-2 gap-3 overflow-hidden rounded-md p-0 text-left font-normal"
+                    variant="outline"
+                    aria-label={`Filtrar por fechas. Desde ${fromLabel || 'sin límite'} hasta ${toLabel || 'sin límite'}`}
+                    className="h-9 w-full min-w-0 justify-start gap-2 px-3 text-left font-normal"
                   >
-                    {[dateFrom, dateTo].map((date, index) => (
-                      <span
-                        key={index}
-                        className="border-input bg-background flex min-h-10 min-w-0 items-center justify-between gap-2 rounded-md border px-3"
-                      >
-                        <span className={`truncate ${date ? '' : 'text-muted-foreground'}`}>
-                          {date ? filterDateFormat.format(calendarDate(date)) : 'Cualquier fecha'}
-                        </span>
-                        <CalendarBlank
-                          aria-hidden="true"
-                          className="text-muted-foreground size-4 shrink-0"
-                        />
-                      </span>
-                    ))}
+                    <CalendarBlank
+                      aria-hidden="true"
+                      className="text-muted-foreground size-4 shrink-0"
+                    />
+                    <span
+                      className={`truncate ${dateFrom || dateTo ? '' : 'text-muted-foreground'}`}
+                    >
+                      {dateLabel}
+                    </span>
                   </Button>
                 }
               >
