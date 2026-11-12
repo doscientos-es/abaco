@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-12",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Show service tasks in mobile day"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "1403b82e4c40f77d4412450b85bd78a133401ba8",
+          "type": "feat",
+          "scope": "DEV-26",
+          "breaking": false,
+          "description": "Show service tasks in mobile day"
+        }
+      ]
+    },
+    {
       "version": "0.0.17",
       "date": "2026-11-12",
       "title": "v0.0.17",
