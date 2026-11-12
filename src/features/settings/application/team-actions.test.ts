@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { inviteMember } from './team-actions'
+import { changeMemberRole, inviteMember, removeMember } from './team-actions'
 
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }))
+const { invoke, from, update, remove, eq } = vi.hoisted(() => ({
+  invoke: vi.fn(),
+  from: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
+  eq: vi.fn(),
+}))
 vi.mock('@/shared/lib/supabase/client', () => ({
-  createBrowserSupabaseClient: () => ({ functions: { invoke } }),
+  createBrowserSupabaseClient: () => ({ functions: { invoke }, from }),
 }))
 
 const input = {
@@ -49,5 +55,50 @@ describe('inviteMember', () => {
       ok: false,
       message: 'No se pudo invitar. Inténtalo de nuevo.',
     })
+  })
+
+  it('does not report success when the invitation response is missing or invalid', async () => {
+    for (const data of [null, {}, { status: 'unknown' }]) {
+      invoke.mockResolvedValueOnce({ data, error: null })
+      expect(await inviteMember(input)).toEqual({
+        ok: false,
+        message: 'No se pudo confirmar la invitación. Revisa el equipo antes de reintentar.',
+      })
+    }
+  })
+})
+
+describe('team membership changes', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    from.mockReturnValue({ update, delete: remove })
+    update.mockReturnValue({ eq })
+    remove.mockReturnValue({ eq })
+    eq.mockReturnValueOnce({ eq })
+  })
+
+  it.each([
+    ['role change', () => changeMemberRole('tenant', 'member', 'admin')],
+    ['removal', () => removeMember('tenant', 'member')],
+  ])('%s reports success only for one affected membership', async (_name, action) => {
+    eq.mockResolvedValueOnce({ count: 1, error: null })
+    expect(await action()).toEqual({ ok: true })
+    expect(from).toHaveBeenCalledWith('memberships')
+    expect(eq).toHaveBeenNthCalledWith(1, 'tenant_id', 'tenant')
+    expect(eq).toHaveBeenNthCalledWith(2, 'user_id', 'member')
+    expect(update.mock.calls[0] ?? remove.mock.calls[0]).toContainEqual({ count: 'exact' })
+  })
+
+  it.each([
+    ['role change', () => changeMemberRole('tenant', 'member', 'admin')],
+    ['removal', () => removeMember('tenant', 'member')],
+  ])('%s reports failure when no membership was modified', async (_name, action) => {
+    eq.mockResolvedValueOnce({ count: 0, error: null })
+    expect(await action()).toMatchObject({ ok: false })
+  })
+
+  it('reports database errors instead of success', async () => {
+    eq.mockResolvedValueOnce({ count: null, error: { message: 'denied' } })
+    expect(await removeMember('tenant', 'member')).toMatchObject({ ok: false })
   })
 })

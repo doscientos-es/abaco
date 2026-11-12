@@ -7,14 +7,19 @@ import type * as Auth from '@/features/auth'
 
 import { TeamSection } from './team-section'
 
-const { state, button, dialog, field, invite, invalidate } = vi.hoisted(() => ({
-  state: vi.fn(),
-  button: vi.fn(),
-  dialog: vi.fn(),
-  field: vi.fn(),
-  invite: vi.fn(),
-  invalidate: vi.fn(),
-}))
+const { state, button, dialog, confirm, field, invite, remove, invalidate, query } = vi.hoisted(
+  () => ({
+    state: vi.fn(),
+    button: vi.fn(),
+    dialog: vi.fn(),
+    confirm: vi.fn(),
+    field: vi.fn(),
+    invite: vi.fn(),
+    remove: vi.fn(),
+    invalidate: vi.fn(),
+    query: vi.fn(),
+  }),
+)
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
@@ -22,13 +27,13 @@ vi.mock('react', async (importOriginal) => ({
 }))
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof ReactQuery>()),
-  useQuery: () => ({ isSuccess: true, data: [] }),
+  useQuery: query,
   useQueryClient: () => ({ invalidateQueries: invalidate }),
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: button,
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  ConfirmDialog: () => null,
+  ConfirmDialog: confirm,
 }))
 vi.mock('@phosphor-icons/react', () => ({ UserPlusIcon: () => null, UsersThreeIcon: () => null }))
 vi.mock('@/features/auth', async (importOriginal) => ({
@@ -44,7 +49,7 @@ vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
   inviteMember: invite,
   changeMemberRole: vi.fn(),
-  removeMember: vi.fn(),
+  removeMember: remove,
 }))
 
 describe('team invitation dialog', () => {
@@ -55,6 +60,7 @@ describe('team invitation dialog', () => {
     cursor = 0
     button.mockClear()
     dialog.mockClear()
+    confirm.mockClear()
     field.mockClear()
     return renderToStaticMarkup(<TeamSection tenantId="company" />)
   }
@@ -85,8 +91,10 @@ describe('team invitation dialog', () => {
     dialog.mockImplementation(({ open, children }: { open: boolean; children: React.ReactNode }) =>
       open ? <div>{children}</div> : null,
     )
+    confirm.mockReturnValue(null)
     field.mockImplementation(({ label }: { label: string }) => <span>{label}</span>)
     invalidate.mockResolvedValue(undefined)
+    query.mockReturnValue({ isSuccess: true, data: [] })
   })
 
   it('opens from the CTA and validates before sending', () => {
@@ -122,5 +130,26 @@ describe('team invitation dialog', () => {
       fullName: 'Ana',
       role: 'user',
     })
+  })
+
+  it('closes the removal confirmation and shows the error when removal fails', async () => {
+    query.mockReturnValue({
+      isSuccess: true,
+      data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
+    })
+    remove.mockResolvedValue({ ok: false, message: 'No se pudo quitar a la persona.' })
+    render()
+    button.mock.calls
+      .find(([props]) => props['aria-label'] === 'Quitar a Ana del equipo')?.[0]
+      .onPress()
+    render()
+    expect(confirm.mock.calls[0]?.[0].open).toBe(true)
+    confirm.mock.calls[0]?.[0].onConfirm()
+    await vi.waitFor(() => expect(render()).toContain('No se pudo quitar a la persona.'))
+    await vi.waitFor(() => {
+      render()
+      expect(confirm.mock.calls[0]?.[0].open).toBe(false)
+    })
+    expect(remove).toHaveBeenCalledWith('company', 'ana')
   })
 })

@@ -2,6 +2,11 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-12 — Sin publicar
+
+### Nuevas funciones
+
+- Add member role change and removal functionality
 ## 2026-11-11 — v0.0.15
 
 ### Nuevas funciones
@@ -271,4 +276,3 @@
 - Update search query initialization for invoices page
 - Change message display to output element in team section
 - Update type definition for description prop in AuthLayout
-
