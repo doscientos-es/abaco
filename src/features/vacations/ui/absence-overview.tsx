@@ -1,4 +1,5 @@
-import { Button, toast } from '@doscientos/ui'
+import { Button, Popover, toast } from '@doscientos/ui'
+import { Info } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { calendarDate, dateValue } from '@/shared/lib/date-range'
@@ -48,29 +49,56 @@ export function AbsenceOverview({
   const selected = requests.find((request) => request.id === selectedId)
   return (
     <section
-      className="space-y-3 rounded-lg border p-4"
+      className="min-w-0 space-y-4 rounded-lg border p-4 sm:p-5"
       aria-label="Calendario de vacaciones y asuntos propios"
     >
-      <h2 className="font-semibold">Calendario y coincidencias</h2>
-      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onPress={() => onRange(`${month}-01`, `${month}-15`)}>
-          Primera quincena
-        </Button>
-        <Button variant="outline" onPress={() => onRange(`${month}-16`, lastMonthDay)}>
-          Segunda quincena
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Calendario de ausencias</h2>
+          <Popover
+            placement="bottom start"
+            className="w-[min(22rem,calc(100vw-2rem))] space-y-2 p-4 text-sm"
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Información del calendario"
+                className="size-8 p-0"
+              >
+                <Info aria-hidden="true" className="size-4" />
+              </Button>
+            }
+          >
+            <p>
+              Los recuentos diarios indican personas distintas con ausencias aprobadas o pendientes.
+              El resumen del intervalo no implica coincidencia en un mismo día; no incluye saldos ni
+              cupos.
+            </p>
+            <p>
+              Las ausencias sin fecha final se muestran hasta el final de la vista. Las vacaciones y
+              bajas aprobadas bloquean nuevas visitas en esas fechas.
+            </p>
+            {onEdit ? (
+              <p>
+                Teclado: Alt + flechas mueve la ausencia; Alt + Mayús + flechas cambia su duración.
+              </p>
+            ) : null}
+          </Popover>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onPress={() => onRange(`${month}-01`, `${month}-15`)}>
+            Primera quincena
+          </Button>
+          <Button size="sm" variant="outline" onPress={() => onRange(`${month}-16`, lastMonthDay)}>
+            Segunda quincena
+          </Button>
+        </div>
       </div>
-      <p className="text-muted-foreground text-sm">
-        Cada casilla cuenta personas únicas: aprobadas / pendientes. Pulsa un día para ver nombres.
-        No se calculan saldos ni cupos.
-      </p>
-      <p className="text-muted-foreground text-sm">
-        Las ausencias ocupan días completos. Los periodos sin fin se muestran hasta el final de la
-        vista, sin cerrar su fecha.
-      </p>
+      <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
+      <p className="text-muted-foreground text-xs">Aprobadas / pendientes</p>
       <EventCalendar
         allDayOnly
+        showInstructions={false}
         key={`${view}:${dateValue(date)}`}
         value={date}
         view={view}
@@ -129,13 +157,14 @@ export function AbsenceOverview({
           ) : null}
         </CalendarDetailsDialog>
       ) : null}
-      <h3 className="font-medium">
-        {start} — {end}
-      </h3>
-      <p>
-        {totals.approvedPeople} personas con alguna ausencia aprobada · {totals.pendingPeople} con
-        alguna petición pendiente en el intervalo. No significa que coincidan todas el mismo día.
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-medium">
+          {start} — {end}
+        </h3>
+        <p className="text-muted-foreground text-sm">
+          {totals.approvedPeople} personas aprobadas · {totals.pendingPeople} pendientes
+        </p>
+      </div>
       <ul className="space-y-1 text-sm">
         {[...totals.approved, ...totals.pending].map((r) => (
           <li key={r.id}>

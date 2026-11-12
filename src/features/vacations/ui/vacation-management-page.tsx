@@ -113,24 +113,19 @@ export function VacationManagementPage() {
       : (requests.data?.filter((request) => request.status === status).length ?? 0)
 
   return (
-    <div className="@container mx-auto max-w-4xl space-y-6">
-      <header className="space-y-1">
+    <div className="@container min-w-0 space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Solicitudes de ausencia</h1>
-        <p className="text-muted-foreground text-sm">
-          Revisa cada solicitud y deja constancia de la decisión. Las vacaciones y bajas aprobadas
-          bloquearán nuevas visitas en esas fechas; revisa los servicios afectados para organizar su
-          cobertura.
-        </p>
+        <Button
+          onPress={() => {
+            setCalendarProposal(undefined)
+            setEditing(null)
+          }}
+        >
+          Registrar ausencia
+        </Button>
       </header>
 
-      <Button
-        onPress={() => {
-          setCalendarProposal(undefined)
-          setEditing(null)
-        }}
-      >
-        Registrar ausencia
-      </Button>
       {requests.isSuccess ? (
         <AbsenceOverview
           requests={(requests.data ?? []).filter(
@@ -168,6 +163,7 @@ export function VacationManagementPage() {
         />
       ) : null}
 
+      <h2 className="text-lg font-semibold">Solicitudes</h2>
       <nav aria-label="Filtrar solicitudes" className="flex flex-wrap gap-2">
         {(['all', ...vacationRequestStatuses] as const).map((status) => (
           <Button

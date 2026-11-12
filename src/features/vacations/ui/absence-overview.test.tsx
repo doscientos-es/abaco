@@ -12,13 +12,25 @@ const mocks = vi.hoisted(() => ({
   calendar: null as null | {
     items: CalendarEvent[]
     allDayOnly: boolean
+    showInstructions: boolean
+    value: Date
     onItemChange?: (change: CalendarEventChange) => void
     onDayClick: (day: Date) => void
   },
+  buttons: new Map<string, () => void>(),
 }))
 vi.mock('@doscientos/ui', () => ({
   toast: { error: mocks.error },
-  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+  Button: ({ children, onPress }: { children: ReactNode; onPress?: () => void }) => {
+    if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
+    return <button>{children}</button>
+  },
+  Popover: ({ trigger, children }: { trigger: ReactNode; children: ReactNode }) => (
+    <>
+      {trigger}
+      {children}
+    </>
+  ),
 }))
 vi.mock('@/shared/ui/calendar-toolbar', () => ({ CalendarToolbar: () => null }))
 vi.mock('@/shared/ui/event-calendar', () => ({
@@ -51,6 +63,7 @@ const request: VacationRequest = {
 describe('absence overview calendar integration', () => {
   beforeEach(() => {
     mocks.calendar = null
+    mocks.buttons.clear()
   })
   it('proposes an inclusive changed period against the original version without writing immediately', () => {
     const edit = vi.fn()
@@ -67,6 +80,7 @@ describe('absence overview calendar integration', () => {
     const item = mocks.calendar?.items[0]
     if (!item) throw new Error('Missing calendar item')
     expect(mocks.calendar?.allDayOnly).toBe(true)
+    expect(mocks.calendar?.showInstructions).toBe(false)
     expect(edit).not.toHaveBeenCalled()
     mocks.calendar?.onItemChange?.({
       item,
@@ -94,5 +108,23 @@ describe('absence overview calendar integration', () => {
     )
     expect(mocks.calendar?.onItemChange).toBeUndefined()
     expect(mocks.calendar?.items[0]?.editable).toBe(false)
+  })
+
+  it('retains half-month filters and the occupancy explanation', () => {
+    const onRange = vi.fn()
+    const html = renderToStaticMarkup(
+      <AbsenceOverview requests={[request]} from="" through="" onRange={onRange} />,
+    )
+    const date = mocks.calendar?.value
+    if (!date) throw new Error('Missing calendar date')
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+    mocks.buttons.get('Primera quincena')?.()
+    mocks.buttons.get('Segunda quincena')?.()
+    expect(onRange).toHaveBeenNthCalledWith(1, `${month}-01`, `${month}-15`)
+    expect(onRange).toHaveBeenNthCalledWith(2, `${month}-16`, `${month}-${lastDay}`)
+    expect(html).toContain('Aprobadas / pendientes')
+    expect(html).toContain('no implica coincidencia en un mismo día')
+    expect(html).not.toContain('Pulsa un día')
   })
 })

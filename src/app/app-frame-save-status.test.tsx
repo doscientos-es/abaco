@@ -2,10 +2,11 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+const state = vi.hoisted(() => ({ pathname: '/' }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
   useNavigate: () => vi.fn(),
-  useRouterState: () => '/',
+  useRouterState: () => state.pathname,
 }))
 vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: false }) }))
 vi.mock('@/features/auth', () => ({
@@ -27,6 +28,16 @@ vi.mock('@/shared/store/store', () => ({
 import { AppFrame } from './app-frame'
 
 describe('estado de guardado en la aplicación', () => {
+  it('expands only the vacation management page to the available width', () => {
+    state.pathname = '/vacaciones'
+    const wide = renderToStaticMarkup(<AppFrame>Vacaciones</AppFrame>)
+    expect(wide).toContain('data-size="full"')
+    expect(wide).toContain('max-w-none')
+    state.pathname = '/'
+    const standard = renderToStaticMarkup(<AppFrame>Resumen</AppFrame>)
+    expect(standard).toContain('data-size="wide"')
+    expect(standard).toContain('max-w-6xl')
+  })
   it('offers one operations destination for both work views, on desktop and mobile', () => {
     const html = renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
     expect(html).toContain('href="/trabajos"')

@@ -101,6 +101,8 @@ describe('VacationManagementPage', () => {
     expect(html).toContain('Hasta')
     expect(html).toContain('@container')
     expect(html).toContain('@min-[40rem]:grid-cols-4')
+    expect(html).not.toContain('max-w-4xl')
+    expect(html).not.toContain('Revisa cada solicitud')
     expect(html).not.toContain('type="date"')
     expect(mocks.picker?.mode).toBe('filter')
     mocks.picker?.onChange('2026-11-10', '2026-11-12')

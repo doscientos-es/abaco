@@ -296,7 +296,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
         </AppShellMobileHeader>
         <PlanBanner />
         <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
-        <AppShellContent className="mx-auto max-w-6xl p-4 sm:px-10 sm:py-10">
+        <AppShellContent
+          size={pathname === '/vacaciones' ? 'full' : 'wide'}
+          className={`mx-auto p-4 sm:px-10 sm:py-10 ${pathname === '/vacaciones' ? 'max-w-none' : 'max-w-6xl'}`}
+        >
           {children}
         </AppShellContent>
       </AppShellMain>

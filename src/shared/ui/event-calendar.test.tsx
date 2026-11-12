@@ -77,4 +77,18 @@ describe('event calendar presentation', () => {
     expect(html).toContain('aria-label="Limpieza, 09:00 – 10:30"')
     expect(html).toContain('data-outside="true"')
   })
+  it('can visually hide instructions while retaining them for assistive technology', () => {
+    const html = renderToStaticMarkup(
+      <EventCalendar
+        value={value}
+        view="month"
+        items={[item]}
+        onItemClick={vi.fn()}
+        showInstructions={false}
+      />,
+    )
+    expect(html).toMatch(/aria-describedby="[^"]+"/)
+    expect(html).toMatch(/<p id="[^"]+" class="sr-only">Pulsa un evento/)
+    expect(html).toContain('data-calendar-event="test"')
+  })
 })

@@ -27,6 +27,7 @@ export function EventCalendar({
   view,
   minuteStep = 15,
   allDayOnly = false,
+  showInstructions = true,
   onItemClick,
   onItemChange,
   onRangeSelect,
@@ -42,6 +43,7 @@ export function EventCalendar({
   view: EventCalendarView
   minuteStep?: number
   allDayOnly?: boolean
+  showInstructions?: boolean
   onItemClick: (item: CalendarEvent) => void
   onItemChange?: ((change: CalendarEventChange) => void) | undefined
   onRangeSelect?: ((range: { start: Date; end: Date }) => void) | undefined
@@ -118,7 +120,7 @@ export function EventCalendar({
   }
   return (
     <section aria-label={label} aria-describedby={helpId} className="space-y-2">
-      <p id={helpId} className="text-muted-foreground text-xs">
+      <p id={helpId} className={showInstructions ? 'text-muted-foreground text-xs' : 'sr-only'}>
         Pulsa un evento para ver detalles.
         {onItemChange
           ? ' Arrastra para mover; usa el borde inferior para cambiar el final. Teclado: Alt + flechas; Alt + Mayús + flechas cambia la duración. Esc cancela el arrastre.'
