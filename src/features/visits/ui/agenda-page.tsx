@@ -689,11 +689,6 @@ export function AgendaPage() {
 
         {view === 'calendar' ? (
           <>
-            {!visits.isPending && !visits.isError && visibleVisits.length === 0 ? (
-              <output className="text-muted-foreground text-sm">
-                No hay trabajos en este periodo con estos filtros. Puedes elegir otra fecha.
-              </output>
-            ) : null}
             <EventCalendar
               key={`${period}:${date}`}
               aria-label={
@@ -707,6 +702,7 @@ export function AgendaPage() {
               value={calendarDateValue(date)}
               items={calendarItems}
               minuteStep={15}
+              showInstructions={false}
               onDayClick={(day) =>
                 updateSearch({ date: calendarLocalInput(day).slice(0, 10), period: 'day' })
               }

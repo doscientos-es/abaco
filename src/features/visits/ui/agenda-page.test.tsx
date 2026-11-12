@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   fields: new Map<string, (value: string) => void>(),
   calendarView: undefined as string | undefined,
   calendarValue: undefined as Date | undefined,
+  calendarShowInstructions: undefined as boolean | undefined,
   buttons: new Map<string, () => void>(),
   dialog: null as null | { open: boolean; isDirty: boolean; onSubmit: () => void },
 }))
@@ -99,14 +100,17 @@ vi.mock('@/shared/ui/event-calendar', () => ({
     value,
     items,
     onItemChange,
+    showInstructions,
   }: {
     view: string
     value: Date
     items: CalendarEvent[]
     onItemChange?: (change: CalendarEventChange) => void
+    showInstructions?: boolean
   }) => {
     mocks.calendarView = view
     mocks.calendarValue = value
+    mocks.calendarShowInstructions = showInstructions
     mocks.calendarIds = items.map((item) => item.id)
     mocks.events = items
     mocks.change = onItemChange
@@ -201,6 +205,7 @@ describe('AgendaPage: nueva visita', () => {
     mocks.search = {}
     mocks.calendarView = undefined
     mocks.calendarValue = undefined
+    mocks.calendarShowInstructions = undefined
     mocks.visits = []
     mocks.selectedVisitId = null
     mocks.role = 'admin'
@@ -248,9 +253,12 @@ describe('AgendaPage: nueva visita', () => {
   it('renders the calendar week for the date in the URL', () => {
     mocks.search = { view: 'calendar', date: '2026-06-10', period: 'week' }
 
-    expect(render()).toContain('Calendario de trabajos')
+    const html = render()
+    expect(html).toContain('Calendario de trabajos')
+    expect(html).not.toContain('No hay trabajos en este periodo con estos filtros')
     expect(mocks.calendarView).toBe('week')
     expect(mocks.calendarValue?.getDate()).toBe(10)
+    expect(mocks.calendarShowInstructions).toBe(false)
   })
 
   it('permite elegir un centro sin ofrecer activos ni piscinas', () => {
