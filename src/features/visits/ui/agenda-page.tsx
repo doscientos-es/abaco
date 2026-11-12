@@ -1,4 +1,4 @@
-import { Button, toast } from '@doscientos/ui'
+import { Button, Input, toast } from '@doscientos/ui'
 import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -27,6 +27,7 @@ import {
 import { useTenantData } from '@/shared/store/store'
 import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
 import { EventCalendar } from '@/shared/ui/event-calendar'
+import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
@@ -582,53 +583,59 @@ export function AgendaPage() {
             Nueva visita
           </Button>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <SelectField
-            label="Técnico"
-            className="w-40 max-w-full"
-            value={filterTechnicianId}
-            options={[
-              { value: '', label: 'Todos los técnicos' },
-              { value: 'unassigned', label: 'Sin persona ni equipo' },
-              ...(technicians.data ?? []).map((person) => ({
-                value: person.id,
-                label: person.label,
-              })),
-            ]}
-            onChange={(value) => {
-              updateSearch({ technician: value || undefined })
-            }}
-          />
-          <SelectField
-            label="Equipo"
-            className="w-40 max-w-full"
-            value={teamFilter}
-            onChange={(value) => updateSearch({ team: value || undefined })}
-            options={[
-              { value: '', label: 'Todos los equipos' },
-              { value: 'unassigned', label: 'Sin equipo' },
-              ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
-            ]}
-          />
-          <SelectField
-            label="Estado"
-            className="w-40 max-w-full"
-            value={statusFilter}
-            onChange={(value) =>
-              updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
-            }
-            options={[
-              { value: '', label: 'Todos los estados' },
-              ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-            ]}
-          />
-          <TextField
-            label="Buscar cliente o centro"
-            className="w-52 max-w-full"
-            value={textFilter}
-            onChange={(value) => updateSearch({ q: value || undefined })}
-            placeholder="Nombre o dirección"
-          />
+        <div className="flex flex-wrap items-start gap-2">
+          <div className="w-64 max-w-full">
+            <Input
+              type="search"
+              aria-label="Buscar cliente o centro"
+              value={textFilter}
+              onChange={(event) => updateSearch({ q: event.target.value || undefined })}
+              placeholder="Buscar cliente, centro o dirección"
+            />
+          </div>
+          <FilterDisclosure
+            activeCount={[filterTechnicianId, teamFilter, statusFilter].filter(Boolean).length}
+          >
+            <SelectField
+              label="Técnico"
+              className="w-40 max-w-full"
+              value={filterTechnicianId}
+              options={[
+                { value: '', label: 'Todos los técnicos' },
+                { value: 'unassigned', label: 'Sin persona ni equipo' },
+                ...(technicians.data ?? []).map((person) => ({
+                  value: person.id,
+                  label: person.label,
+                })),
+              ]}
+              onChange={(value) => {
+                updateSearch({ technician: value || undefined })
+              }}
+            />
+            <SelectField
+              label="Equipo"
+              className="w-40 max-w-full"
+              value={teamFilter}
+              onChange={(value) => updateSearch({ team: value || undefined })}
+              options={[
+                { value: '', label: 'Todos los equipos' },
+                { value: 'unassigned', label: 'Sin equipo' },
+                ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
+              ]}
+            />
+            <SelectField
+              label="Estado"
+              className="w-40 max-w-full"
+              value={statusFilter}
+              onChange={(value) =>
+                updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
+              }
+              options={[
+                { value: '', label: 'Todos los estados' },
+                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+              ]}
+            />
+          </FilterDisclosure>
           {filterTechnicianId || teamFilter || statusFilter || textFilter ? (
             <Button
               variant="ghost"

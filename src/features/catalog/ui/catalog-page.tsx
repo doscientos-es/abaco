@@ -24,6 +24,7 @@ import { centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 import type { CatalogItem, CatalogKind } from '@/shared/domain/types'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
@@ -251,17 +252,18 @@ export function CatalogPage() {
           options={[{ value: 'all', label: 'Todos los tipos' }, ...kindOptions]}
           onChange={(v) => setKindFilter(v as 'all' | CatalogKind)}
         />
-        <SelectField
-          label="Filtrar por categoría"
-          hideLabel
-          className="sm:w-48"
-          value={categoryFilter}
-          options={[
-            { value: 'all', label: 'Todas las categorías' },
-            ...categories.map((c) => ({ value: c, label: c })),
-          ]}
-          onChange={setCategoryFilter}
-        />
+        <FilterDisclosure activeCount={Number(categoryFilter !== 'all')}>
+          <SelectField
+            label="Filtrar por categoría"
+            className="w-48 max-w-full"
+            value={categoryFilter}
+            options={[
+              { value: 'all', label: 'Todas las categorías' },
+              ...categories.map((c) => ({ value: c, label: c })),
+            ]}
+            onChange={setCategoryFilter}
+          />
+        </FilterDisclosure>
         {query || kindFilter !== 'all' || categoryFilter !== 'all' ? (
           <Button
             variant="ghost"

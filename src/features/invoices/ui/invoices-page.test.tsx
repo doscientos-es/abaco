@@ -50,6 +50,8 @@ describe('lista de facturas emitidas', () => {
     expect(html).toContain('1 factura')
     expect(html).toContain('F-2026-003')
     expect(html).not.toContain('F-2026-002')
+    expect(html.indexOf('aria-label="Buscar facturas"')).toBeLessThan(html.indexOf('<details'))
+    expect(html).toContain('Filtros adicionales')
     expect(html).toContain('xl:hidden')
     expect(html).toMatch(/data-slot="table-container" class="[^"]*max-xl:hidden/)
     expect(html).not.toMatch(/data-slot="table-container" class="[^"]*\shidden(?:\s|")/)

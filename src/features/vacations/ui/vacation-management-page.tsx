@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 
 import { useSession } from '@/features/auth'
+import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 
 import {
   decideVacationRequest,
@@ -183,9 +184,9 @@ export function VacationManagementPage() {
           ) : null}
         </TabsContent>
         <TabsContent id="pending" className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="grid w-36 max-w-full gap-1.5 text-sm font-medium">
-              Estado
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="w-36 max-w-full">
+              <span className="sr-only">Estado</span>
               <select
                 value={filter}
                 onChange={(event) => setFilter(event.target.value as StatusFilter)}
@@ -199,8 +200,8 @@ export function VacationManagementPage() {
                 ))}
               </select>
             </label>
-            <label className="grid w-48 max-w-full gap-1.5 text-sm font-medium">
-              Buscar trabajador
+            <label className="w-48 max-w-full">
+              <span className="sr-only">Buscar trabajador</span>
               <input
                 type="search"
                 value={search}
@@ -209,58 +210,75 @@ export function VacationManagementPage() {
                 className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
               />
             </label>
-            <label className="grid w-44 max-w-full gap-1.5 text-sm font-medium">
-              Tipo de ausencia
-              <select
-                value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-                className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
-              >
-                <option value="all">Todos los tipos</option>
-                {absenceTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {absenceTypeLabels[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="grid w-64 max-w-full min-w-0 gap-1.5">
-              <span aria-hidden="true" className="text-sm font-medium">
-                Fechas
-              </span>
-              <Popover
-                placement="bottom end"
-                className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
-                trigger={
-                  <Button
-                    variant="outline"
-                    aria-label={`Filtrar por fechas. Desde ${fromLabel || 'sin límite'} hasta ${toLabel || 'sin límite'}`}
-                    className="h-9 w-full min-w-0 justify-start gap-2 px-3 text-left font-normal"
-                  >
-                    <CalendarBlank
-                      aria-hidden="true"
-                      className="text-muted-foreground size-4 shrink-0"
-                    />
-                    <span
-                      className={`truncate ${dateFrom || dateTo ? '' : 'text-muted-foreground'}`}
+            <FilterDisclosure
+              activeCount={Number(typeFilter !== 'all') + Number(Boolean(dateFrom || dateTo))}
+            >
+              <label className="grid w-44 max-w-full gap-1.5 text-sm font-medium">
+                Tipo de ausencia
+                <select
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
+                  className="border-input bg-background h-9 w-full min-w-0 rounded-md border px-3"
+                >
+                  <option value="all">Todos los tipos</option>
+                  {absenceTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {absenceTypeLabels[type]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid w-64 max-w-full min-w-0 gap-1.5">
+                <span aria-hidden="true" className="text-sm font-medium">
+                  Fechas
+                </span>
+                <Popover
+                  placement="bottom end"
+                  className="max-h-[80dvh] w-[min(38rem,calc(100vw-2rem))] overflow-y-auto p-2"
+                  trigger={
+                    <Button
+                      variant="outline"
+                      aria-label={`Filtrar por fechas. Desde ${fromLabel || 'sin límite'} hasta ${toLabel || 'sin límite'}`}
+                      className="h-9 w-full min-w-0 justify-start gap-2 px-3 text-left font-normal"
                     >
-                      {dateLabel}
-                    </span>
-                  </Button>
-                }
-              >
-                <AbsenceDateRangePicker
-                  start={dateFrom}
-                  end={dateTo}
-                  endOptional={false}
-                  mode="filter"
-                  onChange={(start, end) => {
-                    setDateFrom(start)
-                    setDateTo(end)
+                      <CalendarBlank
+                        aria-hidden="true"
+                        className="text-muted-foreground size-4 shrink-0"
+                      />
+                      <span
+                        className={`truncate ${dateFrom || dateTo ? '' : 'text-muted-foreground'}`}
+                      >
+                        {dateLabel}
+                      </span>
+                    </Button>
+                  }
+                >
+                  <AbsenceDateRangePicker
+                    start={dateFrom}
+                    end={dateTo}
+                    endOptional={false}
+                    mode="filter"
+                    onChange={(start, end) => {
+                      setDateFrom(start)
+                      setDateTo(end)
+                    }}
+                  />
+                </Popover>
+              </div>
+              {typeFilter !== 'all' || dateFrom || dateTo ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => {
+                    setTypeFilter('all')
+                    setDateFrom('')
+                    setDateTo('')
                   }}
-                />
-              </Popover>
-            </div>
+                >
+                  Limpiar filtros adicionales
+                </Button>
+              ) : null}
+            </FilterDisclosure>
           </div>
 
           {!requests.isPending && !requests.isError && visibleRequests.length === 0 ? (

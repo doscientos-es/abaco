@@ -76,6 +76,16 @@ vi.mock('@doscientos/ui', () => {
       if (Array.isArray(children) && onPress) mocks.buttons.set(String(children[1]), onPress)
       return <button>{children}</button>
     },
+    Input: ({
+      'aria-label': label,
+      onChange,
+    }: {
+      'aria-label': string
+      onChange: (event: { target: { value: string } }) => void
+    }) => {
+      mocks.fields.set(label, (value) => onChange({ target: { value } }))
+      return <input aria-label={label} />
+    },
     Card: Container,
     CardContent: Container,
     CardHeader: Container,
@@ -367,6 +377,27 @@ describe('AgendaPage: nueva visita', () => {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch
     }
     expect(navigation.search(mocks.search)).toEqual({ ...mocks.search, team: 'unassigned' })
+  })
+
+  it('keeps search visible and indicates active secondary filters', () => {
+    mocks.search = {
+      view: 'calendar',
+      date: '2026-11-13',
+      period: 'week',
+      technician: 'unassigned',
+      status: 'scheduled',
+    }
+    const html = render()
+    expect(html.indexOf('aria-label="Buscar cliente o centro"')).toBeLessThan(
+      html.indexOf('<details'),
+    )
+    expect(html).toContain('Filtros adicionales, 2 activos')
+    expect(html).not.toContain('<details open')
+    mocks.fields.get('Buscar cliente o centro')?.('Oficinas')
+    const navigation = mocks.navigate.mock.calls.at(-1)?.[0] as {
+      search: (previous: WorkPlanningSearch) => WorkPlanningSearch
+    }
+    expect(navigation.search(mocks.search)).toEqual({ ...mocks.search, q: 'Oficinas' })
   })
 
   it('clears planning filters without changing the date, period or view', () => {

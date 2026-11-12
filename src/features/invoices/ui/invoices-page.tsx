@@ -32,6 +32,7 @@ import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { refreshStore, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
@@ -222,7 +223,7 @@ export function InvoicesPage() {
             <StatCard label="Facturas" value={String(invoices.length)} icon={fieldIcons.file} />
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               type="search"
               maxLength={formLimits.searchQuery}
@@ -243,17 +244,18 @@ export function InvoicesPage() {
               ]}
               onChange={(v) => setStatus(v as 'all' | InvoiceStatus)}
             />
-            <SelectField
-              label="Filtrar por cliente"
-              hideLabel
-              className="sm:w-48"
-              value={clientId}
-              options={[
-                { value: 'all', label: 'Todos los clientes' },
-                ...clients.map((c) => ({ value: c.id, label: c.name })),
-              ]}
-              onChange={setClientId}
-            />
+            <FilterDisclosure activeCount={Number(clientId !== 'all')}>
+              <SelectField
+                label="Filtrar por cliente"
+                className="w-48 max-w-full"
+                value={clientId}
+                options={[
+                  { value: 'all', label: 'Todos los clientes' },
+                  ...clients.map((c) => ({ value: c.id, label: c.name })),
+                ]}
+                onChange={setClientId}
+              />
+            </FilterDisclosure>
             {filtered ? (
               <Button variant="ghost" size="sm" onPress={clearFilters}>
                 Limpiar filtros

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   setFilter: vi.fn(),
   setType: vi.fn(),
   setSearch: vi.fn(),
+  buttons: new Map<string, () => void>(),
   overview: null as null | {
     requests: Array<Record<string, unknown>>
     onRange: (from: string, through: string) => void
@@ -50,9 +51,18 @@ vi.mock('react', async (importOriginal) => {
 })
 
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children, ...props }: { children: ReactNode; 'aria-label'?: string }) => (
-    <button aria-label={props['aria-label']}>{children}</button>
-  ),
+  Button: ({
+    children,
+    onPress,
+    ...props
+  }: {
+    children: ReactNode
+    onPress?: () => void
+    'aria-label'?: string
+  }) => {
+    if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
+    return <button aria-label={props['aria-label']}>{children}</button>
+  },
   Tabs: ({
     children,
     onSelectionChange,
@@ -138,6 +148,7 @@ describe('VacationManagementPage', () => {
     mocks.from = ''
     mocks.to = ''
     mocks.picker = null
+    mocks.buttons.clear()
     vi.clearAllMocks()
   })
 
@@ -177,6 +188,20 @@ describe('VacationManagementPage', () => {
     html = renderToStaticMarkup(<VacationManagementPage />)
     expect(html).toContain('Desde 10 nov 2026')
     expect(html).toContain('Filtrar por fechas. Desde 10 nov 2026 hasta sin límite')
+  })
+
+  it('keeps the worker search visible and can clear secondary filters without resetting status', () => {
+    mocks.from = '2026-11-10'
+    mocks.to = '2026-11-12'
+    const html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html.indexOf('Buscar trabajador')).toBeLessThan(html.indexOf('<details'))
+    expect(html).toContain('Filtros adicionales, 1 activo')
+    mocks.buttons.get('Limpiar filtros adicionales')?.()
+    expect(mocks.setType).toHaveBeenCalledWith('all')
+    expect(mocks.setFrom).toHaveBeenCalledWith('')
+    expect(mocks.setTo).toHaveBeenCalledWith('')
+    expect(mocks.setFilter).not.toHaveBeenCalled()
+    expect(mocks.setSearch).not.toHaveBeenCalled()
   })
 
   it('separates the calendar and inbox and transfers a selected period to the inbox', () => {
