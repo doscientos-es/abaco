@@ -1,5 +1,5 @@
 import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
-import { UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { TrashIcon, UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -158,7 +158,10 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
               .map((part) => part.charAt(0).toLocaleUpperCase())
               .join('')
             return (
-              <li key={member.userId} className="flex flex-wrap items-center gap-3 px-5 py-4">
+              <li
+                key={member.userId}
+                className="flex flex-wrap items-center gap-3 px-5 py-4 sm:flex-nowrap"
+              >
                 <span
                   aria-hidden="true"
                   className="bg-secondary text-secondary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
@@ -175,7 +178,7 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                   ) : null}
                 </div>
                 {editable ? (
-                  <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                  <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0">
                     <SelectField
                       hideLabel
                       label={`Rol de ${member.email}`}
@@ -192,13 +195,14 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                       }}
                     />
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="destructive"
+                      size="icon-lg"
                       isDisabled={busy}
                       aria-label={`Quitar a ${member.fullName || member.email} del equipo`}
+                      title={`Quitar a ${member.fullName || member.email} del equipo`}
                       onPress={() => setRemoving(member)}
                     >
-                      Quitar
+                      <TrashIcon aria-hidden="true" className="size-4" />
                     </Button>
                   </div>
                 ) : (

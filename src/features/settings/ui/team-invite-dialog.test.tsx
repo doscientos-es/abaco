@@ -35,7 +35,11 @@ vi.mock('@doscientos/ui', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   ConfirmDialog: confirm,
 }))
-vi.mock('@phosphor-icons/react', () => ({ UserPlusIcon: () => null, UsersThreeIcon: () => null }))
+vi.mock('@phosphor-icons/react', () => ({
+  TrashIcon: () => null,
+  UserPlusIcon: () => null,
+  UsersThreeIcon: () => null,
+}))
 vi.mock('@/features/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof Auth>()),
   useSession: () => ({ userId: 'me', role: 'admin' }),
@@ -139,9 +143,12 @@ describe('team invitation dialog', () => {
     })
     remove.mockResolvedValue({ ok: false, message: 'No se pudo quitar a la persona.' })
     render()
-    button.mock.calls
-      .find(([props]) => props['aria-label'] === 'Quitar a Ana del equipo')?.[0]
-      .onPress()
+    const removeButton = button.mock.calls.find(
+      ([props]) => props['aria-label'] === 'Quitar a Ana del equipo',
+    )?.[0]
+    expect(removeButton).toMatchObject({ variant: 'destructive', size: 'icon-lg' })
+    expect(remove).not.toHaveBeenCalled()
+    removeButton.onPress()
     render()
     expect(confirm.mock.calls[0]?.[0].open).toBe(true)
     confirm.mock.calls[0]?.[0].onConfirm()
