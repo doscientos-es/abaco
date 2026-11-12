@@ -27,7 +27,8 @@ vi.mock('react', async (importOriginal) => ({
 }))
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof ReactQuery>()),
-  useQuery: query,
+  useQuery: (options: { queryKey: string[] }) =>
+    options.queryKey[0] === 'team' ? query() : { isSuccess: true, data: [] },
   useQueryClient: () => ({ invalidateQueries: invalidate }),
 }))
 vi.mock('@doscientos/ui', () => ({

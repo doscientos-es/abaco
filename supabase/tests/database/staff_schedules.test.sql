@@ -30,6 +30,15 @@ select public.save_staff_schedule(
   '[{"weekday":1,"start":600,"end":900}]'::jsonb,
   array['86000000-0000-4000-8000-000000000008'::uuid]);
 select is((select count(*) from public.staff_schedules), 2::bigint, 'Admin sees the team schedules');
+select set_config('test.schedule_version', public.save_staff_schedule(
+  '86000000-0000-4000-8000-000000000001', '86000000-0000-4000-8000-000000000004',
+  current_setting('test.schedule_version')::timestamptz,
+  '[{"weekday":1,"start":540,"end":1020}]'::jsonb,
+  array['86000000-0000-4000-8000-000000000007'::uuid, '86000000-0000-4000-8000-000000000008'::uuid])::text, true);
+select is((select count(*) from public.staff_function_assignments where user_id = '86000000-0000-4000-8000-000000000004'),
+  2::bigint, 'One person can have multiple functions');
+select is((select slots from public.staff_schedules where user_id = '86000000-0000-4000-8000-000000000004'),
+  '[{"weekday":1,"start":540,"end":1020}]'::jsonb, 'Assigning functions preserves the schedule');
 select throws_ok($$select public.save_staff_schedule(
   '86000000-0000-4000-8000-000000000001', '86000000-0000-4000-8000-000000000004', null,
   '[]'::jsonb, array[]::uuid[])$$, 'P0409', 'El horario cambió; recarga antes de guardar',
@@ -37,8 +46,8 @@ select throws_ok($$select public.save_staff_schedule(
 
 set local request.jwt.claim.sub = '86000000-0000-4000-8000-000000000004';
 select is((select count(*) from public.staff_schedules), 1::bigint, 'Worker sees only their schedule');
-select is((select count(*) from public.staff_function_assignments), 1::bigint, 'Worker sees only their assignments');
-select is((select name from public.staff_functions), 'Electricidad', 'Worker sees only their assigned function');
+select is((select count(*) from public.staff_function_assignments), 2::bigint, 'Worker sees only their assignments');
+select is((select count(*) from public.staff_functions), 2::bigint, 'Worker sees their assigned functions');
 select throws_ok($$select public.save_staff_schedule(
   '86000000-0000-4000-8000-000000000001', '86000000-0000-4000-8000-000000000004',
   current_setting('test.schedule_version')::timestamptz, '[]'::jsonb, array[]::uuid[])$$,

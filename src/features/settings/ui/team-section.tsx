@@ -11,6 +11,11 @@ import {
   useSession,
   type Role,
 } from '@/features/auth'
+import {
+  StaffMemberFunctionsDialog,
+  staffFunctionsQuery,
+  staffSchedulesQuery,
+} from '@/features/staff-schedules'
 import { WorkTeamsSection } from '@/features/work-teams'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -31,6 +36,8 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
   const session = useSession()
   const queryClient = useQueryClient()
   const team = useQuery(teamQuery(tenantId))
+  const functions = useQuery(staffFunctionsQuery(tenantId))
+  const schedules = useQuery(staffSchedulesQuery(tenantId))
   const options = assignableRoles(session?.role)
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
@@ -41,10 +48,12 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
   const [importOpen, setImportOpen] = useState(false)
   const [removing, setRemoving] = useState<TeamMember | null>(null)
   const [search, setSearch] = useState('')
+  const [editingFunctions, setEditingFunctions] = useState<TeamMember | null>(null)
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
     await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
+    await queryClient.invalidateQueries({ queryKey: staffSchedulesQuery(tenantId).queryKey })
   }
 
   async function run(action: () => Promise<TeamResult>, success: string) {
@@ -148,10 +157,18 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
             />
           </div>
         ) : null}
+        {functions.isError || schedules.isError ? (
+          <p role="alert" className="text-destructive px-5 pt-4 text-sm">
+            No se pudieron cargar las funciones del equipo. Recarga la página para editarlas.
+          </p>
+        ) : null}
         <ul className="divide-border divide-y">
           {matching.map((member) => {
             const isMe = member.userId === session?.userId
             const editable = !isMe && options.includes(member.role)
+            const schedule = schedules.data?.find((item) => item.userId === member.userId)
+            const assigned =
+              functions.data?.filter((item) => schedule?.functionIds.includes(item.id)) ?? []
             const initials = (member.fullName.trim() || member.email)
               .split(/\s+/)
               .slice(0, 2)
@@ -176,7 +193,22 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
                   {member.fullName ? (
                     <p className="text-muted-foreground mt-0.5 text-xs break-all">{member.email}</p>
                   ) : null}
+                  {functions.isSuccess && schedules.isSuccess ? (
+                    <p className="text-muted-foreground mt-1 text-xs break-words">
+                      {assigned.length
+                        ? assigned.map((item) => item.name).join(' · ')
+                        : 'Sin funciones asignadas'}
+                    </p>
+                  ) : null}
                 </div>
+                <Button
+                  variant="outline"
+                  isDisabled={!functions.isSuccess || !schedules.isSuccess || busy}
+                  aria-label={`Editar funciones de ${member.fullName || member.email}`}
+                  onPress={() => setEditingFunctions(member)}
+                >
+                  Funciones
+                </Button>
                 {editable ? (
                   <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0">
                     <SelectField
@@ -234,6 +266,20 @@ export function TeamSection({ tenantId }: { tenantId: string }) {
           </output>
         ) : null}
       </section>
+      {editingFunctions && functions.isSuccess && schedules.isSuccess ? (
+        <StaffMemberFunctionsDialog
+          key={editingFunctions.userId}
+          tenantId={tenantId}
+          person={{
+            userId: editingFunctions.userId,
+            name: editingFunctions.fullName || editingFunctions.email,
+            schedule:
+              schedules.data.find((item) => item.userId === editingFunctions.userId) ?? null,
+          }}
+          functions={functions.data}
+          onClose={() => setEditingFunctions(null)}
+        />
+      ) : null}
       <FormDialog
         open={inviteOpen}
         onOpenChange={(open) => {
