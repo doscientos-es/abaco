@@ -149,7 +149,7 @@ export function EstimateDocument({
       ) : null}
 
       <section>
-        <h3 className="mb-2 text-base font-semibold">Condiciones</h3>
+        <h3 className="mb-2 text-base font-semibold">Descripción y condiciones</h3>
         <p className="text-muted-foreground whitespace-pre-line">{estimate.clauses}</p>
       </section>
 
