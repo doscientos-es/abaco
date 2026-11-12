@@ -41,6 +41,7 @@ describe('estado de guardado en la aplicación', () => {
   it('offers one operations destination for both work views, on desktop and mobile', () => {
     const html = renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
     expect(html).toContain('href="/trabajos"')
+    expect(html.indexOf('>Contratos</a>')).toBeLessThan(html.indexOf('>Planificación</a>'))
     expect(html).not.toContain('href="/agenda"')
     expect(html).not.toContain('>Agenda<')
   })

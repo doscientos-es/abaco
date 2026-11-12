@@ -32,6 +32,7 @@ import { Route as VacacionesRouteImport } from './routes/vacaciones'
 import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as ClientesClientIdRouteImport } from './routes/clientes.$clientId'
 import { Route as ClientesNuevoRouteImport } from './routes/clientes.nuevo'
+import { Route as ContratosIndexRouteImport } from './routes/contratos.index'
 import { Route as ContratosContractIdRouteImport } from './routes/contratos.$contractId'
 import { Route as FacturasIndexRouteImport } from './routes/facturas.index'
 import { Route as FacturasInvoiceIdRouteImport } from './routes/facturas.$invoiceId'
@@ -158,6 +159,11 @@ const ClientesNuevoRoute = ClientesNuevoRouteImport.update({
   path: '/nuevo',
   getParentRoute: () => ClientesRoute,
 } as any)
+const ContratosIndexRoute = ContratosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ContratosRoute,
+} as any)
 const ContratosContractIdRoute = ContratosContractIdRouteImport.update({
   id: '/$contractId',
   path: '/$contractId',
@@ -239,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/contratos/': typeof ContratosIndexRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
   '/trabajos/': typeof TrabajosIndexRoute
@@ -252,7 +259,6 @@ export interface FileRoutesByTo {
   '/catalogo': typeof CatalogoRoute
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
-  '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/mis-vacaciones': typeof MisVacacionesRoute
@@ -271,6 +277,7 @@ export interface FileRoutesByTo {
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes': typeof ClientesIndexRoute
+  '/contratos': typeof ContratosIndexRoute
   '/facturas': typeof FacturasIndexRoute
   '/presupuestos': typeof PresupuestosIndexRoute
   '/trabajos': typeof TrabajosIndexRoute
@@ -307,6 +314,7 @@ export interface FileRoutesById {
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/contratos/': typeof ContratosIndexRoute
   '/facturas/': typeof FacturasIndexRoute
   '/presupuestos/': typeof PresupuestosIndexRoute
   '/trabajos/': typeof TrabajosIndexRoute
@@ -344,6 +352,7 @@ export interface FileRouteTypes {
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
     | '/clientes/'
+    | '/contratos/'
     | '/facturas/'
     | '/presupuestos/'
     | '/trabajos/'
@@ -357,7 +366,6 @@ export interface FileRouteTypes {
     | '/catalogo'
     | '/confirmar'
     | '/contabilidad'
-    | '/contratos'
     | '/entrar'
     | '/mi-jornada'
     | '/mis-vacaciones'
@@ -376,6 +384,7 @@ export interface FileRouteTypes {
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
     | '/clientes'
+    | '/contratos'
     | '/facturas'
     | '/presupuestos'
     | '/trabajos'
@@ -411,6 +420,7 @@ export interface FileRouteTypes {
     | '/presupuestos/$estimateId'
     | '/trabajos/$workOrderId'
     | '/clientes/'
+    | '/contratos/'
     | '/facturas/'
     | '/presupuestos/'
     | '/trabajos/'
@@ -607,6 +617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesNuevoRouteImport
       parentRoute: typeof ClientesRoute
     }
+    '/contratos/': {
+      id: '/contratos/'
+      path: '/'
+      fullPath: '/contratos/'
+      preLoaderRoute: typeof ContratosIndexRouteImport
+      parentRoute: typeof ContratosRoute
+    }
     '/contratos/$contractId': {
       id: '/contratos/$contractId'
       path: '/$contractId'
@@ -700,10 +717,12 @@ const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
 
 interface ContratosRouteChildren {
   ContratosContractIdRoute: typeof ContratosContractIdRoute
+  ContratosIndexRoute: typeof ContratosIndexRoute
 }
 
 const ContratosRouteChildren: ContratosRouteChildren = {
   ContratosContractIdRoute: ContratosContractIdRoute,
+  ContratosIndexRoute: ContratosIndexRoute,
 }
 
 const ContratosRouteWithChildren = ContratosRoute._addFileChildren(

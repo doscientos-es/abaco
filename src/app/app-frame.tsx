@@ -54,8 +54,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'Operaciones',
     items: [
-      { to: '/trabajos', label: 'Trabajos', icon: navIcons.work },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
+      { to: '/trabajos', label: 'Planificación', icon: navIcons.work },
       { to: '/vacaciones', label: 'Vacaciones', icon: navIcons.visits },
     ],
   },
@@ -83,8 +83,8 @@ const bottomOrder: NavTo[] = [
   '/',
   '/presupuestos',
   '/clientes',
-  '/trabajos',
   '/contratos',
+  '/trabajos',
   '/vacaciones',
   '/facturas',
   '/catalogo',

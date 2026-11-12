@@ -1,6 +1,6 @@
-import { Button, Card, CardContent } from '@doscientos/ui'
+import { Button, Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { contractBillingLabels } from '@/shared/domain/contract-billing'
@@ -11,8 +11,46 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 
 import { listServiceContracts } from '../application/contract-actions'
 import { contractStatusLabels as statusLabels } from '../domain/contract-status'
+import { ContractJobsPage } from './contract-jobs-page'
 
 export function ContractsPage() {
+  const { tab } = useSearch({ from: '/contratos/' })
+  const navigate = useNavigate({ from: '/contratos/' })
+  const selected = tab === 'trabajos' ? 'trabajos' : 'contratos'
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold">Contratos de servicio</h1>
+        <p className="text-muted-foreground text-sm">
+          Cada contrato contiene sus trabajos. La planificación reúne las visitas de todos los
+          contratos y las independientes.
+        </p>
+      </div>
+      <Link to="/trabajos" className="text-primary text-sm underline">
+        Ir a planificación
+      </Link>
+      <Tabs
+        selectedKey={selected}
+        onSelectionChange={(key) =>
+          void navigate({
+            to: '/contratos',
+            search: key === 'trabajos' ? { tab: 'trabajos' } : {},
+          })
+        }
+      >
+        <TabsList aria-label="Secciones de contratos" className="w-full overflow-x-auto sm:w-fit">
+          <TabsTrigger id="contratos">Contratos</TabsTrigger>
+          <TabsTrigger id="trabajos">Trabajos contratados</TabsTrigger>
+        </TabsList>
+        <TabsContent id={selected} key={selected}>
+          {selected === 'contratos' ? <ContractsList /> : <ContractJobsPage />}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function ContractsList() {
   const { tenant, clients } = useTenantData()
   const [page, setPage] = useState(0)
   const query = useQuery({
@@ -21,13 +59,6 @@ export function ContractsPage() {
   })
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Contratos de servicio</h1>
-        <p className="text-muted-foreground text-sm">
-          Un presupuesto aceptado crea su contrato. Cada contrato contiene los trabajos puntuales o
-          periódicos y sus centros.
-        </p>
-      </div>
       <Link to="/presupuestos" className="text-primary text-sm underline">
         Crear o revisar presupuesto
       </Link>

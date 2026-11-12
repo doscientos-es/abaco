@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Add new release section for CreatePassportItem enhancements refactor: standardize string quotes for consistency
 - Add new release section for CreatePassportItem enhancements
 - Add new release section for CreatePassportItem enhancements
 - Enhance CreatePassportItem and related record creation with status and submit blocking features

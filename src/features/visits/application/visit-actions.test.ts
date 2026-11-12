@@ -49,6 +49,20 @@ describe('listAllOfficeVisits', () => {
 
 describe('listPlanningVisits', () => {
   beforeEach(() => vi.clearAllMocks())
+  it('keeps contracted and independent visits together in the selected range', async () => {
+    const common = {
+      timezone: 'Europe/Madrid',
+      scheduled_start_at: '2026-11-13T09:00:00Z',
+      scheduled_end_at: '2026-11-13T10:00:00Z',
+    }
+    const contracted = { ...common, id: 'contract', contract_id: 'contract-1' }
+    const independent = { ...common, id: 'independent', contract_id: null }
+    listOfficeVisits.mockResolvedValue([contracted, independent])
+    await expect(listPlanningVisits('tenant', '2026-11-13', '2026-11-13', null)).resolves.toEqual([
+      contracted,
+      independent,
+    ])
+  })
   it('partitions the entire 42-day month grid without exceeding RPC date limits or losing page filters', async () => {
     listOfficeVisits.mockResolvedValue([])
     await expect(listPlanningVisits('tenant', '2026-10-26', '2026-12-06', 'ana')).resolves.toEqual(

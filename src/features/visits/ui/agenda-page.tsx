@@ -379,7 +379,7 @@ export function AgendaPage() {
         <div>
           <h2 className="text-lg font-semibold">Planificación</h2>
           <p className="text-muted-foreground text-sm">
-            Organiza las visitas en lista o calendario.
+            Consulta las visitas de contratos e independientes en lista o calendario.
           </p>
         </div>
         <Button onPress={() => setCreateOpen(true)}>

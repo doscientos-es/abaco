@@ -71,10 +71,10 @@ describe('contracted jobs list', () => {
     expect(html).not.toContain('Órdenes por visita')
   })
 
-  it('explains the source of jobs and their planning within the same module', () => {
+  it('explains the source of jobs and their planning in the global view', () => {
     const html = renderToStaticMarkup(<ContractJobsPage />)
     expect(html).toContain('partidas del presupuesto aceptado')
-    expect(html).toContain('vistas de lista y calendario de Trabajos')
+    expect(html).toContain('planificación global')
     expect(html).not.toContain('href="/agenda"')
     expect(html).not.toContain('Nuevo trabajo')
   })

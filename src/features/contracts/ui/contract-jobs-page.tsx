@@ -21,7 +21,7 @@ export function ContractJobsPage() {
       <h2 className="text-xl font-semibold">Trabajos contratados</h2>
       <p className="text-muted-foreground text-sm">
         Cada trabajo pertenece a un contrato: puede realizarse una vez o periódicamente. Su
-        planificación y sus partes se consultan en las vistas de lista y calendario de Trabajos.
+        planificación y sus partes se consultan en la planificación global.
       </p>
       <div className="flex gap-4 text-sm">
         <Link to="/contratos" className="text-primary underline">

@@ -133,8 +133,12 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
         </PageHeaderHeading>
         <PageHeaderActions>
           <WorkStatusBadge status={order.status} />
-          <Link to="/trabajos" className="text-primary text-sm font-medium underline">
-            Volver a trabajos
+          <Link
+            to="/trabajos"
+            search={{ tab: 'anteriores' }}
+            className="text-primary text-sm font-medium underline"
+          >
+            Volver a trabajos anteriores
           </Link>
         </PageHeaderActions>
       </PageHeader>

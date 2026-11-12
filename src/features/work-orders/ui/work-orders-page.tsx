@@ -15,7 +15,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 
 import { can, useSession } from '@/features/auth'
-import { ContractJobsPage } from '@/features/contracts'
 import { AgendaPage, ReportReviewInbox, ReportReviewTabLabel } from '@/features/visits'
 import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
@@ -32,21 +31,23 @@ export function WorkOrdersPage() {
   const session = useSession()
   const search = useSearch({ from: '/trabajos' })
   const navigate = useNavigate({ from: '/trabajos' })
-  const tabs = workTabs.filter((tab) => tab !== 'revision' || session?.role === 'admin')
+  const tabs = workTabs.filter(
+    (tab) => tab !== 'contratados' && (tab !== 'revision' || session?.role === 'admin'),
+  )
   const tab = search.tab && tabs.includes(search.tab) ? search.tab : 'planificacion'
   const labels: Record<WorkTab, string> = {
     planificacion: 'Planificación',
     revision: 'Partes por revisar',
-    contratados: 'Partidas contratadas',
+    contratados: 'Trabajos contratados',
     anteriores: 'Trabajos anteriores',
   }
   return (
     <div className="space-y-5">
       <PageHeader className="py-0">
         <PageHeaderHeading>
-          <PageHeaderTitle className="text-xl md:text-2xl">Trabajos</PageHeaderTitle>
+          <PageHeaderTitle className="text-xl md:text-2xl">Planificación</PageHeaderTitle>
           <PageHeaderDescription>
-            Planifica las visitas y gestiona los trabajos de tus clientes.
+            Organiza conjuntamente las visitas de contratos y las visitas independientes.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
@@ -59,7 +60,10 @@ export function WorkOrdersPage() {
           })
         }
       >
-        <TabsList aria-label="Secciones de trabajos" className="w-full overflow-x-auto sm:w-fit">
+        <TabsList
+          aria-label="Secciones de planificación"
+          className="w-full overflow-x-auto sm:w-fit"
+        >
           {tabs.map((id) => (
             <TabsTrigger key={id} id={id}>
               {id === 'revision' ? <ReportReviewTabLabel tenantId={tenant.id} /> : labels[id]}
@@ -71,7 +75,6 @@ export function WorkOrdersPage() {
           {tab === 'revision' && session?.role === 'admin' ? (
             <ReportReviewInbox tenantId={tenant.id} />
           ) : null}
-          {tab === 'contratados' ? <ContractJobsPage /> : null}
           {tab === 'anteriores' ? <LegacyWorkOrdersPage /> : null}
         </TabsContent>
       </Tabs>
@@ -111,8 +114,8 @@ function LegacyWorkOrdersPage() {
         <PageHeaderHeading>
           <PageHeaderTitle>Trabajos anteriores</PageHeaderTitle>
           <PageHeaderDescription>
-            Consulta y termina los registros del modelo anterior. Los nuevos trabajos se configuran
-            en su contrato.
+            Consulta y termina los registros del modelo anterior, estén o no vinculados a un
+            contrato.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
@@ -209,7 +212,7 @@ function LegacyWorkOrdersPage() {
               ? 'El listado ha cambiado. Vuelve al inicio para ver los trabajos disponibles.'
               : filtered
                 ? 'Prueba otro equipo o estado, o limpia los filtros para ver todos los trabajos.'
-                : 'Los nuevos trabajos se crean desde las partidas del presupuesto aceptado y se configuran en su contrato.'
+                : 'Aquí encontrarás los trabajos del modelo anterior, incluidos los que no pertenecen a un contrato.'
           }
         >
           {page > 0 ? (

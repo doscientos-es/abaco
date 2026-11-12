@@ -55,9 +55,6 @@ vi.mock('@tanstack/react-query', () => ({
   },
 }))
 vi.mock('@/features/auth', () => ({ can: () => true, useSession: () => ({ role: state.role }) }))
-vi.mock('@/features/contracts', () => ({
-  ContractJobsPage: () => <h2>Trabajos contratados TEST</h2>,
-}))
 vi.mock('@/features/visits', () => ({
   AgendaPage: () => <h2>Planificación compartida TEST</h2>,
   ReportReviewInbox: () => <h2>Revisión TEST</h2>,
@@ -95,32 +92,27 @@ describe('unified work module', () => {
   it.each([
     ['planificacion', 'Planificación compartida TEST'],
     ['revision', 'Revisión TEST'],
-    ['contratados', 'Trabajos contratados TEST'],
     ['anteriores', 'Consulta y termina los registros del modelo anterior'],
   ] as const)('shows only the selected section for %s', (tab, content) => {
     state.search.tab = tab
     const html = renderToStaticMarkup(<WorkOrdersPage />)
     expect(html).toContain(content)
-    for (const other of [
-      'Planificación compartida TEST',
-      'Revisión TEST',
-      'Trabajos contratados TEST',
-    ]) {
+    for (const other of ['Planificación compartida TEST', 'Revisión TEST']) {
       if (other !== content) expect(html).not.toContain(other)
     }
     expect(html).toContain('Partes por revisar')
-    expect(html).toContain('Partidas contratadas')
+    expect(html).not.toContain('Trabajos contratados')
     expect(html).toContain('Trabajos anteriores')
     if (tab !== 'anteriores') expect(state.queries).toEqual([])
   })
 
   it('preserves planning and historical filters when switching sections', () => {
     renderToStaticMarkup(<WorkOrdersPage />)
-    state.selectTab?.('contratados')
+    state.selectTab?.('revision')
     const navigation = state.navigate.mock.calls.at(-1)?.[0] as {
       search: (previous: WorkSearch) => WorkSearch
     }
-    expect(navigation.search(state.search)).toEqual({ ...state.search, tab: 'contratados' })
+    expect(navigation.search(state.search)).toEqual({ ...state.search, tab: 'revision' })
   })
 
   it('does not expose report review to non-admin users', () => {
