@@ -8,14 +8,12 @@ export type Company = {
   id: string
   name: string
   role: Role
-  collectVisitStartLocation: boolean
 }
 
 type MembershipRow = {
   tenant_id: string
   role: string
   company_name: string
-  collect_visit_start_location: boolean
 }
 
 export type AuthSession = {
@@ -45,7 +43,6 @@ async function fetchCompanies(): Promise<Company[]> {
       id: row.tenant_id,
       name: row.company_name || 'Empresa',
       role: row.role,
-      collectVisitStartLocation: row.collect_visit_start_location === true,
     })
   }
   return companies

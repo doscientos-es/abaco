@@ -78,12 +78,7 @@ export function MyDayPage() {
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
     if (!tenantId || busyId) return
     let startLocation: { latitude: number; longitude: number } | null = null
-    if (
-      nextStatus === 'in_progress' &&
-      session?.companies.find((company) => company.id === tenantId)?.collectVisitStartLocation ===
-        true &&
-      session.role === 'user'
-    ) {
+    if (nextStatus === 'in_progress' && session?.role === 'user') {
       if (!navigator.geolocation) {
         toast.error('Este dispositivo no permite compartir la ubicación requerida por la empresa.')
         return
@@ -182,6 +177,10 @@ export function MyDayPage() {
           <h1 className="text-2xl font-semibold">Mi jornada</h1>
           <p className="text-muted-foreground text-sm">
             Aparecen las visitas asignadas a ti o a tus equipos.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Al iniciar una visita se guarda la hora y una ubicación puntual; no hay seguimiento
+            continuo.
           </p>
         </div>
         <label className="flex flex-col gap-1 text-sm font-medium">

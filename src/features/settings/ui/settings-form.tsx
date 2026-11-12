@@ -24,8 +24,6 @@ export type Form = {
   defaultVatRate: string
   defaultDepositPercent: string
   autoReminders: string
-  weeklySummary: string
-  collectVisitStartLocation: string
 }
 
 export type FormProps = {
@@ -64,8 +62,6 @@ export function toForm(t: Tenant): Form {
     defaultVatRate: String(t.defaultVatRate),
     defaultDepositPercent: String(t.defaultDepositPercent),
     autoReminders: t.autoReminders ? 'yes' : 'no',
-    weeklySummary: t.weeklySummary === false ? 'no' : 'yes',
-    collectVisitStartLocation: t.collectVisitStartLocation ? 'yes' : 'no',
   }
 }
 

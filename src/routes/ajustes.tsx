@@ -3,15 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/features/auth'
 import { SettingsPage, UserSettingsPage } from '@/features/settings'
 
-const tabs = [
-  'empresa',
-  'documentos',
-  'privacidad',
-  'listas',
-  'equipo',
-  'plan',
-  'novedades',
-] as const
+const tabs = ['empresa', 'documentos', 'listas', 'equipo', 'plan', 'novedades'] as const
 
 export const Route = createFileRoute('/ajustes')({
   beforeLoad: requirePermission('settings:personal'),

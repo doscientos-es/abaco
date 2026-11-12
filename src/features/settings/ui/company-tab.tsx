@@ -5,35 +5,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { isWebsiteOk, Section, type FormProps } from './settings-form'
 
 /** Who the company is, where it gets paid and the defaults for new estimates. */
-export function CompanyTab({
-  form,
-  set,
-  privacyOnly = false,
-}: FormProps & { privacyOnly?: boolean }) {
-  if (privacyOnly) {
-    return (
-      <Section
-        title="Privacidad de la jornada"
-        description="Controla si la empresa solicita una ubicación puntual al iniciar una visita."
-      >
-        <SelectField
-          className="sm:col-span-2"
-          label="Ubicación al iniciar visitas"
-          value={form.collectVisitStartLocation}
-          options={[
-            { value: 'no', label: 'No recopilar' },
-            { value: 'yes', label: 'Solicitar al técnico una vez al iniciar' },
-          ]}
-          onChange={set('collectVisitStartLocation')}
-        />
-        <p className="text-muted-foreground text-sm sm:col-span-2">
-          Si se activa, el técnico autoriza la ubicación del dispositivo. Se guarda una coordenada
-          al iniciar cada visita; no se hace seguimiento continuo.
-        </p>
-      </Section>
-    )
-  }
-
+export function CompanyTab({ form, set }: FormProps) {
   return (
     <>
       <Section title="Empresa" description="Cómo te identificas ante tus clientes.">
@@ -184,16 +156,6 @@ export function CompanyTab({
             { value: 'yes', label: 'Activados' },
           ]}
           onChange={set('autoReminders')}
-        />
-        <SelectField
-          className="sm:col-span-2"
-          label="Resumen semanal por correo (cada lunes, a tu email de empresa)"
-          value={form.weeklySummary}
-          options={[
-            { value: 'yes', label: 'Activado' },
-            { value: 'no', label: 'Desactivado' },
-          ]}
-          onChange={set('weeklySummary')}
         />
       </Section>
     </>
