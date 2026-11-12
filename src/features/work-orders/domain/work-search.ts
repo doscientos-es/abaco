@@ -5,6 +5,9 @@ import {
   type WorkPlanningSearch,
 } from '@/shared/domain/work-planning-search'
 
+export const workTabs = ['planificacion', 'revision', 'contratados', 'anteriores'] as const
+export type WorkTab = (typeof workTabs)[number]
+
 const workSearch = z.object({
   equipo: z
     .union([z.literal('unassigned'), z.string().uuid()])
@@ -17,8 +20,13 @@ const workSearch = z.object({
   pagina: z.coerce.number().int().min(0).max(100000).optional().catch(undefined),
 })
 
-export type WorkSearch = z.infer<typeof workSearch> & WorkPlanningSearch
+export type WorkSearch = z.infer<typeof workSearch> & WorkPlanningSearch & { tab?: WorkTab }
 
 export function parseWorkSearch(search: Record<string, unknown>): WorkSearch {
-  return { ...workSearch.parse(search), ...validateWorkPlanningSearch(search) }
+  const tab = workTabs.find((candidate) => candidate === search.tab)
+  return {
+    ...workSearch.parse(search),
+    ...validateWorkPlanningSearch(search),
+    ...(tab ? { tab } : {}),
+  }
 }

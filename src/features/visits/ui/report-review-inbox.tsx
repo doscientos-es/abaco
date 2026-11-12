@@ -10,16 +10,37 @@ import {
 import { loadClosedVisitReportVersion } from '../application/visit-report-actions'
 import { ClosedVisitReport } from './closed-visit-report'
 
+function usePendingReviews(tenantId: string, page: number) {
+  return useQuery({
+    queryKey: ['pending-report-reviews', tenantId, page],
+    queryFn: () => listPendingReportReviews(tenantId, page),
+    refetchInterval: 60_000,
+  })
+}
+
+export function ReportReviewTabLabel({ tenantId }: { tenantId: string }) {
+  const query = usePendingReviews(tenantId, 0)
+  const count = query.data?.items.length ?? 0
+  return (
+    <>
+      Partes por revisar
+      {count > 0 ? (
+        <span className="bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-xs">
+          <span className="sr-only">Pendientes: </span>
+          {count}
+          {query.data?.hasMore ? '+' : ''}
+        </span>
+      ) : null}
+    </>
+  )
+}
+
 export function ReportReviewInbox({ tenantId }: { tenantId: string }) {
   const client = useQueryClient()
   const [page, setPage] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const query = useQuery({
-    queryKey: ['pending-report-reviews', tenantId, page],
-    queryFn: () => listPendingReportReviews(tenantId, page),
-    refetchInterval: 60_000,
-  })
+  const query = usePendingReviews(tenantId, page)
   const selected = query.data?.items.find((item) => item.report_version_id === openId)
   const openedReport = useQuery({
     queryKey: [

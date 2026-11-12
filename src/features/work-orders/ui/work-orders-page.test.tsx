@@ -10,6 +10,8 @@ const state = vi.hoisted(() => ({
   navigate: vi.fn(),
   clearFilters: undefined as (() => void) | undefined,
   queries: [] as unknown[][],
+  role: 'admin',
+  selectTab: undefined as ((key: string) => void) | undefined,
 }))
 vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children: ReactNode }) => <div>{children}</div>
@@ -23,6 +25,19 @@ vi.mock('@doscientos/ui', () => {
     PageHeaderHeading: Container,
     PageHeaderTitle: Container,
     Skeleton: () => null,
+    Tabs: ({
+      children,
+      onSelectionChange,
+    }: {
+      children: ReactNode
+      onSelectionChange: (key: string) => void
+    }) => {
+      state.selectTab = onSelectionChange
+      return <div>{children}</div>
+    },
+    TabsContent: Container,
+    TabsList: Container,
+    TabsTrigger: Container,
   }
 })
 vi.mock('@tanstack/react-router', () => ({
@@ -39,11 +54,15 @@ vi.mock('@tanstack/react-query', () => ({
     }
   },
 }))
-vi.mock('@/features/auth', () => ({ can: () => true, useSession: () => ({ role: 'admin' }) }))
+vi.mock('@/features/auth', () => ({ can: () => true, useSession: () => ({ role: state.role }) }))
 vi.mock('@/features/contracts', () => ({
   ContractJobsPage: () => <h2>Trabajos contratados TEST</h2>,
 }))
-vi.mock('@/features/visits', () => ({ AgendaPage: () => <h1>Planificación compartida TEST</h1> }))
+vi.mock('@/features/visits', () => ({
+  AgendaPage: () => <h2>Planificación compartida TEST</h2>,
+  ReportReviewInbox: () => <h2>Revisión TEST</h2>,
+  ReportReviewTabLabel: () => <>Partes por revisar</>,
+}))
 vi.mock('@/features/work-teams', () => ({
   workTeamLabel: vi.fn(),
   workTeamsQuery: () => ({ queryKey: ['teams'] }),
@@ -60,6 +79,8 @@ vi.mock('../application/work-order-actions', () => ({ listWorkOrders: vi.fn() })
 beforeEach(() => {
   vi.clearAllMocks()
   state.queries = []
+  state.role = 'admin'
+  state.clearFilters = undefined
   state.search = {
     view: 'calendar',
     date: '2026-11-13',
@@ -71,15 +92,48 @@ beforeEach(() => {
 })
 
 describe('unified work module', () => {
-  it('keeps planning, contract configuration and historical work accessible in one page', () => {
+  it.each([
+    ['planificacion', 'Planificación compartida TEST'],
+    ['revision', 'Revisión TEST'],
+    ['contratados', 'Trabajos contratados TEST'],
+    ['anteriores', 'Consulta y termina los registros del modelo anterior'],
+  ] as const)('shows only the selected section for %s', (tab, content) => {
+    state.search.tab = tab
     const html = renderToStaticMarkup(<WorkOrdersPage />)
+    expect(html).toContain(content)
+    for (const other of [
+      'Planificación compartida TEST',
+      'Revisión TEST',
+      'Trabajos contratados TEST',
+    ]) {
+      if (other !== content) expect(html).not.toContain(other)
+    }
+    expect(html).toContain('Partes por revisar')
+    expect(html).toContain('Partidas contratadas')
+    expect(html).toContain('Trabajos anteriores')
+    if (tab !== 'anteriores') expect(state.queries).toEqual([])
+  })
+
+  it('preserves planning and historical filters when switching sections', () => {
+    renderToStaticMarkup(<WorkOrdersPage />)
+    state.selectTab?.('contratados')
+    const navigation = state.navigate.mock.calls.at(-1)?.[0] as {
+      search: (previous: WorkSearch) => WorkSearch
+    }
+    expect(navigation.search(state.search)).toEqual({ ...state.search, tab: 'contratados' })
+  })
+
+  it('does not expose report review to non-admin users', () => {
+    state.role = 'user'
+    state.search.tab = 'revision'
+    const html = renderToStaticMarkup(<WorkOrdersPage />)
+    expect(html).not.toContain('Partes por revisar')
+    expect(html).not.toContain('Revisión TEST')
     expect(html).toContain('Planificación compartida TEST')
-    expect(html).toContain('Trabajos contratados TEST')
-    expect(html).toContain('Trabajos anteriores e independientes')
-    expect(html).not.toContain('href="/agenda"')
   })
 
   it('clears only historical filters without resetting calendar planning', () => {
+    state.search.tab = 'anteriores'
     renderToStaticMarkup(<WorkOrdersPage />)
     state.clearFilters?.()
     const navigation = state.navigate.mock.calls.at(-1)?.[0] as {
@@ -90,6 +144,7 @@ describe('unified work module', () => {
       date: '2026-11-13',
       period: 'week',
       team: 'unassigned',
+      tab: 'anteriores',
       equipo: undefined,
       estado: undefined,
       pagina: undefined,

@@ -1,5 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
-import { PlusIcon } from '@phosphor-icons/react'
+import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
@@ -49,7 +49,6 @@ import {
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
-import { ReportReviewInbox } from './report-review-inbox'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -87,7 +86,7 @@ export function AgendaPage() {
   const { tenant, clients } = useTenantData()
   const session = useSession()
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
+  const navigate = useNavigate({ from: '/trabajos' })
   const search = useSearch({ from: '/trabajos' })
   const date = search.date ?? todayInMadrid()
   const view: AgendaView = search.view ?? 'list'
@@ -375,12 +374,12 @@ export function AgendaPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Trabajos</h1>
+          <h2 className="text-lg font-semibold">Planificación</h2>
           <p className="text-muted-foreground text-sm">
-            Una misma planificación en lista o calendario; asignación, reprogramaciones y partes.
+            Organiza las visitas en lista o calendario.
           </p>
         </div>
         <Button onPress={() => setCreateOpen(true)}>
@@ -388,7 +387,6 @@ export function AgendaPage() {
           Nueva visita
         </Button>
       </div>
-      {session?.role === 'admin' ? <ReportReviewInbox tenantId={tenant.id} /> : null}
       <FormDialog
         open={createOpen && !related.creating}
         onOpenChange={(open) => {
@@ -535,20 +533,22 @@ export function AgendaPage() {
               ))}
             </fieldset>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <TextField
-              label="Fecha de referencia"
-              type="date"
-              value={date}
-              onChange={(value) => {
-                if (value) {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({ date: value })
-                }
-              }}
-              placeholder="Fecha"
-            />
-            <div className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-full min-w-0 sm:w-44">
+              <TextField
+                label="Fecha de referencia"
+                type="date"
+                value={date}
+                onChange={(value) => {
+                  if (value) {
+                    setSelectedCalendarVisitId(null)
+                    updateSearch({ date: value })
+                  }
+                }}
+                placeholder="Fecha"
+              />
+            </div>
+            <div className="w-32">
               <SelectField
                 label="Periodo"
                 value={period}
@@ -561,46 +561,55 @@ export function AgendaPage() {
                   updateSearch({ period: value as AgendaPeriod })
                 }}
               />
-              <div className="flex flex-wrap items-end gap-2 sm:flex-nowrap">
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({
-                      date:
-                        period === 'month'
-                          ? moveCalendarMonth(date, -1)
-                          : addDays(date, period === 'day' ? -1 : -7),
-                    })
-                  }}
-                >
-                  Periodo anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({ date: todayInMadrid() })
-                  }}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant="outline"
-                  onPress={() => {
-                    setSelectedCalendarVisitId(null)
-                    updateSearch({
-                      date:
-                        period === 'month'
-                          ? moveCalendarMonth(date, 1)
-                          : addDays(date, period === 'day' ? 1 : 7),
-                    })
-                  }}
-                >
-                  Periodo siguiente
-                </Button>
-              </div>
             </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+                aria-label="Periodo anterior"
+                onPress={() => {
+                  setSelectedCalendarVisitId(null)
+                  updateSearch({
+                    date:
+                      period === 'month'
+                        ? moveCalendarMonth(date, -1)
+                        : addDays(date, period === 'day' ? -1 : -7),
+                  })
+                }}
+              >
+                <CaretLeftIcon aria-hidden="true" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setSelectedCalendarVisitId(null)
+                  updateSearch({ date: todayInMadrid() })
+                }}
+              >
+                Hoy
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="size-8 p-0"
+                aria-label="Periodo siguiente"
+                onPress={() => {
+                  setSelectedCalendarVisitId(null)
+                  updateSearch({
+                    date:
+                      period === 'month'
+                        ? moveCalendarMonth(date, 1)
+                        : addDays(date, period === 'day' ? 1 : 7),
+                  })
+                }}
+              >
+                <CaretRightIcon aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <SelectField
               label="Técnico"
               value={filterTechnicianId}
@@ -644,6 +653,24 @@ export function AgendaPage() {
               placeholder="Nombre o dirección"
             />
           </div>
+          {filterTechnicianId || teamFilter || statusFilter || textFilter ? (
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() =>
+                  updateSearch({
+                    technician: undefined,
+                    team: undefined,
+                    status: undefined,
+                    q: undefined,
+                  })
+                }
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-sm">

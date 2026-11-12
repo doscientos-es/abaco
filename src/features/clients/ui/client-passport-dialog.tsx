@@ -1,5 +1,5 @@
 import { toast } from '@doscientos/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -37,6 +37,8 @@ export function CreatePassportItem({
   onCreated,
   onError,
   serviceLocationOnly = false,
+  status,
+  submitBlocked = false,
 }: {
   item: NewItem
   tenantId: string
@@ -45,6 +47,8 @@ export function CreatePassportItem({
   onCreated: (id?: string) => void
   onError: () => void
   serviceLocationOnly?: boolean
+  status?: ReactNode
+  submitBlocked?: boolean
 }) {
   const contact = item.kind === 'editContact' ? item.contact : undefined
   const location = item.kind === 'editLocation' ? item.location : undefined
@@ -67,7 +71,7 @@ export function CreatePassportItem({
   const invalid = !name.trim() || name.trim().length > 160 || (isLocation && !address.trim())
 
   async function save() {
-    if (invalid || saving) return
+    if (invalid || saving || submitBlocked) return
     setSaving(true)
     try {
       let createdId: string | undefined
@@ -134,9 +138,10 @@ export function CreatePassportItem({
       }}
       title={`${editing ? 'Editar' : 'Añadir'} ${label}`}
       submitLabel={saving ? 'Guardando…' : editing ? 'Guardar cambios' : `Añadir ${label}`}
-      submitDisabled={invalid || saving}
+      submitDisabled={invalid || saving || submitBlocked}
       onSubmit={() => void save()}
     >
+      {status}
       <TextField
         label="Nombre"
         value={name}

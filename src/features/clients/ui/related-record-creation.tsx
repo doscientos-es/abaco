@@ -96,6 +96,8 @@ export function useRelatedRecordCreation({
           tenantId={tenantId}
           clientId={clientId}
           serviceLocationOnly
+          status={status}
+          submitBlocked={pending}
           onClose={() => setCreating(null)}
           onCreated={(id) => {
             if (id) onLocationCreated(id)
@@ -110,7 +112,15 @@ export function useRelatedRecordCreation({
     </>
   )
 
-  return { creating, start, allowed, pending, storePending, status, dialogs }
+  return {
+    creating,
+    start,
+    allowed,
+    pending,
+    storePending,
+    status: creating === 'location' ? null : status,
+    dialogs,
+  }
 }
 
 export function RelatedCreateButton({

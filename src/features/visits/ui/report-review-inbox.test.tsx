@@ -2,7 +2,7 @@ import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ReportReviewInbox } from './report-review-inbox'
+import { ReportReviewInbox, ReportReviewTabLabel } from './report-review-inbox'
 
 const mocks = vi.hoisted(() => ({
   state: vi.fn(),
@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   error: vi.fn(),
   openedData: null as object | null,
   reportProps: vi.fn(),
+  hasMore: false,
 }))
 vi.mock('react', async (original) => ({
   ...(await original<typeof React>()),
@@ -39,7 +40,7 @@ vi.mock('@tanstack/react-query', () => ({
                 client_name: 'Cliente',
               },
             ],
-            hasMore: false,
+            hasMore: mocks.hasMore,
           },
         }
       : { data: mocks.openedData },
@@ -71,6 +72,7 @@ describe('report review inbox', () => {
     values = []
     cursor = 0
     mocks.openedData = null
+    mocks.hasMore = false
     mocks.state.mockImplementation((initial: unknown) => {
       const index = cursor++
       if (!(index in values)) values[index] = initial
@@ -121,5 +123,13 @@ describe('report review inbox', () => {
     await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled())
     expect(render()).toContain('Marcar como revisado')
     expect(mocks.invalidate).not.toHaveBeenCalled()
+  })
+
+  it('keeps pending reports visible in the navigation, including overflow', () => {
+    expect(renderToStaticMarkup(<ReportReviewTabLabel tenantId="company" />)).toContain(
+      'Pendientes:',
+    )
+    mocks.hasMore = true
+    expect(renderToStaticMarkup(<ReportReviewTabLabel tenantId="company" />)).toContain('1+')
   })
 })

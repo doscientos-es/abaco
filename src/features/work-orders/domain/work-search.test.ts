@@ -3,6 +3,17 @@ import { describe, expect, it } from 'vitest'
 import { parseWorkSearch } from './work-search'
 
 describe('shareable work filters', () => {
+  it.each(['planificacion', 'revision', 'contratados', 'anteriores'])(
+    'retains section %s',
+    (tab) => {
+      expect(parseWorkSearch({ tab }).tab).toBe(tab)
+    },
+  )
+
+  it('ignores an unknown section', () => {
+    expect(parseWorkSearch({ tab: 'desconocido' }).tab).toBeUndefined()
+  })
+
   it('keeps planning and historical filters together without mixing their statuses', () => {
     expect(
       parseWorkSearch({

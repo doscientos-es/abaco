@@ -62,7 +62,16 @@ vi.mock('react', async (importOriginal) => {
 vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children: ReactNode }) => <div>{children}</div>
   return {
-    Button: ({ children, onPress }: { children: ReactNode; onPress?: () => void }) => {
+    Button: ({
+      children,
+      onPress,
+      'aria-label': ariaLabel,
+    }: {
+      children: ReactNode
+      onPress?: () => void
+      'aria-label'?: string
+    }) => {
+      if (ariaLabel && onPress) mocks.buttons.set(ariaLabel, onPress)
       if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
       if (Array.isArray(children) && onPress) mocks.buttons.set(String(children[1]), onPress)
       return <button>{children}</button>
@@ -347,6 +356,33 @@ describe('AgendaPage: nueva visita', () => {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch
     }
     expect(navigation.search(mocks.search)).toEqual({ ...mocks.search, team: 'unassigned' })
+  })
+
+  it('clears planning filters without changing the date, period or view', () => {
+    mocks.search = {
+      view: 'calendar',
+      date: '2026-11-13',
+      period: 'week',
+      technician: 'unassigned',
+      team: 'unassigned',
+      status: 'scheduled',
+      q: 'Oficina',
+    }
+    render()
+    expect(mocks.buttons.has('Limpiar filtros')).toBe(true)
+    mocks.buttons.get('Limpiar filtros')?.()
+    const navigation = mocks.navigate.mock.calls.at(-1)?.[0] as {
+      search: (previous: WorkPlanningSearch) => WorkPlanningSearch
+    }
+    expect(navigation.search(mocks.search)).toEqual({
+      view: 'calendar',
+      date: '2026-11-13',
+      period: 'week',
+      technician: undefined,
+      team: undefined,
+      status: undefined,
+      q: undefined,
+    })
   })
 
   it('guarda, actualiza la agenda y cierra el diálogo', async () => {

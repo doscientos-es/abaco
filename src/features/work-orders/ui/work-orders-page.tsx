@@ -5,6 +5,10 @@ import {
   PageHeaderHeading,
   PageHeaderTitle,
   Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@doscientos/ui'
 import { ClipboardTextIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
@@ -12,37 +16,65 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 
 import { can, useSession } from '@/features/auth'
 import { ContractJobsPage } from '@/features/contracts'
-import { AgendaPage } from '@/features/visits'
+import { AgendaPage, ReportReviewInbox, ReportReviewTabLabel } from '@/features/visits'
 import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
 
 import { listWorkOrders } from '../application/work-order-actions'
-import type { WorkSearch } from '../domain/work-search'
+import { workTabs, type WorkSearch, type WorkTab } from '../domain/work-search'
 import { WorkOrdersList } from './work-orders-list'
 import { workStatusLabels } from './work-status-badge'
 
 export function WorkOrdersPage() {
+  const { tenant } = useTenantData()
+  const session = useSession()
+  const search = useSearch({ from: '/trabajos' })
+  const navigate = useNavigate({ from: '/trabajos' })
+  const tabs = workTabs.filter((tab) => tab !== 'revision' || session?.role === 'admin')
+  const tab = search.tab && tabs.includes(search.tab) ? search.tab : 'planificacion'
+  const labels: Record<WorkTab, string> = {
+    planificacion: 'Planificación',
+    revision: 'Partes por revisar',
+    contratados: 'Partidas contratadas',
+    anteriores: 'Trabajos anteriores',
+  }
   return (
-    <div className="space-y-6">
-      <AgendaPage />
-      <details className="rounded-lg border p-4">
-        <summary className="cursor-pointer font-medium">
-          Partidas contratadas y configuración
-        </summary>
-        <div className="mt-4">
-          <ContractJobsPage />
-        </div>
-      </details>
-      <details className="rounded-lg border p-4">
-        <summary className="cursor-pointer font-medium">
-          Trabajos anteriores e independientes (modelo anterior)
-        </summary>
-        <div className="mt-4">
-          <LegacyWorkOrdersPage />
-        </div>
-      </details>
+    <div className="space-y-5">
+      <PageHeader className="py-0">
+        <PageHeaderHeading>
+          <PageHeaderTitle className="text-xl md:text-2xl">Trabajos</PageHeaderTitle>
+          <PageHeaderDescription>
+            Planifica las visitas y gestiona los trabajos de tus clientes.
+          </PageHeaderDescription>
+        </PageHeaderHeading>
+      </PageHeader>
+      <Tabs
+        selectedKey={tab}
+        onSelectionChange={(key) =>
+          void navigate({
+            to: '/trabajos',
+            search: (previous) => ({ ...previous, tab: key as WorkTab }),
+          })
+        }
+      >
+        <TabsList aria-label="Secciones de trabajos" className="w-full overflow-x-auto sm:w-fit">
+          {tabs.map((id) => (
+            <TabsTrigger key={id} id={id}>
+              {id === 'revision' ? <ReportReviewTabLabel tenantId={tenant.id} /> : labels[id]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent id={tab} key={tab}>
+          {tab === 'planificacion' ? <AgendaPage /> : null}
+          {tab === 'revision' && session?.role === 'admin' ? (
+            <ReportReviewInbox tenantId={tenant.id} />
+          ) : null}
+          {tab === 'contratados' ? <ContractJobsPage /> : null}
+          {tab === 'anteriores' ? <LegacyWorkOrdersPage /> : null}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
@@ -51,7 +83,7 @@ function LegacyWorkOrdersPage() {
   const { tenant, clients } = useTenantData()
   const session = useSession()
   const search = useSearch({ from: '/trabajos' })
-  const navigate = useNavigate()
+  const navigate = useNavigate({ from: '/trabajos' })
   const page = search.pagina ?? 0
   const legacyFilters = { equipo: search.equipo, estado: search.estado }
   const teams = useQuery(workTeamsQuery(tenant.id))

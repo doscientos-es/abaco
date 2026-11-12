@@ -14,7 +14,11 @@ const mocks = vi.hoisted(() => ({
   cursor: 0,
   fields: new Map<string, Field>(),
   actions: new Map<string, Action>(),
-  dialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
+  dialog: null as null | {
+    onSubmit: () => void
+    onOpenChange: (open: boolean) => void
+    submitDisabled: boolean
+  },
   jobDialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
   locations: {} as Record<string, Array<{ id: string; name: string }>>,
   targetState: 'ready' as 'ready' | 'loading' | 'error',
@@ -126,12 +130,17 @@ vi.mock('@/shared/ui/form-dialog', () => ({
     title: string
     children: ReactNode
     onSubmit: () => void
+    onOpenChange: (open: boolean) => void
     submitDisabled: boolean
   }) => {
     if (!props.open) return null
     if (props.title.includes('trabajo')) mocks.jobDialog = props
     else mocks.dialog = props
-    return <dialog open>{props.children}</dialog>
+    return (
+      <dialog open aria-label={props.title}>
+        {props.children}
+      </dialog>
+    )
   },
 }))
 vi.mock('@/shared/ui/page-states', () => ({
@@ -305,10 +314,46 @@ describe('contract job and inline centre creation', () => {
     mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
     openLocationForm()
     mocks.dialog?.onSubmit()
-    await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
+    let html = ''
+    await vi.waitFor(() => {
+      html = render()
+      expect(html).toContain('No se pudieron actualizar los centros')
+    })
+    const centreDialog = html.match(
+      /<dialog open="" aria-label="Añadir centro">(.*?)<\/dialog>/,
+    )?.[1]
+    const jobDialog = html.match(/<dialog open="" aria-label="Añadir trabajo">(.*?)<\/dialog>/)?.[1]
+    expect(centreDialog).toContain('Reintentar actualización')
+    expect(jobDialog).not.toContain('Reintentar actualización')
     expect(mocks.dialog).not.toBeNull()
     expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
+    expect(mocks.fields.get('Dirección')?.value).toBe('Calle de prueba 1')
+    expect(mocks.dialog?.submitDisabled).toBe(true)
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
+    press('Reintentar actualización')
+    await vi.waitFor(() => {
+      expect(render()).not.toContain('No se pudieron actualizar los centros')
+      expect(mocks.dialog?.submitDisabled).toBe(false)
+    })
+    expect(mocks.dialog).not.toBeNull()
+    expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
+    expect(mocks.fields.get('Dirección')?.value).toBe('Calle de prueba 1')
+    expect(mocks.dialog?.submitDisabled).toBe(false)
+    expect(mocks.createLocation).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the refresh retry available in the parent when the centre dialog is closed', async () => {
+    mocks.createLocation.mockRejectedValue(new Error('No se pudo guardar'))
+    mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
+    openLocationForm()
+    mocks.dialog?.onSubmit()
+    await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
+    mocks.dialog?.onOpenChange(false)
+    const html = render()
+    expect(html).not.toContain('aria-label="Añadir centro"')
+    expect(
+      html.match(/<dialog open="" aria-label="Añadir trabajo">(.*?)<\/dialog>/)?.[1],
+    ).toContain('Reintentar actualización')
     press('Reintentar actualización')
     await vi.waitFor(() => expect(render()).not.toContain('No se pudieron actualizar los centros'))
     expect(mocks.createLocation).toHaveBeenCalledOnce()
