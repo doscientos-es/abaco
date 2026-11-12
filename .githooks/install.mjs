@@ -14,7 +14,8 @@ try {
     )
   }
   const { scripts = {} } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-  if (!scripts['quality:quick']) throw new Error('Define quality:quick before installing hooks.')
+  if (!scripts['quality:quick'] || !scripts.quality)
+    throw new Error('Define quality:quick and quality before installing hooks.')
 
   const current = git('config', '--get', 'core.hooksPath')
   if (current.status !== 0 && current.status !== 1)
@@ -32,11 +33,12 @@ try {
   }
 
   chmodSync(join(root, '.githooks', 'pre-commit'), 0o755)
+  chmodSync(join(root, '.githooks', 'pre-push'), 0o755)
   if (git('config', '--local', 'core.hooksPath', '.githooks').status !== 0) {
     throw new Error('Cannot configure local Git hooks.')
   }
   process.stdout.write(
-    'Pre-commit installed: pnpm quality:quick. No pre-push hook or automatic fixes.\n',
+    'Pre-commit installed: pnpm quality:quick. Pre-push installed: pnpm quality. No automatic fixes.\n',
   )
 } catch (error) {
   process.stderr.write(
