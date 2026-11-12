@@ -1,9 +1,9 @@
 {
   "releases": [
     {
-      "version": null,
+      "version": "0.0.20",
       "date": "2026-11-12",
-      "title": "Sin publicar",
+      "title": "v0.0.20",
       "sections": [
         {
           "title": "Nuevas funciones",

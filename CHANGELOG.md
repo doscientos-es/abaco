@@ -2,7 +2,7 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-12 — Sin publicar
+## 2026-11-12 — v0.0.20
 
 ### Nuevas funciones
 
