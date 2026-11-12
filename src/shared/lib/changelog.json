@@ -8,11 +8,19 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add new release section for CreatePassportItem enhancements",
             "Enhance CreatePassportItem and related record creation with status and submit blocking features"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "99c5a257e0bbfb011a7dd2577929df74074d74b0",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Add new release section for CreatePassportItem enhancements"
+        },
         {
           "sha": "a85986ef09e2be8f2a58820158b7420ea89dcf1a",
           "type": "feat",
