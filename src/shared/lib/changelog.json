@@ -2,12 +2,14 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-11",
+      "date": "2026-11-12",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add member role change and removal functionality"]
+          "items": [
+            "Add member role change and removal functionality"
+          ]
         }
       ],
       "changes": [
@@ -16,18 +18,55 @@
           "type": "feat",
           "scope": "team",
           "breaking": false,
-          "description": "Add member role change and removal functionality"s
+          "description": "Add member role change and removal functionality"
+        }
+      ]
+    },
+    {
+      "version": "0.0.15",
+      "date": "2026-11-11",
+      "title": "v0.0.15",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Enable team visit access"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Respect current worker roles"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "4df30ca63293430b3d57da90c82ebefed41116d6",
+          "type": "fix",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Respect current worker roles"
+        },
+        {
+          "sha": "6bf5ddd53b39f07521bcd15c9e04922fce5eccfa",
+          "type": "feat",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Enable team visit access"
         }
       ]
     },
     {
       "version": "0.0.14",
-      "date": "2026-11-11",s
+      "date": "2026-11-11",
       "title": "v0.0.14",
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add report review functionality and inbox component"]
+          "items": [
+            "Add report review functionality and inbox component"
+          ]
         }
       ],
       "changes": [
@@ -47,7 +86,9 @@
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add team import functionality and validation tests"]
+          "items": [
+            "Add team import functionality and validation tests"
+          ]
         }
       ],
       "changes": [
@@ -401,7 +442,9 @@
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add optional start location capture"]
+          "items": [
+            "Add optional start location capture"
+          ]
         },
         {
           "title": "Correcciones",
@@ -955,7 +998,9 @@
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Enhance subscription query to handle schema changes"]
+          "items": [
+            "Enhance subscription query to handle schema changes"
+          ]
         }
       ],
       "changes": [
@@ -983,7 +1028,9 @@
         },
         {
           "title": "Correcciones",
-          "items": ["Address PR review findings"]
+          "items": [
+            "Address PR review findings"
+          ]
         }
       ],
       "changes": [
@@ -1054,7 +1101,9 @@
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add team size management and custom plan options"]
+          "items": [
+            "Add team size management and custom plan options"
+          ]
         }
       ],
       "changes": [
@@ -1074,7 +1123,9 @@
       "sections": [
         {
           "title": "Nuevas funciones",
-          "items": ["Add scheduled payments management and UI integration"]
+          "items": [
+            "Add scheduled payments management and UI integration"
+          ]
         }
       ],
       "changes": [
