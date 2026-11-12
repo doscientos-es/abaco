@@ -16,6 +16,7 @@ export type NavTo =
   | '/superadmin'
   | '/mi-jornada'
   | '/mis-vacaciones'
+  | '/horarios'
 
 export type NavItem = { to: NavTo; label: string; icon: ReactNode }
 

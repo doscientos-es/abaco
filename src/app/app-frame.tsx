@@ -56,6 +56,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
       { to: '/trabajos', label: 'Planificación', icon: navIcons.work },
+      { to: '/horarios', label: 'Horarios', icon: navIcons.visits },
       { to: '/vacaciones', label: 'Vacaciones', icon: navIcons.visits },
     ],
   },
@@ -97,6 +98,7 @@ const flatItems = bottomOrder.flatMap((to) =>
 /** Pages each item needs; hidden from the menu when the role lacks it. RLS still enforces it. */
 const navPermission: Partial<Record<NavTo, Permission>> = {
   '/trabajos': 'work:read',
+  '/horarios': 'team:manage',
   '/contratos': 'contracts:read',
   '/vacaciones': 'vacations:manage',
   '/facturas': 'invoices:read',

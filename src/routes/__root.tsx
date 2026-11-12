@@ -38,6 +38,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       !isPlatformPage &&
       path !== '/ajustes' &&
       path !== '/mi-jornada' &&
+      path !== '/horarios' &&
       path !== '/mis-vacaciones' &&
       path !== '/nueva-contrasena'
     ) {

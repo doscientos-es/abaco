@@ -27,6 +27,7 @@ import './technician-frame.css'
 
 const navigation: NavItem[] = [
   { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.home },
+  { to: '/horarios', label: 'Mi horario', icon: navIcons.visits },
   { to: '/mis-vacaciones', label: 'Mis vacaciones', icon: navIcons.visits },
   { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
 ]
@@ -139,7 +140,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
       </AppShellMain>
       <nav
         aria-label="Navegación de usuario"
-        className="bg-sidebar border-border hidden shrink-0 grid-cols-3 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
+        className="bg-sidebar border-border hidden shrink-0 grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
       >
         {navigation.map((item) => (
           <Link

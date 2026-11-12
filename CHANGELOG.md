@@ -2,6 +2,17 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-12 — Sin publicar
+
+### Nuevas funciones
+
+- Remove weekly summary feature and related settings
+- Add client types management functionality
+- Configurable client types by company
+- Complete team visit access and assignment
+- Add changelog check to CI and update quality script
+- Add contracts feature to changelog and JSON
+
 ## 2026-11-12 — v0.0.20
 
 ### Nuevas funciones

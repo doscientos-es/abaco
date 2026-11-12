@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { can, useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
 import { ClientTypesSection } from '@/features/clients'
+import { StaffFunctionsSection } from '@/features/staff-schedules'
 import doscientosLogo from '@/shared/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
@@ -144,7 +145,10 @@ export function SettingsPage() {
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'documentos' ? <BrandTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'listas' && session?.tenantId ? (
-        <ClientTypesSection key={session.tenantId} tenantId={session.tenantId} />
+        <div className="space-y-4">
+          <ClientTypesSection key={session.tenantId} tenantId={session.tenantId} />
+          <StaffFunctionsSection key={session.tenantId} tenantId={session.tenantId} />
+        </div>
       ) : null}
       {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
       {tab === 'plan' && session?.tenantId ? (

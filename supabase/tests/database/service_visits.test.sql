@@ -127,13 +127,13 @@ select is(public.transition_service_visit(
   '48000000-0000-4000-8000-000000000001',
   current_setting('test.visit_one')::uuid,
   current_setting('test.visit_one_version')::timestamptz,
-  'in_progress', '', '48000000-0000-4000-8000-000000000010'
+  'in_progress', '', '48000000-0000-4000-8000-000000000010', 41.3, 2.1
 ), 'in_progress', 'Assigned technician can start their visit');
 select is(public.transition_service_visit(
   '48000000-0000-4000-8000-000000000001',
   current_setting('test.visit_one')::uuid,
   current_setting('test.visit_one_version')::timestamptz,
-  'in_progress', '', '48000000-0000-4000-8000-000000000010'
+  'in_progress', '', '48000000-0000-4000-8000-000000000010', 41.3, 2.1
 ), 'in_progress', 'Retrying the same transition is idempotent');
 select throws_ok(
   $$select public.transition_service_visit(

@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 select plan(13);
 
 insert into public.tenants (id,name,collect_visit_start_location) values
-  ('49000000-0000-4000-8000-000000000001','Ubicación opcional',true),
+  ('49000000-0000-4000-8000-000000000001','Ajuste antiguo desactivado',false),
   ('49000000-0000-4000-8000-000000000008','Sin ubicación',false);
 insert into public.clients (id,tenant_id,name) values
   ('49000000-0000-4000-8000-000000000002','49000000-0000-4000-8000-000000000001','Cliente');
@@ -21,7 +21,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '49000000-0000-4000-8000-000000000004';
 select is((select collect_visit_start_location from public.my_company_memberships()
   where tenant_id='49000000-0000-4000-8000-000000000001'),true,
-  'Company setting is exposed only in the caller membership projection');
+  'Legacy clients always see location as required, regardless of the old setting');
 select set_config('test.loc_visit',public.create_service_visit(
   '49000000-0000-4000-8000-000000000001','49000000-0000-4000-8000-000000000002',
   '49000000-0000-4000-8000-000000000003',null,null,'Visita con ubicación',

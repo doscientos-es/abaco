@@ -1,4 +1,5 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+import { fetchAllPages } from '@/shared/lib/supabase/fetch-all-pages'
 
 import type {
   AbsenceType,
@@ -91,21 +92,19 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
 }
 
 export async function listVacationRequests(tenantId: string): Promise<VacationRequest[]> {
-  const data: VacationRequestRow[] = []
-  for (let page = 0; ; page++) {
-    const result = await createBrowserSupabaseClient()
-      .from('absence_requests')
-      .select(
-        'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
-      )
-      .eq('tenant_id', tenantId)
-      .order('submitted_at', { ascending: false })
-      .order('id')
-      .range(page * 500, (page + 1) * 500 - 1)
-    if (result.error) throw new Error('No se pudieron cargar las solicitudes de vacaciones.')
-    data.push(...((result.data ?? []) as VacationRequestRow[]))
-    if ((result.data?.length ?? 0) < 500) break
-  }
+  const data = await fetchAllPages<VacationRequestRow>(
+    (from, to) =>
+      createBrowserSupabaseClient()
+        .from('absence_requests')
+        .select(
+          'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
+        )
+        .eq('tenant_id', tenantId)
+        .order('submitted_at', { ascending: false })
+        .order('id')
+        .range(from, to),
+    'No se pudieron cargar las solicitudes de vacaciones.',
+  )
   return data.map(toVacationRequest)
 }
 

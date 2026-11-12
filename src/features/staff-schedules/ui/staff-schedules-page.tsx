@@ -1,0 +1,284 @@
+import { Button } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+
+import { useSession } from '@/features/auth'
+import { teamQuery } from '@/features/settings/application/team-actions'
+import { dateValue } from '@/shared/lib/date-range'
+import { calendarDays, calendarTime, type EventCalendarView } from '@/shared/lib/event-calendar'
+import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
+import { EventCalendar } from '@/shared/ui/event-calendar'
+
+import {
+  staffAbsencesQuery,
+  staffFunctionsQuery,
+  staffSchedulesQuery,
+} from '../application/staff-schedule-actions'
+import { scheduleOccurrences, type StaffPerson } from '../domain/staff-schedule'
+import { StaffScheduleEditor } from './staff-schedule-editor'
+
+export function StaffSchedulesPage() {
+  const session = useSession()
+  if (!session?.tenantId || !session.userId) return <p>Selecciona una empresa.</p>
+  return (
+    <ScheduleView
+      key={`${session.tenantId}:${session.userId}`}
+      tenantId={session.tenantId}
+      userId={session.userId}
+      name={session.fullName || session.email || 'Mi horario'}
+      admin={session.role === 'admin'}
+    />
+  )
+}
+
+function ScheduleView({
+  tenantId,
+  userId,
+  name,
+  admin,
+}: {
+  tenantId: string
+  userId: string
+  name: string
+  admin: boolean
+}) {
+  const [date, setDate] = useState(() => new Date())
+  const [view, setView] = useState<EventCalendarView>('week')
+  const [selected, setSelected] = useState<string[] | null>(null)
+  const [functionFilter, setFunctionFilter] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [itemId, setItemId] = useState<string | null>(null)
+  const [pdfError, setPdfError] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const days = calendarDays(date, view)
+  const from = dateValue(days[0] ?? date)
+  const to = dateValue(days[days.length - 1] ?? date)
+  const scheduleOptions = staffSchedulesQuery(tenantId)
+  const functionOptions = staffFunctionsQuery(tenantId)
+  const absenceOptions = staffAbsencesQuery(tenantId, from, to)
+  const schedules = useQuery({
+    ...scheduleOptions,
+    queryKey: [...scheduleOptions.queryKey, userId],
+  })
+  const functions = useQuery({
+    ...functionOptions,
+    queryKey: [...functionOptions.queryKey, userId],
+  })
+  const absences = useQuery({ ...absenceOptions, queryKey: [...absenceOptions.queryKey, userId] })
+  const team = useQuery({ ...teamQuery(tenantId), enabled: admin })
+  const loading =
+    schedules.isPending || functions.isPending || absences.isPending || (admin && team.isPending)
+  const failed =
+    schedules.isError || functions.isError || absences.isError || (admin && team.isError)
+  const people: StaffPerson[] = (
+    admin
+      ? (team.data ?? []).map((member) => ({
+          userId: member.userId,
+          name: member.fullName || member.email,
+        }))
+      : [{ userId, name }]
+  ).map((person) => ({
+    ...person,
+    schedule: schedules.data?.find((item) => item.userId === person.userId) ?? null,
+  }))
+  const visible = people.filter(
+    (person) =>
+      (selected === null || selected.includes(person.userId)) &&
+      (!functionFilter || person.schedule?.functionIds.includes(functionFilter)),
+  )
+  const occurrences = scheduleOccurrences(visible, absences.data ?? [], date, view)
+  const activeNow = [
+    ...new Map(
+      occurrences
+        .filter((item) => item.start <= now && item.end > now)
+        .map((item) => [item.userId, item.name]),
+    ).values(),
+  ]
+  const selectedItem = occurrences.find((item) => item.id === itemId)
+  const editing = people.find((person) => person.userId === editingId)
+  const events = occurrences.map((item) => ({
+    id: item.id,
+    title: item.name,
+    start: item.start,
+    end: item.end,
+  }))
+
+  async function download() {
+    setExporting(true)
+    setPdfError('')
+    try {
+      const { downloadSchedulePdf } = await import('./staff-schedule-pdf')
+      await downloadSchedulePdf(
+        date,
+        view,
+        occurrences,
+        admin ? 'Horario del equipo' : `Horario de ${name}`,
+      )
+    } catch {
+      setPdfError('No se pudo generar el PDF. Inténtalo de nuevo.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <header>
+        <h1 className="text-2xl font-semibold">{admin ? 'Horarios del equipo' : 'Mi horario'}</h1>
+        <p className="text-muted-foreground text-sm">
+          Semana tipo actual, no presencia real ni historial de horarios. Se excluyen las ausencias
+          aprobadas.
+        </p>
+      </header>
+      {loading ? (
+        <p>Cargando horarios…</p>
+      ) : failed ? (
+        <div role="alert">
+          No se pudieron cargar los horarios o las ausencias.{' '}
+          <Button
+            variant="outline"
+            onPress={() => {
+              void schedules.refetch()
+              void functions.refetch()
+              void absences.refetch()
+              if (admin) void team.refetch()
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
+      ) : (
+        <>
+          {admin ? (
+            <section
+              className="border-border bg-card space-y-3 rounded-xl border p-4"
+              aria-label="Filtrar trabajadores"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-semibold">Personas y funciones</h2>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onPress={() => setSelected(null)}>
+                    Todas
+                  </Button>
+                  <Button variant="outline" size="sm" onPress={() => setSelected([])}>
+                    Ninguna
+                  </Button>
+                </div>
+              </div>
+              <label className="block text-sm">
+                Filtrar por función
+                <select
+                  className="bg-background ml-2 rounded border p-2"
+                  value={functionFilter}
+                  onChange={(event) => setFunctionFilter(event.target.value)}
+                >
+                  <option value="">Todas las funciones</option>
+                  {(functions.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {people.map((person) => (
+                  <li className="flex items-center gap-2" key={person.userId}>
+                    <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selected === null || selected.includes(person.userId)}
+                        onChange={(event) =>
+                          setSelected((previous) => {
+                            const ids = previous ?? people.map((item) => item.userId)
+                            return event.target.checked
+                              ? [...ids, person.userId]
+                              : ids.filter((id) => id !== person.userId)
+                          })
+                        }
+                      />
+                      <span className="truncate">{person.name}</span>
+                    </label>
+                    <Button variant="outline" size="sm" onPress={() => setEditingId(person.userId)}>
+                      Editar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <p className="text-sm">
+              <strong>Mis funciones:</strong>{' '}
+              {(functions.data ?? []).map((item) => item.name).join(', ') ||
+                'Sin funciones asignadas'}
+            </p>
+          )}
+          {editing ? (
+            <StaffScheduleEditor
+              key={editing.userId}
+              tenantId={tenantId}
+              person={editing}
+              functions={functions.data ?? []}
+              onClose={() => setEditingId(null)}
+            />
+          ) : null}
+          {admin && from <= dateValue(now) && dateValue(now) <= to ? (
+            <p className="text-sm" aria-live="polite">
+              <strong>Previstos ahora:</strong>{' '}
+              {activeNow.length ? activeNow.join(', ') : 'ninguna persona'}.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">Calendario</h2>
+            <Button variant="outline" isDisabled={exporting} onPress={() => void download()}>
+              {exporting ? 'Generando PDF…' : 'Descargar PDF'}
+            </Button>
+          </div>
+          {pdfError ? <p role="alert">{pdfError}</p> : null}
+          <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
+          <EventCalendar
+            key={`${view}:${from}`}
+            value={date}
+            view={view}
+            items={events}
+            showInstructions={false}
+            showAllDay={false}
+            renderDaySummary={(day) => {
+              const count = new Set(
+                occurrences
+                  .filter((item) => item.date === dateValue(day))
+                  .map((item) => item.userId),
+              ).size
+              return count ? (
+                <span className="text-muted-foreground text-xs">
+                  {count} {count === 1 ? 'persona' : 'personas'}
+                </span>
+              ) : null
+            }}
+            aria-label="Calendario de horarios previstos"
+            onItemClick={(item) => setItemId(item.id)}
+            onDayClick={(day) => {
+              setDate(day)
+              setView('day')
+            }}
+          />
+          {selectedItem ? (
+            <output className="text-sm">
+              {selectedItem.name}: {selectedItem.date}, {calendarTime(selectedItem.start)}–
+              {calendarTime(selectedItem.end)}
+            </output>
+          ) : null}
+          {!occurrences.length ? (
+            <p className="text-muted-foreground text-sm">
+              No hay franjas previstas para este período y selección.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
+  )
+}

@@ -1,6 +1,68 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-12",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Remove weekly summary feature and related settings",
+            "Add client types management functionality",
+            "Configurable client types by company",
+            "Complete team visit access and assignment",
+            "Add changelog check to CI and update quality script",
+            "Add contracts feature to changelog and JSON"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "27f53ed1154711a3a9d680c8b190622af01210e1",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Remove weekly summary feature and related settings"
+        },
+        {
+          "sha": "ac7c75a99c282928ed4221b4cc918d1eb75035f7",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add client types management functionality"
+        },
+        {
+          "sha": "031d0e830f973eb96322aa30058840ed69b3d9c0",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Configurable client types by company"
+        },
+        {
+          "sha": "8fd6a4c7ece3adea01e35c56721d926149adc0ea",
+          "type": "feat",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Complete team visit access and assignment"
+        },
+        {
+          "sha": "638b5a87c85d7b7c7b3001fbc3e4be7b729c9e6f",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add changelog check to CI and update quality script"
+        },
+        {
+          "sha": "f2a2c33b5618cbcfbd68d824d457bda171a6741b",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Add contracts feature to changelog and JSON"
+        }
+      ]
+    },
+    {
       "version": "0.0.20",
       "date": "2026-11-12",
       "title": "v0.0.20",

@@ -20,6 +20,7 @@ import { Route as ContabilidadRouteImport } from './routes/contabilidad'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FacturasRouteImport } from './routes/facturas'
+import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
 import { Route as MisVacacionesRouteImport } from './routes/mis-vacaciones'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
@@ -97,6 +98,11 @@ const EntrarRoute = EntrarRouteImport.update({
 const FacturasRoute = FacturasRouteImport.update({
   id: '/facturas',
   path: '/facturas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HorariosRoute = HorariosRouteImport.update({
+  id: '/horarios',
+  path: '/horarios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MiJornadaRoute = MiJornadaRouteImport.update({
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
+  '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/entrar': typeof EntrarRoute
+  '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/facturas': typeof FacturasRouteWithChildren
+  '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/contratos'
     | '/entrar'
     | '/facturas'
+    | '/horarios'
     | '/mi-jornada'
     | '/mis-vacaciones'
     | '/nueva-contrasena'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/confirmar'
     | '/contabilidad'
     | '/entrar'
+    | '/horarios'
     | '/mi-jornada'
     | '/mis-vacaciones'
     | '/nueva-contrasena'
@@ -402,6 +413,7 @@ export interface FileRouteTypes {
     | '/contratos'
     | '/entrar'
     | '/facturas'
+    | '/horarios'
     | '/mi-jornada'
     | '/mis-vacaciones'
     | '/nueva-contrasena'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   ContratosRoute: typeof ContratosRouteWithChildren
   EntrarRoute: typeof EntrarRoute
   FacturasRoute: typeof FacturasRouteWithChildren
+  HorariosRoute: typeof HorariosRoute
   MiJornadaRoute: typeof MiJornadaRoute
   MisVacacionesRoute: typeof MisVacacionesRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
@@ -531,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/facturas'
       fullPath: '/facturas'
       preLoaderRoute: typeof FacturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/horarios': {
+      id: '/horarios'
+      path: '/horarios'
+      fullPath: '/horarios'
+      preLoaderRoute: typeof HorariosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mi-jornada': {
@@ -769,6 +789,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContratosRoute: ContratosRouteWithChildren,
   EntrarRoute: EntrarRoute,
   FacturasRoute: FacturasRouteWithChildren,
+  HorariosRoute: HorariosRoute,
   MiJornadaRoute: MiJornadaRoute,
   MisVacacionesRoute: MisVacacionesRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,

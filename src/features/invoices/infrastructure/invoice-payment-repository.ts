@@ -1,4 +1,5 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+import { fetchAllPages } from '@/shared/lib/supabase/fetch-all-pages'
 
 export type InvoicePaymentRecord = {
   id: string
@@ -22,20 +23,16 @@ async function loadAll<T>(
   columns: string,
 ): Promise<T[]> {
   const db = createBrowserSupabaseClient()
-  const rows: T[] = []
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await db
+  return fetchAllPages<T>((from, to) =>
+    db
       .from(table)
       .select(columns)
       .eq('tenant_id', tenantId)
       .eq('invoice_id', invoiceId)
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
-      .range(offset, offset + 499)
-    if (error) throw new Error(error.message)
-    rows.push(...((data ?? []) as T[]))
-    if (!data || data.length < 500) return rows
-  }
+      .range(from, to),
+  )
 }
 
 export async function loadInvoicePaymentHistory(tenantId: string, invoiceId: string) {
