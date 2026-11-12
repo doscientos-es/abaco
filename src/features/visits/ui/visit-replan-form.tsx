@@ -125,11 +125,19 @@ export function VisitReplanForm({
           label="Técnico"
           value={assignedUserId}
           options={[
-            { value: '', label: 'Pendiente de asignar' },
+            {
+              value: '',
+              label: visit.work_team_id ? 'Mantener equipo asignado' : 'Pendiente de asignar',
+            },
             ...technicians.map((person) => ({ value: person.id, label: person.label })),
           ]}
           onChange={setAssignedUserId}
         />
+        {visit.work_team_id ? (
+          <p className="text-muted-foreground text-sm">
+            Si seleccionas un técnico, sustituirá al equipo asignado.
+          </p>
+        ) : null}
         <TextField
           label="Motivo del cambio"
           value={reason}

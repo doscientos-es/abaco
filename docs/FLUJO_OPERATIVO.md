@@ -30,6 +30,19 @@ no demuestra que se hayan aplicado a Supabase ni que el recorrido se haya valida
 - **Cierre condicionado a firma digital o constancia física:** no implementado. Hoy el cierre de visita puede generar una instantánea antes de cualquier firma.
 - **Aviso a administración al cerrar:** la versión cerrada queda consultable; falta comprobar y completar el aviso operativo para el flujo acordado.
 
+## Asignación a equipos (DEV-25)
+
+- Administración asigna un equipo desde el detalle de la visita. Una visita tiene asignación
+  individual o de equipo: asignar uno sustituye al otro. Al reprogramar sin técnico se conserva
+  el equipo; al seleccionar un técnico se sustituye por la asignación individual.
+- Los integrantes actuales con permiso de trabajo pueden ver, iniciar, completar y cerrar la
+  visita. Al cambiar la composición cambia el acceso, también para visitas ya cerradas; el parte
+  cerrado conserva la composición existente en el momento del cierre.
+- Se rechazan solapamientos y ausencias aprobadas al asignar o incorporar personas al equipo.
+  Una visita generada por contrato con conflicto queda sin asignar y registra una incidencia.
+- Las migraciones de DEV-25 se aplicaron a Supabase, pero el recorrido y los permisos de base de
+  datos no se han probado; deben validarse con cuentas separadas antes de darlo por verificado.
+
 ## Orden recomendado para completar
 
 1. Integrar en `main` el modelo de servicios múltiples y presupuesto → contrato → trabajos,
@@ -48,9 +61,6 @@ no demuestra que se hayan aplicado a Supabase ni que el recorrido se haya valida
 
 ## Decisiones que faltan
 
-- Si un trabajador asignado a equipo puede cerrar por sí solo o si todos los integrantes deben
-  confirmar la visita; recomendación inicial: un responsable individual cierra y el equipo es
-  una asignación operativa visible.
 - Qué significa «no marcar» una tarea: no hecha, no aplicable o simplemente no registrada.
   Debe quedar distinguible en el parte.
 - Si la firma del cliente es obligatoria en todos los trabajos o se permite un motivo de ausencia.

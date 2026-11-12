@@ -55,12 +55,12 @@ const visit: VisitSummary = {
   notes: '',
   updated_at: 'original-version',
 }
-function render(durationMinutes = 90) {
+function render(durationMinutes = 90, currentVisit = visit) {
   mocks.index = 0
   return renderToStaticMarkup(
     <VisitReplanForm
       tenantId="tenant"
-      visit={visit}
+      visit={currentVisit}
       technicians={[]}
       onDone={mocks.done}
       onCancel={vi.fn()}
@@ -104,6 +104,13 @@ describe('calendar replan confirmation', () => {
     render(735)
     mocks.buttons.get('Guardar cambio')?.()
     expect(mocks.save).not.toHaveBeenCalled()
+  })
+  it('retains a team assignment when replanning without selecting a technician', async () => {
+    const html = render(90, { ...visit, assigned_user_id: null, work_team_id: 'team' })
+    expect(html).toContain('Si seleccionas un técnico, sustituirá al equipo asignado')
+    mocks.buttons.get('Guardar cambio')?.()
+    await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ assignedUserId: null }))
   })
   it('retains the operation id on failure and leaves confirmation open for retry', async () => {
     mocks.save.mockRejectedValueOnce(new Error('Concurrent update'))
