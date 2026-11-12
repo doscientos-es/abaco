@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Implement contracts feature with navigation, routing, and tests",
             "Add new release section for CreatePassportItem enhancements refactor: standardize string quotes for consistency",
             "Add new release section for CreatePassportItem enhancements",
             "Add new release section for CreatePassportItem enhancements",
@@ -16,6 +17,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "41169d5188693bcda77d0ee0e35e612a82aa6aaa",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Implement contracts feature with navigation, routing, and tests"
+        },
         {
           "sha": "215e32cb5aadb7fb69db449c24bb78ecf0d0b35f",
           "type": "feat",
