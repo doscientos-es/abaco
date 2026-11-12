@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add contracts feature to changelog and JSON",
             "Implement contracts feature with navigation, routing, and tests",
             "Add new release section for CreatePassportItem enhancements refactor: standardize string quotes for consistency",
             "Add new release section for CreatePassportItem enhancements",
@@ -17,6 +18,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "7982c1cf3174e2533b5ba574b7eba6277442be34",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Add contracts feature to changelog and JSON"
+        },
         {
           "sha": "41169d5188693bcda77d0ee0e35e612a82aa6aaa",
           "type": "feat",

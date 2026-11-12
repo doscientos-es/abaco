@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Add contracts feature to changelog and JSON
 - Implement contracts feature with navigation, routing, and tests
 - Add new release section for CreatePassportItem enhancements refactor: standardize string quotes for consistency
 - Add new release section for CreatePassportItem enhancements
