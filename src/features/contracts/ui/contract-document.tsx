@@ -141,7 +141,7 @@ export function ContractDocument({
                 <p className="border-t pt-2">Firma del cliente</p>
               </section>
               {publication.data ? (
-                <section className="pt-8">
+                <section className="contract-annex pt-8">
                   <h2 className="mb-3 text-lg font-semibold">Anexo · Presupuesto aceptado</h2>
                   <EstimateDocument
                     estimate={publication.data.estimate}
