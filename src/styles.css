@@ -343,4 +343,14 @@ body.invoice-print .paper-sheet section {
     width: 100%;
     max-width: none;
   }
+  body.invoice-print .contract-document .estimate-document {
+    position: static;
+    width: auto;
+    max-width: none;
+    border: 0;
+    box-shadow: none;
+  }
+  body.invoice-print .contract-document section {
+    break-inside: auto;
+  }
 }
