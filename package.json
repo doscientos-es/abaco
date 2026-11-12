@@ -13,7 +13,7 @@
     "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "quality": "pnpm changelog:check && pnpm format:check && pnpm lint && pnpm structure:check && pnpm typecheck && pnpm test",
+    "quality": "pnpm format:check && pnpm lint && pnpm structure:check && pnpm typecheck && pnpm test",
     "quality:quick": "pnpm format:check && pnpm lint",
     "hooks:install": "node .githooks/install.mjs",
     "changelog:sync": "changelog generate src/shared/lib/changelog.json --md CHANGELOG.md",

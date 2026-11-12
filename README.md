@@ -164,12 +164,14 @@ El contrato completo para la aplicación es `pnpm quality`, también para agente
 - `pnpm typecheck`: contrato TypeScript estricto.
 - `pnpm test`: pruebas de dominio, aplicación y presentación.
 - `pnpm changelog:check`: comprueba los archivos de novedades generados.
-- `pnpm quality`: changelog y todos los checks anteriores.
+- `pnpm quality`: todos los checks anteriores salvo el changelog.
 - `pnpm build`: sincronización de changelog, TypeScript y compilación de Vite.
 
 Revisa `.githooks/` y ejecuta `pnpm hooks:install` una vez por clon: el pre-commit
 ejecuta `pnpm quality:quick` y el pre-push ejecuta `pnpm quality`. La instalación
 rehúsa reemplazar hooks existentes.
+El changelog depende del historial de commits y no bloquea el push: CI lo genera
+y comprueba, y `dev` y `build` lo sincronizan con el historial disponible.
 
 ### Base de datos
 
