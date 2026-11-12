@@ -103,9 +103,7 @@ export function useRelatedRecordCreation({
             void refreshTargets()
           }}
           onError={() => {
-            void queryClient.invalidateQueries({
-              queryKey: ['work-target-options', tenantId, clientId],
-            })
+            void refreshTargets()
           }}
         />
       ) : null}

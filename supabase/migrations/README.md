@@ -23,6 +23,13 @@ nombre de versión realmente aplicado e incorpora dos correcciones ya aplicadas:
 Estos archivos forman parte del historial, no son migraciones pendientes ni
 copias que puedan eliminarse. No vuelvas a ejecutar su SQL en el proyecto remoto.
 
+El orden por versión de este historial no permite reconstruirlo directamente:
+`admin_absence_management` depende de `absence_request_types` y
+`absence_information_followup`, que tienen versiones posteriores. Para una base
+desechable, usa el procedimiento aislado del README principal. Sus nombres de
+versión son sintéticos: nunca enlaces ese proyecto ni lo uses para hacer push o
+reparar el historial de una base remota.
+
 ## Nuevos cambios
 
 1. Crea una migración nueva con `supabase migration new <nombre>`; no edites ni

@@ -102,15 +102,18 @@ La interfaz usa React 19, TanStack Router y Query, Tailwind 4 y TypeScript 7. La
 
 ## Base de datos y pruebas
 
-Crea migraciones con `supabase migration new <nombre>`. Para reconstruir una base local desde cero y probarlas:
+Crea migraciones con `supabase migration new <nombre>`. Para reconstruir y probar una base **desechable**, crea un directorio temporal que aún no exista:
 
 ```bash
-supabase db start
-supabase db reset --local
-supabase test db
+REPLAY_DIR="$(mktemp -d)/abaco-db-replay"
+node scripts/prepare-db-replay.mjs "$REPLAY_DIR"
+supabase db start --workdir "$REPLAY_DIR"
+supabase db reset --local --workdir "$REPLAY_DIR"
+supabase test db --workdir "$REPLAY_DIR"
+supabase stop --workdir "$REPLAY_DIR"
 ```
 
-La prueba SQL requiere que el servicio Docker esté activo. CI ejecuta el mismo reinicio y las pruebas de base de datos antes de la versión automática. Las funciones Edge y la aplicación tienen que desplegarse después de sus migraciones compatibles. Antes de aplicar cambios a un proyecto con datos, compara su esquema y migraciones reales con Git, verifica copias de seguridad y restauración en staging y prueba los documentos y contratos existentes. No ejecutes `db reset` en producción.
+La prueba SQL requiere Docker. El proyecto temporal copia todas las migraciones y las ejecuta en orden de dependencias, con versiones sintéticas: **nunca lo enlaces a Supabase remoto ni uses su historial para hacer push o reparaciones**. La reconstrucción directa con los nombres reales no funciona actualmente por el orden del historial aplicado. CI ejecuta el mismo procedimiento antes de la versión automática. Las funciones Edge y la aplicación tienen que desplegarse después de sus migraciones compatibles. Antes de aplicar cambios a un proyecto con datos, compara su esquema y migraciones reales con Git, verifica copias de seguridad y restauración en staging y prueba los documentos y contratos existentes. No ejecutes `db reset` en producción.
 
 La comprobación local de la aplicación es:
 

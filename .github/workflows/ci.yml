@@ -40,9 +40,11 @@ jobs:
       - uses: supabase/setup-cli@v3
         with:
           version: 2.116.0
-      - run: supabase db start
-      - run: supabase db reset --local
-      - run: supabase test db
+      - name: Prepare disposable migration replay
+        run: node scripts/prepare-db-replay.mjs "$RUNNER_TEMP/abaco-db-replay"
+      - run: supabase db start --workdir "$RUNNER_TEMP/abaco-db-replay"
+      - run: supabase db reset --local --workdir "$RUNNER_TEMP/abaco-db-replay"
+      - run: supabase test db --workdir "$RUNNER_TEMP/abaco-db-replay"
 
   python:
     name: Python (informes PDF)

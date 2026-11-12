@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": null,
+      "date": "2026-11-12",
+      "title": "Sin publicar",
+      "sections": [
+        {
+          "title": "Correcciones",
+          "items": [
+            "Improve error handling for related record creation and refresh logic"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "b4c4607ea0f0a949e3a728180b2f71e590133d1d",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve error handling for related record creation and refresh logic"
+        }
+      ]
+    },
+    {
       "version": "0.0.18",
       "date": "2026-11-12",
       "title": "v0.0.18",
