@@ -1,31 +1,52 @@
 {
   "releases": [
     {
-      "version": null,
+      "version": "0.0.17",
       "date": "2026-11-12",
-      "title": "Sin publicar",
+      "title": "v0.0.17",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
-            "Add member role change and removal functionality"
+            "Update release dates and add new features",
+            "Update changelog for new features and corrections"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Resolve conflicts with main"
           ]
         }
       ],
       "changes": [
         {
-          "sha": "5dda3feb410d74668b2c375c5cef4cf82b1a80d4",
-          "type": "feat",
-          "scope": "team",
+          "sha": "a91045d351a50799c9c41fc3096133294b582834",
+          "type": "fix",
+          "scope": "DEV-22",
           "breaking": false,
-          "description": "Add member role change and removal functionality"
+          "description": "Resolve conflicts with main"
+        },
+        {
+          "sha": "decd40d077dc0022dc678db61014f878ca19d257",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update release dates and add new features"
+        },
+        {
+          "sha": "84a6bf7ee22ba60efac61b6294d531a3048dda84",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog for new features and corrections"
         }
       ]
     },
     {
-      "version": "0.0.15",
+      "version": "0.0.16",
       "date": "2026-11-11",
-      "title": "v0.0.15",
+      "title": "v0.0.16",
       "sections": [
         {
           "title": "Nuevas funciones",
@@ -41,6 +62,57 @@
         }
       ],
       "changes": [
+        {
+          "sha": "d610ddf77940c7f3ad900f7746ba5e2aed4db8c2",
+          "type": "fix",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Respect current worker roles"
+        },
+        {
+          "sha": "227bc6042bd1ef19c1d28c22b70f919208d3c03b",
+          "type": "feat",
+          "scope": "DEV-25",
+          "breaking": false,
+          "description": "Enable team visit access"
+        }
+      ]
+    },
+    {
+      "version": "0.0.15",
+      "date": "2026-11-11",
+      "title": "v0.0.15",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Add member role change and removal functionality",
+            "Add member role change and removal functionality",
+            "Enable team visit access"
+          ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Respect current worker roles"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "20af8e2d51b1fcb19c709712f9e9006fbb6927cc",
+          "type": "feat",
+          "scope": "team",
+          "breaking": false,
+          "description": "Add member role change and removal functionality"
+        },
+        {
+          "sha": "5dda3feb410d74668b2c375c5cef4cf82b1a80d4",
+          "type": "feat",
+          "scope": "team",
+          "breaking": false,
+          "description": "Add member role change and removal functionality"
+        },
         {
           "sha": "4df30ca63293430b3d57da90c82ebefed41116d6",
           "type": "fix",

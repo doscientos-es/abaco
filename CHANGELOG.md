@@ -2,15 +2,33 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-12 — Sin publicar
+## 2026-11-12 — v0.0.17
 
 ### Nuevas funciones
 
-- Add member role change and removal functionality
+- Update release dates and add new features
+- Update changelog for new features and corrections
+
+### Correcciones
+
+- Resolve conflicts with main
+
+## 2026-11-11 — v0.0.16
+
+### Nuevas funciones
+
+- Enable team visit access
+
+### Correcciones
+
+- Respect current worker roles
+
 ## 2026-11-11 — v0.0.15
 
 ### Nuevas funciones
 
+- Add member role change and removal functionality
+- Add member role change and removal functionality
 - Enable team visit access
 
 ### Correcciones
@@ -276,3 +294,4 @@
 - Update search query initialization for invoices page
 - Change message display to output element in team section
 - Update type definition for description prop in AuthLayout
+
