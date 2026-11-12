@@ -286,12 +286,32 @@ describe('contract job and inline centre creation', () => {
     openLocationForm()
     mocks.dialog?.onSubmit()
     await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled())
+    for (const key of ['work-target-options', 'client-passport']) {
+      expect(mocks.invalidate).toHaveBeenCalledWith(
+        { queryKey: [key, 'tenant-1', 'client-1'] },
+        { throwOnError: true },
+      )
+    }
     render()
     expect(mocks.dialog).not.toBeNull()
     expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
     expect(mocks.fields.get('Dirección')?.value).toBe('Calle de prueba 1')
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
     expect(mocks.createContract).not.toHaveBeenCalled()
+  })
+
+  it('allows retrying a failed refresh after centre creation fails', async () => {
+    mocks.createLocation.mockRejectedValue(new Error('No se pudo guardar'))
+    mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
+    openLocationForm()
+    mocks.dialog?.onSubmit()
+    await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
+    expect(mocks.dialog).not.toBeNull()
+    expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
+    press('Reintentar actualización')
+    await vi.waitFor(() => expect(render()).not.toContain('No se pudieron actualizar los centros'))
+    expect(mocks.createLocation).toHaveBeenCalledOnce()
   })
 
   it('retries refreshing centres without inserting the saved centre again', async () => {
