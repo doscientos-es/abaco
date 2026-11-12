@@ -38,7 +38,7 @@ try {
     throw new Error('Cannot configure local Git hooks.')
   }
   process.stdout.write(
-    'Pre-commit installed: pnpm quality:quick. Pre-push installed: pnpm quality. No automatic fixes.\n',
+    'Pre-commit installed: fix staged files and run pnpm quality:quick. Pre-push installed: pnpm quality.\n',
   )
 } catch (error) {
   process.stderr.write(

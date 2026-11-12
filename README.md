@@ -168,8 +168,11 @@ El contrato completo para la aplicación es `pnpm quality`, también para agente
 - `pnpm build`: sincronización de changelog, TypeScript y compilación de Vite.
 
 Revisa `.githooks/` y ejecuta `pnpm hooks:install` una vez por clon: el pre-commit
-ejecuta `pnpm quality:quick` y el pre-push ejecuta `pnpm quality`. La instalación
-rehúsa reemplazar hooks existentes.
+aplica correcciones de lint y formato a los archivos preparados y ejecuta
+`pnpm quality:quick`; el pre-push ejecuta `pnpm quality`. Para proteger cambios
+parciales, el pre-commit se detiene si un archivo preparado también tiene cambios
+sin preparar. Los nombres con caracteres de glob tampoco admiten corrección
+automática. La instalación rehúsa reemplazar hooks existentes.
 El changelog depende del historial de commits y no bloquea el push: CI lo genera
 y comprueba, y `dev` y `build` lo sincronizan con el historial disponible.
 
