@@ -61,7 +61,7 @@ export async function loadAccountingExport(
           db,
           'clients',
           tenantId,
-          'id,name,kind,tax_id,email,phone,address,billing_address,archived_at,notes',
+          'id,name,kind,tax_id,email,phone,address,billing_address,archived_at,notes,client_types(label)',
         )
       : [],
     dataset === 'all' || dataset === 'invoices' || dataset === 'payments'
@@ -103,7 +103,7 @@ export async function loadAccountingExport(
     clients: clientRows.map((row) => ({
       id: row.id,
       name: string(row.name),
-      kind: string(row.kind),
+      kind: string((row.client_types as { label?: unknown } | null)?.label) || string(row.kind),
       taxId: string(row.tax_id),
       email: string(row.email),
       phone: string(row.phone),

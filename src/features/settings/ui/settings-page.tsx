@@ -13,6 +13,7 @@ import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
+import { ClientTypesSection } from '@/features/clients'
 import doscientosLogo from '@/shared/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
@@ -25,12 +26,20 @@ import { CompanyTab } from './company-tab'
 import { hexColor, isLogoOk, isWebsiteOk, percent, toForm, type Form } from './settings-form'
 import { TeamSection } from './team-section'
 
-export type SettingsTab = 'empresa' | 'documentos' | 'privacidad' | 'equipo' | 'plan' | 'novedades'
+export type SettingsTab =
+  | 'empresa'
+  | 'documentos'
+  | 'privacidad'
+  | 'listas'
+  | 'equipo'
+  | 'plan'
+  | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   documentos: 'Documentos y correos',
   privacidad: 'Privacidad',
+  listas: 'Listas',
   equipo: 'Equipo',
   plan: 'Plan y facturación',
   novedades: 'Novedades',
@@ -47,6 +56,7 @@ export function SettingsPage() {
   const canTeam = Boolean(session?.tenantId && can(session.role, 'team:manage'))
   const canPlan = Boolean(session?.tenantId && session.role === 'admin')
   const allowed: SettingsTab[] = ['empresa', 'documentos', 'privacidad']
+  if (session?.tenantId && can(session.role, 'settings:write')) allowed.push('listas')
   if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
@@ -145,6 +155,9 @@ export function SettingsPage() {
       {tab === 'documentos' ? <BrandTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'privacidad' ? (
         <CompanyTab form={form} set={set} tenant={tenant} privacyOnly />
+      ) : null}
+      {tab === 'listas' && session?.tenantId ? (
+        <ClientTypesSection key={session.tenantId} tenantId={session.tenantId} />
       ) : null}
       {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
       {tab === 'plan' && session?.tenantId ? (

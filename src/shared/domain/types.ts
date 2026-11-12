@@ -41,7 +41,8 @@ export type Tenant = {
   nextEstimateNumber: number
 }
 
-export type ClientKind = 'person' | 'community' | 'business'
+/** Stable value of a client type configured by the company. */
+export type ClientKind = string
 
 export type Client = {
   id: string

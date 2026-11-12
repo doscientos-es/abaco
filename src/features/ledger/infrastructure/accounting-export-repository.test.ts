@@ -9,8 +9,16 @@ describe('accounting export repository', () => {
       id: `client-${String(index).padStart(4, '0')}`,
       tenant_id: 'tenant-1',
       name: `Cliente ${index}`,
+      kind: 'hotel',
+      client_types: { label: 'Hotel' },
     }))
-    clients.push({ id: 'client-other', tenant_id: 'tenant-2', name: 'No autorizado' })
+    clients.push({
+      id: 'client-other',
+      tenant_id: 'tenant-2',
+      name: 'No autorizado',
+      kind: 'person',
+      client_types: { label: 'Particular' },
+    })
     const rows: Record<string, Array<Record<string, unknown> & { id: string }>> = {
       clients,
       invoices: [],
@@ -58,6 +66,7 @@ describe('accounting export repository', () => {
     const data = await loadAccountingExport('tenant-1', 'all', db)
 
     expect(data.clients).toHaveLength(501)
+    expect(data.clients[0]?.kind).toBe('Hotel')
     expect(data.clients.at(-1)?.id).toBe('client-0500')
     expect(data.clients.some((client) => client.name === 'No autorizado')).toBe(false)
     expect(data.expenses.map((expense) => expense.id)).toEqual(['expense-1'])

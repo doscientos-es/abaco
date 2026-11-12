@@ -20,6 +20,10 @@ describe('settings route search', () => {
     expect(validate({ tab: 'plan' })).toEqual({ tab: 'plan' })
   })
 
+  it('supports direct links to configurable lists', () => {
+    expect(validate({ tab: 'listas' })).toEqual({ tab: 'listas' })
+  })
+
   it('rejects unknown tabs', () => {
     expect(validate({ tab: 'unknown' })).toEqual({})
   })

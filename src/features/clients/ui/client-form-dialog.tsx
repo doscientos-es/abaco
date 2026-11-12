@@ -1,9 +1,10 @@
 import { Button } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useBlocker } from '@tanstack/react-router'
 import { useRef, useState, type RefObject } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
-import type { Client, ClientKind } from '@/shared/domain/types'
+import type { Client } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
@@ -11,10 +12,11 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 
 import { createClient, updateClient, type ClientInput } from '../application/client-actions'
 import { findPotentialClientDuplicates } from '../application/client-duplicates'
+import { clientTypesQuery } from '../application/client-types'
 
 const empty: ClientInput = {
   name: '',
-  kind: 'person',
+  kind: '',
   taxId: '',
   email: '',
   phone: '',
@@ -43,12 +45,13 @@ export function ClientForm({
   onSaved,
   variant,
 }: Omit<Props, 'open'> & { variant: 'dialog' | 'page' }) {
-  const { clients } = useTenantData()
+  const { clients, tenant } = useTenantData()
+  const types = useQuery(clientTypesQuery(tenant.id))
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
           name: client.name,
-          kind: client.kind ?? 'person',
+          kind: client.kind ?? '',
           taxId: client.taxId,
           email: client.email,
           phone: client.phone,
@@ -66,13 +69,16 @@ export function ClientForm({
   }
   const duplicates = findPotentialClientDuplicates(form, clients, client?.id)
   const isDirty = JSON.stringify(form) !== initialForm
+  const selectedKind = form.kind || types.data?.[0]?.value || ''
+  const validKind = types.isSuccess && types.data.some((item) => item.value === selectedKind)
 
   function save() {
     if (saved.current) return
     const clean = Object.fromEntries(
       Object.entries(form).map(([key, value]) => [key, value.trim()]),
     ) as ClientInput
-    if (!clean.name || clean.name.length > formLimits.clientName) return
+    if (!clean.name || clean.name.length > formLimits.clientName || !validKind) return
+    clean.kind = selectedKind
     let id: string
     if (client) {
       updateClient(client.id, clean)
@@ -136,20 +142,21 @@ export function ClientForm({
           ) : null}
           <SelectField
             label="Tipo de cliente"
-            value={form.kind ?? 'person'}
-            options={[
-              { value: 'person', label: 'Particular' },
-              { value: 'community', label: 'Comunidad' },
-              { value: 'business', label: 'Empresa' },
-            ]}
-            onChange={(kind) => {
-              saved.current = false
-              setForm((previous) => ({
-                ...previous,
-                kind: kind as ClientKind,
-              }))
-            }}
+            value={selectedKind}
+            options={(types.data ?? []).map(({ value, label }) => ({ value, label }))}
+            isDisabled={!types.isSuccess || !types.data.length}
+            onChange={set('kind')}
           />
+          {types.isError ? (
+            <p role="alert" className="text-destructive text-sm">
+              No se pudieron cargar los tipos de cliente.
+            </p>
+          ) : null}
+          {types.isSuccess && !validKind ? (
+            <p className="text-muted-foreground text-sm">
+              Selecciona un tipo disponible o añádelo en Ajustes → Listas.
+            </p>
+          ) : null}
           <TextField
             label="NIF / CIF"
             maxLength={formLimits.taxId}
@@ -235,7 +242,7 @@ export function ClientForm({
       </section>
     </div>
   )
-  const invalid = !form.name.trim() || form.name.trim().length > formLimits.clientName
+  const invalid = !form.name.trim() || form.name.trim().length > formLimits.clientName || !validKind
 
   if (variant === 'page') {
     return (

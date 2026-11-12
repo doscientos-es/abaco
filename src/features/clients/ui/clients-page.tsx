@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -27,8 +28,10 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
+import { clientTypesQuery } from '../application/client-types'
 export function ClientsPage() {
-  const { clients } = useTenantData()
+  const { clients, tenant } = useTenantData()
+  const types = useQuery(clientTypesQuery(tenant.id))
   const navigate = useNavigate()
   const [importOpen, setImportOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -58,27 +61,44 @@ export function ClientsPage() {
           <PageHeaderDescription>Datos de contacto para tus presupuestos.</PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
-          <Button variant="outline" onPress={() => setImportOpen(true)}>
+          <Button
+            variant="outline"
+            isDisabled={!types.data?.length}
+            onPress={() => setImportOpen(true)}
+          >
             Importar de Excel
           </Button>
           <Button onPress={create}>Nuevo cliente</Button>
         </PageHeaderActions>
       </PageHeader>
 
+      {types.isError ? (
+        <p role="alert" className="text-destructive text-sm">
+          No se pudieron cargar los tipos de cliente. Recarga la página para importar.
+        </p>
+      ) : null}
+      {types.isSuccess && !types.data.length ? (
+        <p className="text-muted-foreground text-sm">
+          Añade un tipo en Ajustes → Listas para crear o importar clientes.
+        </p>
+      ) : null}
+
       <ImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         schema={clientImportSchema}
         existingKeys={clientKeys(clients)}
-        onImport={(values) =>
+        onImport={(values) => {
+          const kind = types.data?.[0]?.value
+          if (!kind) return
           updateTenantData((data) => ({
             ...data,
             clients: [
-              ...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v })),
+              ...values.map((v) => ({ id: newId(), tenantId: data.tenant.id, ...v, kind })),
               ...data.clients,
             ],
           }))
-        }
+        }}
       />
 
       <div className="flex flex-col gap-2 sm:flex-row">

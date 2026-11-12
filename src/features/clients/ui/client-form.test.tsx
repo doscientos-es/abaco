@@ -13,6 +13,11 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   close: vi.fn(),
   saved: vi.fn(),
+  types: [
+    { id: '1', value: 'person', label: 'Particular', position: 1 },
+    { id: '2', value: 'hotel', label: 'Hotel', position: 2 },
+  ],
+  options: new Map<string, Array<{ value: string; label: string }>>(),
 }))
 
 vi.mock('react', async (importOriginal) => ({
@@ -43,10 +48,27 @@ vi.mock('@tanstack/react-router', () => ({
     mocks.blocker = options
   },
 }))
-vi.mock('@/shared/store/store', () => ({ useTenantData: () => ({ clients: [] }) }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ isSuccess: true, data: mocks.types }),
+}))
+vi.mock('../application/client-types', () => ({
+  clientTypesQuery: (id: string) => ({ queryKey: ['client-types', id] }),
+}))
+vi.mock('@/shared/store/store', () => ({
+  useTenantData: () => ({ clients: [], tenant: { id: 'tenant' } }),
+}))
 vi.mock('@/shared/ui/form', () => {
-  const Field = ({ label, onChange }: { label: string; onChange: (value: string) => void }) => {
+  const Field = ({
+    label,
+    onChange,
+    options,
+  }: {
+    label: string
+    onChange: (value: string) => void
+    options?: Array<{ value: string; label: string }>
+  }) => {
     mocks.fields.set(label, onChange)
+    if (options) mocks.options.set(label, options)
     return <span>{label}</span>
   }
   return { SelectField: Field, TextField: Field, TextareaField: Field }
@@ -82,13 +104,39 @@ function render(
 beforeEach(() => {
   mocks.states = []
   mocks.fields.clear()
+  mocks.options.clear()
   mocks.submit = null
   mocks.blocker = null
   vi.clearAllMocks()
   mocks.create.mockReturnValue('new-client')
+  mocks.types = [
+    { id: '1', value: 'person', label: 'Particular', position: 1 },
+    { id: '2', value: 'hotel', label: 'Hotel', position: 2 },
+  ]
 })
 
 describe('client form', () => {
+  it('uses the company options and saves the chosen type', () => {
+    render('dialog')
+    expect(mocks.options.get('Tipo de cliente')).toEqual([
+      { value: 'person', label: 'Particular' },
+      { value: 'hotel', label: 'Hotel' },
+    ])
+    mocks.fields.get('Nombre')?.('Marta')
+    mocks.fields.get('Tipo de cliente')?.('hotel')
+    render('dialog')
+    mocks.submit?.()
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ kind: 'hotel' }))
+  })
+
+  it('does not save if there are no available client types', () => {
+    mocks.types = []
+    render('dialog')
+    mocks.fields.get('Nombre')?.('Marta')
+    render('dialog')
+    mocks.submit?.()
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
   it('creates a trimmed client and returns its id to the calling form', () => {
     render('dialog')
     mocks.fields.get('Nombre')?.('  Marta  ')
