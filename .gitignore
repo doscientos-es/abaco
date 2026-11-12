@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+# Local worktrees are separate checkouts, not part of this project.
+/.worktrees/
 .env
 .env.local
 .env.*.local
