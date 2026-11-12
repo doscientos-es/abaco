@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarEvent } from '@/shared/lib/event-calendar'
 
@@ -14,6 +14,8 @@ const item: CalendarEvent = {
   editable: true,
 }
 describe('event calendar presentation', () => {
+  afterEach(() => vi.useRealTimers())
+
   it('renders explicit start/end hours, a resize handle and keyboard help in the day view', () => {
     const html = renderToStaticMarkup(
       <EventCalendar
@@ -90,5 +92,50 @@ describe('event calendar presentation', () => {
     expect(html).toMatch(/aria-describedby="[^"]+"/)
     expect(html).toMatch(/<p id="[^"]+" class="sr-only">Pulsa un evento/)
     expect(html).toContain('data-calendar-event="test"')
+  })
+
+  it.each(['day', 'week'] as const)('shows the current time only in today’s %s column', (view) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 13, 9, 30))
+    const html = renderToStaticMarkup(
+      <EventCalendar value={value} view={view} items={[]} onItemClick={vi.fn()} />,
+    )
+    expect(html.match(/class="event-calendar__now"/g)).toHaveLength(1)
+    expect(html).toMatch(
+      /data-calendar-day="2026-11-13" data-calendar-timed="true"[^>]*><span class="event-calendar__now" style="top:39.58333333333333%" aria-hidden="true"/,
+    )
+    expect(html).toContain('Hora actual: 09:30')
+    const other = renderToStaticMarkup(
+      <EventCalendar value={new Date(2026, 10, 20)} view={view} items={[]} onItemClick={vi.fn()} />,
+    )
+    expect(other).not.toContain('event-calendar__now')
+  })
+
+  it('highlights the local date in the month grid, including adjacent-month days', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 1, 0, 30))
+    const html = renderToStaticMarkup(
+      <EventCalendar value={new Date(2026, 9, 15)} view="month" items={[]} onItemClick={vi.fn()} />,
+    )
+    expect(html).toContain('data-calendar-day="2026-11-01" data-outside="true" data-today="true"')
+    expect(html).toContain('data-calendar-day="2026-10-31" data-outside="false" data-today="false"')
+    expect(html).toContain('aria-current="date"')
+    expect(html).not.toContain('event-calendar__now')
+  })
+
+  it('can disable today markers for an abstract template week', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 13, 9, 30))
+    const html = renderToStaticMarkup(
+      <EventCalendar
+        value={value}
+        view="week"
+        items={[]}
+        showToday={false}
+        onItemClick={vi.fn()}
+      />,
+    )
+    expect(html).not.toContain('event-calendar__now')
+    expect(html).not.toContain('aria-current="date"')
   })
 })

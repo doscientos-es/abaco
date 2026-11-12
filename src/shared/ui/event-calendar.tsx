@@ -12,6 +12,7 @@ import {
 
 import { CalendarEventButton } from './calendar-event-button'
 import { useCalendarInteraction } from './use-calendar-interaction'
+import { useCalendarNow } from './use-calendar-now'
 
 import './event-calendar.css'
 
@@ -32,6 +33,7 @@ export function EventCalendar({
   onItemChange,
   onRangeSelect,
   showAllDay = true,
+  showToday = true,
   renderDayLabel,
   onDayClick,
   renderItem,
@@ -48,6 +50,7 @@ export function EventCalendar({
   onItemChange?: ((change: CalendarEventChange) => void) | undefined
   onRangeSelect?: ((range: { start: Date; end: Date }) => void) | undefined
   showAllDay?: boolean
+  showToday?: boolean
   renderDayLabel?: ((day: Date) => ReactNode) | undefined
   onDayClick?: ((day: Date) => void) | undefined
   renderItem?: ((item: CalendarEvent) => ReactNode) | undefined
@@ -57,6 +60,9 @@ export function EventCalendar({
   const root = useRef<HTMLDivElement>(null)
   const helpId = useId()
   const dateKey = dateValue(value)
+  const now = useCalendarNow()
+  const today = dateValue(now)
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
   useEffect(() => {
     const scroller = root.current?.querySelector<HTMLElement>('.event-calendar__time-scroll')
     if (scroller) scroller.scrollTop = 7 * 60
@@ -109,7 +115,8 @@ export function EventCalendar({
     return (
       <div
         className="event-calendar__day-header"
-        data-today={dateValue(day) === dateValue(new Date())}
+        data-today={showToday && dateValue(day) === today}
+        aria-current={showToday && dateValue(day) === today ? 'date' : undefined}
       >
         {onDayClick ? (
           <button type="button" onClick={() => onDayClick(day)}>
@@ -155,6 +162,7 @@ export function EventCalendar({
                 className="event-calendar__month-day"
                 data-calendar-day={dateValue(day)}
                 data-outside={day.getMonth() !== value.getMonth()}
+                data-today={showToday && dateValue(day) === today}
               >
                 {dayHeader(day)}
                 {displayItems
@@ -222,6 +230,19 @@ export function EventCalendar({
                           onRangeSelect ? { touchAction: 'none', cursor: 'crosshair' } : undefined
                         }
                       >
+                        {showToday && dateValue(day) === today ? (
+                          <>
+                            <span
+                              className="event-calendar__now"
+                              style={{ top: `${(currentMinutes / 1440) * 100}%` }}
+                              aria-hidden="true"
+                            />
+                            <span className="sr-only">
+                              Hora actual: {String(now.getHours()).padStart(2, '0')}:
+                              {String(now.getMinutes()).padStart(2, '0')}
+                            </span>
+                          </>
+                        ) : null}
                         {[
                           ...timedEventLayout(
                             displayItems.filter((item) => item.id !== previewSource?.id),

@@ -26,6 +26,9 @@
 .event-calendar__month-day[data-outside='true'] {
   background: var(--muted);
 }
+.event-calendar__month-day[data-today='true'] {
+  background: color-mix(in srgb, var(--muted) 60%, var(--background));
+}
 .event-calendar__day-header {
   display: grid;
   gap: 0.2rem;
@@ -104,6 +107,25 @@
     transparent 1px,
     transparent 30px
   );
+}
+.event-calendar__now {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #dc2626;
+  pointer-events: none;
+}
+.event-calendar__now::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: inherit;
 }
 .event-calendar__event {
   position: relative;

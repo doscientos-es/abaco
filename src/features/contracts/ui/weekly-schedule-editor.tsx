@@ -116,6 +116,7 @@ export function WeeklyScheduleEditor({
           .filter((slot) => Number.isFinite(slot.start_minute) && slot.duration_minutes >= 15)
           .map((slot) => slotEvent(slot, week))}
         showAllDay={false}
+        showToday={Boolean(referenceDate)}
         renderDayLabel={referenceDate ? undefined : (day) => scheduleDays[(day.getDay() + 6) % 7]}
         onItemClick={() => setEditing(true)}
         onRangeSelect={({ start, end }) =>
