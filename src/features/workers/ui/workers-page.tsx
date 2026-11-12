@@ -1,0 +1,211 @@
+import { Badge, Button } from '@doscientos/ui'
+import { useQueryClient } from '@tanstack/react-query'
+import { Link, useSearch } from '@tanstack/react-router'
+import { useState } from 'react'
+
+import { useSession } from '@/features/auth'
+import { TeamSection } from '@/features/settings/ui/team-section'
+import { StaffFunctionsSection, StaffSchedulesPage } from '@/features/staff-schedules'
+import { VacationManagementPage } from '@/features/vacations'
+import { WorkTeamForm, WorkTeamsSection, workTeamsQuery } from '@/features/work-teams'
+
+import { useWorkersData } from '../application/use-workers-data'
+import { WorkerOrganization } from './worker-organization'
+import { WorkersNavigation } from './workers-navigation'
+
+export function WorkersPage() {
+  const session = useSession()
+  if (!session?.tenantId) return <p>Selecciona una empresa.</p>
+  return <WorkersContent key={session.tenantId} tenantId={session.tenantId} />
+}
+
+function WorkersContent({ tenantId }: { tenantId: string }) {
+  const search = useSearch({ from: '/trabajadores' })
+  const data = useWorkersData(tenantId)
+  const cache = useQueryClient()
+  const [editingTeam, setEditingTeam] = useState(false)
+  const team = search.equipo ? data.teams.find((item) => item.id === search.equipo) : undefined
+  const person = search.persona
+    ? data.people.find((item) => item.userId === search.persona)
+    : undefined
+  const scoped = Boolean(search.equipo || search.persona)
+  const requested = search.vista ?? 'personas'
+  const view =
+    scoped && !['personas', 'horarios', 'vacaciones'].includes(requested) ? 'personas' : requested
+  const memberIds = person ? [person.userId] : team?.memberIds
+  const title = person ? person.fullName || person.email : (team?.name ?? 'Trabajadores')
+  const activeTeams = data.teams.filter((item) => !item.archived)
+
+  if (data.pending) return <p role="status">Cargando trabajadores y equipos…</p>
+  if (data.failed)
+    return (
+      <div role="alert" className="space-y-3">
+        <p>No se pudieron cargar los trabajadores y equipos.</p>
+        <Button onPress={data.retry}>Reintentar</Button>
+      </div>
+    )
+  if (scoped && !team && !person)
+    return (
+      <div className="space-y-3">
+        <h1 className="text-xl font-semibold">No se encontró esta ficha</h1>
+        <p>Puede que la persona ya no pertenezca a la empresa o el equipo no esté disponible.</p>
+        <Link to="/trabajadores" className="text-primary hover:underline">
+          Volver a Trabajadores
+        </Link>
+      </div>
+    )
+
+  return (
+    <div className="min-w-0 space-y-6">
+      {scoped ? (
+        <nav
+          aria-label="Ruta de trabajadores"
+          className="text-muted-foreground flex flex-wrap gap-2 text-sm"
+        >
+          <Link to="/trabajadores" className="hover:text-foreground">
+            Trabajadores
+          </Link>
+          <span aria-hidden="true">/</span>
+          {team ? (
+            <>
+              <Link
+                to="/trabajadores"
+                search={{ vista: 'equipos' }}
+                className="hover:text-foreground"
+              >
+                Equipos
+              </Link>
+              <span aria-hidden="true">/</span>
+            </>
+          ) : null}
+          <span aria-current="page" className="text-foreground">
+            {title}
+          </span>
+        </nav>
+      ) : null}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <h1 className="text-2xl font-semibold break-words">{title}</h1>
+          <p className="text-muted-foreground max-w-2xl text-sm">
+            {person
+              ? person.email
+              : team
+                ? team.description || 'Personas, horarios y ausencias de este equipo.'
+                : 'Las personas de tu empresa, sus equipos y su disponibilidad, en un solo lugar.'}
+          </p>
+          {team?.archived ? <Badge variant="neutral">Equipo archivado</Badge> : null}
+        </div>
+        {team ? (
+          <Button variant="outline" onPress={() => setEditingTeam(true)}>
+            Editar equipo
+          </Button>
+        ) : (
+          <Link
+            to="/ajustes"
+            search={{ tab: 'equipo' }}
+            className="border-border bg-card hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
+          >
+            Invitar personas
+          </Link>
+        )}
+      </header>
+      {!scoped ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: 'Personas', value: data.people.length, vista: 'personas' as const },
+            { label: 'Equipos activos', value: activeTeams.length, vista: 'equipos' as const },
+            {
+              label: 'Sin equipo',
+              value: data.people.filter(
+                (item) => !activeTeams.some((group) => group.memberIds.includes(item.userId)),
+              ).length,
+              vista: 'organigrama' as const,
+            },
+          ].map((item) => (
+            <Link
+              key={item.label}
+              to="/trabajadores"
+              search={{ vista: item.vista }}
+              className="border-border bg-card hover:bg-muted/40 rounded-xl border p-4"
+            >
+              <span className="text-muted-foreground block text-sm">{item.label}</span>
+              <strong className="mt-1 block text-2xl tabular-nums">{item.value}</strong>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+      {person ? (
+        <div className="flex flex-wrap gap-2" aria-label="Equipos de la persona">
+          {activeTeams
+            .filter((group) => group.memberIds.includes(person.userId))
+            .map((group) => (
+              <Link
+                key={group.id}
+                to="/trabajadores"
+                search={{ equipo: group.id }}
+                className="border-border hover:bg-muted rounded-full border px-3 py-1 text-xs"
+              >
+                {group.name} →
+              </Link>
+            ))}
+        </div>
+      ) : null}
+      <WorkersNavigation search={search} view={view} scoped={scoped} />
+      {view === 'personas' ? (
+        <TeamSection
+          key={search.persona ?? search.equipo ?? 'company'}
+          tenantId={tenantId}
+          memberIds={memberIds}
+        />
+      ) : null}
+      {view === 'equipos' ? (
+        <WorkTeamsSection
+          tenantId={tenantId}
+          peopleReady
+          people={data.people.map((item) => ({
+            id: item.userId,
+            label: item.fullName || item.email,
+          }))}
+          onOpenTeam={(id) => {
+            window.location.hash = ''
+            void import('@tanstack/react-router').then(() => {})
+          }}
+        />
+      ) : null}
+      {view === 'horarios' ? (
+        <StaffSchedulesPage
+          key={search.persona ?? search.equipo ?? 'company'}
+          memberIds={memberIds}
+          title={scoped ? `Horario · ${title}` : 'Horarios de la empresa'}
+          embedded
+        />
+      ) : null}
+      {view === 'vacaciones' ? (
+        <VacationManagementPage
+          key={search.persona ?? search.equipo ?? 'company'}
+          memberIds={memberIds}
+          embedded
+        />
+      ) : null}
+      {view === 'organigrama' ? (
+        <WorkerOrganization people={data.people} teams={data.teams} />
+      ) : null}
+      {view === 'funciones' ? <StaffFunctionsSection tenantId={tenantId} /> : null}
+      {editingTeam && team ? (
+        <WorkTeamForm
+          tenantId={tenantId}
+          team={team}
+          people={data.people.map((item) => ({
+            id: item.userId,
+            label: item.fullName || item.email,
+          }))}
+          onCancel={() => setEditingTeam(false)}
+          onSaved={async () => {
+            await cache.invalidateQueries({ queryKey: workTeamsQuery(tenantId).queryKey })
+            setEditingTeam(false)
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}

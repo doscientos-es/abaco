@@ -3,7 +3,10 @@ import { PlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { fuzzySearch } from '@/shared/domain/fuzzy-search'
+import { TextField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { workTeamsQuery } from '../application/work-team-actions'
 import type { WorkTeam } from '../domain/work-team'
@@ -13,16 +16,24 @@ export function WorkTeamsSection({
   tenantId,
   people,
   peopleReady,
+  onOpenTeam,
 }: {
   tenantId: string
   people: TeamPerson[]
   peopleReady: boolean
+  onOpenTeam?: ((teamId: string) => void) | undefined
 }) {
   const teams = useQuery(workTeamsQuery(tenantId))
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<WorkTeam | 'new' | null>(null)
   const [showArchived, setShowArchived] = useState(false)
-  const visible = teams.data?.filter((team) => showArchived || !team.archived) ?? []
+  const [search, setSearch] = useState('')
+  const visible =
+    teams.data?.filter(
+      (team) =>
+        (showArchived || !team.archived) && fuzzySearch(search, team.name, team.description),
+    ) ?? []
+  const pager = usePagination(visible, `${tenantId}:${search}:${showArchived}`)
   const peopleById = new Map(people.map((person) => [person.id, person.label]))
   const activeCount = teams.data?.filter((team) => !team.archived).length ?? 0
   const archivedCount = (teams.data?.length ?? 0) - activeCount
@@ -84,6 +95,12 @@ export function WorkTeamsSection({
       ) : null}
       {teams.isSuccess ? (
         <>
+          <TextField
+            label="Buscar equipo"
+            value={search}
+            onChange={setSearch}
+            placeholder="Nombre o descripción del equipo"
+          />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-xs">
               {activeCount} {activeCount === 1 ? 'equipo activo' : 'equipos activos'} ·{' '}
@@ -106,7 +123,7 @@ export function WorkTeamsSection({
           ) : null}
           {visible.length ? (
             <ul className="grid gap-3 xl:grid-cols-2">
-              {visible.map((team) => (
+              {pager.pageItems.map((team) => (
                 <li
                   key={team.id}
                   className="border-border flex min-w-0 items-start gap-3 rounded-xl border p-4"
@@ -115,7 +132,19 @@ export function WorkTeamsSection({
                     <UsersThreeIcon aria-hidden="true" className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold break-words">{team.name}</p>
+                    <p className="text-sm font-semibold break-words">
+                      {onOpenTeam ? (
+                        <button
+                          type="button"
+                          className="text-primary text-left hover:underline"
+                          onClick={() => onOpenTeam(team.id)}
+                        >
+                          {team.name}
+                        </button>
+                      ) : (
+                        team.name
+                      )}
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Badge
                         variant={
@@ -133,7 +162,7 @@ export function WorkTeamsSection({
                         {team.memberIds.length === 1 ? 'persona' : 'personas'}
                       </span>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-xs break-words">
+                    <p className="text-muted-foreground mt-2 line-clamp-2 text-xs break-words">
                       {team.memberIds
                         .map((id) => peopleById.get(id) ?? 'Miembro de la empresa')
                         .join(' · ') || 'Añade personas antes de asignar este equipo.'}
@@ -144,14 +173,21 @@ export function WorkTeamsSection({
                       </p>
                     ) : null}
                   </div>
-                  <Button
-                    variant="outline"
-                    isDisabled={!peopleReady}
-                    aria-label={`Editar ${team.name}`}
-                    onPress={() => setEditing(team)}
-                  >
-                    Editar
-                  </Button>
+                  <div className="flex shrink-0 flex-col gap-2">
+                    {onOpenTeam ? (
+                      <Button variant="outline" onPress={() => onOpenTeam(team.id)}>
+                        Ver equipo
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      isDisabled={!peopleReady}
+                      aria-label={`Editar ${team.name}`}
+                      onPress={() => setEditing(team)}
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -180,6 +216,7 @@ export function WorkTeamsSection({
               )}
             </EmptyPanel>
           )}
+          {visible.length > 10 ? <TablePagination controller={pager} noun="equipos" /> : null}
         </>
       ) : null}
     </section>

@@ -41,7 +41,7 @@ const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   operativa: 'Cobros y avisos',
   cuenta: 'Mi cuenta',
-  equipo: 'Equipo',
+  equipo: 'Invitaciones',
   plan: 'Plan y facturación',
   novedades: 'Novedades',
 }
@@ -114,7 +114,9 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'cuenta' ? <AccountSettings /> : null}
-      {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
+      {tab === 'equipo' && session?.tenantId ? (
+        <TeamSection tenantId={session.tenantId} mode="invite" />
+      ) : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}

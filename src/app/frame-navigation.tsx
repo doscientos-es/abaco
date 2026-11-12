@@ -6,6 +6,7 @@ export type NavTo =
   | '/presupuestos'
   | '/clientes'
   | '/trabajos'
+  | '/trabajadores'
   | '/contratos'
   | '/vacaciones'
   | '/catalogo'
