@@ -180,13 +180,10 @@ Las migraciones están en `supabase/migrations` y las pruebas pgTAP en
 `supabase migration new <nombre>` y sigue las instrucciones de `AGENTS.md` para
 aplicarlas al entorno correspondiente.
 
-**Limitación actual:** el job de base de datos de CI referencia
-`scripts/prepare-db-replay.mjs`, que no está presente en el árbol de trabajo.
-Hasta recuperarlo o reemplazarlo, ese procedimiento y las pruebas pgTAP de CI no
-son ejecutables tal como están configurados. El historial requiere un replay en
-orden de dependencias con versiones sintéticas; no asumas que un reset directo
-con los nombres originales es equivalente. Usa solo bases desechables para
-pruebas, nunca las enlaces a producción ni uses su historial para reparaciones.
+La CI no ejecuta las pruebas pgTAP. El historial requiere un replay en orden de
+dependencias con versiones sintéticas; no asumas que un reset directo con los
+nombres originales es equivalente. Usa solo bases desechables para pruebas,
+nunca las enlaces a producción ni uses su historial para reparaciones.
 
 Antes de aplicar cambios a un proyecto con datos, compara esquema e historial,
 verifica copias y restauración en staging y prueba los datos existentes. No

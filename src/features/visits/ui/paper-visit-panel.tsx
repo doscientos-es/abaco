@@ -127,6 +127,10 @@ export function PaperVisitPanel({ tenantId, visit }: { tenantId: string; visit: 
                 .map((t) => ({ value: t.id, label: t.name })),
             ]}
           />
+          <p className="text-muted-foreground text-sm">
+            Al asignar un equipo se sustituye la asignación individual. Sus integrantes actuales
+            podrán trabajar en la visita y cerrarla.
+          </p>
           <TextField
             label="Orden de salida"
             type="number"
