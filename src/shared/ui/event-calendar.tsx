@@ -70,6 +70,9 @@ export function EventCalendar({
   })
   const days = calendarDays(value, view)
   const previewId = '__calendar-preview__'
+  const previewSource = interaction.preview
+    ? items.find((item) => item.id === interaction.preview?.item.id)
+    : undefined
   const displayItems = interaction.preview
     ? [
         ...items,
@@ -92,6 +95,7 @@ export function EventCalendar({
         style={style}
         renderItem={renderItem}
         preview={item.id === previewId}
+        dragSource={item.id === previewSource?.id}
         canEdit={Boolean(original.editable && onItemChange)}
         onOpen={() => {
           if (interaction.canClick()) onItemClick(original)
@@ -218,14 +222,23 @@ export function EventCalendar({
                           onRangeSelect ? { touchAction: 'none', cursor: 'crosshair' } : undefined
                         }
                       >
-                        {timedEventLayout(displayItems, day).map(
-                          ({ item, top, height, lane, lanes }) =>
-                            eventButton(item, true, {
-                              top: `${top}%`,
-                              height: `${height}%`,
-                              left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                              width: `calc(${100 / lanes}% - 4px)`,
-                            }),
+                        {[
+                          ...timedEventLayout(
+                            displayItems.filter((item) => item.id !== previewSource?.id),
+                            day,
+                          ),
+                          ...(previewSource &&
+                          !previewSource.allDay &&
+                          eventIntersectsDay(previewSource, day)
+                            ? [{ item: previewSource, top: 0, height: 0, lane: 0, lanes: 1 }]
+                            : []),
+                        ].map(({ item, top, height, lane, lanes }) =>
+                          eventButton(item, true, {
+                            top: `${top}%`,
+                            height: `${height}%`,
+                            left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                            width: `calc(${100 / lanes}% - 4px)`,
+                          }),
                         )}
                       </div>
                     ))}

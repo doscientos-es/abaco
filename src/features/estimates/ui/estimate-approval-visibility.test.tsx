@@ -65,6 +65,8 @@ vi.mock('@/shared/store/store', () => ({
   }),
   refreshStore: vi.fn(),
   getSaveStatus: () => ({ state: 'saved' }),
+  useSaveStatus: () => ({ state: 'saved' }),
+  retryStoreSaves: vi.fn(),
 }))
 vi.mock('./estimate-document', () => ({ EstimateDocument: () => null }))
 vi.mock('./lines-editor', () => ({ LinesEditor: () => null }))
@@ -90,6 +92,16 @@ beforeEach(() => {
 })
 
 describe('acceso a la aprobación del presupuesto', () => {
+  it('shows the automatic save guidance only while the estimate is editable', () => {
+    expect(renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)).toContain(
+      'Los cambios válidos se guardan automáticamente',
+    )
+    state.status = 'sent'
+    expect(renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)).not.toContain(
+      'Los cambios válidos se guardan automáticamente',
+    )
+  })
+
   it.each(['draft', 'sent'])('permite aprobar un presupuesto %s a un administrador', (status) => {
     state.status = status
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)

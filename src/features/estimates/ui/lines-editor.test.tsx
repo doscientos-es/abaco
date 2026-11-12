@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import type { ComponentProps, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
@@ -52,9 +54,10 @@ describe('LinesEditor', () => {
   it('keeps the line fields, discount, total and actions in a responsive grid', () => {
     const markup = renderToStaticMarkup(<LinesEditor estimate={estimate} catalog={[]} />)
 
-    expect(markup).toContain(
-      '@min-[46rem]:grid-cols-[minmax(10rem,1fr)_4.75rem_4.5rem_7rem_5.5rem_minmax(5.5rem,auto)_2rem]',
-    )
+    expect(markup).toContain('estimate-lines')
+    expect(markup).toContain('estimate-line__grid')
+    expect(markup).toContain('estimate-line__description')
+    expect(markup).toContain('estimate-line__header')
     expect(markup).toContain('aria-label="Descripción"')
     expect(markup).toContain('aria-label="Cantidad"')
     expect(markup).toContain('aria-label="Unidad"')
@@ -65,6 +68,15 @@ describe('LinesEditor', () => {
     expect(markup).toContain('Eliminar partida')
     expect(markup).toContain('<svg')
     expect(markup).toContain('aria-hidden="true"')
+  })
+
+  it('uses a two-column mobile layout and a proportional single row in wide containers', () => {
+    const css = readFileSync(new URL('./lines-editor.css', import.meta.url), 'utf8')
+    expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))')
+    expect(css).toContain('@container estimate-lines (min-width: 46rem)')
+    expect(css).toContain('minmax(10rem, 1fr)')
+    expect(css).toContain('minmax(4.75rem, 0.16fr)')
+    expect(css).toContain('.estimate-line__mobile-label')
   })
 
   it('offers reorder actions when there are neighboring estimate lines', () => {

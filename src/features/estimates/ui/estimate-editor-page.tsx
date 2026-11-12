@@ -59,6 +59,7 @@ import {
   publishEstimate,
 } from '../application/estimate-publication-actions'
 import { recordManualApproval } from '../application/record-manual-approval'
+import { EstimateAutoSaveStatus } from './estimate-auto-save-status'
 import { EstimateDocument } from './estimate-document'
 import { LinesEditor } from './lines-editor'
 import { ManualAcceptanceCard } from './manual-acceptance-card'
@@ -655,10 +656,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             label="Título del servicio o acuerdo"
             minLength={1}
             maxLength={formLimits.estimateTitle}
+            required
+            showCount
             className="sm:col-span-2"
             placeholder="Ej. Limpieza de oficinas"
             icon={fieldIcons.file}
-            helper={`Obligatorio · máximo ${formLimits.estimateTitle} caracteres.`}
             value={titleDraft}
             onChange={(value) => setTitleEdit({ estimateId: estimate.id, value })}
             onBlur={() => {
@@ -866,6 +868,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           />
         </CardContent>
       </Card>
+
+      <EstimateAutoSaveStatus />
 
       <ClientFormDialog
         open={creatingClient}

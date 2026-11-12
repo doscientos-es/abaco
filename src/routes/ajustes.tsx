@@ -1,12 +1,29 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { requirePermission } from '@/features/auth'
+import { can, requirePermission, sessionQuery } from '@/features/auth'
 import { SettingsPage, UserSettingsPage } from '@/features/settings'
 
-const tabs = ['empresa', 'documentos', 'listas', 'equipo', 'plan', 'novedades'] as const
+const tabs = [
+  'empresa',
+  'operativa',
+  'cuenta',
+  'documentos',
+  'listas',
+  'equipo',
+  'plan',
+  'novedades',
+] as const
 
 export const Route = createFileRoute('/ajustes')({
-  beforeLoad: requirePermission('settings:personal'),
+  beforeLoad: async ({ context, search }) => {
+    await requirePermission('settings:personal')({ context })
+    if (search.tab === 'documentos' || search.tab === 'listas') {
+      const session = await context.queryClient.ensureQueryData(sessionQuery)
+      if (can(session?.role, 'settings:write')) {
+        throw redirect({ to: '/personalizar', search: { tab: search.tab }, replace: true })
+      }
+    }
+  },
   // `pago` lo añade Redsys al volver: lleva directo a la pestaña del plan.
   validateSearch: (
     search: Record<string, unknown>,

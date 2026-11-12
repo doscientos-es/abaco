@@ -40,7 +40,8 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
         label="Nombre de la empresa"
         minLength={1}
         maxLength={120}
-        helper="Obligatorio · máximo 120 caracteres."
+        required
+        showCount
         className="sm:col-span-2"
         placeholder="Ej. Reformas Abderrahim"
         icon={fieldIcons.user}

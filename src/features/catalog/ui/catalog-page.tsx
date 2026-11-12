@@ -185,7 +185,8 @@ export function CatalogPage() {
           label="Nombre"
           minLength={1}
           maxLength={formLimits.catalogName}
-          helper={`Obligatorio · máximo ${formLimits.catalogName} caracteres.`}
+          required
+          showCount
           className="sm:col-span-2"
           placeholder="Ej. Alicatado de pared"
           icon={fieldIcons.tag}

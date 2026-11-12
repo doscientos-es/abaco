@@ -1,0 +1,41 @@
+.estimate-lines {
+  container: estimate-lines / inline-size;
+}
+
+.estimate-line__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.estimate-line__header {
+  display: none;
+}
+
+.estimate-line__description {
+  grid-column: span 2;
+}
+
+@container estimate-lines (min-width: 46rem) {
+  .estimate-line__grid {
+    grid-template-columns:
+      minmax(10rem, 1fr) minmax(4.75rem, 0.16fr) minmax(4.5rem, 0.14fr)
+      minmax(6.5rem, 0.2fr) minmax(4.75rem, 0.15fr) minmax(6.5rem, 0.25fr) 2rem;
+  }
+
+  .estimate-line__header {
+    display: grid;
+  }
+
+  .estimate-line__description {
+    grid-column: span 1;
+  }
+
+  .estimate-line__mobile-label {
+    display: none;
+  }
+
+  .estimate-line__total {
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+}

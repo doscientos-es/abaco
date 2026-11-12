@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { Tenant } from '@/shared/domain/types'
 
-import { CompanyTab } from './company-tab'
+import { CompanyTab, OperatingDefaultsTab } from './company-tab'
 import type { Form } from './settings-form'
 
 vi.mock('@/shared/ui/form', () => ({
@@ -22,13 +22,6 @@ const form: Form = {
   city: '',
   website: '',
   iban: '',
-  brandColor: '',
-  logoUrl: '',
-  emailFromName: '',
-  emailSignature: '',
-  invoiceEmailIntro: '',
-  estimateEmailIntro: '',
-  documentFooter: '',
   defaultVatRate: '21',
   defaultDepositPercent: '0',
   autoReminders: 'no',
@@ -43,9 +36,19 @@ describe('company settings tabs', () => {
     expect(html).toContain('Nombre comercial')
     expect(html).toContain('Contacto')
     expect(html).toContain('Dirección fiscal')
-    expect(html).toContain('Cobros y valores por defecto')
-    expect(html).toContain('Recordatorios por correo')
+    expect(html).toContain('Cobros')
+    expect(html).not.toContain('Recordatorios por correo')
     expect(html).not.toContain('Resumen semanal')
     expect(html).not.toContain('Ubicación al iniciar visitas')
+  })
+
+  it('keeps operational defaults and real reminder options in a separate section', () => {
+    const html = renderToStaticMarkup(
+      <OperatingDefaultsTab form={form} set={() => vi.fn()} tenant={{} as Tenant} />,
+    )
+    expect(html).toContain('IVA por defecto')
+    expect(html).toContain('Señal por defecto')
+    expect(html).toContain('Recordatorios por correo')
+    expect(html).not.toContain('Nombre comercial')
   })
 })

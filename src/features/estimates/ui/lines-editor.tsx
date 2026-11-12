@@ -20,14 +20,17 @@ import { newId } from '@/shared/store/store'
 import { patchEstimate } from '../application/estimate-actions'
 import { PriceInput } from './price-input'
 
+import './lines-editor.css'
+
 const FREE_KEY = '__free__'
-const gridCols =
-  'grid grid-cols-2 items-end gap-2 @min-[46rem]:grid-cols-[minmax(10rem,1fr)_4.75rem_4.5rem_7rem_5.5rem_minmax(5.5rem,auto)_2rem]'
+const gridCols = 'estimate-line__grid items-end gap-2'
 
 /** Visible field label when there is not enough room for the column headers. */
 function MobileLabel({ children }: { children: string }) {
   return (
-    <span className="text-muted-foreground mb-1 block text-xs @min-[46rem]:hidden">{children}</span>
+    <span className="estimate-line__mobile-label text-muted-foreground mb-1 block text-xs">
+      {children}
+    </span>
   )
 }
 
@@ -122,11 +125,11 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
   ]
 
   return (
-    <div className="@container space-y-3">
+    <div className="estimate-lines space-y-3">
       {estimate.lines.length > 0 ? (
         <div className="space-y-2">
           <div
-            className={`${gridCols} text-muted-foreground hidden px-3 text-xs font-medium @min-[46rem]:grid`}
+            className={`${gridCols} estimate-line__header text-muted-foreground px-3 text-xs font-medium`}
           >
             <span>Descripción</span>
             <span className="text-right">Cantidad</span>
@@ -146,7 +149,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                   aria-label="Descripción"
                   maxLength={formLimits.estimateLineDescription}
                   placeholder="Describe el trabajo o material"
-                  className="col-span-2 h-8 min-w-0 px-2 @min-[46rem]:col-span-1"
+                  className="estimate-line__description h-8 min-w-0 px-2"
                   value={line.description}
                   onChange={(event) => updateLine(line.id, { description: event.target.value })}
                 />
@@ -215,7 +218,7 @@ export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog
                     }
                   />
                 </div>
-                <div className="min-w-0 @min-[46rem]:text-right">
+                <div className="estimate-line__total min-w-0">
                   <MobileLabel>Total</MobileLabel>
                   <p className="text-sm font-semibold tabular-nums">
                     {line.discountPercent > 0 ? (

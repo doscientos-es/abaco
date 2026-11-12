@@ -1,28 +1,42 @@
+import { Section } from '@/features/settings/ui/settings-form'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextareaField, TextField } from '@/shared/ui/form'
 
-import { Section, type FormProps } from './settings-form'
+export type MessageForm = {
+  emailFromName: string
+  emailSignature: string
+  estimateEmailIntro: string
+  invoiceEmailIntro: string
+  documentFooter: string
+}
 
-/** Customer-facing document and email branding. */
-export function BrandTab({ form, set, tenant }: FormProps) {
+export function MessageFields({
+  form,
+  set,
+  companyName,
+}: {
+  form: MessageForm
+  set: (key: keyof MessageForm) => (value: string) => void
+  companyName: string
+}) {
   return (
     <Section
       title="Documentos y correos"
-      description="Personaliza los mensajes y datos de marca que reciben tus clientes en presupuestos y facturas."
+      description="Personaliza lo que reciben tus clientes en presupuestos y facturas."
     >
       <TextField
         label="Nombre del remitente"
         maxLength={80}
-        placeholder={tenant.name}
+        placeholder={companyName}
         icon={fieldIcons.mail}
-        helper="Lo que ve el cliente como remitente del correo. Por defecto, tu nombre comercial."
+        helper="Lo que ve el cliente como remitente. Por defecto, tu nombre comercial."
         value={form.emailFromName}
         onChange={set('emailFromName')}
       />
       <TextareaField
         label="Firma del correo"
         maxLength={500}
-        placeholder={`Un saludo,\n${tenant.name}`}
+        placeholder={`Un saludo,\n${companyName}`}
         helper="Cierra todos los correos. Por defecto, tu nombre comercial."
         value={form.emailSignature}
         onChange={set('emailSignature')}

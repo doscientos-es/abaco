@@ -140,24 +140,29 @@ h3 {
   border-bottom: 0;
 }
 
-/* Unlayered limits take precedence over the UI library's bundled width utilities. */
-.app-dialog {
+/* Constrain both the visible dialog and the full-width modal wrapper from the UI library. */
+.app-dialog,
+[data-slot='dialog-overlay'] > :has(> .app-dialog) {
   max-width: min(100%, 36rem);
 }
 
-.app-dialog--compact {
-  max-width: min(100%, 32rem);
+.app-dialog--compact,
+[data-slot='dialog-overlay'] > :has(> .app-dialog--compact) {
+  max-width: min(100%, 28rem);
 }
 
-.app-dialog--alert {
+.app-dialog--alert,
+[data-slot='alert-dialog-overlay'] > :has(> .app-dialog--alert) {
   max-width: min(100%, 20rem);
 }
 
-.app-dialog--details {
+.app-dialog--details,
+[data-slot='dialog-overlay'] > :has(> .app-dialog--details) {
   max-width: min(100%, 42rem);
 }
 
-.app-dialog--wide {
+.app-dialog--wide,
+[data-slot='dialog-overlay'] > :has(> .app-dialog--wide) {
   max-width: min(100%, 72rem);
 }
 

@@ -127,12 +127,6 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0">
-          {invoice.snapshot?.source === 'migration' ? (
-            <p className="bg-warning/10 text-foreground mb-3 rounded-lg px-3 py-2 text-xs print:hidden">
-              Los datos de emisor y cliente de esta factura anterior se reconstruyeron durante la
-              migración. Comprueba el documento original antes de reenviarla.
-            </p>
-          ) : null}
           <DocumentPreview>
             <InvoiceDocument
               invoice={invoice}

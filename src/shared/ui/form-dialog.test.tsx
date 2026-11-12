@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import type { FormEvent, ReactElement, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -135,5 +137,25 @@ describe('FormDialog interaction guards', () => {
 
     const wideMarkup = render({ wide: true })
     expect(wideMarkup).toContain('app-dialog app-dialog--wide max-h-[94dvh] w-full overflow-y-auto')
+  })
+
+  it('constrains the UI library modal wrapper as well as its content', () => {
+    const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8').replaceAll(
+      '"',
+      "'",
+    )
+    for (const [variant, width] of [
+      ['app-dialog', '36rem'],
+      ['app-dialog--compact', '28rem'],
+      ['app-dialog--details', '42rem'],
+      ['app-dialog--wide', '72rem'],
+    ]) {
+      expect(css).toContain(
+        `.${variant},\n[data-slot='dialog-overlay'] > :has(> .${variant}) {\n  max-width: min(100%, ${width});`,
+      )
+    }
+    expect(css).toContain(
+      ".app-dialog--alert,\n[data-slot='alert-dialog-overlay'] > :has(> .app-dialog--alert) {\n  max-width: min(100%, 20rem);",
+    )
   })
 })

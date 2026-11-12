@@ -1,9 +1,19 @@
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useCompanyActions, useSession } from '@/features/auth'
 
 export function UserSettingsPage() {
+  return (
+    <div className="space-y-5">
+      <h1 className="text-2xl font-semibold">Ajustes</h1>
+      <AccountSettings />
+    </div>
+  )
+}
+
+export function AccountSettings() {
   const session = useSession()
   const { switchTo } = useCompanyActions()
   const [switching, setSwitching] = useState(false)
@@ -26,7 +36,18 @@ export function UserSettingsPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold">Ajustes</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Cuenta y seguridad</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {session?.fullName ? <p className="font-medium">{session.fullName}</p> : null}
+          <p className="text-muted-foreground text-sm">{session?.email}</p>
+          <Link to="/nueva-contrasena" className="text-sm font-medium underline">
+            Cambiar contraseña
+          </Link>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Mis empresas</CardTitle>
@@ -55,7 +76,7 @@ export function UserSettingsPage() {
               </li>
             ))}
           </ul>
-          {switching ? <p role="status">Cambiando de empresa…</p> : null}
+          {switching ? <output>Cambiando de empresa…</output> : null}
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}

@@ -108,7 +108,8 @@ export function ClientForm({
             label="Nombre"
             minLength={1}
             maxLength={formLimits.clientName}
-            helper={`Obligatorio · máximo ${formLimits.clientName} caracteres.`}
+            required
+            showCount
             className="sm:col-span-2"
             placeholder="Ej. Marta Soler"
             icon={fieldIcons.user}

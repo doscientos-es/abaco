@@ -234,7 +234,7 @@ describe('InvoiceDocument', () => {
     // React 19 hoists image preload links outside the article in both renderings.
     expect(html).toContain(markup.slice(markup.indexOf('<article')))
     expect(html).toContain('invoice-document invoice-sheet')
-    expect(html).toContain('A4 · El mismo documento que guardarás en PDF')
+    expect(html).not.toContain('El mismo documento que guardarás en PDF')
     expect(html).not.toContain('sm:flex-row')
   })
 

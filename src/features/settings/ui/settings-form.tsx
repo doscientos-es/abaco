@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { Tenant } from '@/shared/domain/types'
 
-/** Every editable company field, as text, shared by the "Empresa" and "Marca" tabs. */
+/** Company and operating defaults, kept as text while being edited. */
 export type Form = {
   name: string
   legalName: string
@@ -14,13 +14,6 @@ export type Form = {
   city: string
   website: string
   iban: string
-  brandColor: string
-  logoUrl: string
-  emailFromName: string
-  emailSignature: string
-  invoiceEmailIntro: string
-  estimateEmailIntro: string
-  documentFooter: string
   defaultVatRate: string
   defaultDepositPercent: string
   autoReminders: string
@@ -52,13 +45,6 @@ export function toForm(t: Tenant): Form {
     city: t.city ?? '',
     website: t.website ?? '',
     iban: t.iban ?? '',
-    brandColor: t.brandColor ?? '',
-    logoUrl: t.logoUrl ?? '',
-    emailFromName: t.emailFromName ?? '',
-    emailSignature: t.emailSignature ?? '',
-    invoiceEmailIntro: t.invoiceEmailIntro ?? '',
-    estimateEmailIntro: t.estimateEmailIntro ?? '',
-    documentFooter: t.documentFooter ?? '',
     defaultVatRate: String(t.defaultVatRate),
     defaultDepositPercent: String(t.defaultDepositPercent),
     autoReminders: t.autoReminders ? 'yes' : 'no',
@@ -68,6 +54,64 @@ export function toForm(t: Tenant): Form {
 export function percent(value: string, fallback: number) {
   const n = Number(value.replace(',', '.'))
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback
+}
+
+export const companyFields = [
+  'name',
+  'legalName',
+  'taxId',
+  'email',
+  'phone',
+  'address',
+  'postalCode',
+  'city',
+  'website',
+  'iban',
+] as const satisfies readonly (keyof Form)[]
+export const defaultsFields = [
+  'defaultVatRate',
+  'defaultDepositPercent',
+  'autoReminders',
+] as const satisfies readonly (keyof Form)[]
+
+export function companySettingsValid(form: Form) {
+  return (
+    form.name.trim() !== '' &&
+    form.name.length <= 120 &&
+    form.legalName.length <= 160 &&
+    form.taxId.length <= 32 &&
+    form.email.length <= 254 &&
+    (form.email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) &&
+    form.phone.length <= 32 &&
+    form.address.length <= 300 &&
+    form.postalCode.length <= 20 &&
+    form.city.length <= 100 &&
+    form.website.length <= 2048 &&
+    form.iban.length <= 34 &&
+    isWebsiteOk(form.website)
+  )
+}
+
+export function defaultsSettingsValid(form: Form) {
+  return [form.defaultVatRate, form.defaultDepositPercent].every((value) => {
+    const number = Number(value.replace(',', '.'))
+    return value.trim() !== '' && Number.isFinite(number) && number >= 0 && number <= 100
+  })
+}
+
+export function companySettingsPatch(form: Form) {
+  return Object.fromEntries(companyFields.map((key) => [key, form[key].trim()])) as Pick<
+    Tenant,
+    (typeof companyFields)[number]
+  >
+}
+
+export function defaultsSettingsPatch(form: Form, tenant: Tenant) {
+  return {
+    defaultVatRate: percent(form.defaultVatRate, tenant.defaultVatRate),
+    defaultDepositPercent: percent(form.defaultDepositPercent, tenant.defaultDepositPercent),
+    autoReminders: form.autoReminders === 'yes',
+  }
 }
 
 export function Section({

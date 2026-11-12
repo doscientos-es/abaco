@@ -4,7 +4,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 
 import { isWebsiteOk, Section, type FormProps } from './settings-form'
 
-/** Who the company is, where it gets paid and the defaults for new estimates. */
+/** Company identity and payment details. */
 export function CompanyTab({ form, set }: FormProps) {
   return (
     <>
@@ -12,9 +12,11 @@ export function CompanyTab({ form, set }: FormProps) {
         <TextField
           label="Nombre comercial"
           maxLength={formLimits.companyName}
+          required
+          showCount
           placeholder="Reformas Abderrahim"
           icon={fieldIcons.building}
-          helper={`Obligatorio · máximo ${formLimits.companyName} caracteres. Es el nombre que ve el cliente.`}
+          helper="Es el nombre que ve el cliente."
           value={form.name}
           onChange={set('name')}
         />
@@ -109,10 +111,7 @@ export function CompanyTab({ form, set }: FormProps) {
         />
       </Section>
 
-      <Section
-        title="Cobros y valores por defecto"
-        description="Se aplican a los presupuestos nuevos."
-      >
+      <Section title="Cobros" description="Cuenta donde tus clientes te pagan.">
         <TextField
           className="sm:col-span-2"
           label="IBAN"
@@ -123,6 +122,15 @@ export function CompanyTab({ form, set }: FormProps) {
           value={form.iban}
           onChange={set('iban')}
         />
+      </Section>
+    </>
+  )
+}
+
+export function OperatingDefaultsTab({ form, set }: FormProps) {
+  return (
+    <>
+      <Section title="Valores por defecto" description="Se aplican a los presupuestos nuevos.">
         <TextField
           label="IVA por defecto (%)"
           type="number"
@@ -147,9 +155,11 @@ export function CompanyTab({ form, set }: FormProps) {
           value={form.defaultDepositPercent}
           onChange={set('defaultDepositPercent')}
         />
+      </Section>
+      <Section title="Recordatorios automáticos" description="Avisos por correo a tus clientes.">
         <SelectField
           className="sm:col-span-2"
-          label="Recordatorios por correo: facturas vencidas (cada 7 días, máx. 3), presupuestos sin respuesta a los 4 días y presupuestos que caducan en 3 días"
+          label="Recordatorios por correo"
           value={form.autoReminders}
           options={[
             { value: 'no', label: 'Desactivados' },
@@ -157,6 +167,10 @@ export function CompanyTab({ form, set }: FormProps) {
           ]}
           onChange={set('autoReminders')}
         />
+        <p className="text-muted-foreground text-xs sm:col-span-2">
+          Facturas vencidas: cada 7 días, máximo 3. Presupuestos: sin respuesta a los 4 días o que
+          caducan en 3 días.
+        </p>
       </Section>
     </>
   )

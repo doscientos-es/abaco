@@ -1,6 +1,6 @@
 .date-range-picker .rdp-root {
   --rdp-accent-color: var(--primary);
-  --rdp-accent-background-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  --rdp-accent-background-color: var(--muted);
   --rdp-day-height: 36px;
   --rdp-day-width: 36px;
   --rdp-day_button-height: 34px;
@@ -14,8 +14,13 @@
 }
 
 .date-range-picker .rdp-month_caption {
+  color: var(--foreground);
   font-size: 0.875rem;
   text-transform: capitalize;
+}
+
+.date-range-picker .rdp-weekday {
+  color: var(--muted-foreground);
 }
 
 .date-range-picker .rdp-selected {

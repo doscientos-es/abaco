@@ -21,19 +21,35 @@ function Helper({ children }: { children: ReactNode }) {
 export function FormField({
   label,
   helper,
+  helperId,
+  required = false,
   children,
   className,
 }: {
   label: string
   helper?: string | undefined
+  helperId?: string | undefined
+  required?: boolean
   children: ReactNode
   className?: string | undefined
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className ?? ''}`}>
-      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className="text-muted-foreground text-xs font-medium">
+        {label}
+        {required ? (
+          <span aria-hidden="true" title="Obligatorio">
+            {' '}
+            *
+          </span>
+        ) : null}
+      </span>
       {children}
-      {helper ? <Helper>{helper}</Helper> : null}
+      {helper ? (
+        <span id={helperId}>
+          <Helper>{helper}</Helper>
+        </span>
+      ) : null}
     </label>
   )
 }
@@ -53,6 +69,8 @@ export function TextField({
   autoComplete,
   maxLength,
   minLength,
+  required = false,
+  showCount = false,
   min,
   max,
   step,
@@ -70,12 +88,26 @@ export function TextField({
   autoComplete?: string
   maxLength?: number
   minLength?: number
+  required?: boolean
+  showCount?: boolean
   min?: number | string
   max?: number | string
   step?: number | string
 }) {
+  const helperId = useId()
+  const countId = useId()
+  const hasCount = showCount && maxLength !== undefined
+  const describedBy =
+    [helper ? helperId : null, hasCount ? countId : null].filter(Boolean).join(' ') || undefined
+
   return (
-    <FormField label={label} helper={helper} className={className}>
+    <FormField
+      label={label}
+      helper={helper}
+      helperId={helperId}
+      required={required}
+      className={className}
+    >
       <div className="relative">
         {icon ? (
           <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 flex items-center">
@@ -84,6 +116,9 @@ export function TextField({
         ) : null}
         <Input
           type={type}
+          aria-label={label}
+          aria-required={required || undefined}
+          aria-describedby={describedBy}
           name={name}
           autoComplete={autoComplete}
           value={value}
@@ -94,9 +129,23 @@ export function TextField({
           {...(max === undefined ? {} : { max })}
           {...(step === undefined ? {} : { step })}
           className={icon ? 'pl-9' : ''}
+          {...(hasCount ? { style: { paddingRight: '5rem' } } : {})}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
         />
+        {hasCount ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs tabular-nums"
+            >
+              {value.length} / {maxLength}
+            </span>
+            <span id={countId} className="sr-only">
+              {value.length} de {maxLength} caracteres.
+            </span>
+          </>
+        ) : null}
       </div>
     </FormField>
   )

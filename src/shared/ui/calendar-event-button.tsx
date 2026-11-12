@@ -6,6 +6,7 @@ export function CalendarEventButton({
   item,
   timed = false,
   preview = false,
+  dragSource = false,
   canEdit,
   style,
   renderItem,
@@ -16,6 +17,7 @@ export function CalendarEventButton({
   item: CalendarEvent
   timed?: boolean
   preview?: boolean
+  dragSource?: boolean
   canEdit: boolean
   style?: CSSProperties | undefined
   renderItem?: ((item: CalendarEvent) => React.ReactNode) | undefined
@@ -28,15 +30,17 @@ export function CalendarEventButton({
     : `${calendarTime(item.start)} – ${calendarTime(item.end)}`
   return (
     <div
-      className={`event-calendar__event ${timed ? 'is-timed' : ''} ${preview ? 'is-preview' : ''}`}
+      className={`event-calendar__event ${timed ? 'is-timed' : ''} ${preview ? 'is-preview' : ''} ${dragSource ? 'is-drag-source' : ''}`}
       style={style}
       data-tone={item.tone ?? 'primary'}
+      aria-hidden={preview || dragSource || undefined}
     >
       <button
         type="button"
         className="event-calendar__event-body"
         aria-label={`${item.title}, ${hours}${item.description ? `, ${item.description}` : ''}`}
         data-calendar-event={item.id}
+        tabIndex={preview || dragSource ? -1 : undefined}
         style={{ touchAction: canEdit ? 'none' : 'auto' }}
         onClick={onOpen}
         onKeyDown={(event) => onKeyDown(event)}
@@ -50,6 +54,7 @@ export function CalendarEventButton({
           type="button"
           className="event-calendar__resize"
           aria-label={`Cambiar duración de ${item.title}`}
+          tabIndex={dragSource ? -1 : undefined}
           title="Arrastra para cambiar el final; Alt + Mayús + flechas con el evento enfocado"
           onPointerDown={(event) => {
             event.stopPropagation()

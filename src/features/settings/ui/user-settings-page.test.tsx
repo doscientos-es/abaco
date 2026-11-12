@@ -22,6 +22,11 @@ vi.mock('@doscientos/ui', () => ({
   CardTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+}))
 vi.mock('@/features/auth', () => ({
   useSession: session,
   useCompanyActions: () => ({ switchTo }),
@@ -60,13 +65,20 @@ describe('worker settings', () => {
         <button disabled={isDisabled}>{children}</button>
       ),
     )
-    session.mockReturnValue({ tenantId: 'one', companies })
+    session.mockReturnValue({
+      tenantId: 'one',
+      companies,
+      email: 'user@example.test',
+      fullName: 'Usuario',
+    })
     switchTo.mockResolvedValue(undefined)
   })
 
   it('shows the current company and switches only to another accessible company', async () => {
     const html = render()
     expect(html).toContain('Empresa Uno')
+    expect(html).toContain('user@example.test')
+    expect(html).toContain('href="/nueva-contrasena"')
     expect(html).toContain('Empresa actual')
     expect(html).toContain('Cambiar a Empresa Dos')
     expect(button).toHaveBeenCalledTimes(1)
