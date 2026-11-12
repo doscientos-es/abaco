@@ -103,6 +103,21 @@ describe('pre-commit automatic fixes', () => {
     )
   }, 30000)
 
+  it('blocks the commit when lint reports an unfixable error', () => {
+    const cwd = repository()
+    writeFileSync(
+      join(cwd, '.oxlintrc.json'),
+      JSON.stringify({ rules: { 'no-debugger': 'error' } }),
+    )
+    writeFileSync(join(cwd, 'source.js'), 'debugger;\n')
+    git(cwd, 'add', 'source.js')
+
+    const result = command(cwd, 'git', ['commit', '-m', 'invalid'])
+    expect(result.status).not.toBe(0)
+    expect(result.stdout + result.stderr).toContain('no-debugger')
+    expect(git(cwd, 'show', ':source.js')).toBe('debugger;\n')
+  }, 30000)
+
   it('refuses glob-like filenames rather than modifying other files', () => {
     const cwd = repository()
     writeFileSync(join(cwd, '[item].js'), 'const value=1;\n')
