@@ -10,6 +10,7 @@ export default defineConfig({
   test: createVitestConfig({
     include: [
       'src/**/*.test.{ts,tsx}',
+      'server/**/*.test.{ts,tsx}',
       'scripts/**/*.test.mjs',
       'supabase/functions/_shared/**/*.test.ts',
     ],
