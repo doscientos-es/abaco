@@ -13,7 +13,12 @@ export type StaffSchedule = {
   slots: StaffSlot[]
   functionIds: string[]
 }
-export type StaffPerson = { userId: string; name: string; schedule: StaffSchedule | null }
+export type StaffPerson = {
+  userId: string
+  name: string
+  email?: string
+  schedule: StaffSchedule | null
+}
 export type StaffAbsence = { userId: string; startDate: string; endDate: string | null }
 export type StaffOccurrence = {
   id: string

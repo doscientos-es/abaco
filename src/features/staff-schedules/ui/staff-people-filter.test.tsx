@@ -1,23 +1,41 @@
 import { IconButton } from '@doscientos/ui'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import type * as React from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TextField } from '@/shared/ui/form'
+
+import type { StaffSelection } from '../domain/staff-selection'
 import { StaffPeopleFilter } from './staff-people-filter'
 
-const setOpen = vi.hoisted(() => vi.fn())
+const state = vi.hoisted(() => ({ query: '', limit: 20 }))
 vi.mock('react', async (original) => ({
   ...(await original<typeof React>()),
-  useState: () => [true, setOpen],
+  useState: (initial: string | number) =>
+    typeof initial === 'string'
+      ? [
+          state.query,
+          (value: string) => {
+            state.query = value
+          },
+        ]
+      : [
+          state.limit,
+          (value: number) => {
+            state.limit = value
+          },
+        ],
 }))
 
 type Props = {
   children?: ReactNode
   checked?: boolean
-  onChange?: (event: { target: { checked: boolean } }) => void
+  disabled?: boolean
+  type?: string
+  'aria-label'?: string
+  onChange?: (value: string | { target: { checked: boolean } }) => void
   onPress?: () => void
   label?: string
-  trigger?: ReactElement<{ 'aria-label': string }>
 }
 
 function findAll(
@@ -35,44 +53,122 @@ function findAll(
 }
 
 const people = [
-  { userId: 'ana', name: 'Ana', schedule: null },
-  { userId: 'luis', name: 'Luis', schedule: null },
+  { userId: 'ana', name: 'Ana García', email: 'ana@example.com', schedule: null },
+  { userId: 'luis', name: 'Luis', email: 'operations@example.com', schedule: null },
 ]
+const teams = [{ id: 'north', name: 'Equipo norte', memberIds: ['ana', 'luis'] }]
+const empty: StaffSelection = { personIds: [], teamIds: [] }
 
 describe('staff people filter', () => {
-  it('starts with Todas and allows selecting none, a subset, or everyone', () => {
-    const onChange = vi.fn()
-    const render = (selected: string[] | null) =>
-      StaffPeopleFilter({ people, selected, onChange, onEdit: vi.fn() })
-    const all = render(null)
-    expect(all.props.trigger.props['aria-label']).toBe('Personas: Todas')
-    const checks = findAll(all, (node) => node.type === 'input')
-    expect(checks.map((node) => node.props.checked)).toEqual([true, true, true])
-    checks[0]?.props.onChange?.({ target: { checked: false } })
-    expect(onChange).toHaveBeenLastCalledWith([])
-    checks[1]?.props.onChange?.({ target: { checked: false } })
-    expect(onChange).toHaveBeenLastCalledWith(['luis'])
-
-    const partial = render(['luis'])
-    expect(partial.props.trigger.props['aria-label']).toBe('Personas: Luis')
-    const partialChecks = findAll(partial, (node) => node.type === 'input')
-    expect(partialChecks.map((node) => node.props.checked)).toEqual([false, false, true])
-    partialChecks[1]?.props.onChange?.({ target: { checked: true } })
-    expect(onChange).toHaveBeenLastCalledWith(null)
-    partialChecks[0]?.props.onChange?.({ target: { checked: true } })
-    expect(onChange).toHaveBeenLastCalledWith(null)
-    expect(render([]).props.trigger.props['aria-label']).toBe('Personas: Ninguna')
+  beforeEach(() => {
+    state.query = ''
+    state.limit = 20
   })
 
-  it('opens the editor for the chosen person and closes the picker', () => {
+  it('does not render the entire workforce before searching', () => {
+    const tree = StaffPeopleFilter({
+      people,
+      teams,
+      selected: empty,
+      onChange: vi.fn(),
+      onEdit: vi.fn(),
+    })
+    expect(findAll(tree, (node) => node.type === 'input')).toHaveLength(0)
+    expect(findAll(tree, (node) => node.type === TextField)).toHaveLength(1)
+  })
+
+  it('searches names without accents and emails, and keeps other selections', () => {
+    state.query = 'garcia'
+    const onChange = vi.fn()
+    const render = () =>
+      StaffPeopleFilter({
+        people,
+        teams,
+        selected: { personIds: ['luis'], teamIds: [] },
+        onChange,
+        onEdit: vi.fn(),
+      })
+    const results = findAll(render(), (node) => node.type === 'input')
+    expect(results).toHaveLength(1)
+    results[0]?.props.onChange?.({ target: { checked: true } })
+    expect(onChange).toHaveBeenLastCalledWith({ personIds: ['luis', 'ana'], teamIds: [] })
+    state.query = 'operations'
+    expect(findAll(render(), (node) => node.type === IconButton)[0]?.props.label).toBe(
+      'Editar horario de Luis',
+    )
+  })
+
+  it('selects whole teams and makes team-derived people explicit', () => {
+    state.query = 'norte'
+    const onChange = vi.fn()
+    const tree = StaffPeopleFilter({ people, teams, selected: empty, onChange, onEdit: vi.fn() })
+    findAll(tree, (node) => node.type === 'input')[0]?.props.onChange?.({
+      target: { checked: true },
+    })
+    expect(onChange).toHaveBeenCalledWith({ personIds: [], teamIds: ['north'] })
+    state.query = 'ana'
+    const selected = StaffPeopleFilter({
+      people,
+      teams,
+      selected: { personIds: [], teamIds: ['north'] },
+      onChange,
+      onEdit: vi.fn(),
+    })
+    const input = findAll(selected, (node) => node.type === 'input')[0]
+    expect(input?.props).toMatchObject({ checked: true, disabled: true })
+    findAll(
+      selected,
+      (node) => node.props['aria-label'] === 'Quitar equipo Equipo norte',
+    )[0]?.props.onPress?.()
+    expect(onChange).toHaveBeenLastCalledWith(empty)
+  })
+
+  it('bounds results for 154 employees, loads more, and resets the limit on a new search', () => {
+    state.query = 'Persona'
+    const workforce = Array.from({ length: 154 }, (_, index) => ({
+      userId: String(index),
+      name: `Persona ${index}`,
+      schedule: null,
+    }))
+    const render = () =>
+      StaffPeopleFilter({
+        people: workforce,
+        teams: [],
+        selected: empty,
+        onChange: vi.fn(),
+        onEdit: vi.fn(),
+      })
+    expect(findAll(render(), (node) => node.type === 'input')).toHaveLength(20)
+    findAll(
+      render(),
+      (node) => node.props.children === 'Mostrar más resultados',
+    )[0]?.props.onPress?.()
+    expect(findAll(render(), (node) => node.type === 'input')).toHaveLength(40)
+    findAll(render(), (node) => node.type === TextField)[0]?.props.onChange?.('Persona 153')
+    expect(state.limit).toBe(20)
+    expect(findAll(render(), (node) => node.type === IconButton)[0]?.props.label).toBe(
+      'Editar horario de Persona 153',
+    )
+  })
+
+  it('clears all selections and opens the editor for a searched person', () => {
+    state.query = 'garcia'
     const onEdit = vi.fn()
-    const tree = StaffPeopleFilter({ people, selected: [], onChange: vi.fn(), onEdit })
+    const onChange = vi.fn()
+    const tree = StaffPeopleFilter({
+      people,
+      teams,
+      selected: { personIds: ['ana'], teamIds: ['north'] },
+      onChange,
+      onEdit,
+    })
     const edit = findAll(
       tree,
-      (node) => node.type === IconButton && node.props.label === 'Editar horario de Ana',
+      (node) => node.type === IconButton && node.props.label === 'Editar horario de Ana García',
     )[0]
     edit?.props.onPress?.()
     expect(onEdit).toHaveBeenCalledWith('ana')
-    expect(setOpen).toHaveBeenCalledWith(false)
+    findAll(tree, (node) => node.props.children === 'Limpiar selección')[0]?.props.onPress?.()
+    expect(onChange).toHaveBeenCalledWith(empty)
   })
 })
