@@ -6,6 +6,17 @@
 
 ### Nuevas funciones
 
+- Add showInstructions prop to EventCalendar component
+- Add test to block commits with unfixable lint errors
+- Enhance pre-commit hook with automatic linting and formatting fixes
+- Add current time display and refresh functionality to event calendar
+- Refine settings, calendars and estimate editing
+- Enhance agenda page with filter disclosure component and improve code formatting
+- Enhance dialog components with new styling classes for improved layout and responsiveness
+- Implement EstimateStatusSummary component and associated tests for displaying estimate statuses
+- Refactor absence overview and vacation management components for improved readability and functionality
+- Enhance staff schedules page with people filter component and calendar toolbar improvements
+- Add legacy technician role handling and related tests
 - Add staff functions management and scheduling features
 - Remove weekly summary feature and related settings
 - Add client types management functionality

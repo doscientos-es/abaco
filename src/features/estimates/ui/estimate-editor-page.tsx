@@ -65,6 +65,7 @@ import { LinesEditor } from './lines-editor'
 import { ManualAcceptanceCard } from './manual-acceptance-card'
 import { MilestonesEditor } from './milestones-editor'
 import { PriceInput } from './price-input'
+import { ServiceProposalAssistant } from './service-proposal-assistant'
 
 export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const { estimates, clients, catalog, tenant, ledger } = useTenantData()
@@ -854,9 +855,13 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Condiciones</CardTitle>
+          <CardTitle>Descripción y condiciones</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <ServiceProposalAssistant
+            clauses={estimate.clauses}
+            onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
+          />
           <TextareaField
             label="Condiciones"
             hideLabel
