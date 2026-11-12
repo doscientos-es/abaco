@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add staff functions management and scheduling features",
             "Remove weekly summary feature and related settings",
             "Add client types management functionality",
             "Configurable client types by company",
@@ -18,6 +19,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "3c91b83dbaa74a32f7507dc4100603d999db3900",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add staff functions management and scheduling features"
+        },
         {
           "sha": "27f53ed1154711a3a9d680c8b190622af01210e1",
           "type": "feat",

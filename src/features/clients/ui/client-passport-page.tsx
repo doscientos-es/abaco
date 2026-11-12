@@ -4,12 +4,14 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  IconButton,
   PageHeader,
   PageHeaderActions,
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
 } from '@doscientos/ui'
+import { PencilSimple } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -121,13 +123,13 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                           </a>
                         ) : null}
                         {canWrite ? (
-                          <Button
-                            size="sm"
+                          <IconButton
+                            label={`Editar contacto ${contact.name}`}
                             variant="ghost"
                             onPress={() => setCreating({ kind: 'editContact', contact })}
                           >
-                            Editar
-                          </Button>
+                            <PencilSimple aria-hidden="true" className="size-4" />
+                          </IconButton>
                         ) : null}
                       </li>
                     ))}
@@ -164,13 +166,13 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {canWrite ? (
-                      <Button
-                        size="sm"
+                      <IconButton
+                        label={`Editar centro ${location.name}`}
                         variant="ghost"
                         onPress={() => setCreating({ kind: 'editLocation', location })}
                       >
-                        Editar centro
-                      </Button>
+                        <PencilSimple aria-hidden="true" className="size-4" />
+                      </IconButton>
                     ) : null}
                   </div>
                 </CardHeader>

@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import { isRole, type Role } from '@/features/auth'
+import { roleFromMembership, type Role } from '@/features/auth'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 export type TeamMember = { userId: string; email: string; fullName: string; role: Role }
@@ -17,13 +17,14 @@ export const teamQuery = (tenantId: string) =>
       if (error) throw new Error('No se pudo cargar el equipo.')
       return data.flatMap((row) => {
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-        if (!profile || !isRole(row.role)) return []
+        const role = roleFromMembership(row.role)
+        if (!profile || !role) return []
         return [
           {
             userId: row.user_id,
             email: profile.email,
             fullName: profile.full_name,
-            role: row.role,
+            role,
           },
         ]
       })

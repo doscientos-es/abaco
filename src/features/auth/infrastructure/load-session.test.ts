@@ -105,6 +105,16 @@ describe('welcome state in the session', () => {
     expect(await loadSession()).toMatchObject({ tenantId: 'company-1', role: 'user' })
   })
 
+  it('recognizes a legacy technician membership as a worker session', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'worker-1' } } } })
+    rpc.mockResolvedValue({
+      data: [{ tenant_id: 'company-1', role: 'technician', company_name: 'Uno' }],
+      error: null,
+    })
+
+    expect(await loadSession()).toMatchObject({ tenantId: 'company-1', role: 'user' })
+  })
+
   it('reports a failure to save the selected company', async () => {
     updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
     await expect(setPreferredCompanyId('company-2')).rejects.toThrow(

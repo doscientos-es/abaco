@@ -6,6 +6,7 @@ export {
   can,
   assignableRoles,
   isRole,
+  roleFromMembership,
   roleDescriptions,
   roleLabels,
   roles,

@@ -83,3 +83,8 @@ export function assignableRoles(inviter: Role | null | undefined): Role[] {
 export function isRole(value: string): value is Role {
   return (roles as readonly string[]).includes(value)
 }
+
+/** Legacy technician memberships retain their database permissions but use the worker UI. */
+export function roleFromMembership(value: string): Role | null {
+  return value === 'technician' ? 'user' : isRole(value) ? value : null
+}

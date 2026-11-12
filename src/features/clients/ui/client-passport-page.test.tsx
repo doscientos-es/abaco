@@ -21,6 +21,10 @@ vi.mock('@doscientos/ui', () => {
       mocks.actions.set(children, onPress)
       return <button>{children}</button>
     },
+    IconButton: ({ label, onPress }: { label: string; onPress: () => void }) => {
+      mocks.actions.set(label, onPress)
+      return <button aria-label={label} />
+    },
     Card: Container,
     CardContent: Container,
     CardHeader: Container,
@@ -36,7 +40,7 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: () => ({
     data: {
-      contacts: [],
+      contacts: [{ id: 'contact', name: 'Ana', active: true, role: 'other' }],
       locations: [
         {
           id: 'centre',
@@ -91,14 +95,19 @@ describe('client service centres', () => {
     expect(html).not.toMatch(/piscina|activos|instalaciones|Legacy pool/i)
     mocks.actions.get('Añadir centro')?.()
     expect(mocks.start).toHaveBeenCalledWith({ kind: 'location' })
-    mocks.actions.get('Editar centro')?.()
+    expect(html).toContain('aria-label="Editar centro Office centre"')
+    mocks.actions.get('Editar centro Office centre')?.()
     expect(mocks.start).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'editLocation' }))
+    expect(html).toContain('aria-label="Editar contacto Ana"')
+    mocks.actions.get('Editar contacto Ana')?.()
+    expect(mocks.start).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'editContact' }))
   })
 
   it('does not offer centre creation or editing to a read-only user', () => {
     mocks.allowed = false
     renderToStaticMarkup(<ClientPassportPage clientId="client" />)
     expect(mocks.actions.has('Añadir centro')).toBe(false)
-    expect(mocks.actions.has('Editar centro')).toBe(false)
+    expect(mocks.actions.has('Editar centro Office centre')).toBe(false)
+    expect(mocks.actions.has('Editar contacto Ana')).toBe(false)
   })
 })

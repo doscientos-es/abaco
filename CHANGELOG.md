@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Add staff functions management and scheduling features
 - Remove weekly summary feature and related settings
 - Add client types management functionality
 - Configurable client types by company

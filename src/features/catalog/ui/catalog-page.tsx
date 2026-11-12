@@ -28,7 +28,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
-import { TableRowActions } from '@/shared/ui/table-row-actions'
+import { RowActions, TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { catalogImportSchema, catalogKeys } from '../application/catalog-import'
@@ -328,16 +328,11 @@ export function CatalogPage() {
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
                   <span className="flex-1" />
-                  <Button variant="outline" onPress={() => edit(item)}>
-                    Editar
-                  </Button>
-                  <Button
-                    className="text-destructive"
-                    variant="ghost"
-                    onPress={() => setToDelete(item)}
-                  >
-                    Eliminar
-                  </Button>
+                  <RowActions
+                    name={item.name}
+                    onEdit={() => edit(item)}
+                    onDelete={() => setToDelete(item)}
+                  />
                 </div>
               </li>
             ))}
@@ -368,7 +363,11 @@ export function CatalogPage() {
                   <TableCell className="text-right tabular-nums">
                     {formatEuros(item.unitPriceCents)} / {item.unit}
                   </TableCell>
-                  <TableRowActions onEdit={() => edit(item)} onDelete={() => setToDelete(item)} />
+                  <TableRowActions
+                    name={item.name}
+                    onEdit={() => edit(item)}
+                    onDelete={() => setToDelete(item)}
+                  />
                 </TableRow>
               ))}
             </TableBody>

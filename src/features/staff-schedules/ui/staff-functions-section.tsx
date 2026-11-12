@@ -1,4 +1,5 @@
-import { Button, ConfirmDialog } from '@doscientos/ui'
+import { Button, ConfirmDialog, IconButton } from '@doscientos/ui'
+import { PencilSimple, Trash } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -56,26 +57,26 @@ export function StaffFunctionsSection({ tenantId }: { tenantId: string }) {
             {query.data.map((item) => (
               <li className="flex flex-wrap items-center gap-2 py-2" key={item.id}>
                 <span className="flex-1">{item.name}</span>
-                <Button
+                <IconButton
+                  label={`Renombrar ${item.name}`}
                   variant="outline"
-                  size="sm"
                   isDisabled={busy}
                   onPress={() => {
                     setEditing(item)
                     setName(item.name)
                   }}
                 >
-                  Renombrar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
+                  <PencilSimple aria-hidden="true" className="size-4" />
+                </IconButton>
+                <IconButton
+                  label={`Eliminar ${item.name}`}
+                  variant="ghost"
+                  className="text-destructive"
                   isDisabled={busy}
-                  aria-label={`Eliminar ${item.name}`}
                   onPress={() => setRemoving(item)}
                 >
-                  Eliminar
-                </Button>
+                  <Trash aria-hidden="true" className="size-4" />
+                </IconButton>
               </li>
             ))}
           </ul>

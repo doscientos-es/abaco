@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { changeMemberRole, inviteMember, removeMember } from './team-actions'
+import { changeMemberRole, inviteMember, removeMember, teamQuery } from './team-actions'
 
 const { invoke, from, update, remove, eq } = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -19,6 +19,30 @@ const input = {
   role: 'user' as const,
   fullName: 'Ana',
 }
+
+it('includes legacy technicians when loading the team', async () => {
+  const order = vi.fn().mockResolvedValue({
+    data: [
+      {
+        user_id: 'worker',
+        role: 'technician',
+        profiles: { email: 'a@example.test', full_name: 'Ana' },
+      },
+      {
+        user_id: 'other',
+        role: 'unknown',
+        profiles: { email: 'b@example.test', full_name: 'Bea' },
+      },
+    ],
+    error: null,
+  })
+  from.mockReturnValue({ select: () => ({ eq: () => ({ order }) }) })
+  const queryFn = teamQuery('tenant').queryFn
+  if (typeof queryFn !== 'function') throw new Error('Missing team query function')
+  expect(await queryFn({} as never)).toEqual([
+    { userId: 'worker', email: 'a@example.test', fullName: 'Ana', role: 'user' },
+  ])
+})
 
 describe('inviteMember', () => {
   beforeEach(() => invoke.mockReset())

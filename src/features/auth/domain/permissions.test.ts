@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assignableRoles, can } from './permissions'
+import { assignableRoles, can, roleFromMembership } from './permissions'
 
 describe('role permissions', () => {
   it('lets users request their own vacation but not decide requests', () => {
@@ -18,5 +18,11 @@ describe('role permissions', () => {
     expect(can('admin', 'settings:personal')).toBe(true)
     expect(assignableRoles('admin')).toEqual(['admin', 'user'])
     expect(assignableRoles('user')).toEqual([])
+  })
+
+  it('recognizes only the supported legacy worker role', () => {
+    expect(roleFromMembership('technician')).toBe('user')
+    expect(roleFromMembership('admin')).toBe('admin')
+    expect(roleFromMembership('unknown')).toBeNull()
   })
 })

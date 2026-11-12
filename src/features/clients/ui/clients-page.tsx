@@ -1,6 +1,7 @@
 import {
   Button,
   ConfirmDialog,
+  IconButton,
   Input,
   PageHeader,
   PageHeaderActions,
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { Archive, ArrowCounterClockwise, PencilSimple } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -29,6 +31,36 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
 import { clientTypesQuery } from '../application/client-types'
+
+function ClientActions({
+  client,
+  archived,
+  onEdit,
+  onArchive,
+  onRestore,
+}: {
+  client: Client
+  archived: boolean
+  onEdit: () => void
+  onArchive: () => void
+  onRestore: () => void
+}) {
+  return archived ? (
+    <IconButton label={`Restaurar ${client.name}`} variant="outline" onPress={onRestore}>
+      <ArrowCounterClockwise aria-hidden="true" className="size-4" />
+    </IconButton>
+  ) : (
+    <>
+      <IconButton label={`Editar ${client.name}`} variant="outline" onPress={onEdit}>
+        <PencilSimple aria-hidden="true" className="size-4" />
+      </IconButton>
+      <IconButton label={`Archivar ${client.name}`} variant="ghost" onPress={onArchive}>
+        <Archive aria-hidden="true" className="size-4" />
+      </IconButton>
+    </>
+  )
+}
+
 export function ClientsPage() {
   const { clients, tenant } = useTenantData()
   const types = useQuery(clientTypesQuery(tenant.id))
@@ -51,6 +83,15 @@ export function ClientsPage() {
 
   function edit(client: Client) {
     void navigate({ to: '/clientes/$clientId/editar', params: { clientId: client.id } })
+  }
+
+  function restore(client: Client) {
+    updateTenantData((data) => ({
+      ...data,
+      clients: data.clients.map((item) =>
+        item.id === client.id ? { ...item, archivedAt: null } : item,
+      ),
+    }))
   }
 
   return (
@@ -171,36 +212,14 @@ export function ClientsPage() {
                     </p>
                   ) : null}
                 </div>
-                <div className="flex gap-2">
-                  {showArchived ? (
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      onPress={() =>
-                        updateTenantData((data) => ({
-                          ...data,
-                          clients: data.clients.map((item) =>
-                            item.id === client.id ? { ...item, archivedAt: null } : item,
-                          ),
-                        }))
-                      }
-                    >
-                      Restaurar
-                    </Button>
-                  ) : (
-                    <>
-                      <Button className="flex-1" variant="outline" onPress={() => edit(client)}>
-                        Editar
-                      </Button>
-                      <Button
-                        className="flex-1"
-                        variant="ghost"
-                        onPress={() => setToArchive(client)}
-                      >
-                        Archivar
-                      </Button>
-                    </>
-                  )}
+                <div className="flex justify-end gap-1">
+                  <ClientActions
+                    client={client}
+                    archived={showArchived}
+                    onEdit={() => edit(client)}
+                    onArchive={() => setToArchive(client)}
+                    onRestore={() => restore(client)}
+                  />
                 </div>
               </li>
             ))}
@@ -234,31 +253,15 @@ export function ClientsPage() {
                   </TableCell>
                   <TableCell className="break-words">{client.address}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    {showArchived ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onPress={() =>
-                          updateTenantData((data) => ({
-                            ...data,
-                            clients: data.clients.map((item) =>
-                              item.id === client.id ? { ...item, archivedAt: null } : item,
-                            ),
-                          }))
-                        }
-                      >
-                        Restaurar
-                      </Button>
-                    ) : (
-                      <div className="inline-flex items-center gap-1">
-                        <Button size="sm" variant="outline" onPress={() => edit(client)}>
-                          Editar
-                        </Button>
-                        <Button size="sm" variant="ghost" onPress={() => setToArchive(client)}>
-                          Archivar
-                        </Button>
-                      </div>
-                    )}
+                    <div className="inline-flex items-center gap-1">
+                      <ClientActions
+                        client={client}
+                        archived={showArchived}
+                        onEdit={() => edit(client)}
+                        onArchive={() => setToArchive(client)}
+                        onRestore={() => restore(client)}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
