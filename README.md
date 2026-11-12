@@ -1,22 +1,41 @@
 # Ábaco
 
-Presupuestos y cobros para autónomos y pequeñas empresas de instalaciones.
-Un producto de Doscientos construido con React, Vite, TanStack Router y Supabase.
+Ábaco es una aplicación multiempresa de Doscientos para autónomos y empresas de
+servicios e instalaciones. Reúne la gestión comercial, la planificación de visitas,
+el trabajo de campo y el seguimiento de facturas y cobros.
 
-## Enfoque del producto
+La aplicación usa React y TypeScript en el frontend, Supabase para datos y servicios,
+y funciones TypeScript en Vercel para los PDF de partes de visita.
 
-Prepara presupuestos, facilita la respuesta de tu cliente y controla lo pendiente
-de cobrar. El primer resultado útil de la prueba es enviar un presupuesto real,
-no completar una configuración extensa.
+## Qué permite hacer
 
-- Clientes y catálogo de materiales y mano de obra.
-- Presupuestos y facturas; envío por WhatsApp y correo.
-- Aceptación o rechazo desde el enlace del cliente, con nombre y fecha registrados.
-- Seguimiento de facturas y cobros pendientes; contabilidad básica.
+| Área                       | Funcionalidad                                                                                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clientes y catálogo        | Clientes, contactos, ubicaciones, instalaciones, equipos y conceptos reutilizables.                                                                                        |
+| Presupuestos               | Preparar propuestas, publicarlas y registrar la respuesta del cliente o una aceptación manual. La oficina puede convertir una propuesta aceptada en un trabajo o contrato. |
+| Contratos                  | Configurar contratos recurrentes, sus trabajos, frecuencias, visitas y periodos de facturación.                                                                            |
+| Planificación              | Consultar conjuntamente las visitas de contratos y las independientes, revisar partes y acceder a trabajos anteriores sin contrato.                                        |
+| Trabajo de campo           | Consultar visitas asignadas en **Mi jornada**, registrar partes, mediciones, actividades, fotos e incidencias y completar visitas.                                         |
+| Facturación y contabilidad | Revisar borradores, emitir facturas, registrar cobros y gastos, y consultar costes y márgenes provisionales.                                                               |
+| Equipo                     | Gestionar miembros, equipos de trabajo y vacaciones.                                                                                                                       |
 
-El [plan comercial](docs/producto/PLAN_COMERCIAL.md) define el cliente inicial, los límites
-de la oferta, los escenarios económicos y el piloto de captación y retención.
-Las cifras de mercado y los tickets previstos son hipótesis, no resultados medidos.
+Los informes cerrados pueden compartirse mediante enlaces temporales revocables,
+correo y PDF. La generación de visitas o borradores no implica la emisión ni el
+envío automático de una factura.
+
+**Estado:** el repositorio contiene funcionalidad en evolución. La existencia de
+código o migraciones no garantiza su despliegue ni su validación en un entorno.
+Quedan pendientes, entre otros, la firma digital del cliente, la asignación de
+visitas a equipos y partes del circuito operativo. Consulta el
+[flujo operativo](docs/FLUJO_OPERATIVO.md) y comprueba su fecha y sus referencias
+a ramas antes de usarlo como estado actual.
+
+### Acceso y seguridad
+
+La interfaz distingue administrador y usuario: el primero gestiona la empresa;
+el segundo accede a sus visitas asignadas, vacaciones y ajustes personales. La
+pertenencia y los datos están asociados a una empresa. Los controles de interfaz
+no sustituyen las políticas RLS de Supabase ni las comprobaciones del servidor.
 
 ## Oferta vigente
 
@@ -32,42 +51,42 @@ incluido el propietario. Precios sin IVA:
 Prueba de 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
 El pago anual se cobra de una vez. El catálogo se define en
 `src/features/billing/domain/plans.ts`; precios y límites deben mantenerse alineados
-con la base de datos. Redsys tramita el cobro de la suscripción de Ábaco.
+con la base de datos. Redsys tramita el cobro de la suscripción de Ábaco. Existe
+además una oferta informativa Escala, que no es un plan de pago de Redsys.
+El [plan comercial](docs/producto/PLAN_COMERCIAL.md) recoge la oferta, el piloto y
+sus hipótesis; las cifras previstas no son resultados medidos.
 
-## Alcance
+## Recorrido principal
 
-Consulta la [guía de uso de la aplicación](./GUIA_DE_USO.md) para los pasos de oficina y técnico en el estado actual del repositorio.
+1. La oficina registra el cliente y prepara un presupuesto con los conceptos del catálogo.
+2. Publica la propuesta y registra su aceptación. Después puede convertirla manualmente
+   en el trabajo o contrato elegido, conservando la versión aceptada.
+3. Desde **Contratos** configura los trabajos contratados; desde **Planificación**
+   organiza conjuntamente visitas recurrentes e independientes y revisa los partes.
+4. El usuario asignado realiza la visita desde **Mi jornada** y completa el parte.
+   Los borradores y envíos pendientes se conservan en el dispositivo para reintentar;
+   la visita no se completa mientras haya mediciones o fotos pendientes allí.
+5. El cierre conserva una instantánea del parte, pone en cola su PDF y crea un pendiente
+   de revisión de facturación. La oficina revisa los borradores antes de emitir facturas
+   y registra los cobros por separado.
 
-El flujo operativo previsto y su estado por fase se mantienen en
-[`docs/FLUJO_OPERATIVO.md`](docs/FLUJO_OPERATIVO.md). Antes de afirmar que el flujo completo
-está listo, validar allí los hitos de implementación, entorno y uso real.
+Los equipos se pueden asignar a trabajos, pero no sustituyen la asignación individual
+de visitas ni cambian los permisos. Las aceptaciones manuales y la conformidad en papel
+no deben confundirse con una firma digital del cliente.
 
-Ábaco es una aplicación multiempresa para presupuestos, clientes, facturas y cobros de empresas de servicios, con operación de campo (trabajos, visitas, contratos e informes) en desarrollo. Las capacidades aún no implementadas no deben anunciarse como disponibles.
+## Documentación
 
-## Estado actual
-
-La preparación de la demo de limpieza de Felipe está documentada en una [ficha fechada el 10/11/2026](docs/demos/2026-11-13-felipe.md). Sus estados de migración y validación son históricos; confirma el entorno antes de reutilizar sus pasos.
-
-La funcionalidad de [equipos de trabajo](docs/decisiones/WORK_TEAMS.md) permite:
-grupos de miembros existentes gestionados en Ajustes, con edición y archivo,
-asignación opcional en la planificación del trabajo y filtros por equipo y estado.
-Conserva el responsable individual y no cambia los permisos ni asigna visitas.
-La migración está en el repositorio; su presencia aquí no confirma que esté aplicada
-en un entorno concreto. Comprueba el historial Supabase del destino antes de desplegar.
-
-La aplicación incluye acceso e invitaciones, selección de empresa, clientes, catálogo, presupuestos, aceptación por enlace, facturas por hitos, cobros manuales, libro de ingresos y gastos, correo y suscripción SaaS mediante Redsys. Las nuevas migraciones de integridad conservan instantáneas inmutables de facturas emitidas y presupuestos publicados, preparan un borrador del primer hito al recibir una aceptación pública, sin emitir ni numerar la factura y registran cobros de factura en una transacción con clave de operación. Email, WhatsApp y copia del enlace publican la misma versión; los presupuestos anteriores se identifican como reconstruidos durante la migración. La oficina puede registrar una aceptación manual con referencia a la evidencia conservada, diferenciada de una respuesta directa del cliente. La ampliación del pasaporte de cliente añade contactos, varias ubicaciones, piscinas con dimensiones, tratamiento y temporada, y equipos instalados. Los cambios de activos y equipos dejan historial; la sustitución y edición de piscinas son atómicas, y los costes internos tienen permisos separados. Los clientes se archivan sin perder sus referencias y el formulario señala posibles duplicados para revisión humana. Antes de publicar un presupuesto se elige si dará lugar a un trabajo o a un contrato recurrente, con periodicidad de precio en este último caso. Tras la aceptación, la oficina puede convertirlo manualmente una sola vez al destino publicado. La base de datos conserva la versión aceptada y evita que se creen ambos destinos para la misma propuesta. Su activación requiere aplicar y probar las migraciones en el entorno correspondiente.
-
-Todavía faltan la cronología unificada, los documentos y el acceso protegido de instalaciones, las garantías y las capacidades completas de ubicaciones, piscinas y equipos. Los trabajos se pueden crear de forma independiente o desde un presupuesto aceptado, asignar a una persona del equipo, planificar por fechas y avanzar de estado. Su ficha permite añadir fases, tareas y comprobaciones; el cierre exige terminar o descartar las tareas abiertas. Propietario y administrador pueden registrar costes reales por categoría y tarifa histórica, con anulaciones trazables y sin exponer importes al editor. La ficha del trabajo muestra venta aprobada, facturación sin IVA, cobros con IVA y margen provisional sobre los costes registrados; señala los costes incompletos y los gastos aún no imputados. También pueden proponer extras con precio y coste históricos, y registrar su aprobación o rechazo manual con descripción de la evidencia; esta anotación no equivale a la firma directa del cliente. Un extra aprobado puede convertirse una sola vez en borrador revisable; la emisión posterior conserva el importe, el IVA y el origen aceptado. La base de datos impide preparar extras pendientes o rechazados y evita facturarlos dos veces. Los hitos aceptados pueden prepararse como borradores con concepto y vencimiento editables; propietario o administrador los emiten después de revisarlos, con numeración del servidor. Los extras aprobados también requieren borrador editable antes de emitir. La factura emitida conserva su estado documental; el envío aceptado por Resend deja un evento y el saldo se deriva de los cobros. Contabilidad ofrece CSV separados de clientes, facturas, cobros y gastos para propietario y administrador, con lectura paginada de los registros autorizados. Falta el acceso limitado del asesor, el marcado de periodos exportados o revisados, borradores de otros orígenes, líneas combinadas, parciales y rectificativas. Faltan asimismo archivos y varias capacidades de ejecución. Se han añadido el rol técnico con acceso acotado, la planificación de visitas puntuales con detección de solapamientos, la reprogramación con motivo e historial y una jornada móvil que permite iniciarlas y completarlas. El técnico y la oficina pueden guardar notas y comprobaciones del parte en revisiones con historial; el borrador local se recupera tras recarga, está separado por usuario y empresa, y un conflicto muestra las dos versiones para revisión antes de escribir. Las migraciones anteriores de trabajo y visitas pasaron pgTAP en la base local. Las migraciones recientes de informes y facturación aún requieren ejecución de pgTAP y validación en staging antes del despliegue. Los contratos manuales pueden guardar precio, vigencia, alcance y reglas semanales por meses de temporada. Un generador diario crea visitas recurrentes con unicidad por ocurrencia y registra los conflictos; la pausa y reanudación conservan el historial. La conversión a contrato copia el alcance, la base imponible por periodo y la periodicidad de la propuesta aceptada; la oficina selecciona ubicación y fecha de inicio. Propietario y administrador pueden registrar costes reales del contrato, asociados opcionalmente a una visita, con tarifa histórica, anulación trazable y suma protegida; la ficha advierte que el margen sigue sin poder calcularse hasta completar facturación e imputaciones. Una tarea diaria idempotente genera periodos contractuales completos y borradores valorados, registra fallos por contrato y nunca emite ni envía facturas automáticamente. El precio y el IVA quedan conservados; las cuotas parciales o afectadas por pausas quedan sin importe hasta revisión de oficina. La oficina puede valorar una cuota parcial o afectada por una pausa, preparar un borrador revisable y emitir su factura con origen único y numeración del servidor. La ficha separa facturación, cobros y costes reales para un margen provisional. Contabilidad permite repartir cada gasto entre trabajos o contratos, vincularlo a un coste operativo ya registrado para no contarlo dos veces y anular cada imputación con historial. El gasto imputado suma al margen sin IVA y no puede superar el total bruto registrado. Siguen pendientes ajustes de precio posteriores, rectificativas y automatización de cuotas con reglas comerciales completas. Siguen pendientes la revisión de frecuencias activas, renovación, cuotas, partes, stock, portal y conectores avanzados. La conversión automática y las reglas de señal/plan siguen pendientes. El plan distingue las capacidades entregadas de las previstas.
-
-Las piscinas disponen de parámetros de pH, desinfectante y temperatura, además de parámetros adicionales con unidad y rango configurables. Cada lectura queda vinculada a visita, piscina, método, equipo y hora; conserva el rango vigente, muestra su evaluación en texto y admite correcciones trazables. La ficha de piscina muestra lecturas y cambios de configuración. Las lecturas pendientes se conservan en el dispositivo por usuario, empresa y visita con una clave de operación estable para reintentos; la jornada impide completar una visita mientras haya mediciones pendientes.
-
-El parte también registra tiempo, desplazamientos, materiales, repuestos, productos, acciones correctoras, recomendaciones y siguientes actuaciones. Cada actividad conserva cantidad, unidad, hora, autor y origen de trabajo o contrato; las correcciones no borran el original. Los historiales de lecturas y actividades se consultan por páginas. Los envíos pendientes se pueden reintentar o descartar de forma explícita antes de completar la visita. Las fotos JPEG, PNG y WebP se preparan en IndexedDB, separadas por usuario, empresa y visita; se envían a un bucket privado con acceso acotado y se registran con una operación idempotente. La jornada impide cerrar una visita con fotos pendientes en ese dispositivo. Al completarla, la base conserva una versión inmutable del parte con notas, comprobaciones, tareas, mediciones, actividades, incidencias y referencias a las fotos registradas; la oficina y el técnico asignado pueden consultarla. El mismo cierre crea un trabajo duradero para generar el PDF de la versión, con reintentos y estado visible en la oficina. Propietario o administrador pueden crear un enlace al informe cerrado con token de 256 bits, caducidad de siete días y revocación, copiarlo o compartirlo manualmente por WhatsApp. La vista pública expone una selección de campos sin costes internos y usa URL temporales para fotos privadas. Desde esa vista se puede descargar el PDF conservado en un bucket privado; si el trabajador aún no terminó, la primera descarga también puede generarlo de forma idempotente. La descarga usa una URL temporal. Las funciones TypeScript de Vercel requieren `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` como secretos de servidor. La oficina puede registrar una entrega por correo al email del cliente o de su contacto principal; la cola cifra el enlace, conserva los intentos y reintenta fallos temporales con idempotencia del proveedor durante su ventana de 24 horas. La aceptación del envío y los resultados posteriores de entrega, retraso, rebote y reclamación se muestran por separado mediante eventos firmados de Resend. Los importes de coste siguen reservados a la oficina y aún no se derivan automáticamente de estas cantidades. Faltan alertas automáticas, gráficos de evolución y firma.
-
-Las incidencias se pueden abrir desde una visita asignada o desde el pasaporte del cliente. Conservan ubicación, activo y equipo cuando proceda, prioridad, responsable, plazo, evaluación de cobertura, diagnóstico, resolución e historial de cambios. La oficina decide cobertura y asignación; el técnico asignado puede diagnosticar y resolver. Las incidencias creadas en campo admiten reintentos con una clave estable. La oficina puede convertir cada incidencia una vez por destino a presupuesto borrador, trabajo o visita; cada destino conserva el vínculo con la incidencia y los reintentos no lo duplican. Al cerrar una visita se crea un pendiente de revisión de facturación, clasificado por contrato, trabajo o visita puntual. Propietario o administrador pueden marcarla como incluida o para facturar aparte con motivo e historial; esto no emite ninguna factura. Aún faltan la generación de borradores desde estos pendientes y la entrada de incidencias desde el futuro portal de cliente.
+- [Guía de uso](GUIA_DE_USO.md): recorrido de oficina y campo. Es una guía fechada;
+  algunas etiquetas de navegación y roles han cambiado desde su publicación.
+- [Flujo operativo](docs/FLUJO_OPERATIVO.md): objetivos, límites y decisiones pendientes.
+- [Índice de documentación](docs/README.md): producto, decisiones y demos históricas.
+- [Equipos de trabajo](docs/decisiones/WORK_TEAMS.md) y
+  [ausencias y cobertura](docs/decisiones/COBERTURA_DE_VACACIONES.md).
 
 ## Desarrollo local
 
-Requisitos: Node.js 22.18 o posterior, pnpm 9.15.2 y, para las pruebas de base de datos, Docker y Supabase CLI 2.116.0.
+Requisitos: Node.js 22.18 o posterior y pnpm 9.15.2. Las pruebas locales de
+base de datos también requieren Docker y Supabase CLI 2.116.0.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -75,17 +94,48 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local` con un proyecto autorizado. Son valores públicos; la seguridad de los datos depende de las políticas RLS y los permisos del backend. No pongas una clave `service_role`, secretos de Redsys o Resend ni credenciales de otras integraciones en variables `VITE_*`. No hay modo de datos ficticios que sustituya a Supabase.
+Completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`
+con los valores de un proyecto autorizado. Son públicos: la protección de los
+datos depende de RLS y de las comprobaciones del backend. No hay modo ficticio
+que sustituya a Supabase. `pnpm dev` ejecuta Vite; no levanta las funciones de
+Vercel ni las funciones Edge de Supabase.
 
-Para invitar desde otro origen, configura `INVITE_ALLOWED_ORIGINS` en Supabase Edge con los orígenes adicionales separados por comas, por ejemplo `http://localhost:5173` para desarrollo. `APP_URL` sigue determinando el enlace de invitación. Permite localhost solo en entornos autorizados: la lista CORS no sustituye la autenticación ni los permisos.
+Nunca pongas la clave `service_role`, secretos de Redsys o Resend ni otras
+credenciales en variables `VITE_*` o en archivos versionados. Configura los
+secretos exclusivamente en el entorno de servidor correspondiente.
 
-Para el correo del parte, configura en los secretos de Supabase Edge `REPORT_DELIVERY_KEY` (32 bytes codificados en Base64), `RESEND_API_KEY`, `RESEND_FROM`, `APP_URL` y `CRON_SECRET`. En Supabase Vault configura `cron_secret` con el mismo valor y `visit_report_email_worker_url` con la URL HTTPS completa de la función `visit-report-email-worker` de ese entorno. Conserva `REPORT_DELIVERY_KEY` mientras haya entregas pendientes; cambiarla impide descifrar sus enlaces. La cola detiene reintentos automáticos tras 23 horas y marca el resultado como incierto para evitar un segundo envío fuera de la ventana de idempotencia de Resend.
+### Integraciones de informes e invitaciones
 
-Para conciliar la entrega final, configura en Supabase Edge `RESEND_WEBHOOK_SECRET` (`whsec_...`) y registra en Resend la URL HTTPS `/functions/v1/visit-report-email-events` del proyecto para los eventos `email.delivery_delayed`, `email.delivered`, `email.bounced`, `email.complained`, `email.failed` y `email.suppressed`. El endpoint valida la firma y conserva solo el identificador del correo, destinatario, tipo y fecha del evento; no guarda el contenido del mensaje. Comprueba con un envío de prueba que Resend alcanza este endpoint antes de considerar disponible la conciliación en producción.
+- **Invitaciones:** `APP_URL` determina el enlace. Para permitir otros orígenes,
+  configura `INVITE_ALLOWED_ORIGINS` en Supabase Edge como lista separada por comas;
+  permite localhost solo en entornos autorizados. CORS no sustituye la autenticación.
+- **PDF de partes:** las funciones Node.js de Vercel necesitan `SUPABASE_URL` y
+  `SUPABASE_SERVICE_ROLE_KEY` en el servidor. Para la cola, configura también
+  `CRON_SECRET` en Vercel con el mismo valor de `cron_secret` en Supabase Vault,
+  y `visit_report_pdf_worker_url` en Vault con la URL HTTPS de
+  `/api/visit_report_pdf_worker`. El trabajador procesa la cola con reintentos;
+  la descarga pública también puede generar el PDF si aún no está disponible.
+- **Correo del parte:** configura los secretos Edge `REPORT_DELIVERY_KEY` (32 bytes
+  en Base64), `RESEND_API_KEY`, `RESEND_FROM`, `APP_URL` y `CRON_SECRET`. En Vault,
+  configura `cron_secret` con el mismo valor y `visit_report_email_worker_url` con
+  la URL HTTPS de `visit-report-email-worker`. Conserva la clave de cifrado mientras
+  haya entregas pendientes: cambiarla impide descifrar sus enlaces. Los reintentos
+  automáticos se detienen tras 23 horas para evitar duplicados fuera de la ventana
+  de idempotencia del proveedor.
+- **Eventos de correo:** configura `RESEND_WEBHOOK_SECRET` en Edge y registra en
+  Resend `/functions/v1/visit-report-email-events` para `email.delivery_delayed`,
+  `email.delivered`, `email.bounced`, `email.complained`, `email.failed` y
+  `email.suppressed`. Verifica la entrega de eventos con un envío de prueba.
 
-Para generar el PDF al cierre, configura además `CRON_SECRET` en Vercel con el mismo valor de Vault `cron_secret` y `visit_report_pdf_worker_url` en Vault con la URL HTTPS de producción `/api/visit_report_pdf_worker`. La base invoca ese trabajador cada minuto; el trabajo permanece pendiente y se reintenta si hay un fallo temporal. Tras ocho intentos fallidos, propietario o administrador pueden revisar el origen o la configuración y solicitar otro intento desde el parte.
+Otras integraciones, como pagos o envío de documentos, requieren su propia
+configuración y validación. Consulta las funciones correspondientes antes de activarlas.
 
-## Organización
+## Arquitectura y organización
+
+El frontend usa React 19, Vite, TypeScript, TanStack Router y Query, Tailwind CSS
+y `@doscientos/ui`. Las funcionalidades se agrupan en `src/features` con capas de
+dominio, aplicación, infraestructura e interfaz según sus necesidades. La URL
+pertenece al router y la caché remota a TanStack Query.
 
 | Carpeta                   | Responsabilidad                                                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -94,54 +144,68 @@ Para generar el PDF al cierre, configura además `CRON_SECRET` en Vercel con el 
 | `src/features`            | Pantallas y casos de uso por funcionalidad.                                                            |
 | `src/shared/domain`       | Tipos y cálculos sin dependencia del proveedor de datos.                                               |
 | `src/shared/store`        | Estado heredado y adaptador de Supabase. Se sustituirá gradualmente por comandos y consultas acotadas. |
+| `src/shared/ui`           | Componentes compartidos, incluidos estados de carga, error y contenido vacío.                          |
+| `api`                     | Endpoints Node.js de Vercel para descarga y procesamiento de PDF de partes.                            |
+| `server/visit-report-pdf` | Proyección, renderizado y acceso a datos para esos PDF. Usa `@react-pdf/renderer` y `sharp`.           |
 | `supabase/migrations`     | Esquema, restricciones, funciones transaccionales y RLS.                                               |
 | `supabase/functions`      | Funciones Edge para enlaces públicos, correos, invitaciones y facturación SaaS.                        |
 | `supabase/tests/database` | Pruebas SQL con pgTAP.                                                                                 |
 
-La interfaz usa React 19, TanStack Router y Query, Tailwind 4 y TypeScript 7. La URL pertenece a TanStack Router, la caché remota a TanStack Query y las primitivas visuales a `@doscientos/ui`. Mantener los permisos y límites de cada feature; no conectar operaciones privilegiadas directamente desde componentes.
+El frontend, las funciones Edge y las funciones de PDF están escritos en
+TypeScript; no se necesita Python para la generación de PDF.
 
 ## Base de datos y pruebas
 
-Crea migraciones con `supabase migration new <nombre>`. Para reconstruir y probar una base **desechable**, crea un directorio temporal que aún no exista:
-
-```bash
-REPLAY_DIR="$(mktemp -d)/abaco-db-replay"
-node scripts/prepare-db-replay.mjs "$REPLAY_DIR"
-supabase db start --workdir "$REPLAY_DIR"
-supabase db reset --local --workdir "$REPLAY_DIR"
-supabase test db --workdir "$REPLAY_DIR"
-supabase stop --workdir "$REPLAY_DIR"
-```
-
-La prueba SQL requiere Docker. El proyecto temporal copia todas las migraciones y las ejecuta en orden de dependencias, con versiones sintéticas: **nunca lo enlaces a Supabase remoto ni uses su historial para hacer push o reparaciones**. La reconstrucción directa con los nombres reales no funciona actualmente por el orden del historial aplicado. CI ejecuta el mismo procedimiento antes de la versión automática. Las funciones Edge y la aplicación tienen que desplegarse después de sus migraciones compatibles. Antes de aplicar cambios a un proyecto con datos, compara su esquema y migraciones reales con Git, verifica copias de seguridad y restauración en staging y prueba los documentos y contratos existentes. No ejecutes `db reset` en producción.
-
-La comprobación local de la aplicación es:
-
-El contrato completo es `pnpm quality`, también para agentes y CI. No eliminar
-checks para ocultar incompatibilidades ni aplicar cambios a datos reales para validar copy.
+El contrato completo para la aplicación es `pnpm quality`, también para agentes y CI:
 
 - `pnpm format:check`: formato compartido.
 - `pnpm lint`: reglas de React/Vite y capas de features.
 - `pnpm structure:check`: estructura y nombres.
 - `pnpm typecheck`: contrato TypeScript estricto.
 - `pnpm test`: pruebas de dominio, aplicación y presentación.
-- `pnpm quality`: novedades y todos los checks anteriores.
-- `pnpm build`: compilación estática de Vite y generación del árbol de rutas.
+- `pnpm changelog:check`: comprueba los archivos de novedades generados.
+- `pnpm quality`: changelog y todos los checks anteriores.
+- `pnpm build`: sincronización de changelog, TypeScript y compilación de Vite.
 
-Revisar `.githooks/` y ejecutar `pnpm hooks:install` una vez por clon para activar
-el pre-commit de `pnpm quality:quick` (formato y lint, sin fixes). Rehúsa reemplazar
-hooks existentes. CI verifica el contenido del commit; los required checks de
-GitHub se configuran aparte.
+Revisa `.githooks/` y ejecuta `pnpm hooks:install` una vez por clon: el pre-commit
+ejecuta `pnpm quality:quick` y el pre-push ejecuta `pnpm quality`. La instalación
+rehúsa reemplazar hooks existentes.
+
+### Base de datos
+
+Las migraciones están en `supabase/migrations` y las pruebas pgTAP en
+`supabase/tests/database`. Crea nuevas migraciones con
+`supabase migration new <nombre>` y sigue las instrucciones de `AGENTS.md` para
+aplicarlas al entorno correspondiente.
+
+**Limitación actual:** el job de base de datos de CI referencia
+`scripts/prepare-db-replay.mjs`, que no está presente en el árbol de trabajo.
+Hasta recuperarlo o reemplazarlo, ese procedimiento y las pruebas pgTAP de CI no
+son ejecutables tal como están configurados. El historial requiere un replay en
+orden de dependencias con versiones sintéticas; no asumas que un reset directo
+con los nombres originales es equivalente. Usa solo bases desechables para
+pruebas, nunca las enlaces a producción ni uses su historial para reparaciones.
+
+Antes de aplicar cambios a un proyecto con datos, compara esquema e historial,
+verifica copias y restauración en staging y prueba los datos existentes. No
+ejecutes `db reset` en producción.
 
 ## Despliegue y operación
 
 1. Aplica migraciones compatibles y valida RLS, numeración, saldos y datos históricos en staging.
 2. Despliega las funciones Edge con sus secretos de servidor y la configuración de JWT indicada en `supabase/config.toml`.
-3. Despliega el frontend con sus dos variables públicas; comprueba aceptación, envío, factura y cobro con cuentas de prueba separadas.
-4. Observa errores de guardado, operaciones pendientes, correo, renovaciones y webhooks. Un error de guardado deja el cambio visible y ofrece reintento; no equivale a confirmación del servidor.
+3. Despliega en Vercel el frontend y las funciones de PDF con su configuración; valida los endpoints y las colas en el entorno de destino.
+4. Comprueba aceptación, envío, factura y cobro con cuentas de prueba separadas.
+5. Observa errores de guardado, operaciones pendientes, correo, renovaciones y webhooks. Un error de guardado no equivale a confirmación del servidor.
 
 Las integraciones externas pendientes requieren proveedor elegido, credenciales, pruebas de contrato y validación productiva antes de activarse. El catálogo de planes se rige por el [plan comercial](docs/producto/PLAN_COMERCIAL.md), no por etiquetas de interfaz.
 
 ## Versiones
 
-CI valida cada push a `main` y después incrementa la versión patch, genera `CHANGELOG.md` y `src/shared/lib/changelog.json`, y etiqueta la release. Un cambio manual de versión se respeta. Usa `pnpm changelog:sync` para actualizar los archivos generados y no los edites manualmente.
+El workflow de CI está configurado para validar los cambios y, tras un push a
+`main` con las comprobaciones superadas, generar changelog y una versión
+etiquetada. Sin embargo, la decisión de versión referencia
+`scripts/release-decision.mjs`, ausente del árbol de trabajo: la publicación
+automática también necesita recuperarlo o reemplazarlo. Usa `pnpm changelog:sync`
+para actualizar `CHANGELOG.md` y `src/shared/lib/changelog.json`; no los edites
+manualmente.

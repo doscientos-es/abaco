@@ -1,6 +1,6 @@
 import { projectClosedReport } from './projection'
 import { renderVisitReport } from './render'
-import { MAX_PHOTO_BYTES, record, SupabaseReportStore, UpstreamError, UUID } from './upstream'
+import { MAX_PHOTO_BYTES, record, UpstreamError, UUID, type SupabaseReportStore } from './upstream'
 
 export async function renderPdfJob(store: SupabaseReportStore, job: Record<string, unknown>) {
   const tenant = String(job.tenant_id)
@@ -54,7 +54,7 @@ export async function processOnePdfJob(
   try {
     await renderPdfJob(store, job)
   } catch (error) {
-    console.error(`PDF job failed: ${error instanceof Error ? error.name : 'Error'}`)
+    process.stderr.write(`PDF job failed: ${error instanceof Error ? error.name : 'Error'}\n`)
     errorCode = error instanceof UpstreamError ? 'source_unavailable' : 'render_failed'
   }
   const finished = await store.rpc('finish_service_visit_report_pdf_job', {

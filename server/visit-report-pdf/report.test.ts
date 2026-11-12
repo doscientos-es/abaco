@@ -90,7 +90,7 @@ describe('customer PDF', () => {
       'size',
     )
     const invalid = version()
-    invalid.snapshot.photos[0]!.storage_path = ''
+    invalid.snapshot.photos = [{ storage_path: '', phase: 'before', caption: 'Antes' }]
     expect(() => projectClosedReport(invalid)).toThrow('photos')
   })
 })

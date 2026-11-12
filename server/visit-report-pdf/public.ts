@@ -2,7 +2,13 @@ import { createHash } from 'node:crypto'
 
 import type { ReportProjection } from './projection'
 import { renderVisitReport } from './render'
-import { MAX_PHOTO_BYTES, PDF_BUCKET, record, SupabaseReportStore, UpstreamError } from './upstream'
+import {
+  MAX_PHOTO_BYTES,
+  PDF_BUCKET,
+  record,
+  UpstreamError,
+  type SupabaseReportStore,
+} from './upstream'
 
 async function liveShare(store: SupabaseReportStore, digest: string) {
   const query = new URLSearchParams({
@@ -19,12 +25,14 @@ export async function createOrGetPdf(token: string, store: SupabaseReportStore) 
   const digest = createHash('sha256').update(token, 'ascii').digest('hex')
   const share = await liveShare(store, digest)
   if (!share) throw new UpstreamError(404)
-  const path = store.objectPath(String(share.tenant_id), String(share.report_version_id))
+  const tenantId = String(share.tenant_id)
+  const versionId = String(share.report_version_id)
+  const path = store.objectPath(tenantId, versionId)
   if (!(await store.exists(path))) {
     const query = new URLSearchParams({
       select: 'snapshot',
-      id: `eq.${share.report_version_id}`,
-      tenant_id: `eq.${share.tenant_id}`,
+      id: `eq.${versionId}`,
+      tenant_id: `eq.${tenantId}`,
       limit: '1',
     })
     const version = await store.one(`/rest/v1/service_visit_report_versions?${query}`)
