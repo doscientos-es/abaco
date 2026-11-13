@@ -75,7 +75,7 @@ vi.mock('@doscientos/ui', () => {
       if (ariaLabel && onPress) mocks.buttons.set(ariaLabel, onPress)
       if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
       if (Array.isArray(children) && onPress) mocks.buttons.set(String(children[1]), onPress)
-      return <button>{children}</button>
+      return <button aria-label={ariaLabel}>{children}</button>
     },
     Input: ({
       'aria-label': label,
@@ -91,6 +91,12 @@ vi.mock('@doscientos/ui', () => {
     CardContent: Container,
     CardHeader: Container,
     CardTitle: Container,
+    Popover: ({ trigger, children }: { trigger: ReactNode; children: ReactNode }) => (
+      <>
+        {trigger}
+        {children}
+      </>
+    ),
     toast: { success: vi.fn(), error: mocks.error },
   }
 })
@@ -397,10 +403,9 @@ describe('AgendaPage: nueva visita', () => {
     }
     const html = render()
     expect(html.indexOf('aria-label="Buscar cliente o centro"')).toBeLessThan(
-      html.indexOf('<details'),
+      html.indexOf('Filtros adicionales, 2 activos'),
     )
     expect(html).toContain('Filtros adicionales, 2 activos')
-    expect(html).not.toContain('<details open')
     mocks.fields.get('Buscar cliente o centro')?.('Oficinas')
     const navigation = mocks.navigate.mock.calls.at(-1)?.[0] as {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch

@@ -169,6 +169,23 @@ describe('VacationManagementPage', () => {
     expect(mocks.setTo).toHaveBeenCalledWith('2026-11-12')
   })
 
+  it('scopes both the calendar and absence inbox to the selected people', () => {
+    mocks.data = ['ana', 'bea'].map((id) => ({
+      id,
+      requesterId: id,
+      requesterName: id === 'ana' ? 'Ana' : 'Bea',
+      status: 'pending',
+      absenceType: 'other',
+      startDate: '2026-11-10',
+      endDate: null,
+    }))
+    const html = renderToStaticMarkup(<VacationManagementPage memberIds={['ana']} embedded />)
+    expect(mocks.overview?.requests.map((request) => request.requesterId)).toEqual(['ana'])
+    expect(html).toContain('Ana')
+    expect(html).not.toContain('Bea')
+    expect(html).not.toContain('<h1')
+  })
+
   it('summarizes a complete or open-ended date filter in one accessible control', () => {
     mocks.from = '2026-11-10'
     mocks.to = '2026-11-12'
@@ -194,7 +211,7 @@ describe('VacationManagementPage', () => {
     mocks.from = '2026-11-10'
     mocks.to = '2026-11-12'
     const html = renderToStaticMarkup(<VacationManagementPage />)
-    expect(html.indexOf('Buscar trabajador')).toBeLessThan(html.indexOf('<details'))
+    expect(html.indexOf('Buscar trabajador')).toBeLessThan(html.indexOf('Filtros adicionales'))
     expect(html).toContain('Filtros adicionales, 1 activo')
     mocks.buttons.get('Limpiar filtros adicionales')?.()
     expect(mocks.setType).toHaveBeenCalledWith('all')

@@ -1,7 +1,6 @@
 import {
   Button,
   PageHeader,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Tabs,
@@ -41,7 +40,7 @@ const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   operativa: 'Cobros y avisos',
   cuenta: 'Mi cuenta',
-  equipo: 'Equipo',
+  equipo: 'Invitaciones',
   plan: 'Plan y facturación',
   novedades: 'Novedades',
 }
@@ -89,9 +88,6 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Ajustes</PageHeaderTitle>
-          <PageHeaderDescription>
-            Gestiona tu empresa, tu cuenta y las opciones de funcionamiento.
-          </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
 
@@ -114,7 +110,9 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'cuenta' ? <AccountSettings /> : null}
-      {tab === 'equipo' && session?.tenantId ? <TeamSection tenantId={session.tenantId} /> : null}
+      {tab === 'equipo' && session?.tenantId ? (
+        <TeamSection tenantId={session.tenantId} mode="invite" />
+      ) : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}

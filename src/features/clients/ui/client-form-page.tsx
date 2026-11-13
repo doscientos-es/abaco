@@ -1,9 +1,4 @@
-import {
-  PageHeader,
-  PageHeaderDescription,
-  PageHeaderHeading,
-  PageHeaderTitle,
-} from '@doscientos/ui'
+import { PageHeader, PageHeaderHeading, PageHeaderTitle } from '@doscientos/ui'
 import { Link, useNavigate } from '@tanstack/react-router'
 
 import { useTenantData } from '@/shared/store/store'
@@ -40,11 +35,6 @@ export function ClientFormPage({ clientId }: { clientId?: string }) {
             ← Clientes
           </Link>
           <PageHeaderTitle>{client ? 'Editar cliente' : 'Nuevo cliente'}</PageHeaderTitle>
-          <PageHeaderDescription>
-            {client
-              ? `Actualiza los datos de ${client.name}.`
-              : 'Añade los datos para presupuestos, facturas y servicios.'}
-          </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
       <ClientForm

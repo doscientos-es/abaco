@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { teamQuery } from '@/features/settings/application/team-actions'
+import { workTeamsQuery } from '@/features/work-teams'
 import { dateValue } from '@/shared/lib/date-range'
 import { calendarDays, calendarTime, type EventCalendarView } from '@/shared/lib/event-calendar'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
@@ -15,10 +16,21 @@ import {
   staffSchedulesQuery,
 } from '../application/staff-schedule-actions'
 import { scheduleOccurrences, type StaffPerson } from '../domain/staff-schedule'
+import {
+  defaultStaffSelection,
+  selectedStaffIds,
+  type StaffSelection,
+} from '../domain/staff-selection'
 import { StaffPeopleFilter } from './staff-people-filter'
 import { StaffScheduleEditor } from './staff-schedule-editor'
 
-export function StaffSchedulesPage() {
+type ScheduleContext = {
+  memberIds?: string[] | undefined
+  title?: string | undefined
+  embedded?: boolean | undefined
+}
+
+export function StaffSchedulesPage(props: ScheduleContext) {
   const session = useSession()
   if (!session?.tenantId || !session.userId) return <p>Selecciona una empresa.</p>
   return (
@@ -28,6 +40,7 @@ export function StaffSchedulesPage() {
       userId={session.userId}
       name={session.fullName || session.email || 'Mi horario'}
       admin={session.role === 'admin'}
+      {...props}
     />
   )
 }
@@ -37,15 +50,18 @@ function ScheduleView({
   userId,
   name,
   admin,
+  memberIds: scopeIds,
+  title,
+  embedded,
 }: {
   tenantId: string
   userId: string
   name: string
   admin: boolean
-}) {
+} & ScheduleContext) {
   const [date, setDate] = useState(() => new Date())
   const [view, setView] = useState<EventCalendarView>('week')
-  const [selected, setSelected] = useState<string[] | null>(null)
+  const [selection, setSelected] = useState<StaffSelection | undefined>(undefined)
   const [functionFilter, setFunctionFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [itemId, setItemId] = useState<string | null>(null)
@@ -72,24 +88,42 @@ function ScheduleView({
   })
   const absences = useQuery({ ...absenceOptions, queryKey: [...absenceOptions.queryKey, userId] })
   const team = useQuery({ ...teamQuery(tenantId), enabled: admin })
+  const workTeams = useQuery({ ...workTeamsQuery(tenantId), enabled: admin })
   const loading =
-    schedules.isPending || functions.isPending || absences.isPending || (admin && team.isPending)
+    schedules.isPending ||
+    functions.isPending ||
+    absences.isPending ||
+    (admin && (team.isPending || workTeams.isPending))
   const failed =
-    schedules.isError || functions.isError || absences.isError || (admin && team.isError)
+    schedules.isError ||
+    functions.isError ||
+    absences.isError ||
+    (admin && (team.isError || workTeams.isError))
+  const schedulesByUser = new Map(schedules.data?.map((schedule) => [schedule.userId, schedule]))
   const people: StaffPerson[] = (
     admin
       ? (team.data ?? []).map((member) => ({
           userId: member.userId,
           name: member.fullName || member.email,
+          email: member.email,
         }))
       : [{ userId, name }]
-  ).map((person) => ({
-    ...person,
-    schedule: schedules.data?.find((item) => item.userId === person.userId) ?? null,
-  }))
+  )
+    .filter((person) => !scopeIds || scopeIds.includes(person.userId))
+    .map((person) => ({
+      ...person,
+      schedule: schedulesByUser.get(person.userId) ?? null,
+    }))
+  const memberIds = new Set(people.map((person) => person.userId))
+  const availableTeams = (workTeams.data ?? [])
+    .filter((group) => !group.archived)
+    .map((group) => ({ ...group, memberIds: group.memberIds.filter((id) => memberIds.has(id)) }))
+    .filter((group) => group.memberIds.length > 0)
+  const selected = selection ?? defaultStaffSelection(people, scopeIds !== undefined)
+  const selectedIds = selectedStaffIds(people, availableTeams, selected)
   const visible = people.filter(
     (person) =>
-      (selected === null || selected.includes(person.userId)) &&
+      (!admin || selectedIds.has(person.userId)) &&
       (!functionFilter || person.schedule?.functionIds.includes(functionFilter)),
   )
   const occurrences = scheduleOccurrences(visible, absences.data ?? [], date, view)
@@ -130,24 +164,42 @@ function ScheduleView({
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">{admin ? 'Horarios del equipo' : 'Mi horario'}</h1>
+        {embedded ? (
+          <h2 className="text-lg font-semibold">{title ?? 'Horarios'}</h2>
+        ) : (
+          <h1 className="text-xl font-semibold">
+            {title ?? (admin ? 'Horarios del equipo' : 'Mi horario')}
+          </h1>
+        )}
         <p className="text-muted-foreground text-sm">
           Semana tipo actual, no presencia real ni historial de horarios. Se excluyen las ausencias
           aprobadas.
         </p>
+        {admin && scopeIds?.length === 1 && people[0] && !loading && !failed ? (
+          <Button
+            className="mt-3"
+            variant="outline"
+            onPress={() => setEditingId(people[0]?.userId ?? null)}
+          >
+            Editar horario
+          </Button>
+        ) : null}
       </header>
       {loading ? (
         <p>Cargando horarios…</p>
       ) : failed ? (
         <div role="alert">
-          No se pudieron cargar los horarios o las ausencias.{' '}
+          No se pudieron cargar los horarios, los equipos o las ausencias.{' '}
           <Button
             variant="outline"
             onPress={() => {
               void schedules.refetch()
               void functions.refetch()
               void absences.refetch()
-              if (admin) void team.refetch()
+              if (admin) {
+                void team.refetch()
+                void workTeams.refetch()
+              }
             }}
           >
             Reintentar
@@ -162,6 +214,7 @@ function ScheduleView({
             >
               <StaffPeopleFilter
                 people={people}
+                teams={availableTeams}
                 selected={selected}
                 onChange={setSelected}
                 onEdit={setEditingId}
@@ -196,53 +249,74 @@ function ScheduleView({
               onClose={() => setEditingId(null)}
             />
           ) : null}
-          {admin && from <= dateValue(now) && dateValue(now) <= to ? (
+          {admin && visible.length > 0 && from <= dateValue(now) && dateValue(now) <= to ? (
             <p className="text-sm" aria-live="polite">
               <strong>Previstos ahora:</strong>{' '}
               {activeNow.length ? activeNow.join(', ') : 'ninguna persona'}.
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">Calendario</h2>
-            <Button variant="outline" isDisabled={exporting} onPress={() => void download()}>
-              {exporting ? 'Generando PDF…' : 'Descargar PDF'}
-            </Button>
-          </div>
-          {pdfError ? <p role="alert">{pdfError}</p> : null}
-          <CalendarToolbar value={date} view={view} onDateChange={setDate} onViewChange={setView} />
-          <EventCalendar
-            key={`${view}:${from}`}
-            value={date}
-            view={view}
-            items={events}
-            showInstructions={false}
-            showAllDay={false}
-            renderDaySummary={(day) => {
-              const count = new Set(
-                occurrences
-                  .filter((item) => item.date === dateValue(day))
-                  .map((item) => item.userId),
-              ).size
-              return count ? (
-                <span className="text-muted-foreground text-xs">
-                  {count} {count === 1 ? 'persona' : 'personas'}
-                </span>
-              ) : null
-            }}
-            aria-label="Calendario de horarios previstos"
-            onItemClick={(item) => setItemId(item.id)}
-            onDayClick={(day) => {
-              setDate(day)
-              setView('day')
-            }}
-          />
+          {visible.length > 0 ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">Calendario</h2>
+                <Button
+                  variant="outline"
+                  isDisabled={exporting || !occurrences.length}
+                  onPress={() => void download()}
+                >
+                  {exporting ? 'Generando PDF…' : 'Descargar PDF'}
+                </Button>
+              </div>
+              {pdfError ? <p role="alert">{pdfError}</p> : null}
+              <CalendarToolbar
+                value={date}
+                view={view}
+                onDateChange={setDate}
+                onViewChange={setView}
+              />
+              <EventCalendar
+                key={`${view}:${from}`}
+                value={date}
+                view={view}
+                items={events}
+                showInstructions={false}
+                showAllDay={false}
+                renderDaySummary={(day) => {
+                  const count = new Set(
+                    occurrences
+                      .filter((item) => item.date === dateValue(day))
+                      .map((item) => item.userId),
+                  ).size
+                  return count ? (
+                    <span className="text-muted-foreground text-xs">
+                      {count} {count === 1 ? 'persona' : 'personas'}
+                    </span>
+                  ) : null
+                }}
+                aria-label="Calendario de horarios previstos"
+                onItemClick={(item) => setItemId(item.id)}
+                onDayClick={(day) => {
+                  setDate(day)
+                  setView('day')
+                }}
+              />
+            </>
+          ) : null}
           {selectedItem ? (
             <output className="text-sm">
               {selectedItem.name}: {selectedItem.date}, {calendarTime(selectedItem.start)}–
               {calendarTime(selectedItem.end)}
             </output>
           ) : null}
-          {!occurrences.length ? (
+          {admin && selectedIds.size === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Selecciona personas o equipos en el buscador para mostrar el calendario.
+            </p>
+          ) : visible.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No hay personas de la selección con esta función.
+            </p>
+          ) : !occurrences.length ? (
             <p className="text-muted-foreground text-sm">
               No hay franjas previstas para este período y selección.
             </p>

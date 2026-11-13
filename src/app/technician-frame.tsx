@@ -18,6 +18,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { roleLabels, useSession, useSignOut } from '@/features/auth'
+import { GlobalSearch } from '@/features/global-search'
 import { brand } from '@/shared/lib/brand'
 
 import { initials, SidebarLink, type NavItem } from './frame-navigation'
@@ -56,7 +57,10 @@ export function UserFrame({ children }: { children: ReactNode }) {
 
   return (
     <AppShell className="user-frame">
-      <AppShellSidebar className="hidden h-full w-64 shrink-0 flex-col md:flex">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido
+      </a>
+      <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
         <div className="shrink-0 px-3 pt-4 pb-3">
           <Link
             to="/mi-jornada"
@@ -126,11 +130,25 @@ export function UserFrame({ children }: { children: ReactNode }) {
             {userMenu('bottom end')}
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
+        <div className="workspace-topbar">
+          <span className="text-muted-foreground hidden text-xs md:block">Mi espacio</span>
+          <GlobalSearch
+            key={session?.tenantId}
+            navigation={navigation.map((item) => ({
+              id: `page:${item.to}`,
+              title: item.label,
+              category: 'Navegación',
+              target: { to: item.to },
+            }))}
+          />
+        </div>
         <AppShellContent
+          id="main-content"
           size="full"
           padded={false}
           scrollable
           className="user-frame__content"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The shared AppShellContent renders a div; name its independently scrollable region.
           role="region"
           aria-label="Contenido principal"
           tabIndex={0}

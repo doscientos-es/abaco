@@ -37,8 +37,7 @@ function CompanyBrowser() {
         <Link to="/" className="text-primary text-sm">
           ← Volver a la aplicación
         </Link>
-        <h1 className="text-2xl font-semibold">Administración de Ábaco</h1>
-        <p className="text-muted-foreground text-sm">Empresas y pagos de la plataforma.</p>
+        <h1 className="text-xl font-semibold">Administración de Ábaco</h1>
       </header>
       {company ? (
         <CompanyDetail key={company.id} company={company} onBack={() => setCompany(null)} />

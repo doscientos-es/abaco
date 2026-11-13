@@ -35,6 +35,11 @@ vi.mock('@/features/auth', () => ({
   useSignOut: () => signOut,
   roleLabels: { user: 'Usuario', admin: 'Administrador' },
 }))
+vi.mock('@/features/global-search', () => ({
+  GlobalSearch: ({ data }: { data?: unknown }) => (
+    <span>{data ? 'Datos de empresa' : 'Buscar secciones'}</span>
+  ),
+}))
 vi.mock('@doscientos/ui', () => {
   const box = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
     <div {...props}>{children}</div>
@@ -111,6 +116,8 @@ describe('worker navigation', () => {
       expect(html).not.toContain(`href="${path}"`)
     }
     expect(html).toContain('Menú de usuario')
+    expect(html).toContain('Buscar secciones')
+    expect(html).not.toContain('Datos de empresa')
   })
 
   it('keeps the page in a dedicated keyboard-accessible content region', () => {

@@ -27,6 +27,7 @@ vi.mock('@/features/auth', () => ({
   useSignOut: () => vi.fn(),
 }))
 vi.mock('@/features/billing', () => ({ PlanBanner: () => null }))
+vi.mock('@/features/global-search', () => ({ GlobalSearch: () => <span>Búsqueda global</span> }))
 vi.mock('@/features/superadmin', () => ({ platformAccessQuery: () => ({}) }))
 vi.mock('@/features/vacations', () => ({ PendingAbsenceNotifications: () => <span>Avisos</span> }))
 vi.mock('@/shared/store/store', () => ({
@@ -38,11 +39,13 @@ vi.mock('@/shared/store/store', () => ({
 import { AppFrame } from './app-frame'
 
 describe('estado de guardado en la aplicación', () => {
-  it('expands only the vacation management page to the available width', () => {
+  it('expands workers and vacation management to the available width', () => {
     state.pathname = '/vacaciones'
     const wide = renderToStaticMarkup(<AppFrame>Vacaciones</AppFrame>)
     expect(wide).toContain('data-size="full"')
     expect(wide).toContain('max-w-none')
+    state.pathname = '/trabajadores'
+    expect(renderToStaticMarkup(<AppFrame>Trabajadores</AppFrame>)).toContain('data-size="full"')
     state.pathname = '/'
     const standard = renderToStaticMarkup(<AppFrame>Resumen</AppFrame>)
     expect(standard).toContain('data-size="wide"')
@@ -60,6 +63,11 @@ describe('estado de guardado en la aplicación', () => {
     expect(html.indexOf('>Contratos</a>')).toBeLessThan(html.indexOf('>Planificación</a>'))
     expect(html).not.toContain('href="/agenda"')
     expect(html).not.toContain('>Agenda<')
+    expect(html).toContain('href="/trabajadores"')
+    const sales = html.slice(html.indexOf('>Ventas<'), html.indexOf('>Operaciones<'))
+    expect(sales).toContain('href="/contratos"')
+    expect(html).not.toContain('href="/horarios"')
+    expect(html).not.toContain('href="/vacaciones"')
   })
 
   it('places settings in the sidebar footer instead of the main navigation', () => {

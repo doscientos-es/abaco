@@ -10,6 +10,7 @@ import {
   type StaffPerson,
   type StaffSlot,
 } from '../domain/staff-schedule'
+import { StaffFunctionPicker } from './staff-function-picker'
 
 const formatTime = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
@@ -68,28 +69,7 @@ export function StaffScheduleEditor({
           días; como fin, 00:00 significa medianoche.
         </p>
       </div>
-      <fieldset>
-        <legend className="mb-2 font-medium">Funciones</legend>
-        <div className="flex flex-wrap gap-4">
-          {functions.map((item) => (
-            <label key={item.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={functionIds.includes(item.id)}
-                onChange={(event) =>
-                  setFunctionIds((ids) =>
-                    event.target.checked ? [...ids, item.id] : ids.filter((id) => id !== item.id),
-                  )
-                }
-              />
-              {item.name}
-            </label>
-          ))}
-        </div>
-        {!functions.length ? (
-          <p className="text-muted-foreground text-sm">Crea funciones en Ajustes → Listas.</p>
-        ) : null}
-      </fieldset>
+      <StaffFunctionPicker functions={functions} selected={functionIds} onChange={setFunctionIds} />
       <div className="space-y-2">
         <h3 className="font-medium">Franjas semanales</h3>
         {slots.map((slot, index) => (

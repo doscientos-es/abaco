@@ -6,7 +6,6 @@ import {
   Input,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Table,
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
@@ -53,7 +53,9 @@ const empty = {
 
 export function CatalogPage() {
   const { catalog, tenant } = useTenantData()
-  const [query, setQuery] = useState('')
+  const navigate = useNavigate({ from: '/catalogo' })
+  const query = useSearch({ from: '/catalogo' }).q ?? ''
+  const setQuery = (q: string) => void navigate({ search: q ? { q } : {}, replace: true })
   const [kindFilter, setKindFilter] = useState<'all' | CatalogKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -139,9 +141,6 @@ export function CatalogPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Catálogo</PageHeaderTitle>
-          <PageHeaderDescription>
-            Materiales, mano de obra y servicios con su precio.
-          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button variant="outline" onPress={() => setImportOpen(true)}>

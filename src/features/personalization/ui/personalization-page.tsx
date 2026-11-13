@@ -1,7 +1,6 @@
 import {
   Button,
   PageHeader,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Tabs,
@@ -76,9 +75,6 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Personalizar</PageHeaderTitle>
-          <PageHeaderDescription>
-            Personaliza la identidad, los mensajes y las listas de tu empresa.
-          </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
 

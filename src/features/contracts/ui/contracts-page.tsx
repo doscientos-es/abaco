@@ -20,11 +20,7 @@ export function ContractsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold">Contratos de servicio</h1>
-        <p className="text-muted-foreground text-sm">
-          Cada contrato contiene sus trabajos. La planificación reúne las visitas de todos los
-          contratos y las independientes.
-        </p>
+        <h1 className="text-xl font-semibold">Contratos de servicio</h1>
       </div>
       <Link to="/trabajos" className="text-primary text-sm underline">
         Ir a planificación
