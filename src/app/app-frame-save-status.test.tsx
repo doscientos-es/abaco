@@ -39,6 +39,34 @@ vi.mock('@/shared/store/store', () => ({
 import { AppFrame } from './app-frame'
 
 describe('estado de guardado en la aplicación', () => {
+  it('shows the company and section trail only on internal pages', () => {
+    try {
+      for (const pathname of ['/', '/presupuestos', '/presupuestos/', '/clientes', '/ajustes']) {
+        state.pathname = pathname
+        const html = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
+        const topbar = html.slice(
+          html.indexOf('workspace-topbar__identity'),
+          html.indexOf('Búsqueda global'),
+        )
+        expect(topbar).not.toContain('Empresa')
+        expect(topbar).toContain('workspace-topbar__heading')
+      }
+
+      for (const pathname of ['/presupuestos/123', '/clientes/123/editar']) {
+        state.pathname = pathname
+        const html = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
+        const topbar = html.slice(
+          html.indexOf('workspace-topbar__identity'),
+          html.indexOf('Búsqueda global'),
+        )
+        expect(topbar).toContain('Empresa')
+        expect(topbar).toContain('Ventas')
+      }
+    } finally {
+      state.pathname = '/'
+    }
+  })
+
   it('expands workers and vacation management to the available width', () => {
     state.pathname = '/vacaciones'
     const wide = renderToStaticMarkup(<AppFrame>Vacaciones</AppFrame>)

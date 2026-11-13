@@ -86,6 +86,11 @@ h3 {
   }
 }
 
+/* Icon-only actions should indicate that they are clickable. */
+[data-slot='icon-button']:not(:disabled):not([data-disabled]):not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
 /* Empty states: quiet dashed frame on the card surface. */
 [data-slot='data-view-state'] {
   min-height: 14rem;

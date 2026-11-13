@@ -151,6 +151,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const tabs = bottomItems.length > MAX_TABS ? bottomItems.slice(0, MAX_TABS - 1) : bottomItems
   const moreItems = bottomItems.slice(tabs.length)
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const isInternalPage = pathname.split('/').filter(Boolean).length > 1
   const moreActive = moreItems.some((item) => pathname.startsWith(item.to))
   const tabClass =
     'text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none'
@@ -365,13 +366,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="workspace-topbar">
             <div className="workspace-topbar__row">
               <div className="workspace-topbar__identity">
-                <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
-                  {tenant.name}
-                  <span aria-hidden="true" className="px-2">
-                    /
+                {isInternalPage ? (
+                  <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
+                    {tenant.name}
+                    <span aria-hidden="true" className="px-2">
+                      /
+                    </span>
+                    <span className="text-foreground">{section}</span>
                   </span>
-                  <span className="text-foreground">{section}</span>
-                </span>
+                ) : null}
                 <div ref={setHeadingTarget} className="workspace-topbar__heading" />
               </div>
               <GlobalSearch

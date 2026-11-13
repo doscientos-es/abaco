@@ -2,10 +2,20 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-12 — Sin publicar
+## 2026-11-13 — Sin publicar
 
 ### Nuevas funciones
 
+- Improve layout of topbar for better responsiveness
+- Mejorar navegación, búsqueda y experiencia de trabajadores
+- Enhance staff selection and filtering functionality
+- Preparar propuestas y documento contractual
+- Add estimate work plan type and validation functions
+- Enhance staff scheduling features
+- Add ContractDocument component and related tests
+- Add visual fixture for contract document rendering
+- Add ContractDocument component for contract details display
+- Enhance estimate editor with service proposal assistant
 - Add showInstructions prop to EventCalendar component
 - Add test to block commits with unfixable lint errors
 - Enhance pre-commit hook with automatic linting and formatting fixes
@@ -24,6 +34,10 @@
 - Complete team visit access and assignment
 - Add changelog check to CI and update quality script
 - Add contracts feature to changelog and JSON
+
+### Correcciones
+
+- Aislar pruebas del hook de Git
 
 ## 2026-11-12 — v0.0.20
 

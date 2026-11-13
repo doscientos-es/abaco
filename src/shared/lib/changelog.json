@@ -2,12 +2,22 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-12",
+      "date": "2026-11-13",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Improve layout of topbar for better responsiveness",
+            "Mejorar navegación, búsqueda y experiencia de trabajadores",
+            "Enhance staff selection and filtering functionality",
+            "Preparar propuestas y documento contractual",
+            "Add estimate work plan type and validation functions",
+            "Enhance staff scheduling features",
+            "Add ContractDocument component and related tests",
+            "Add visual fixture for contract document rendering",
+            "Add ContractDocument component for contract details display",
+            "Enhance estimate editor with service proposal assistant",
             "Add showInstructions prop to EventCalendar component",
             "Add test to block commits with unfixable lint errors",
             "Enhance pre-commit hook with automatic linting and formatting fixes",
@@ -27,9 +37,92 @@
             "Add changelog check to CI and update quality script",
             "Add contracts feature to changelog and JSON"
           ]
+        },
+        {
+          "title": "Correcciones",
+          "items": [
+            "Aislar pruebas del hook de Git"
+          ]
         }
       ],
       "changes": [
+        {
+          "sha": "6bf60deebf82d6227ae789d978f309f5123b61bf",
+          "type": "feat",
+          "scope": "workspace",
+          "breaking": false,
+          "description": "Improve layout of topbar for better responsiveness"
+        },
+        {
+          "sha": "cf27cf1b0dd5c460b6edac4d1da593defb47a92e",
+          "type": "feat",
+          "scope": "DEV-34",
+          "breaking": false,
+          "description": "Mejorar navegación, búsqueda y experiencia de trabajadores"
+        },
+        {
+          "sha": "b322dbffa22ccb5c89c1e319325925b064e090af",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Enhance staff selection and filtering functionality"
+        },
+        {
+          "sha": "368279f3d07d68ad66f03297ea8806e420ed4250",
+          "type": "fix",
+          "scope": "DEV-33",
+          "breaking": false,
+          "description": "Aislar pruebas del hook de Git"
+        },
+        {
+          "sha": "ebc671f9df1c45dbd046e3b2e66292bf22689ee7",
+          "type": "feat",
+          "scope": "DEV-33",
+          "breaking": false,
+          "description": "Preparar propuestas y documento contractual"
+        },
+        {
+          "sha": "262f4cc98160aeac4ed2fc79ec760dce94636025",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add estimate work plan type and validation functions"
+        },
+        {
+          "sha": "62c2b609b92f5367529ad5c4ca56936392840358",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Enhance staff scheduling features"
+        },
+        {
+          "sha": "7c28612e734bdd9004853bcdb013e9da2a3f18e8",
+          "type": "feat",
+          "scope": "contract-document",
+          "breaking": false,
+          "description": "Add ContractDocument component and related tests"
+        },
+        {
+          "sha": "eba964aeae844688e8748315081544185056560d",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add visual fixture for contract document rendering"
+        },
+        {
+          "sha": "29cf4457f28f7a48ed2554646731e41cd5156ad6",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add ContractDocument component for contract details display"
+        },
+        {
+          "sha": "97a1cd3114ecd14915e40b5680d06a8065f0d655",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Enhance estimate editor with service proposal assistant"
+        },
         {
           "sha": "578aef25f33ae977650ea7357aa3abf0f0dba12d",
           "type": "feat",
