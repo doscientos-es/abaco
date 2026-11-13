@@ -6,6 +6,9 @@
 
 ### Nuevas funciones
 
+- Restructure PWA files and implement service worker functionality
+- Implement PWA functionality with service worker and manifest
+- Update changelog for new features and fixes
 - Improve layout of topbar for better responsiveness
 - Mejorar navegación, búsqueda y experiencia de trabajadores
 - Enhance staff selection and filtering functionality

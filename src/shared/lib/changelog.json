@@ -8,6 +8,9 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Restructure PWA files and implement service worker functionality",
+            "Implement PWA functionality with service worker and manifest",
+            "Update changelog for new features and fixes",
             "Improve layout of topbar for better responsiveness",
             "Mejorar navegación, búsqueda y experiencia de trabajadores",
             "Enhance staff selection and filtering functionality",
@@ -46,6 +49,27 @@
         }
       ],
       "changes": [
+        {
+          "sha": "3301b29f03413fced86d59b13d7acb9f909dfdf1",
+          "type": "feat",
+          "scope": "pwa",
+          "breaking": false,
+          "description": "Restructure PWA files and implement service worker functionality"
+        },
+        {
+          "sha": "022dd35403e0d64489ed2dbdcd52a8db4c087a8a",
+          "type": "feat",
+          "scope": "pwa",
+          "breaking": false,
+          "description": "Implement PWA functionality with service worker and manifest"
+        },
+        {
+          "sha": "b30af99d8e966a49a5b6bb080648425f5716ffc2",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog for new features and fixes"
+        },
         {
           "sha": "6bf60deebf82d6227ae789d978f309f5123b61bf",
           "type": "feat",
