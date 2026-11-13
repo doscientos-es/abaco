@@ -40,7 +40,7 @@ export function PublicVisitReportPage({ token }: { token: string }) {
   if (report.isError) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <h1 className="text-2xl font-semibold">Enlace no disponible</h1>
+        <h1 className="text-xl font-semibold">Enlace no disponible</h1>
         <p role="alert" className="mt-3">
           El informe ha caducado, fue revocado o el enlace no es válido. Solicita uno nuevo a la
           empresa.
@@ -68,7 +68,7 @@ export function PublicVisitReportPage({ token }: { token: string }) {
           <p className="text-primary text-sm font-semibold tracking-wide uppercase">
             {value.company.name}
           </p>
-          <h1 className="text-3xl font-semibold">Parte de visita</h1>
+          <h1 className="text-xl font-semibold">Parte de visita</h1>
           <p className="text-muted-foreground text-sm">
             Versión {value.version} · Cerrado el {new Date(value.closedAt).toLocaleString('es-ES')}
           </p>

@@ -1,3 +1,4 @@
+import { Button, Popover } from '@doscientos/ui'
 import { CaretDown, SlidersHorizontal } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 
@@ -10,20 +11,26 @@ export function FilterDisclosure({
   children: ReactNode
 }) {
   return (
-    <details className="group max-w-full min-w-0">
-      <summary
-        aria-label={
-          activeCount
-            ? `Filtros adicionales, ${activeCount} ${activeCount === 1 ? 'activo' : 'activos'}`
-            : 'Filtros adicionales'
-        }
-        className="border-border bg-background hover:bg-muted flex h-9 w-fit cursor-pointer list-none items-center gap-2 rounded-lg border px-3 text-sm font-medium [&::-webkit-details-marker]:hidden"
-      >
-        <SlidersHorizontal aria-hidden="true" className="size-4" />
-        Filtros {activeCount > 0 ? <span aria-hidden="true">({activeCount})</span> : null}
-        <CaretDown aria-hidden="true" className="size-3 group-open:rotate-180" />
-      </summary>
-      <div className="mt-2 flex max-w-full flex-wrap items-end gap-2">{children}</div>
-    </details>
+    <Popover
+      placement="bottom start"
+      className="max-h-[80dvh] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto p-4"
+      trigger={
+        <Button
+          variant="outline"
+          aria-label={
+            activeCount
+              ? `Filtros adicionales, ${activeCount} ${activeCount === 1 ? 'activo' : 'activos'}`
+              : 'Filtros adicionales'
+          }
+          className="h-9 gap-2 px-3"
+        >
+          <SlidersHorizontal aria-hidden="true" className="size-4" />
+          Filtros {activeCount > 0 ? <span aria-hidden="true">({activeCount})</span> : null}
+          <CaretDown aria-hidden="true" className="size-3" />
+        </Button>
+      }
+    >
+      <div className="flex flex-col items-start gap-3">{children}</div>
+    </Popover>
   )
 }

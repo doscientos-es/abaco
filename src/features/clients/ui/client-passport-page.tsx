@@ -7,7 +7,6 @@ import {
   IconButton,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
 } from '@doscientos/ui'
@@ -56,9 +55,6 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>{client.name}</PageHeaderTitle>
-          <PageHeaderDescription>
-            Contactos, centros, servicios y partes del cliente.
-          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           {canWrite ? (

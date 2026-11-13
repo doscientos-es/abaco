@@ -7,7 +7,7 @@ import { useCompanyActions, useSession } from '@/features/auth'
 export function UserSettingsPage() {
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold">Ajustes</h1>
+      <h1 className="text-xl font-semibold">Ajustes</h1>
       <AccountSettings />
     </div>
   )

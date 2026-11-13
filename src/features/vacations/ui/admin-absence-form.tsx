@@ -2,7 +2,7 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
-import { listTechnicians } from '@/features/visits/application/visit-actions'
+import { teamQuery } from '@/features/settings/application/team-actions'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
@@ -27,20 +27,19 @@ export function AdminAbsenceForm({
   requests,
   onDone,
   proposal,
+  memberIds,
 }: {
   tenantId: string
   request: VacationRequest | null
   requests: VacationRequest[]
   onDone: () => void
   proposal?: AbsenceCalendarProposal | undefined
+  memberIds?: string[] | undefined
 }) {
   const cache = useQueryClient()
-  const people = useQuery({
-    queryKey: ['technicians', tenantId],
-    queryFn: () => listTechnicians(tenantId),
-  })
+  const people = useQuery(teamQuery(tenantId))
   const [form, setForm] = useState<AdministrativeAbsence>({
-    requester_id: request?.requesterId ?? '',
+    requester_id: request?.requesterId ?? (memberIds?.length === 1 ? (memberIds[0] ?? '') : ''),
     start_date: proposal?.startDate ?? request?.startDate ?? '',
     end_date: proposal ? proposal.endDate : (request?.endDate ?? ''),
     absence_type: request?.absenceType ?? 'vacation',
@@ -64,6 +63,7 @@ export function AdminAbsenceForm({
     if (
       busy ||
       !form.requester_id ||
+      (memberIds && !memberIds.includes(form.requester_id)) ||
       !isValidAbsencePeriod(form.start_date, form.end_date ?? '') ||
       (proposal && !form.decision_comment.trim())
     )
@@ -82,6 +82,7 @@ export function AdminAbsenceForm({
       await Promise.all(
         [
           'vacation-requests',
+          'staff-absences',
           'approved-vacations',
           'vacation-coverage',
           'absence-history',
@@ -110,6 +111,7 @@ export function AdminAbsenceForm({
       isDirty
       submitDisabled={
         !form.requester_id ||
+        Boolean(memberIds && !memberIds.includes(form.requester_id)) ||
         !isValidAbsencePeriod(form.start_date, form.end_date ?? '') ||
         Boolean(proposal && !form.decision_comment.trim())
       }
@@ -130,7 +132,9 @@ export function AdminAbsenceForm({
           onChange={(v) => set('requester_id', v)}
           options={[
             { value: '', label: 'Selecciona un empleado' },
-            ...(people.data ?? []).map((p) => ({ value: p.id, label: p.label })),
+            ...(people.data ?? [])
+              .filter((p) => !memberIds || memberIds.includes(p.userId))
+              .map((p) => ({ value: p.userId, label: p.fullName || p.email })),
           ]}
         />
       )}

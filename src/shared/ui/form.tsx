@@ -2,6 +2,12 @@ import {
   Field,
   FieldLabel,
   FieldTitle,
+  Button,
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
   Input,
   PasswordInput,
   Select,
@@ -13,6 +19,8 @@ import {
   Textarea,
 } from '@doscientos/ui'
 import { useId, type ReactNode } from 'react'
+
+import { fuzzySearch } from '../domain/fuzzy-search'
 
 function Helper({ children }: { children: ReactNode }) {
   return <span className="text-muted-foreground/80 text-xs font-normal">{children}</span>
@@ -207,6 +215,7 @@ export function SelectField({
   onChange,
   placeholder,
   className,
+  searchable,
 }: {
   label: string
   hideLabel?: boolean
@@ -216,34 +225,73 @@ export function SelectField({
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  searchable?: boolean
 }) {
   const hasEmpty = options.some((option) => option.value === '')
   const selectedKey = value === '' && !hasEmpty ? null : value || NONE_KEY
-  const control = (
-    <Select
-      aria-label={label}
-      isDisabled={isDisabled}
-      selectedKey={selectedKey}
-      onSelectionChange={(key) => {
-        if (key === null) return
-        onChange(key === NONE_KEY ? '' : String(key))
-      }}
-      {...(placeholder ? { placeholder } : {})}
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectList>
-          {options.map((option) => (
-            <SelectItem key={option.value || NONE_KEY} id={option.value || NONE_KEY}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectList>
-      </SelectContent>
-    </Select>
-  )
+  const control =
+    (searchable ?? options.length >= 8) ? (
+      <Combobox
+        aria-label={label}
+        isDisabled={isDisabled}
+        selectedKey={selectedKey}
+        defaultFilter={(text, query) => fuzzySearch(query, text)}
+        menuTrigger="focus"
+        onSelectionChange={(key) => {
+          if (key !== null) onChange(key === NONE_KEY ? '' : String(key))
+        }}
+      >
+        <div className="relative">
+          <ComboboxInput placeholder={placeholder ?? 'Seleccionar o buscar…'} className="pr-10" />
+          <Button
+            variant="ghost"
+            aria-label={`Mostrar opciones de ${label.toLocaleLowerCase('es')}`}
+            className="absolute top-0 right-0 h-full w-9 px-0"
+          >
+            ⌄
+          </Button>
+        </div>
+        <ComboboxContent>
+          <ComboboxList
+            emptyState={<p className="text-muted-foreground p-3 text-sm">No hay coincidencias.</p>}
+          >
+            {options.map((option) => (
+              <ComboboxItem
+                key={option.value || NONE_KEY}
+                id={option.value || NONE_KEY}
+                textValue={option.label}
+              >
+                {option.label}
+              </ComboboxItem>
+            ))}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    ) : (
+      <Select
+        aria-label={label}
+        isDisabled={isDisabled}
+        selectedKey={selectedKey}
+        onSelectionChange={(key) => {
+          if (key === null) return
+          onChange(key === NONE_KEY ? '' : String(key))
+        }}
+        {...(placeholder ? { placeholder } : {})}
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectList>
+            {options.map((option) => (
+              <SelectItem key={option.value || NONE_KEY} id={option.value || NONE_KEY}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectList>
+        </SelectContent>
+      </Select>
+    )
   if (hideLabel) return <div className={className}>{control}</div>
   return (
     <Field className={className}>

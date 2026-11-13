@@ -217,7 +217,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         Volver a contratos
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold">{contract.title}</h1>
+        <h1 className="text-xl font-semibold">{contract.title}</h1>
         <p className="text-muted-foreground text-sm">
           {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'} ·{' '}
           {statusLabels[contract.status]} · {contract.timezone}

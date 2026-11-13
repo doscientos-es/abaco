@@ -85,16 +85,7 @@ export function MyVacationRequestsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="bg-muted/30 flex flex-col gap-5 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Tu tiempo, bien organizado
-          </p>
-          <h1 className="text-2xl font-semibold">Mis ausencias</h1>
-          <p className="text-muted-foreground max-w-xl text-sm">
-            Pide vacaciones, comunica una baja o solicita un permiso. Aquí podrás seguir cada
-            solicitud y consultar la respuesta de administración.
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold">Mis ausencias</h1>
         <Button onPress={() => setRequestOpen(true)}>Solicitar ausencia</Button>
       </header>
 

@@ -5,7 +5,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   PageHeader,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Input,
@@ -184,10 +183,7 @@ export function InvoicesPage() {
     <div className="space-y-5">
       <PageHeader className="py-0">
         <PageHeaderHeading>
-          <PageHeaderTitle className="text-xl md:text-2xl">Facturas</PageHeaderTitle>
-          <PageHeaderDescription>
-            Consulta las facturas emitidas y gestiona el trabajo pendiente de facturación.
-          </PageHeaderDescription>
+          <PageHeaderTitle>Facturas</PageHeaderTitle>
         </PageHeaderHeading>
       </PageHeader>
 

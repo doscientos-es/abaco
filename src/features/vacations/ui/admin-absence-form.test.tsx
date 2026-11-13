@@ -36,13 +36,15 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
-  useQuery: () => ({ data: [{ id: 'ana', label: 'Ana' }] }),
+  useQuery: () => ({ data: [{ userId: 'ana', fullName: 'Ana', email: 'ana@example.com' }] }),
 }))
 vi.mock('../application/vacation-actions', () => ({
   saveAdministrativeAbsence: mocks.save,
   listAbsenceHistory: vi.fn(),
 }))
-vi.mock('@/features/visits/application/visit-actions', () => ({ listTechnicians: vi.fn() }))
+vi.mock('@/features/settings/application/team-actions', () => ({
+  teamQuery: () => ({ queryKey: ['team', 'tenant'] }),
+}))
 vi.mock('@/shared/ui/form', () => ({
   SelectField: ({ label }: { label: string }) => <span>{label}</span>,
   TextField: ({ label, value }: { label: string; value: string }) => {
@@ -128,6 +130,20 @@ describe('administrative absence persistence', () => {
         tenantId="tenant"
         request={{ ...request, endDate: '2026-11-01' }}
         requests={[]}
+        onDone={mocks.done}
+      />,
+    )
+    mocks.submit?.()
+    expect(mocks.save).not.toHaveBeenCalled()
+  })
+
+  it('rejects submissions for someone outside the current team context', () => {
+    renderToStaticMarkup(
+      <AdminAbsenceForm
+        tenantId="tenant"
+        request={request}
+        requests={[]}
+        memberIds={['bea']}
         onDone={mocks.done}
       />,
     )

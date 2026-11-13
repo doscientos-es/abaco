@@ -45,9 +45,6 @@ export function StaffFunctionsSection({ tenantId }: { tenantId: string }) {
         <h2 id="staff-functions-heading" className="font-semibold">
           Funciones del equipo
         </h2>
-        <p className="text-muted-foreground text-sm">
-          Capacidades asignables a las personas, independientes de sus permisos de acceso.
-        </p>
       </div>
       {query.isPending ? <p>Cargando funciones…</p> : null}
       {query.isError ? <p role="alert">No se pudieron cargar las funciones.</p> : null}

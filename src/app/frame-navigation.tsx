@@ -6,6 +6,7 @@ export type NavTo =
   | '/presupuestos'
   | '/clientes'
   | '/trabajos'
+  | '/trabajadores'
   | '/contratos'
   | '/vacaciones'
   | '/catalogo'
@@ -36,8 +37,8 @@ export function SidebarLink({ to, label, icon }: NavItem) {
     <Link
       to={to}
       activeOptions={{ exact: to === '/' }}
-      activeProps={{ className: 'bg-accent text-accent-foreground font-medium' }}
-      className="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors"
+      activeProps={{ className: 'sidebar-link--active' }}
+      className="sidebar-link text-muted-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium"
     >
       {icon}
       {label}

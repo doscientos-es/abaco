@@ -45,7 +45,13 @@ const filterDateFormat = new Intl.DateTimeFormat('es-ES', {
   year: 'numeric',
 })
 
-export function VacationManagementPage() {
+export function VacationManagementPage({
+  memberIds,
+  embedded = false,
+}: {
+  memberIds?: string[] | undefined
+  embedded?: boolean | undefined
+}) {
   const session = useSession()
   const tenantId = session?.tenantId
   const queryClient = useQueryClient()
@@ -79,6 +85,7 @@ export function VacationManagementPage() {
     },
     onSuccess: async (_, input) => {
       await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
+      await queryClient.invalidateQueries({ queryKey: ['staff-absences', tenantId] })
       if (input.decision === 'approved' && tenantId) {
         setFilter('approved')
         await queryClient.invalidateQueries({ queryKey: ['vacation-coverage', tenantId] })
@@ -108,7 +115,10 @@ export function VacationManagementPage() {
       toast.error('No se pudo solicitar la información', { description: error.message }),
   })
 
-  const visibleRequests = (requests.data ?? []).filter(
+  const scopedRequests = (requests.data ?? []).filter(
+    (request) => !memberIds || memberIds.includes(request.requesterId),
+  )
+  const visibleRequests = scopedRequests.filter(
     (request) =>
       (filter === 'all' || request.status === filter) &&
       (typeFilter === 'all' || request.absenceType === typeFilter) &&
@@ -120,8 +130,8 @@ export function VacationManagementPage() {
   )
   const countFor = (status: StatusFilter) =>
     status === 'all'
-      ? (requests.data?.length ?? 0)
-      : (requests.data?.filter((request) => request.status === status).length ?? 0)
+      ? scopedRequests.length
+      : scopedRequests.filter((request) => request.status === status).length
   const fromLabel = dateFrom ? filterDateFormat.format(calendarDate(dateFrom)) : ''
   const toLabel = dateTo ? filterDateFormat.format(calendarDate(dateTo)) : ''
   const dateLabel =
@@ -138,8 +148,13 @@ export function VacationManagementPage() {
   return (
     <div className="@container min-w-0 space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Solicitudes de ausencia</h1>
+        {embedded ? (
+          <h2 className="text-lg font-semibold">Vacaciones y ausencias</h2>
+        ) : (
+          <h1 className="text-xl font-semibold">Solicitudes de ausencia</h1>
+        )}
         <Button
+          isDisabled={memberIds?.length === 0}
           onPress={() => {
             setCalendarProposal(undefined)
             setEditing(null)
@@ -163,7 +178,7 @@ export function VacationManagementPage() {
         <TabsContent id="calendar" shouldForceMount className="mt-4 data-[inert]:hidden">
           {requests.isSuccess ? (
             <AbsenceOverview
-              requests={requests.data ?? []}
+              requests={scopedRequests}
               onEdit={
                 session?.role === 'admin'
                   ? (request, proposal) => {
@@ -342,6 +357,7 @@ export function VacationManagementPage() {
           tenantId={tenantId}
           request={editing}
           requests={requests.data ?? []}
+          memberIds={memberIds}
           proposal={calendarProposal}
           onDone={() => setEditing(undefined)}
         />
