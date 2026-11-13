@@ -38,6 +38,9 @@ export function WorkerOrganization({ people, teams }: { people: TeamMember[]; te
       <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
         {matching.map((team) => {
           const members = people.filter((person) => team.memberIds.includes(person.userId))
+          const matchingMembers = fuzzySearch(search, team.name)
+            ? members
+            : members.filter((person) => fuzzySearch(search, person.fullName, person.email))
           return (
             <article
               key={team.id}
@@ -52,7 +55,7 @@ export function WorkerOrganization({ people, teams }: { people: TeamMember[]; te
               </Link>
               <p className="text-muted-foreground text-sm">{members.length} personas</p>
               <ul className="border-border space-y-2 border-l pl-3">
-                {members.slice(0, 6).map((person) => (
+                {matchingMembers.slice(0, 6).map((person) => (
                   <li key={person.userId}>
                     <Link
                       to="/trabajadores"
@@ -81,7 +84,10 @@ export function WorkerOrganization({ people, teams }: { people: TeamMember[]; te
         </p>
       ) : null}
       {unassigned.length ? (
-        <details className="border-border rounded-xl border p-5">
+        <details
+          className="border-border rounded-xl border p-5"
+          open={search.trim() ? true : undefined}
+        >
           <summary className="cursor-pointer text-sm font-semibold">
             Sin equipo · {unassigned.length} personas
           </summary>

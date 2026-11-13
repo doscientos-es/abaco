@@ -48,9 +48,6 @@ export function WorkTeamsSection({
           <h2 id="work-teams-heading" className="text-sm font-semibold">
             Equipos de trabajo
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Agrupa personas para asignarlas a los trabajos sin repetir la selección.
-          </p>
         </div>
         <Button
           variant="outline"
@@ -194,14 +191,26 @@ export function WorkTeamsSection({
           ) : (
             <EmptyPanel
               icon={<UsersThreeIcon />}
-              title={teams.data.length ? 'No hay equipos activos' : 'Organiza tu primer equipo'}
+              title={
+                search.trim()
+                  ? 'No hay equipos que coincidan'
+                  : teams.data.length
+                    ? 'No hay equipos activos'
+                    : 'Organiza tu primer equipo'
+              }
               description={
-                teams.data.length
-                  ? 'Muestra los equipos archivados para revisarlos o reactivarlos.'
-                  : 'Agrupa a las personas que suelen trabajar juntas. También puedes seguir asignando un responsable individual.'
+                search.trim()
+                  ? 'Prueba otro nombre o limpia la búsqueda.'
+                  : teams.data.length
+                    ? 'Muestra los equipos archivados para revisarlos o reactivarlos.'
+                    : 'Agrupa a las personas que suelen trabajar juntas. También puedes seguir asignando un responsable individual.'
               }
             >
-              {teams.data.length ? (
+              {search.trim() ? (
+                <Button variant="outline" onPress={() => setSearch('')}>
+                  Limpiar búsqueda
+                </Button>
+              ) : teams.data.length ? (
                 <Button variant="outline" onPress={() => setShowArchived(true)}>
                   Ver archivados
                 </Button>

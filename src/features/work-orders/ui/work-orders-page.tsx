@@ -44,7 +44,7 @@ export function WorkOrdersPage() {
     <div className="space-y-5">
       <PageHeader className="py-0">
         <PageHeaderHeading>
-          <PageHeaderTitle className="text-xl md:text-2xl">Planificación</PageHeaderTitle>
+          <PageHeaderTitle>Planificación</PageHeaderTitle>
         </PageHeaderHeading>
       </PageHeader>
       <Tabs

@@ -174,10 +174,7 @@ export function MyDayPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Mi jornada</h1>
-          <p className="text-muted-foreground text-sm">
-            Aparecen las visitas asignadas a ti o a tus equipos.
-          </p>
+          <h1 className="text-xl font-semibold">Mi jornada</h1>
           <p className="text-muted-foreground text-sm">
             Al iniciar una visita se guarda la hora y una ubicación puntual; no hay seguimiento
             continuo.

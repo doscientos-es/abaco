@@ -8,7 +8,6 @@ import {
   CardTitle,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
 } from '@doscientos/ui'
@@ -137,10 +136,6 @@ export function DashboardPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Hola, {tenant.name}</PageHeaderTitle>
-          <PageHeaderDescription>
-            Así van tus presupuestos y cobros.{' '}
-            {canCustomize ? 'Adapta el resumen para toda tu empresa.' : ''}
-          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Link

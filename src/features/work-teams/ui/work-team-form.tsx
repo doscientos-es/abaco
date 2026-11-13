@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 
 import { TextField, TextareaField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
+import { MultiSelectField } from '@/shared/ui/multi-select-field'
 
 import { workTeamActions } from '../application/work-team-actions'
 import { workTeamInput, type WorkTeam } from '../domain/work-team'
@@ -27,7 +28,6 @@ export function WorkTeamForm({
   const [archived, setArchived] = useState(team?.archived ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [personSearch, setPersonSearch] = useState('')
   const [identity] = useState(() => ({
     id: team?.id ?? crypto.randomUUID(),
     operationId: crypto.randomUUID(),
@@ -50,9 +50,6 @@ export function WorkTeamForm({
       archived !== team.archived ||
       JSON.stringify([...memberIds].sort()) !== JSON.stringify([...team.memberIds].sort())
     : Boolean(name || description || memberIds.length || archived)
-  const visiblePeople = people.filter((person) =>
-    person.label.toLocaleLowerCase('es').includes(personSearch.trim().toLocaleLowerCase('es')),
-  )
 
   async function save() {
     if (busy || !parsed.success || !dirty) return
@@ -105,41 +102,16 @@ export function WorkTeamForm({
         <p className="text-muted-foreground text-xs">
           Selecciona al menos una persona. Puede pertenecer a varios equipos.
         </p>
-        {people.length > 6 ? (
-          <TextField
-            label="Buscar persona"
-            value={personSearch}
-            onChange={setPersonSearch}
-            placeholder="Nombre o correo"
-          />
-        ) : null}
-        <div className="grid max-h-64 gap-2 overflow-y-auto p-1 sm:grid-cols-2">
-          {visiblePeople.map((person) => (
-            <label
-              key={person.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm ${memberIds.includes(person.id) ? 'border-primary/40 bg-primary/5' : 'border-border hover:bg-muted/40'}`}
-            >
-              <input
-                type="checkbox"
-                className="accent-primary size-4 shrink-0"
-                checked={memberIds.includes(person.id)}
-                onChange={(event) =>
-                  setMemberIds((current) =>
-                    event.target.checked
-                      ? [...current, person.id]
-                      : current.filter((memberId) => memberId !== person.id),
-                  )
-                }
-              />
-              <span className="min-w-0 break-words">{person.label}</span>
-            </label>
-          ))}
-        </div>
-        {!visiblePeople.length ? (
+        <MultiSelectField
+          label="Integrantes"
+          options={people.map((person) => ({ value: person.id, label: person.label }))}
+          value={memberIds}
+          onChange={setMemberIds}
+          isDisabled={busy || !people.length}
+        />
+        {!people.length ? (
           <p className="text-muted-foreground text-sm">
-            {people.length
-              ? 'No hay personas con ese nombre o correo.'
-              : 'No hay personas disponibles. Añádelas al equipo de la empresa antes de crear un grupo.'}
+            No hay personas disponibles. Añádelas al equipo de la empresa antes de crear un grupo.
           </p>
         ) : null}
         <output aria-live="polite" className="text-muted-foreground text-xs">

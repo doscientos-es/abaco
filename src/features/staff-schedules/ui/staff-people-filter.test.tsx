@@ -171,4 +171,25 @@ describe('staff people filter', () => {
     findAll(tree, (node) => node.props.children === 'Limpiar selección')[0]?.props.onPress?.()
     expect(onChange).toHaveBeenCalledWith(empty)
   })
+
+  it('allows all employees explicitly without rendering hundreds of selected chips', () => {
+    const workforce = Array.from({ length: 150 }, (_, index) => ({
+      userId: String(index),
+      name: `Persona ${index}`,
+      schedule: null,
+    }))
+    const onChange = vi.fn()
+    const tree = StaffPeopleFilter({ people: workforce, teams: [], selected: empty, onChange })
+    findAll(tree, (node) => node.props.children === 'Ver todas las personas')[0]?.props.onPress?.()
+    expect(onChange.mock.calls[0]?.[0].personIds).toHaveLength(150)
+    const selected = StaffPeopleFilter({
+      people: workforce,
+      teams: [],
+      selected: onChange.mock.calls[0]?.[0],
+      onChange,
+    })
+    expect(
+      findAll(selected, (node) => node.props['aria-label']?.startsWith('Quitar persona') ?? false),
+    ).toHaveLength(20)
+  })
 })

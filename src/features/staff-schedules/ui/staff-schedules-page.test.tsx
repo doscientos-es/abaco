@@ -16,7 +16,7 @@ type FilterProps = {
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
   session: vi.fn(),
-  selected: { personIds: [], teamIds: [] } as StaffSelection,
+  selected: undefined as StaffSelection | undefined,
   filter: null as FilterProps | null,
   events: [] as { id: string; title: string }[],
 }))
@@ -26,7 +26,7 @@ vi.mock('react', async (original) => {
     ...actual,
     useState: (initial: unknown) => {
       const state = actual.useState(initial)
-      return initial && typeof initial === 'object' && 'personIds' in initial
+      return initial === undefined
         ? [
             mocks.selected,
             (value: StaffSelection) => {
@@ -69,7 +69,7 @@ vi.mock('@/shared/ui/event-calendar', () => ({
 
 describe('staff schedule access and availability', () => {
   beforeEach(() => {
-    mocks.selected = { personIds: [], teamIds: [] }
+    mocks.selected = undefined
     mocks.filter = null
     mocks.events = []
     vi.useFakeTimers()
@@ -111,15 +111,16 @@ describe('staff schedule access and availability', () => {
     })
   }
 
-  it('starts the admin view without a crowded calendar and offers search instead', () => {
+  it('opens small companies with the whole company calendar and search', () => {
     adminSession()
     const html = renderToStaticMarkup(<StaffSchedulesPage />)
     expect(html).toContain('Horarios del equipo')
     expect(html).toContain('Buscar personas o equipos')
     expect(html).toContain('Filtrar por función')
-    expect(html).toContain('Selecciona personas o equipos en el buscador')
-    expect(html).not.toContain('Descargar PDF')
-    expect(mocks.events).toHaveLength(0)
+    expect(html).not.toContain('Selecciona personas o equipos en el buscador')
+    expect(html).toContain('Descargar PDF')
+    expect(mocks.events).toHaveLength(1)
+    expect(mocks.filter?.selected.personIds).toEqual(['ana', 'luis'])
     expect(mocks.filter?.teams).toEqual([
       { id: 'north', name: 'Norte', memberIds: ['ana', 'luis'], archived: false },
     ])
@@ -135,6 +136,26 @@ describe('staff schedule access and availability', () => {
     expect(mocks.events[0]?.title).toBe('Luis')
     expect(html).not.toMatch(/<div><span[^>]*>Ana<\/span>/)
     expect(html).toContain('Descargar PDF')
+  })
+
+  it('confines the default calendar, filter and team memberships to a team context', () => {
+    adminSession()
+    const html = renderToStaticMarkup(
+      <StaffSchedulesPage memberIds={['luis']} title="Equipo Sur" embedded />,
+    )
+    expect(html).toContain('Equipo Sur')
+    expect(html).not.toContain('<h1')
+    expect(mocks.filter?.people.map((person) => person.userId)).toEqual(['luis'])
+    expect(mocks.filter?.teams[0]?.memberIds).toEqual(['luis'])
+    expect(mocks.events).toHaveLength(1)
+    expect(mocks.events[0]?.title).toBe('Luis')
+  })
+
+  it('never broadens an empty team to the company calendar', () => {
+    adminSession()
+    renderToStaticMarkup(<StaffSchedulesPage memberIds={[]} />)
+    expect(mocks.filter?.people).toEqual([])
+    expect(mocks.events).toEqual([])
   })
 
   it('keeps 154 employees out of the calendar until a person or team is selected', () => {

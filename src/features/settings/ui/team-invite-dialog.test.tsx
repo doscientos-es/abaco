@@ -7,6 +7,12 @@ import type * as Auth from '@/features/auth'
 
 import { TeamSection } from './team-section'
 
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+}))
+
 const { state, button, dialog, confirm, field, invite, remove, invalidate, query } = vi.hoisted(
   () => ({
     state: vi.fn(),
@@ -61,13 +67,13 @@ describe('team invitation dialog', () => {
   let values: unknown[]
   let cursor: number
 
-  function render() {
+  function render(mode: 'manage' | 'invite' = 'invite') {
     cursor = 0
     button.mockClear()
     dialog.mockClear()
     confirm.mockClear()
     field.mockClear()
-    return renderToStaticMarkup(<TeamSection tenantId="company" />)
+    return renderToStaticMarkup(<TeamSection tenantId="company" mode={mode} />)
   }
 
   function dialogProps() {
@@ -143,7 +149,7 @@ describe('team invitation dialog', () => {
       data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
     })
     remove.mockResolvedValue({ ok: false, message: 'No se pudo quitar a la persona.' })
-    render()
+    render('manage')
     const removeButton = button.mock.calls.find(
       ([props]) => props['aria-label'] === 'Quitar a Ana del equipo',
     )?.[0]

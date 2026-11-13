@@ -1,16 +1,16 @@
 import { Badge, Button } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { TeamSection } from '@/features/settings/ui/team-section'
 import { StaffFunctionsSection, StaffSchedulesPage } from '@/features/staff-schedules'
-import { VacationManagementPage } from '@/features/vacations'
 import { WorkTeamForm, WorkTeamsSection, workTeamsQuery } from '@/features/work-teams'
 
 import { useWorkersData } from '../application/use-workers-data'
 import { WorkerOrganization } from './worker-organization'
+import { WorkerVacations } from './worker-vacations'
 import { WorkersNavigation } from './workers-navigation'
 
 export function WorkersPage() {
@@ -21,6 +21,7 @@ export function WorkersPage() {
 
 function WorkersContent({ tenantId }: { tenantId: string }) {
   const search = useSearch({ from: '/trabajadores' })
+  const navigate = useNavigate({ from: '/trabajadores' })
   const data = useWorkersData(tenantId)
   const cache = useQueryClient()
   const [editingTeam, setEditingTeam] = useState(false)
@@ -36,7 +37,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
   const title = person ? person.fullName || person.email : (team?.name ?? 'Trabajadores')
   const activeTeams = data.teams.filter((item) => !item.archived)
 
-  if (data.pending) return <p role="status">Cargando trabajadores y equipos…</p>
+  if (data.pending) return <output>Cargando trabajadores y equipos…</output>
   if (data.failed)
     return (
       <div role="alert" className="space-y-3">
@@ -85,14 +86,12 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
       ) : null}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
-          <h1 className="text-2xl font-semibold break-words">{title}</h1>
-          <p className="text-muted-foreground max-w-2xl text-sm">
-            {person
-              ? person.email
-              : team
-                ? team.description || 'Personas, horarios y ausencias de este equipo.'
-                : 'Las personas de tu empresa, sus equipos y su disponibilidad, en un solo lugar.'}
-          </p>
+          <h1 className="text-xl font-semibold break-words">{title}</h1>
+          {person || team?.description ? (
+            <p className="text-muted-foreground max-w-2xl text-sm">
+              {person ? person.email : team?.description}
+            </p>
+          ) : null}
           {team?.archived ? <Badge variant="neutral">Equipo archivado</Badge> : null}
         </div>
         {team ? (
@@ -109,31 +108,6 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           </Link>
         )}
       </header>
-      {!scoped ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: 'Personas', value: data.people.length, vista: 'personas' as const },
-            { label: 'Equipos activos', value: activeTeams.length, vista: 'equipos' as const },
-            {
-              label: 'Sin equipo',
-              value: data.people.filter(
-                (item) => !activeTeams.some((group) => group.memberIds.includes(item.userId)),
-              ).length,
-              vista: 'organigrama' as const,
-            },
-          ].map((item) => (
-            <Link
-              key={item.label}
-              to="/trabajadores"
-              search={{ vista: item.vista }}
-              className="border-border bg-card hover:bg-muted/40 rounded-xl border p-4"
-            >
-              <span className="text-muted-foreground block text-sm">{item.label}</span>
-              <strong className="mt-1 block text-2xl tabular-nums">{item.value}</strong>
-            </Link>
-          ))}
-        </div>
-      ) : null}
       {person ? (
         <div className="flex flex-wrap gap-2" aria-label="Equipos de la persona">
           {activeTeams
@@ -166,10 +140,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             id: item.userId,
             label: item.fullName || item.email,
           }))}
-          onOpenTeam={(id) => {
-            window.location.hash = ''
-            void import('@tanstack/react-router').then(() => {})
-          }}
+          onOpenTeam={(id) => void navigate({ search: { equipo: id } })}
         />
       ) : null}
       {view === 'horarios' ? (
@@ -181,10 +152,11 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
         />
       ) : null}
       {view === 'vacaciones' ? (
-        <VacationManagementPage
+        <WorkerVacations
           key={search.persona ?? search.equipo ?? 'company'}
           memberIds={memberIds}
-          embedded
+          people={data.people}
+          teams={data.teams}
         />
       ) : null}
       {view === 'organigrama' ? (
@@ -193,6 +165,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
       {view === 'funciones' ? <StaffFunctionsSection tenantId={tenantId} /> : null}
       {editingTeam && team ? (
         <WorkTeamForm
+          key={team.id}
           tenantId={tenantId}
           team={team}
           people={data.people.map((item) => ({

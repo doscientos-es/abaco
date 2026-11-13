@@ -16,11 +16,21 @@ import {
   staffSchedulesQuery,
 } from '../application/staff-schedule-actions'
 import { scheduleOccurrences, type StaffPerson } from '../domain/staff-schedule'
-import { selectedStaffIds, type StaffSelection } from '../domain/staff-selection'
+import {
+  defaultStaffSelection,
+  selectedStaffIds,
+  type StaffSelection,
+} from '../domain/staff-selection'
 import { StaffPeopleFilter } from './staff-people-filter'
 import { StaffScheduleEditor } from './staff-schedule-editor'
 
-export function StaffSchedulesPage() {
+type ScheduleContext = {
+  memberIds?: string[] | undefined
+  title?: string | undefined
+  embedded?: boolean | undefined
+}
+
+export function StaffSchedulesPage(props: ScheduleContext) {
   const session = useSession()
   if (!session?.tenantId || !session.userId) return <p>Selecciona una empresa.</p>
   return (
@@ -30,6 +40,7 @@ export function StaffSchedulesPage() {
       userId={session.userId}
       name={session.fullName || session.email || 'Mi horario'}
       admin={session.role === 'admin'}
+      {...props}
     />
   )
 }
@@ -39,15 +50,18 @@ function ScheduleView({
   userId,
   name,
   admin,
+  memberIds: scopeIds,
+  title,
+  embedded,
 }: {
   tenantId: string
   userId: string
   name: string
   admin: boolean
-}) {
+} & ScheduleContext) {
   const [date, setDate] = useState(() => new Date())
   const [view, setView] = useState<EventCalendarView>('week')
-  const [selected, setSelected] = useState<StaffSelection>({ personIds: [], teamIds: [] })
+  const [selection, setSelected] = useState<StaffSelection | undefined>(undefined)
   const [functionFilter, setFunctionFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [itemId, setItemId] = useState<string | null>(null)
@@ -94,15 +108,18 @@ function ScheduleView({
           email: member.email,
         }))
       : [{ userId, name }]
-  ).map((person) => ({
-    ...person,
-    schedule: schedulesByUser.get(person.userId) ?? null,
-  }))
+  )
+    .filter((person) => !scopeIds || scopeIds.includes(person.userId))
+    .map((person) => ({
+      ...person,
+      schedule: schedulesByUser.get(person.userId) ?? null,
+    }))
   const memberIds = new Set(people.map((person) => person.userId))
   const availableTeams = (workTeams.data ?? [])
     .filter((group) => !group.archived)
     .map((group) => ({ ...group, memberIds: group.memberIds.filter((id) => memberIds.has(id)) }))
     .filter((group) => group.memberIds.length > 0)
+  const selected = selection ?? defaultStaffSelection(people, scopeIds !== undefined)
   const selectedIds = selectedStaffIds(people, availableTeams, selected)
   const visible = people.filter(
     (person) =>
@@ -147,11 +164,26 @@ function ScheduleView({
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">{admin ? 'Horarios del equipo' : 'Mi horario'}</h1>
+        {embedded ? (
+          <h2 className="text-lg font-semibold">{title ?? 'Horarios'}</h2>
+        ) : (
+          <h1 className="text-xl font-semibold">
+            {title ?? (admin ? 'Horarios del equipo' : 'Mi horario')}
+          </h1>
+        )}
         <p className="text-muted-foreground text-sm">
           Semana tipo actual, no presencia real ni historial de horarios. Se excluyen las ausencias
           aprobadas.
         </p>
+        {admin && scopeIds?.length === 1 && people[0] && !loading && !failed ? (
+          <Button
+            className="mt-3"
+            variant="outline"
+            onPress={() => setEditingId(people[0]?.userId ?? null)}
+          >
+            Editar horario
+          </Button>
+        ) : null}
       </header>
       {loading ? (
         <p>Cargando horarios…</p>

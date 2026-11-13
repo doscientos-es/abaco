@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { emptyContractJob } from '@/features/contracts/domain/contract-job'
 import type { EstimateLine } from '@/shared/domain/types'
 
-import { estimateWorkPlanError, normalizeEstimateWorkPlan } from './estimate-work-plan'
+import {
+  estimateWorkPlanError,
+  normalizeEstimateWorkPlan,
+  type EstimateWorkPlan,
+} from './estimate-work-plan'
 
 const lines = [{ id: 'price' }] as EstimateLine[]
 const start = '2026-01-01'
@@ -12,7 +16,7 @@ const plan = () => ({
   endsOn: '2026-12-31',
   jobs: [
     { ...emptyContractJob(start), title: 'Limpieza', tasks: 'Portales', location_id: 'centre' },
-  ],
+  ] as [EstimateWorkPlan['jobs'][number]],
 })
 
 describe('planificación del presupuesto', () => {
@@ -34,7 +38,8 @@ describe('planificación del presupuesto', () => {
   it('conserva el alcance y normaliza cada trabajo antes de guardarlo', () => {
     const value = plan()
     value.jobs[0].title = ' Limpieza '
-    expect(normalizeEstimateWorkPlan(value).jobs[0].title).toBe('Limpieza')
-    expect(normalizeEstimateWorkPlan(value).jobs[0].tasks).toBe('Portales')
+    const [normalized] = normalizeEstimateWorkPlan(value).jobs
+    expect(normalized?.title).toBe('Limpieza')
+    expect(normalized?.tasks).toBe('Portales')
   })
 })

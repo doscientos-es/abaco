@@ -33,7 +33,7 @@ export function StaffPeopleFilter({
   teams: StaffTeam[]
   selected: StaffSelection
   onChange: (selected: StaffSelection) => void
-  onEdit: (userId: string) => void
+  onEdit?: ((userId: string) => void) | undefined
 }) {
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(pageSize)
@@ -63,18 +63,30 @@ export function StaffPeopleFilter({
         }}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm" role="status">
+        <output className="text-muted-foreground text-sm">
           {selectedIds.size} de {people.length} personas seleccionadas
-        </p>
-        {selected.personIds.length || selected.teamIds.length ? (
-          <Button variant="ghost" onPress={() => onChange({ personIds: [], teamIds: [] })}>
-            Limpiar selección
-          </Button>
-        ) : null}
+        </output>
+        <div className="flex flex-wrap gap-2">
+          {selectedIds.size < people.length ? (
+            <Button
+              variant="outline"
+              onPress={() =>
+                onChange({ personIds: people.map((person) => person.userId), teamIds: [] })
+              }
+            >
+              Ver todas las personas
+            </Button>
+          ) : null}
+          {selected.personIds.length || selected.teamIds.length ? (
+            <Button variant="ghost" onPress={() => onChange({ personIds: [], teamIds: [] })}>
+              Limpiar selección
+            </Button>
+          ) : null}
+        </div>
       </div>
       <div
         className="flex max-h-36 flex-wrap gap-2 overflow-y-auto"
-        aria-label="Selección de horarios"
+        aria-label="Selección de personas"
       >
         {teams
           .filter((team) => selected.teamIds.includes(team.id))
@@ -90,6 +102,7 @@ export function StaffPeopleFilter({
           ))}
         {people
           .filter((person) => selected.personIds.includes(person.userId))
+          .slice(0, pageSize)
           .map((person) => (
             <Button
               key={person.userId}
@@ -100,12 +113,17 @@ export function StaffPeopleFilter({
               {person.name} ×
             </Button>
           ))}
+        {selected.personIds.length > pageSize ? (
+          <span className="text-muted-foreground self-center text-xs">
+            Y {selected.personIds.length - pageSize} personas más
+          </span>
+        ) : null}
       </div>
       {searching ? (
         <div className="border-border max-h-80 space-y-3 overflow-y-auto rounded-lg border p-3">
-          <p className="text-muted-foreground text-xs" role="status">
+          <output className="text-muted-foreground text-xs">
             {matchingPeople.length} personas y {matchingTeams.length} equipos encontrados
-          </p>
+          </output>
           {matchingTeams.length ? (
             <fieldset>
               <legend className="mb-1 text-sm font-medium">Equipos</legend>
@@ -160,13 +178,15 @@ export function StaffPeopleFilter({
                           ) : null}
                         </span>
                       </label>
-                      <IconButton
-                        label={`Editar horario de ${person.name}`}
-                        variant="ghost"
-                        onPress={() => onEdit(person.userId)}
-                      >
-                        <PencilSimple aria-hidden="true" className="size-4" />
-                      </IconButton>
+                      {onEdit ? (
+                        <IconButton
+                          label={`Editar horario de ${person.name}`}
+                          variant="ghost"
+                          onPress={() => onEdit(person.userId)}
+                        >
+                          <PencilSimple aria-hidden="true" className="size-4" />
+                        </IconButton>
+                      ) : null}
                     </li>
                   )
                 })}
@@ -184,7 +204,7 @@ export function StaffPeopleFilter({
         </div>
       ) : (
         <p className="text-muted-foreground text-sm">
-          Busca y selecciona personas o equipos para consultar sus horarios.
+          Busca por nombre, correo o equipo. Puedes combinar equipos y personas.
         </p>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { PasswordField, TextField } from './form'
+import { PasswordField, SelectField, TextField } from './form'
 
 describe('TextField', () => {
   const render = (value: string) =>
@@ -70,5 +70,49 @@ describe('PasswordField', () => {
     expect(html).toContain('type="password"')
     expect(html).toContain('autoComplete="new-password"')
     expect(html).toContain('aria-label="Mostrar contraseña"')
+  })
+})
+
+describe('SelectField', () => {
+  const options = Array.from({ length: 12 }, (_, i) => ({ value: `${i}`, label: `Persona ${i}` }))
+
+  it('uses a searchable accessible combobox for large lists without losing the selected label', () => {
+    const html = renderToStaticMarkup(
+      <SelectField label="Responsable" value="8" options={options} onChange={() => undefined} />,
+    )
+    expect(html).toContain('role="combobox"')
+    expect(html).toContain('aria-label="Responsable"')
+    expect(html).toContain('value="Persona 8"')
+  })
+
+  it('keeps short lists as selects and can explicitly enable or disable search', () => {
+    const render = (searchable?: boolean) =>
+      renderToStaticMarkup(
+        <SelectField
+          label="Tipo"
+          value="0"
+          options={options.slice(0, 2)}
+          onChange={() => undefined}
+          {...(searchable === undefined ? {} : { searchable })}
+        />,
+      )
+    expect(render()).toContain('data-slot="select-trigger"')
+    expect(render(true)).toContain('role="combobox"')
+    expect(render(false)).not.toContain('role="combobox"')
+  })
+
+  it('supports a selected empty value and disabled search controls', () => {
+    const html = renderToStaticMarkup(
+      <SelectField
+        label="Equipo"
+        value=""
+        options={[{ value: '', label: 'Sin equipo' }]}
+        searchable
+        isDisabled
+        onChange={() => undefined}
+      />,
+    )
+    expect(html).toContain('value="Sin equipo"')
+    expect(html).toContain('disabled')
   })
 })

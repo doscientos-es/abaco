@@ -126,11 +126,6 @@ export function TeamSection({
               <h2 id="people-heading" className="text-sm font-semibold">
                 {inviting ? 'Invitar personas' : 'Personas y permisos'}
               </h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {inviting
-                  ? 'Envía invitaciones individuales o importa varias a la vez. La gestión del personal está en Trabajadores.'
-                  : 'Consulta las fichas, asigna funciones y gestiona los permisos de acceso.'}
-              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -303,10 +298,17 @@ export function TeamSection({
             </Link>
           </div>
         )}
-        {!inviting && matching.length > 25 ? (
+        {!inviting && matching.length > 10 ? (
           <div className="p-5">
             <TablePagination controller={pager} noun="personas" />
           </div>
+        ) : null}
+
+        {inviting && team.isError ? (
+          <p role="alert" className="text-destructive px-5 pb-4 text-sm">
+            No se pudieron comprobar las personas existentes. La importación no está disponible;
+            recarga la página para reintentar.
+          </p>
         ) : null}
 
         {!inviteOpen && message ? (

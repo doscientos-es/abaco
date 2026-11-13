@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { selectedStaffIds } from './staff-selection'
+import { defaultStaffSelection, selectedStaffIds } from './staff-selection'
 
 const people = ['ana', 'luis', 'bea'].map((userId) => ({ userId, name: userId, schedule: null }))
 const teams = [
@@ -9,6 +9,14 @@ const teams = [
 ]
 
 describe('schedule selection', () => {
+  it('opens small companies with everyone and large companies with explicit selection', () => {
+    expect(defaultStaffSelection(people).personIds).toEqual(['ana', 'luis', 'bea'])
+    const company = Array.from({ length: 150 }, (_, index) => ({ userId: String(index) }))
+    expect(defaultStaffSelection(company).personIds).toEqual([])
+    expect(defaultStaffSelection(company, true).personIds).toHaveLength(150)
+    expect(defaultStaffSelection([], true).personIds).toEqual([])
+  })
+
   it('starts empty instead of including the whole company', () => {
     expect(selectedStaffIds(people, teams, { personIds: [], teamIds: [] }).size).toBe(0)
   })

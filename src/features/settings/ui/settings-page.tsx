@@ -1,7 +1,6 @@
 import {
   Button,
   PageHeader,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Tabs,
@@ -89,9 +88,6 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Ajustes</PageHeaderTitle>
-          <PageHeaderDescription>
-            Gestiona tu empresa, tu cuenta y las opciones de funcionamiento.
-          </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
 

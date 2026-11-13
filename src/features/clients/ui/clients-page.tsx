@@ -5,7 +5,6 @@ import {
   Input,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Table,
@@ -99,7 +98,6 @@ export function ClientsPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Clientes</PageHeaderTitle>
-          <PageHeaderDescription>Datos de contacto para tus presupuestos.</PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button

@@ -2,7 +2,6 @@ import {
   Button,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Input,
@@ -71,9 +70,6 @@ export function EstimateListPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Presupuestos</PageHeaderTitle>
-          <PageHeaderDescription>
-            Crea, envía y sigue cada propuesta hasta el cobro.
-          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions>
           <Button onPress={startNew}>Crear presupuesto</Button>

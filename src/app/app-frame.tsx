@@ -29,6 +29,7 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
+import { GlobalSearch, type SearchItem } from '@/features/global-search'
 import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
@@ -56,11 +57,10 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Operaciones',
-    items: [{ to: '/trabajos', label: 'Planificación', icon: navIcons.work }],
-  },
-  {
-    label: 'Personas',
-    items: [{ to: '/trabajadores', label: 'Trabajadores', icon: navIcons.clients }],
+    items: [
+      { to: '/trabajos', label: 'Planificación', icon: navIcons.work },
+      { to: '/trabajadores', label: 'Trabajadores', icon: navIcons.clients },
+    ],
   },
   {
     label: 'Finanzas',
@@ -122,7 +122,8 @@ function readableTextColor(hex: string) {
 }
 
 export function AppFrame({ children }: { children: ReactNode }) {
-  const { tenant } = useTenantData()
+  const data = useTenantData()
+  const { tenant } = data
   const saveStatus = useSaveStatus()
   const session = useSession()
   const platformAccess = useQuery({
@@ -151,6 +152,44 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const tabClass =
     'text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none'
   const canSeeSettings = can(session?.role, 'settings:write')
+  const shortcuts: Record<string, string> = {
+    '/': 'g r',
+    '/presupuestos': 'g p',
+    '/clientes': 'g c',
+    '/trabajos': 'g t',
+    '/trabajadores': 'g e',
+    '/facturas': 'g f',
+  }
+  const searchNavigation: SearchItem[] = groups.flatMap((group) =>
+    group.items.map((item) => ({
+      id: `page:${item.to}`,
+      title: item.label,
+      category: 'Navegación',
+      keywords: group.label,
+      target: { to: item.to },
+      ...(shortcuts[item.to] ? { shortcut: shortcuts[item.to] } : {}),
+    })),
+  )
+  if (canSeeSettings)
+    searchNavigation.push({
+      id: 'page:settings',
+      title: 'Ajustes',
+      category: 'Navegación',
+      target: { to: '/ajustes' },
+    })
+  if (can(session?.role, 'clients:write'))
+    searchNavigation.push({
+      id: 'action:client',
+      title: 'Nuevo cliente',
+      category: 'Acciones',
+      target: { to: '/clientes/nuevo' },
+    })
+  const section =
+    groups.find((group) =>
+      group.items.some((item) =>
+        item.to === '/' ? pathname === '/' : pathname.startsWith(item.to),
+      ),
+    )?.label ?? 'Mi espacio'
 
   /** Same menu in the sidebar footer (desktop) and the mobile header. */
   const userMenu = (placement: 'top start' | 'bottom end') => (
@@ -178,7 +217,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             Personalizar Ábaco
           </DropdownMenuItem>
           <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
-            Ajustes y equipo
+            Ajustes
           </DropdownMenuItem>
         </>
       ) : null}
@@ -203,7 +242,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
           : undefined
       }
     >
-      <AppShellSidebar className="hidden h-full w-64 shrink-0 flex-col md:flex">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido
+      </a>
+      <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
         <div className="shrink-0 px-3 pt-4 pb-3">
           <Link
             to="/"
@@ -233,7 +275,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <nav aria-label="Principal" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1">
           {groups.map((group) => (
             <div key={group.label} className="space-y-1">
-              <p className="text-muted-foreground/80 px-3 pb-1 text-[11px] font-medium tracking-wider uppercase">
+              <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
                 {group.label}
               </p>
               {group.items.map((item) => (
@@ -313,11 +355,27 @@ export function AppFrame({ children }: { children: ReactNode }) {
             {userMenu('bottom end')}
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
+        <div className="workspace-topbar">
+          <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
+            {tenant.name}
+            <span aria-hidden="true" className="px-2">
+              /
+            </span>
+            <span className="text-foreground">{section}</span>
+          </span>
+          <GlobalSearch
+            key={session?.tenantId}
+            data={session?.role === 'admin' ? data : undefined}
+            navigation={searchNavigation}
+          />
+        </div>
         <PlanBanner />
         <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
         <AppShellContent
-          size={pathname === '/vacaciones' ? 'full' : 'wide'}
-          className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' ? 'max-w-none' : 'max-w-6xl'}`}
+          id="main-content"
+          tabIndex={-1}
+          size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
+          className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
         >
           {children}
         </AppShellContent>

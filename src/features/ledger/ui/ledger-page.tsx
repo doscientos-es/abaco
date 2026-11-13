@@ -8,7 +8,6 @@ import {
   Input,
   PageHeader,
   PageHeaderActions,
-  PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   Table,
@@ -107,11 +106,18 @@ export function LedgerPage() {
   const session = useSession()
   const { ledger, tenant } = useTenantData()
   const navigate = useNavigate()
-  const requestedTab = useSearch({ from: '/contabilidad' }).tab
+  const search = useSearch({ from: '/contabilidad' })
+  const requestedTab = search.tab
   const tab = requestedTab ?? 'resumen'
   const saveStatus = useSaveStatus()
   const [month, setMonth] = useState('')
-  const [query, setQuery] = useState('')
+  const query = search.q ?? ''
+  const setQuery = (q: string) =>
+    void navigate({
+      to: '/contabilidad',
+      search: { ...(requestedTab ? { tab: requestedTab } : {}), ...(q ? { q } : {}) },
+      replace: true,
+    })
   const [kindFilter, setKindFilter] = useState<'all' | LedgerKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -230,9 +236,6 @@ export function LedgerPage() {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>Contabilidad</PageHeaderTitle>
-          <PageHeaderDescription>
-            Ingresos, gastos, IVA y vencimientos en un solo lugar.
-          </PageHeaderDescription>
         </PageHeaderHeading>
         <PageHeaderActions className="shrink-0">
           <Button onPress={() => setDialogOpen(true)}>
@@ -291,7 +294,7 @@ export function LedgerPage() {
       <Tabs
         selectedKey={tab}
         onSelectionChange={(key) =>
-          void navigate({ to: '/contabilidad', search: { tab: key as LedgerTab } })
+          void navigate({ to: '/contabilidad', search: { ...search, tab: key as LedgerTab } })
         }
       >
         <TabsList

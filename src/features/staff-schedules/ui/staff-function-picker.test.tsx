@@ -1,33 +1,39 @@
-import type { ReactElement } from 'react'
+import type { ComponentProps, ReactElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
+
+import { MultiSelectField } from '@/shared/ui/multi-select-field'
 
 import { StaffFunctionPicker } from './staff-function-picker'
 
-type Input = ReactElement<{
-  checked: boolean
-  onChange: (event: { target: { checked: boolean } }) => void
-}>
-type Label = ReactElement<{ children: [Input, string] }>
-type List = ReactElement<{ children: Label[] }>
-
 describe('staff function picker', () => {
-  it('adds and removes individual functions without replacing the other selections', () => {
+  it('passes every available function and current assignment to the shared searchable picker', () => {
     const onChange = vi.fn()
+    const functions = Array.from({ length: 154 }, (_, index) => ({
+      id: `${index}`,
+      name: `Función ${index}`,
+    }))
     const fieldset = StaffFunctionPicker({
-      functions: [
-        { id: 'a', name: 'Electricidad' },
-        { id: 'b', name: 'Fontanería' },
-      ],
-      selected: ['a'],
+      functions,
+      selected: ['0', '153'],
       onChange,
     })
-    const list = fieldset.props.children[1] as List
-    const [first, second] = list.props.children
-    expect(first?.props.children[0].props.checked).toBe(true)
-    expect(second?.props.children[0].props.checked).toBe(false)
-    second?.props.children[0].props.onChange({ target: { checked: true } })
-    expect(onChange).toHaveBeenLastCalledWith(['a', 'b'])
-    first?.props.children[0].props.onChange({ target: { checked: false } })
-    expect(onChange).toHaveBeenLastCalledWith([])
+    const picker = fieldset.props.children[1] as ReactElement<
+      ComponentProps<typeof MultiSelectField>
+    >
+    expect(picker.type).toBe(MultiSelectField)
+    expect(picker.props.options).toEqual(
+      functions.map((item) => ({ value: item.id, label: item.name })),
+    )
+    expect(picker.props.value).toEqual(['0', '153'])
+    expect(picker.props.onChange).toBe(onChange)
+  })
+
+  it('points to the function catalogue when no functions exist', () => {
+    const html = renderToStaticMarkup(
+      <StaffFunctionPicker functions={[]} selected={[]} onChange={vi.fn()} />,
+    )
+    expect(html).toContain('Crea funciones en Personalizar')
+    expect(html).not.toContain('Seleccionar…')
   })
 })
