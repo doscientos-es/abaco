@@ -211,7 +211,7 @@ describe('VacationManagementPage', () => {
     mocks.from = '2026-11-10'
     mocks.to = '2026-11-12'
     const html = renderToStaticMarkup(<VacationManagementPage />)
-    expect(html.indexOf('Buscar trabajador')).toBeLessThan(html.indexOf('<details'))
+    expect(html.indexOf('Buscar trabajador')).toBeLessThan(html.indexOf('Filtros adicionales'))
     expect(html).toContain('Filtros adicionales, 1 activo')
     mocks.buttons.get('Limpiar filtros adicionales')?.()
     expect(mocks.setType).toHaveBeenCalledWith('all')
