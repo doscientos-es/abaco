@@ -24,6 +24,7 @@ import { CleaningServicesPanel } from './cleaning-services-panel'
 import { ContractAgreementForm } from './contract-agreement-form'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
+import { ContractDocument } from './contract-document'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
 
 const monthNames = [
@@ -272,6 +273,12 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           )}
         </CardContent>
       </Card>
+
+      <ContractDocument
+        contract={contract}
+        tenant={tenant}
+        client={clients.find((client) => client.id === contract.client_id)}
+      />
 
       <CleaningServicesPanel
         tenantId={tenant.id}

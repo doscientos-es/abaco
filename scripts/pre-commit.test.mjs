@@ -18,10 +18,15 @@ const root = process.cwd()
 const repositories = []
 
 function command(cwd, executable, args) {
+  // Git hooks export repository-specific variables. Never pass them to the
+  // temporary repository or a test can modify the caller's index or branch.
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_')),
+  )
   const result = spawnSync(executable, args, {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${join(cwd, 'bin')}${delimiter}${process.env.PATH}` },
+    env: { ...env, PATH: `${join(cwd, 'bin')}${delimiter}${process.env.PATH}` },
   })
   if (result.error) throw result.error
   return result
@@ -46,6 +51,7 @@ function repository() {
   for (const file of ['pre-commit', 'pre-commit.mjs']) {
     copyFileSync(join(root, '.githooks', file), join(cwd, '.githooks', file))
   }
+  chmodSync(join(cwd, '.githooks', 'pre-commit'), 0o755)
   symlinkSync(resolve(root, 'node_modules'), join(cwd, 'node_modules'), 'junction')
   writeFileSync(
     join(cwd, 'package.json'),

@@ -343,4 +343,20 @@ body.invoice-print .paper-sheet section {
     width: 100%;
     max-width: none;
   }
+  body.invoice-print .contract-document .estimate-document {
+    position: static;
+    width: auto;
+    max-width: none;
+    border: 0;
+    padding: 0;
+    background: white;
+    box-shadow: none;
+  }
+  body.invoice-print .contract-document .contract-annex {
+    break-before: page;
+    padding-top: 0;
+  }
+  body.invoice-print .contract-document section {
+    break-inside: auto;
+  }
 }
