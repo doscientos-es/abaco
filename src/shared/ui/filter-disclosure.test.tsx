@@ -16,9 +16,9 @@ describe('FilterDisclosure', () => {
         </label>
       </FilterDisclosure>,
     )
-    expect(html).toContain('<details class=')
-    expect(html).not.toContain('<details open')
+    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).toContain('aria-expanded="false"')
     expect(html).toContain(`aria-label="${label}"`)
-    expect(html).toContain('aria-label="Estado"')
+    expect(html).not.toContain('aria-label="Estado"')
   })
 })
