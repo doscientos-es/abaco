@@ -31,6 +31,9 @@ export function EstimateDocument({
   const sections = estimate.documentFormat === 'sections' ? (estimate.sections ?? []) : []
   const showPayment = estimate.conversionDestination !== 'contract'
   const showConditions = estimate.documentFormat !== 'sections' || Boolean(estimate.clauses)
+  const mainSectionCount = estimate.documentFormat === 'sections' ? sections.length : 2
+  const paymentNumber = mainSectionCount + 1
+  const conditionsNumber = mainSectionCount + (showPayment ? 2 : 1)
 
   return (
     <article
@@ -87,19 +90,19 @@ export function EstimateDocument({
             ))
           ) : (
             <>
-              <li>{estimate.title}</li>
-              <li>Resumen económico</li>
+              <li>1. {estimate.title}</li>
+              <li>2. Resumen económico</li>
             </>
           )}
-          {showPayment ? <li>Forma de pago</li> : null}
-          {showConditions ? <li>Descripción y condiciones</li> : null}
+          {showPayment ? <li>{paymentNumber}. Forma de pago</li> : null}
+          {showConditions ? <li>{conditionsNumber}. Descripción y condiciones</li> : null}
         </ul>
       </nav>
 
       <div className="estimate-document__content space-y-8">
         {estimate.documentFormat !== 'sections' ? (
           <section>
-            <h3 className="mb-3 text-base font-semibold">{estimate.title}</h3>
+            <h3 className="mb-3 text-base font-semibold">1. {estimate.title}</h3>
             <EstimatePriceTable lines={estimate.lines} />
           </section>
         ) : null}
@@ -115,13 +118,14 @@ export function EstimateDocument({
 
         {estimate.documentFormat !== 'sections' ? (
           <section aria-label="Resumen económico">
+            <h3 className="mb-3 text-base font-semibold">2. Resumen económico</h3>
             <EstimatePriceSummary estimate={estimate} />
           </section>
         ) : null}
 
         {showPayment ? (
           <section>
-            <h3 className="mb-2 text-base font-semibold">Forma de pago</h3>
+            <h3 className="mb-2 text-base font-semibold">{paymentNumber}. Forma de pago</h3>
             <ul className="space-y-1">
               {milestones.map((m) => (
                 <li key={m.id} className="flex justify-between tabular-nums">
@@ -140,7 +144,9 @@ export function EstimateDocument({
 
         {showConditions ? (
           <section>
-            <h3 className="mb-2 text-base font-semibold">Descripción y condiciones</h3>
+            <h3 className="mb-2 text-base font-semibold">
+              {conditionsNumber}. Descripción y condiciones
+            </h3>
             <p className="text-muted-foreground whitespace-pre-line">{estimate.clauses}</p>
           </section>
         ) : null}

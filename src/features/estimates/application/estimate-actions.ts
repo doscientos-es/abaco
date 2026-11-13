@@ -10,7 +10,7 @@ import { buildEstimateDraft, newEstimateError } from '../domain/new-estimate'
 export function createEstimate(
   clientId: string,
   title = 'Nuevo servicio',
-  documentFormat: EstimateFormat = 'table',
+  documentFormat: EstimateFormat = 'sections',
 ): string {
   let id = ''
   updateTenantData((data) => {

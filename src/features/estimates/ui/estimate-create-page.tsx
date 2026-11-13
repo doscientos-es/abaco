@@ -13,7 +13,7 @@ import { EstimateEditorPage } from './estimate-editor-page'
 export function EstimateCreatePage({
   clientId = '',
   title = '',
-  format = 'table',
+  format = 'sections',
 }: {
   clientId?: string
   title?: string

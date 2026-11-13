@@ -18,7 +18,6 @@ import { useState } from 'react'
 import { can, useSession } from '@/features/auth'
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import { estimateTotalCents } from '@/shared/domain/estimate'
-import type { EstimateFormat } from '@/shared/domain/estimate-document'
 import { estimateRemovalError } from '@/shared/domain/estimate-removal'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
@@ -34,7 +33,6 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { deleteEstimate } from '../application/estimate-actions'
-import { EstimateFormatPicker } from './estimate-format-picker'
 
 function EstimateActions({
   estimate,
@@ -86,7 +84,6 @@ export function EstimateListPage() {
   const [creating, setCreating] = useState(false)
   const [newClientId, setNewClientId] = useState('')
   const [newTitle, setNewTitle] = useState('')
-  const [newFormat, setNewFormat] = useState<EstimateFormat>('table')
   const [creatingClient, setCreatingClient] = useState(false)
   const [toDelete, setToDelete] = useState<Estimate | null>(null)
 
@@ -99,7 +96,6 @@ export function EstimateListPage() {
   function startNew() {
     setNewClientId(activeClients[0]?.id ?? '')
     setNewTitle('')
-    setNewFormat('table')
     setCreating(true)
   }
 
@@ -108,7 +104,7 @@ export function EstimateListPage() {
     setCreating(false)
     void navigate({
       to: '/presupuestos/nuevo',
-      search: { clientId: newClientId, title: newTitle, format: newFormat },
+      search: { clientId: newClientId, title: newTitle, format: 'sections' },
     })
   }
 
@@ -310,9 +306,7 @@ export function EstimateListPage() {
         compact
         title="Nuevo presupuesto"
         description="Elige el cliente, el título y cómo quieres construir este presupuesto."
-        submitLabel={
-          newFormat === 'sections' ? 'Continuar con las secciones' : 'Continuar con las partidas'
-        }
+        submitLabel={'Continuar con las secciones'}
         submitDisabled={!newClientId}
         onSubmit={confirmNew}
       >
@@ -355,7 +349,6 @@ export function EstimateListPage() {
           value={newTitle}
           onChange={setNewTitle}
         />
-        <EstimateFormatPicker value={newFormat} onChange={setNewFormat} />
       </FormDialog>
 
       <ClientFormDialog

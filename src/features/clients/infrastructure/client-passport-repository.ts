@@ -89,6 +89,7 @@ export async function createLocation(input: {
   kind: ServiceLocation['kind']
   address: string
   city: string
+  openingHours?: string
   operationalContact?: string
   accessNotes?: string
   notes?: string
@@ -103,6 +104,7 @@ export async function createLocation(input: {
       kind: input.kind,
       address: input.address.trim(),
       city: input.city.trim(),
+      opening_hours: input.openingHours?.trim() ?? '',
       operational_contact: input.operationalContact?.trim() ?? '',
       access_notes: input.accessNotes?.trim() ?? '',
       notes: input.notes?.trim() ?? '',
@@ -145,6 +147,7 @@ export async function updateLocation(
     | 'kind'
     | 'address'
     | 'city'
+    | 'opening_hours'
     | 'operational_contact'
     | 'access_notes'
     | 'notes'
@@ -159,6 +162,7 @@ export async function updateLocation(
         kind: input.kind,
         address: input.address.trim(),
         city: input.city.trim(),
+        opening_hours: input.opening_hours.trim(),
         operational_contact: input.operational_contact.trim(),
         access_notes: input.access_notes.trim(),
         notes: input.notes.trim(),

@@ -47,6 +47,7 @@ vi.mock('@tanstack/react-query', () => ({
           name: 'Office centre',
           active: true,
           address: 'Test address',
+          opening_hours: 'Lunes a viernes, 8:00–18:00',
           operational_contact: 'Reception',
           access_notes: 'Call ahead',
           notes: 'Cleaning notes',
@@ -89,6 +90,7 @@ describe('client service centres', () => {
     const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
     expect(html).toContain('Centros de trabajo')
     expect(html).toContain('Office centre')
+    expect(html).toContain('Horario: Lunes a viernes, 8:00–18:00')
     expect(html).toContain('Reception')
     expect(html).toContain('Call ahead')
     expect(html).toContain('Historial de visitas')

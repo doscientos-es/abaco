@@ -8,7 +8,7 @@ export const Route = createFileRoute('/presupuestos/nuevo')({
   validateSearch: (search: Record<string, unknown>) => ({
     clientId: typeof search.clientId === 'string' ? search.clientId : '',
     title: typeof search.title === 'string' ? search.title : '',
-    format: search.format === 'sections' ? ('sections' as const) : ('table' as const),
+    format: 'sections' as const,
   }),
   component: CreateRoute,
 })

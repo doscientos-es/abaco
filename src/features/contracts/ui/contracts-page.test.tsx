@@ -218,6 +218,7 @@ function openLocationForm() {
   press('Crear centro')
   change('Nombre', 'Portal A')
   change('Dirección', 'Calle de prueba 1')
+  change('Horario del centro', 'Lunes a viernes, 8:00–18:00')
 }
 async function saveLocation() {
   expect(mocks.dialog?.submitDisabled).toBe(false)
@@ -262,6 +263,7 @@ describe('contract job and inline centre creation', () => {
         clientId: 'client-1',
         name: 'Portal A',
         address: 'Calle de prueba 1',
+        openingHours: 'Lunes a viernes, 8:00–18:00',
         kind: 'service',
       }),
     )

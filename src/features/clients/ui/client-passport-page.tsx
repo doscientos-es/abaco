@@ -173,6 +173,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {location.opening_hours ? (
+                    <p className="text-sm whitespace-pre-wrap">Horario: {location.opening_hours}</p>
+                  ) : null}
                   <p className="text-sm whitespace-pre-wrap">{location.operational_contact}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.access_notes}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.notes}</p>

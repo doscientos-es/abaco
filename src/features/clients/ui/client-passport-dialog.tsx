@@ -61,6 +61,7 @@ export function CreatePassportItem({
   const [phone, setPhone] = useState(contact?.phone ?? '')
   const [address, setAddress] = useState(location?.address ?? '')
   const [city, setCity] = useState(location?.city ?? '')
+  const [openingHours, setOpeningHours] = useState(location?.opening_hours ?? '')
   const [operationalContact, setOperationalContact] = useState(location?.operational_contact ?? '')
   const [accessNotes, setAccessNotes] = useState(location?.access_notes ?? '')
   const [locationNotes, setLocationNotes] = useState(location?.notes ?? '')
@@ -88,6 +89,7 @@ export function CreatePassportItem({
           kind: locationKind as ClientPassport['locations'][number]['kind'],
           address,
           city,
+          opening_hours: openingHours,
           operational_contact: operationalContact,
           access_notes: accessNotes,
           notes: locationNotes,
@@ -110,6 +112,7 @@ export function CreatePassportItem({
           kind: locationKind as 'service' | 'billing' | 'both',
           address,
           city,
+          openingHours,
           operationalContact,
           accessNotes,
           notes: locationNotes,
@@ -204,6 +207,13 @@ export function CreatePassportItem({
             onChange={setOperationalContact}
             placeholder="Nombre, teléfono o correo · opcional"
             maxLength={1000}
+          />
+          <TextareaField
+            label="Horario del centro"
+            value={openingHours}
+            onChange={setOpeningHours}
+            placeholder="Lunes a viernes, 8:00–18:00"
+            maxLength={2000}
           />
           <TextareaField
             label="Acceso al centro"

@@ -8,6 +8,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { estimateEmailTotal } from '../_shared/estimate-email-total.ts'
 import { inviteCorsHeaders } from '../_shared/invite-cors.ts'
 import { sendEmail } from '../_shared/resend.ts'
 
@@ -153,25 +154,10 @@ Deno.serve(async (request) => {
       signature,
     ].join('\n')
   } else {
-    if (!publishedEstimate || !publishedTenant || !publishedClient)
+    if (!publication || !publishedEstimate || !publishedTenant || !publishedClient)
       return reply(500, { error: 'publication_invalid' })
-    const lines = publishedEstimate.estimate_lines as Array<Record<string, unknown>>
-    if (!Array.isArray(lines)) return reply(500, { error: 'publication_invalid' })
-    // Misma lógica que calculateTotals: descuento por línea y luego el global.
-    const net = lines.reduce((sum, l) => {
-      const gross = Math.round(Number(l.quantity) * Number(l.unit_price_cents))
-      const pct = Math.min(100, Math.max(0, Number(l.discount_percent) || 0))
-      return sum + gross - Math.round((gross * pct) / 100)
-    }, 0)
-    const discountValue = Number(publishedEstimate.discount_value) || 0
-    const globalDiscount =
-      publishedEstimate.discount_type === 'percent'
-        ? Math.round((net * Math.min(100, Math.max(0, discountValue))) / 100)
-        : publishedEstimate.discount_type === 'amount'
-          ? Math.min(net, Math.max(0, Math.round(discountValue)))
-          : 0
-    const subtotal = net - globalDiscount
-    const total = subtotal + Math.round((subtotal * Number(publishedEstimate.vat_rate)) / 100)
+    const total = estimateEmailTotal(publication)
+    if (total === null) return reply(500, { error: 'publication_invalid' })
     subject = `Presupuesto ${String(publishedEstimate.number)} · ${company}`
     const appUrl = (Deno.env.get('APP_URL') ?? '').replace(/\/+$/, '')
     const publicLink = appUrl && doc.public_token ? `${appUrl}/p/${doc.public_token}` : ''
