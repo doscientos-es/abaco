@@ -4,9 +4,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  PageHeader,
-  PageHeaderHeading,
-  PageHeaderTitle,
   Input,
   Table,
   TableBody,
@@ -36,6 +33,7 @@ import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { invoiceOutstandingCents } from '../application/invoice-actions'
 import { InvoiceDrafts } from './invoice-drafts'
@@ -181,25 +179,23 @@ export function InvoicesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader className="py-0">
-        <PageHeaderHeading>
-          <PageHeaderTitle>Facturas</PageHeaderTitle>
-        </PageHeaderHeading>
-      </PageHeader>
+      <WorkspacePageHeading title="Facturas" />
 
-      <Tabs selectedKey={tab} onSelectionChange={(key) => selectTab(key as InvoiceTab)}>
-        <TabsList aria-label="Secciones de facturación" className="w-full overflow-x-auto sm:w-fit">
-          {(canReviewBilling ? invoiceTabs : ['emitidas']).map((id) => (
-            <TabsTrigger key={id} id={id}>
-              {id === 'emitidas'
-                ? 'Emitidas'
-                : id === 'borradores'
-                  ? 'Borradores'
-                  : 'Visitas pendientes'}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <WorkspacePageTabs>
+        <Tabs selectedKey={tab} onSelectionChange={(key) => selectTab(key as InvoiceTab)}>
+          <TabsList aria-label="Secciones de facturación">
+            {(canReviewBilling ? invoiceTabs : ['emitidas']).map((id) => (
+              <TabsTrigger key={id} id={id}>
+                {id === 'emitidas'
+                  ? 'Emitidas'
+                  : id === 'borradores'
+                    ? 'Borradores'
+                    : 'Visitas pendientes'}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </WorkspacePageTabs>
 
       {tab === 'emitidas' ? (
         <section className="space-y-4" aria-label="Facturas emitidas">

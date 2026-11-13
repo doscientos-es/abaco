@@ -8,6 +8,7 @@ import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { listServiceContracts } from '../application/contract-actions'
 import { contractStatusLabels as statusLabels } from '../domain/contract-status'
@@ -19,13 +20,16 @@ export function ContractsPage() {
   const selected = tab === 'trabajos' ? 'trabajos' : 'contratos'
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold">Contratos de servicio</h1>
-      </div>
-      <Link to="/trabajos" className="text-primary text-sm underline">
-        Ir a planificación
-      </Link>
+      <WorkspacePageHeading
+        title="Contratos de servicio"
+        actions={
+          <Link to="/trabajos" className="text-primary text-sm underline">
+            Ir a planificación
+          </Link>
+        }
+      />
       <Tabs
+        className="block"
         selectedKey={selected}
         onSelectionChange={(key) =>
           void navigate({
@@ -34,10 +38,12 @@ export function ContractsPage() {
           })
         }
       >
-        <TabsList aria-label="Secciones de contratos" className="w-full overflow-x-auto sm:w-fit">
-          <TabsTrigger id="contratos">Contratos</TabsTrigger>
-          <TabsTrigger id="trabajos">Trabajos contratados</TabsTrigger>
-        </TabsList>
+        <WorkspacePageTabs>
+          <TabsList aria-label="Secciones de contratos">
+            <TabsTrigger id="contratos">Contratos</TabsTrigger>
+            <TabsTrigger id="trabajos">Trabajos contratados</TabsTrigger>
+          </TabsList>
+        </WorkspacePageTabs>
         <TabsContent id={selected} key={selected}>
           {selected === 'contratos' ? <ContractsList /> : <ContractJobsPage />}
         </TabsContent>

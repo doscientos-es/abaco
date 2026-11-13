@@ -7,6 +7,7 @@ import { useSession } from '@/features/auth'
 import { TeamSection } from '@/features/settings/ui/team-section'
 import { StaffFunctionsSection, StaffSchedulesPage } from '@/features/staff-schedules'
 import { WorkTeamForm, WorkTeamsSection, workTeamsQuery } from '@/features/work-teams'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { useWorkersData } from '../application/use-workers-data'
 import { WorkerOrganization } from './worker-organization'
@@ -84,9 +85,29 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           </span>
         </nav>
       ) : null}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 space-y-2">
-          <h1 className="text-xl font-semibold break-words">{title}</h1>
+      <WorkspacePageHeading
+        title={title}
+        actions={
+          team ? (
+            <Button variant="outline" onPress={() => setEditingTeam(true)}>
+              Editar equipo
+            </Button>
+          ) : (
+            <Link
+              to="/ajustes"
+              search={{ tab: 'equipo' }}
+              className="border-border bg-card hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
+            >
+              Invitar personas
+            </Link>
+          )
+        }
+      />
+      <WorkspacePageTabs>
+        <WorkersNavigation search={search} view={view} scoped={scoped} />
+      </WorkspacePageTabs>
+      {person || team?.description || team?.archived ? (
+        <div className="space-y-2">
           {person || team?.description ? (
             <p className="text-muted-foreground max-w-2xl text-sm">
               {person ? person.email : team?.description}
@@ -94,20 +115,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           ) : null}
           {team?.archived ? <Badge variant="neutral">Equipo archivado</Badge> : null}
         </div>
-        {team ? (
-          <Button variant="outline" onPress={() => setEditingTeam(true)}>
-            Editar equipo
-          </Button>
-        ) : (
-          <Link
-            to="/ajustes"
-            search={{ tab: 'equipo' }}
-            className="border-border bg-card hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
-          >
-            Invitar personas
-          </Link>
-        )}
-      </header>
+      ) : null}
       {person ? (
         <div className="flex flex-wrap gap-2" aria-label="Equipos de la persona">
           {activeTeams
@@ -124,7 +132,6 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             ))}
         </div>
       ) : null}
-      <WorkersNavigation search={search} view={view} scoped={scoped} />
       {view === 'personas' ? (
         <TeamSection
           key={search.persona ?? search.equipo ?? 'company'}

@@ -71,6 +71,8 @@ describe('workers module navigation', () => {
   it('provides a company directory and dedicated navigable sections', () => {
     const html = renderToStaticMarkup(<WorkersPage />)
     expect(html).toMatch(/<h1[^>]*>Trabajadores<\/h1>/)
+    expect(html).toContain('Invitar personas')
+    expect(html).toMatch(/aria-current="page"[^>]*>Personas<\/a>/)
     expect(html).not.toContain('Las personas de tu empresa, sus equipos y su disponibilidad')
     expect(html).not.toContain('Equipos activos')
     expect(html).not.toContain('Sin equipo')
@@ -95,6 +97,7 @@ describe('workers module navigation', () => {
       const child = vista === 'horarios' ? mocks.schedule : mocks.vacations
       expect(child.mock.calls[0]?.[0].memberIds).toEqual(['ana'])
       expect(html).toContain('Equipo Norte')
+      expect(html).toContain('Editar equipo')
       expect(html).toContain('equipo=north')
       expect(html).not.toContain('vista=organigrama')
     },

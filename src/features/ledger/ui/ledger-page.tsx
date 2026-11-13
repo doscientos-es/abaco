@@ -6,10 +6,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderHeading,
-  PageHeaderTitle,
   Table,
   TableBody,
   TableCell,
@@ -51,6 +47,7 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 /** `2026-03-15` -> `2026-T1`, same key as quarterlyVat. */
 const quarterKey = (date: string) =>
@@ -233,81 +230,80 @@ export function LedgerPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Contabilidad</PageHeaderTitle>
-        </PageHeaderHeading>
-        <PageHeaderActions className="shrink-0">
-          <Button onPress={() => setDialogOpen(true)}>
-            <Plus aria-hidden="true" className="size-4" />
-            Nuevo apunte
-          </Button>
-          <DropdownMenuTrigger>
-            <Button variant="outline" aria-label="Más opciones de contabilidad">
-              <DotsThree aria-hidden="true" weight="bold" className="size-5" />
-              Más opciones
+      <WorkspacePageHeading
+        title="Contabilidad"
+        actions={
+          <>
+            <Button onPress={() => setDialogOpen(true)}>
+              <Plus aria-hidden="true" className="size-4" />
+              Nuevo apunte
             </Button>
-            <DropdownMenuContent placement="bottom end" className="w-64">
-              <DropdownMenuItem onAction={() => setImportOpen(true)}>
-                <UploadSimple aria-hidden="true" className="size-4 shrink-0" />
-                <span className="whitespace-nowrap">Importar de Excel</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onAction={() =>
-                  downloadTextFile(
-                    `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${month || 'todo'}.csv`,
-                    buildLedgerCsv(monthEntries),
-                  )
-                }
-                isDisabled={monthEntries.length === 0}
-              >
-                <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
-                <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
-              </DropdownMenuItem>
-              {session?.tenantId === tenant.id && session?.role === 'admin' ? (
-                <>
-                  {(['clients', 'invoices', 'payments', 'expenses'] as const).map((dataset) => (
-                    <DropdownMenuItem
-                      key={dataset}
-                      isDisabled={exportBusy}
-                      onAction={() => void exportDataset(dataset)}
-                    >
-                      <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
-                      <span className="whitespace-nowrap">
-                        {dataset === 'clients'
-                          ? 'Exportar clientes'
-                          : dataset === 'invoices'
-                            ? 'Exportar facturas'
-                            : dataset === 'payments'
-                              ? 'Exportar cobros'
-                              : 'Exportar gastos'}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenuTrigger>
-        </PageHeaderActions>
-      </PageHeader>
-
-      <Tabs
-        selectedKey={tab}
-        onSelectionChange={(key) =>
-          void navigate({ to: '/contabilidad', search: { ...search, tab: key as LedgerTab } })
+            <DropdownMenuTrigger>
+              <Button variant="outline" aria-label="Más opciones de contabilidad">
+                <DotsThree aria-hidden="true" weight="bold" className="size-5" />
+                Más opciones
+              </Button>
+              <DropdownMenuContent placement="bottom end" className="w-64">
+                <DropdownMenuItem onAction={() => setImportOpen(true)}>
+                  <UploadSimple aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="whitespace-nowrap">Importar de Excel</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onAction={() =>
+                    downloadTextFile(
+                      `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${month || 'todo'}.csv`,
+                      buildLedgerCsv(monthEntries),
+                    )
+                  }
+                  isDisabled={monthEntries.length === 0}
+                >
+                  <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
+                </DropdownMenuItem>
+                {session?.tenantId === tenant.id && session?.role === 'admin' ? (
+                  <>
+                    {(['clients', 'invoices', 'payments', 'expenses'] as const).map((dataset) => (
+                      <DropdownMenuItem
+                        key={dataset}
+                        isDisabled={exportBusy}
+                        onAction={() => void exportDataset(dataset)}
+                      >
+                        <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
+                        <span className="whitespace-nowrap">
+                          {dataset === 'clients'
+                            ? 'Exportar clientes'
+                            : dataset === 'invoices'
+                              ? 'Exportar facturas'
+                              : dataset === 'payments'
+                                ? 'Exportar cobros'
+                                : 'Exportar gastos'}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenuTrigger>
+          </>
         }
-      >
-        <TabsList
-          aria-label="Secciones de contabilidad"
-          className="w-full overflow-x-auto sm:w-fit"
+      />
+
+      <WorkspacePageTabs>
+        <Tabs
+          selectedKey={tab}
+          onSelectionChange={(key) =>
+            void navigate({ to: '/contabilidad', search: { ...search, tab: key as LedgerTab } })
+          }
         >
-          {ledgerTabs.map((id) => (
-            <TabsTrigger key={id} id={id}>
-              {ledgerTabLabels[id]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+          <TabsList aria-label="Secciones de contabilidad">
+            {ledgerTabs.map((id) => (
+              <TabsTrigger key={id} id={id}>
+                {ledgerTabLabels[id]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </WorkspacePageTabs>
 
       {tab === 'calendario' ? (
         <PaymentCalendar

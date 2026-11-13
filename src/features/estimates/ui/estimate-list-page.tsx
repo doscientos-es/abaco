@@ -1,9 +1,5 @@
 import {
   Button,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderHeading,
-  PageHeaderTitle,
   Input,
   Table,
   TableBody,
@@ -28,6 +24,7 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { createEstimate } from '../application/estimate-actions'
 
@@ -67,14 +64,10 @@ export function EstimateListPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Presupuestos</PageHeaderTitle>
-        </PageHeaderHeading>
-        <PageHeaderActions>
-          <Button onPress={startNew}>Crear presupuesto</Button>
-        </PageHeaderActions>
-      </PageHeader>
+      <WorkspacePageHeading
+        title="Presupuestos"
+        actions={<Button onPress={startNew}>Crear presupuesto</Button>}
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input

@@ -4,10 +4,6 @@ import {
   ConfirmDialog,
   FilterBar,
   Input,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderHeading,
-  PageHeaderTitle,
   Table,
   TableBody,
   TableCell,
@@ -31,6 +27,7 @@ import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { RowActions, TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { catalogImportSchema, catalogKeys } from '../application/catalog-import'
 
@@ -138,17 +135,17 @@ export function CatalogPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Catálogo</PageHeaderTitle>
-        </PageHeaderHeading>
-        <PageHeaderActions>
-          <Button variant="outline" onPress={() => setImportOpen(true)}>
-            Importar de Excel
-          </Button>
-          <Button onPress={create}>Nuevo artículo</Button>
-        </PageHeaderActions>
-      </PageHeader>
+      <WorkspacePageHeading
+        title="Catálogo"
+        actions={
+          <>
+            <Button variant="outline" onPress={() => setImportOpen(true)}>
+              Importar de Excel
+            </Button>
+            <Button onPress={create}>Nuevo artículo</Button>
+          </>
+        }
+      />
 
       <ImportDialog
         open={importOpen}

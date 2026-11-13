@@ -1,16 +1,6 @@
 import { DragDropProvider } from '@dnd-kit/react'
 import { isSortable } from '@dnd-kit/react/sortable'
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderHeading,
-  PageHeaderTitle,
-} from '@doscientos/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
 import { ArrowCounterClockwise, Check, Plus, SlidersHorizontal, X } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState, type ComponentProps } from 'react'
@@ -26,6 +16,7 @@ import { ChartCard, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge } from '@/shared/ui/status-badge'
+import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import {
   dashboardWidgets,
@@ -133,38 +124,38 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Hola, {tenant.name}</PageHeaderTitle>
-        </PageHeaderHeading>
-        <PageHeaderActions>
-          <Link
-            to="/presupuestos"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
-          >
-            Ver presupuestos
-          </Link>
-          {canCustomize ? (
-            editing ? (
-              <>
-                <Button variant="outline" onPress={cancelEditing}>
-                  <X aria-hidden="true" className="mr-2 size-4" />
-                  Cancelar
+      <WorkspacePageHeading
+        title={<>Hola, {tenant.name}</>}
+        actions={
+          <>
+            <Link
+              to="/presupuestos"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
+            >
+              Ver presupuestos
+            </Link>
+            {canCustomize ? (
+              editing ? (
+                <>
+                  <Button variant="outline" onPress={cancelEditing}>
+                    <X aria-hidden="true" className="mr-2 size-4" />
+                    Cancelar
+                  </Button>
+                  <Button isDisabled={!dirty} onPress={saveLayout}>
+                    <Check aria-hidden="true" className="mr-2 size-4" />
+                    Guardar
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onPress={startEditing}>
+                  <SlidersHorizontal aria-hidden="true" className="mr-2 size-4" />
+                  Personalizar
                 </Button>
-                <Button isDisabled={!dirty} onPress={saveLayout}>
-                  <Check aria-hidden="true" className="mr-2 size-4" />
-                  Guardar
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onPress={startEditing}>
-                <SlidersHorizontal aria-hidden="true" className="mr-2 size-4" />
-                Personalizar
-              </Button>
-            )
-          ) : null}
-        </PageHeaderActions>
-      </PageHeader>
+              )
+            ) : null}
+          </>
+        }
+      />
 
       {editing ? (
         <section

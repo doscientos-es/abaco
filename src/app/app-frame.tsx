@@ -34,6 +34,7 @@ import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
+import { WorkspaceChromeContext } from '@/shared/ui/workspace-page-chrome'
 
 import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { navIcons } from './nav-icons'
@@ -134,6 +135,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
+  const [headingTarget, setHeadingTarget] = useState<HTMLDivElement | null>(null)
+  const [tabsTarget, setTabsTarget] = useState<HTMLDivElement | null>(null)
   const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
     if (item.to === '/superadmin') return platformAccess.data === true
@@ -230,197 +233,208 @@ export function AppFrame({ children }: { children: ReactNode }) {
   )
 
   return (
-    <AppShell
-      className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
-      style={
-        tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
-          ? ({
-              '--primary': tenant.brandColor,
-              '--primary-foreground': readableTextColor(tenant.brandColor),
-              '--ring': tenant.brandColor,
-            } as CSSProperties)
-          : undefined
-      }
-    >
-      <a href="#main-content" className="skip-link">
-        Saltar al contenido
-      </a>
-      <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
-        <div className="shrink-0 px-3 pt-4 pb-3">
-          <Link
-            to="/"
-            aria-label="Ir al resumen"
-            className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
+    <WorkspaceChromeContext.Provider value={{ heading: headingTarget, tabs: tabsTarget }}>
+      <AppShell
+        className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
+        style={
+          tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
+            ? ({
+                '--primary': tenant.brandColor,
+                '--primary-foreground': readableTextColor(tenant.brandColor),
+                '--ring': tenant.brandColor,
+              } as CSSProperties)
+            : undefined
+        }
+      >
+        <a href="#main-content" className="skip-link">
+          Saltar al contenido
+        </a>
+        <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
+          <div className="shrink-0 px-3 pt-4 pb-3">
+            <Link
+              to="/"
+              aria-label="Ir al resumen"
+              className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
+            >
+              <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
+                {tenant.logoUrl ? (
+                  <img
+                    src={tenant.logoUrl}
+                    alt={tenant.name}
+                    className="max-h-8 max-w-12 object-contain"
+                  />
+                ) : (
+                  <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+                )}
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-sm font-semibold tracking-tight">
+                  {tenant.name}
+                </span>
+                <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
+              </span>
+            </Link>
+          </div>
+
+          <nav
+            aria-label="Principal"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1"
           >
-            <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
+            {groups.map((group) => (
+              <div key={group.label} className="space-y-1">
+                <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <SidebarLink key={item.to} {...item} />
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          <PlanBanner placement="sidebar" />
+
+          <div className="border-border mt-auto shrink-0 border-t p-3">
+            <div className="flex items-center gap-1 px-2 pb-2">
+              <SaveStatusIndicator status={saveStatus} />
+              <div className="ml-auto flex items-center gap-1">
+                {can(session?.role, 'vacations:manage') && session?.tenantId ? (
+                  <PendingAbsenceNotifications tenantId={session.tenantId} />
+                ) : null}
+                {canSeeSettings ? (
+                  <IconButton
+                    label="Ajustes"
+                    variant="ghost"
+                    onPress={() => void navigate({ to: '/ajustes' })}
+                    className={pathname === '/ajustes' ? 'text-primary' : 'text-muted-foreground'}
+                  >
+                    {navIcons.settings}
+                  </IconButton>
+                ) : null}
+              </div>
+            </div>
+            <DropdownMenuTrigger>
+              <Button
+                variant="ghost"
+                aria-label="Menú de usuario"
+                className="h-auto w-full justify-start gap-3 px-3 py-2"
+              >
+                <Avatar>
+                  <AvatarFallback>{initials(userName)}</AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 text-left leading-tight">
+                  <span className="block truncate text-sm font-medium">{userName}</span>
+                  <span className="text-muted-foreground block truncate text-xs font-normal">
+                    {session?.role ? roleLabels[session.role] : ''}
+                  </span>
+                </span>
+              </Button>
+              {userMenu('top start')}
+            </DropdownMenuTrigger>
+          </div>
+        </AppShellSidebar>
+
+        <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <AppShellMobileHeader className="hidden max-md:flex">
+            <Link to="/" className="min-w-0 flex-1 leading-tight" aria-label="Ir al resumen">
               {tenant.logoUrl ? (
                 <img
                   src={tenant.logoUrl}
                   alt={tenant.name}
-                  className="max-h-8 max-w-12 object-contain"
+                  className="mr-2 inline-block max-h-7 max-w-10 object-contain align-middle"
                 />
-              ) : (
-                <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
-              )}
-            </span>
-            <span className="min-w-0 leading-tight">
+              ) : null}
               <span className="block truncate text-sm font-semibold tracking-tight">
                 {tenant.name}
               </span>
-              <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
-            </span>
-          </Link>
-        </div>
-
-        <nav aria-label="Principal" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1">
-          {groups.map((group) => (
-            <div key={group.label} className="space-y-1">
-              <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
-                {group.label}
-              </p>
-              {group.items.map((item) => (
-                <SidebarLink key={item.to} {...item} />
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <PlanBanner placement="sidebar" />
-
-        <div className="border-border mt-auto shrink-0 border-t p-3">
-          <div className="flex items-center gap-1 px-2 pb-2">
+            </Link>
             <SaveStatusIndicator status={saveStatus} />
-            <div className="ml-auto flex items-center gap-1">
-              {can(session?.role, 'vacations:manage') && session?.tenantId ? (
-                <PendingAbsenceNotifications tenantId={session.tenantId} />
-              ) : null}
-              {canSeeSettings ? (
-                <IconButton
-                  label="Ajustes"
-                  variant="ghost"
-                  onPress={() => void navigate({ to: '/ajustes' })}
-                  className={pathname === '/ajustes' ? 'text-primary' : 'text-muted-foreground'}
-                >
-                  {navIcons.settings}
-                </IconButton>
-              ) : null}
-            </div>
-          </div>
-          <DropdownMenuTrigger>
-            <Button
-              variant="ghost"
-              aria-label="Menú de usuario"
-              className="h-auto w-full justify-start gap-3 px-3 py-2"
-            >
-              <Avatar>
-                <AvatarFallback>{initials(userName)}</AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 text-left leading-tight">
-                <span className="block truncate text-sm font-medium">{userName}</span>
-                <span className="text-muted-foreground block truncate text-xs font-normal">
-                  {session?.role ? roleLabels[session.role] : ''}
+            <DropdownMenuTrigger>
+              <Button
+                variant="ghost"
+                aria-label="Menú de usuario"
+                className="h-auto rounded-full p-1"
+              >
+                <Avatar>
+                  <AvatarFallback>{initials(userName)}</AvatarFallback>
+                </Avatar>
+              </Button>
+              {userMenu('bottom end')}
+            </DropdownMenuTrigger>
+          </AppShellMobileHeader>
+          <div className="workspace-topbar">
+            <div className="workspace-topbar__row">
+              <div className="workspace-topbar__identity">
+                <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
+                  {tenant.name}
+                  <span aria-hidden="true" className="px-2">
+                    /
+                  </span>
+                  <span className="text-foreground">{section}</span>
                 </span>
-              </span>
-            </Button>
-            {userMenu('top start')}
-          </DropdownMenuTrigger>
-        </div>
-      </AppShellSidebar>
-
-      <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <AppShellMobileHeader className="hidden max-md:flex">
-          <Link to="/" className="min-w-0 flex-1 leading-tight" aria-label="Ir al resumen">
-            {tenant.logoUrl ? (
-              <img
-                src={tenant.logoUrl}
-                alt={tenant.name}
-                className="mr-2 inline-block max-h-7 max-w-10 object-contain align-middle"
+                <div ref={setHeadingTarget} className="workspace-topbar__heading" />
+              </div>
+              <GlobalSearch
+                key={session?.tenantId}
+                data={session?.role === 'admin' ? data : undefined}
+                navigation={searchNavigation}
               />
-            ) : null}
-            <span className="block truncate text-sm font-semibold tracking-tight">
-              {tenant.name}
-            </span>
-          </Link>
-          <SaveStatusIndicator status={saveStatus} />
-          <DropdownMenuTrigger>
-            <Button
-              variant="ghost"
-              aria-label="Menú de usuario"
-              className="h-auto rounded-full p-1"
-            >
-              <Avatar>
-                <AvatarFallback>{initials(userName)}</AvatarFallback>
-              </Avatar>
-            </Button>
-            {userMenu('bottom end')}
-          </DropdownMenuTrigger>
-        </AppShellMobileHeader>
-        <div className="workspace-topbar">
-          <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
-            {tenant.name}
-            <span aria-hidden="true" className="px-2">
-              /
-            </span>
-            <span className="text-foreground">{section}</span>
-          </span>
-          <GlobalSearch
-            key={session?.tenantId}
-            data={session?.role === 'admin' ? data : undefined}
-            navigation={searchNavigation}
-          />
-        </div>
-        <PlanBanner />
-        <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
-        <AppShellContent
-          id="main-content"
-          tabIndex={-1}
-          size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
-          className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
-        >
-          {children}
-        </AppShellContent>
-      </AppShellMain>
-
-      <nav
-        aria-label="Principal"
-        style={{
-          gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))`,
-        }}
-        className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
-      >
-        {tabs.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            activeOptions={{ exact: item.to === '/' }}
-            activeProps={{ className: 'text-primary font-medium' }}
-            className={tabClass}
+            </div>
+            <div ref={setTabsTarget} className="workspace-topbar__tabs" />
+          </div>
+          <PlanBanner />
+          <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
+          <AppShellContent
+            id="main-content"
+            tabIndex={-1}
+            size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
+            className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
           >
-            {item.icon}
-            <span className="max-w-full truncate">{item.label}</span>
-          </Link>
-        ))}
-        {moreItems.length > 0 ? (
-          <DropdownMenuTrigger>
-            <Button
-              variant="ghost"
-              aria-label="Más secciones"
-              className={`${tabClass} h-auto rounded-none ${moreActive ? 'text-primary font-medium' : ''}`}
+            {children}
+          </AppShellContent>
+        </AppShellMain>
+
+        <nav
+          aria-label="Principal"
+          style={{
+            gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))`,
+          }}
+          className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
+        >
+          {tabs.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              activeOptions={{ exact: item.to === '/' }}
+              activeProps={{ className: 'text-primary font-medium' }}
+              className={tabClass}
             >
-              {navIcons.more}
-              <span>Más</span>
-            </Button>
-            <DropdownMenuContent placement="top end">
-              {moreItems.map((item) => (
-                <DropdownMenuItem key={item.to} onAction={() => void navigate({ to: item.to })}>
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenuTrigger>
-        ) : null}
-      </nav>
-      <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
-    </AppShell>
+              {item.icon}
+              <span className="max-w-full truncate">{item.label}</span>
+            </Link>
+          ))}
+          {moreItems.length > 0 ? (
+            <DropdownMenuTrigger>
+              <Button
+                variant="ghost"
+                aria-label="Más secciones"
+                className={`${tabClass} h-auto rounded-none ${moreActive ? 'text-primary font-medium' : ''}`}
+              >
+                {navIcons.more}
+                <span>Más</span>
+              </Button>
+              <DropdownMenuContent placement="top end">
+                {moreItems.map((item) => (
+                  <DropdownMenuItem key={item.to} onAction={() => void navigate({ to: item.to })}>
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenuTrigger>
+          ) : null}
+        </nav>
+        <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
+      </AppShell>
+    </WorkspaceChromeContext.Provider>
   )
 }

@@ -1,12 +1,4 @@
-import {
-  Button,
-  PageHeader,
-  PageHeaderHeading,
-  PageHeaderTitle,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '@doscientos/ui'
+import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -16,6 +8,7 @@ import doscientosLogo from '@/shared/assets/logo.svg'
 import type { Tenant } from '@/shared/domain/types'
 import { brand } from '@/shared/lib/brand'
 import { useTenantData } from '@/shared/store/store'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { version } from '../../../../package.json'
 import { patchTenant } from '../application/settings-actions'
@@ -85,27 +78,25 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Ajustes</PageHeaderTitle>
-        </PageHeaderHeading>
-      </PageHeader>
+      <WorkspacePageHeading title="Ajustes" />
 
-      <Tabs
-        selectedKey={tab}
-        onSelectionChange={(key) => {
-          setSaved(false)
-          void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })
-        }}
-      >
-        <TabsList aria-label="Secciones de ajustes" className="w-full overflow-x-auto sm:w-fit">
-          {allowed.map((id) => (
-            <TabsTrigger key={id} id={id}>
-              {labels[id]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <WorkspacePageTabs>
+        <Tabs
+          selectedKey={tab}
+          onSelectionChange={(key) => {
+            setSaved(false)
+            void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })
+          }}
+        >
+          <TabsList aria-label="Secciones de ajustes">
+            {allowed.map((id) => (
+              <TabsTrigger key={id} id={id}>
+                {labels[id]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </WorkspacePageTabs>
 
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}

@@ -1,14 +1,4 @@
-import {
-  Button,
-  PageHeader,
-  PageHeaderHeading,
-  PageHeaderTitle,
-  Skeleton,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@doscientos/ui'
+import { Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@doscientos/ui'
 import { ClipboardTextIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -19,6 +9,7 @@ import { workTeamLabel, workTeamsQuery } from '@/features/work-teams'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { listWorkOrders } from '../application/work-order-actions'
 import { workTabs, type WorkSearch, type WorkTab } from '../domain/work-search'
@@ -42,12 +33,9 @@ export function WorkOrdersPage() {
   }
   return (
     <div className="space-y-5">
-      <PageHeader className="py-0">
-        <PageHeaderHeading>
-          <PageHeaderTitle>Planificación</PageHeaderTitle>
-        </PageHeaderHeading>
-      </PageHeader>
+      <WorkspacePageHeading title="Planificación" />
       <Tabs
+        className="block"
         selectedKey={tab}
         onSelectionChange={(key) =>
           void navigate({
@@ -56,16 +44,15 @@ export function WorkOrdersPage() {
           })
         }
       >
-        <TabsList
-          aria-label="Secciones de planificación"
-          className="w-full overflow-x-auto sm:w-fit"
-        >
-          {tabs.map((id) => (
-            <TabsTrigger key={id} id={id}>
-              {id === 'revision' ? <ReportReviewTabLabel tenantId={tenant.id} /> : labels[id]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <WorkspacePageTabs>
+          <TabsList aria-label="Secciones de planificación">
+            {tabs.map((id) => (
+              <TabsTrigger key={id} id={id}>
+                {id === 'revision' ? <ReportReviewTabLabel tenantId={tenant.id} /> : labels[id]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </WorkspacePageTabs>
         <TabsContent id={tab} key={tab}>
           {tab === 'planificacion' ? <AgendaPage /> : null}
           {tab === 'revision' && session?.role === 'admin' ? (

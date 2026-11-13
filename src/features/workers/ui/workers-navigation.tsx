@@ -26,7 +26,7 @@ export function WorkersNavigation({
   return (
     <nav
       aria-label={scoped ? 'Secciones de la ficha' : 'Secciones de trabajadores'}
-      className="border-border flex gap-1 overflow-x-auto border-b pb-1"
+      className="flex gap-1"
     >
       {views.map((id) => (
         <Link
@@ -34,7 +34,7 @@ export function WorkersNavigation({
           to="/trabajadores"
           search={{ ...search, vista: id }}
           aria-current={view === id ? 'page' : undefined}
-          className={`shrink-0 rounded-lg px-4 py-2.5 text-sm font-medium ${view === id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+          className="hover:bg-muted hover:text-foreground"
         >
           {id === 'personas' && search.persona ? 'Ficha' : labels[id]}
         </Link>

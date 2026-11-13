@@ -3,10 +3,6 @@ import {
   ConfirmDialog,
   IconButton,
   Input,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderHeading,
-  PageHeaderTitle,
   Table,
   TableBody,
   TableCell,
@@ -27,6 +23,7 @@ import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
 import { clientTypesQuery } from '../application/client-types'
@@ -95,21 +92,21 @@ export function ClientsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Clientes</PageHeaderTitle>
-        </PageHeaderHeading>
-        <PageHeaderActions>
-          <Button
-            variant="outline"
-            isDisabled={!types.data?.length}
-            onPress={() => setImportOpen(true)}
-          >
-            Importar de Excel
-          </Button>
-          <Button onPress={create}>Nuevo cliente</Button>
-        </PageHeaderActions>
-      </PageHeader>
+      <WorkspacePageHeading
+        title="Clientes"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              isDisabled={!types.data?.length}
+              onPress={() => setImportOpen(true)}
+            >
+              Importar de Excel
+            </Button>
+            <Button onPress={create}>Nuevo cliente</Button>
+          </>
+        }
+      />
 
       {types.isError ? (
         <p role="alert" className="text-destructive text-sm">

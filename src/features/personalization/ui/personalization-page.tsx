@@ -1,12 +1,4 @@
-import {
-  Button,
-  PageHeader,
-  PageHeaderHeading,
-  PageHeaderTitle,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '@doscientos/ui'
+import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -22,6 +14,7 @@ import { StaffFunctionsSection } from '@/features/staff-schedules'
 import type { Tenant } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { TextField } from '@/shared/ui/form'
+import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { MessageFields, type MessageForm } from './message-fields'
 import { messageForm, messageFormValid, messagePatch } from './message-form'
@@ -72,31 +65,26 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <PageHeader>
-        <PageHeaderHeading>
-          <PageHeaderTitle>Personalizar</PageHeaderTitle>
-        </PageHeaderHeading>
-      </PageHeader>
+      <WorkspacePageHeading title="Personalizar" />
 
-      <Tabs
-        selectedKey={tab}
-        onSelectionChange={(key) => {
-          setSaved(false)
-          void navigate({
-            to: '/personalizar',
-            search: { tab: key as 'marca' | 'documentos' | 'listas' },
-          })
-        }}
-      >
-        <TabsList
-          aria-label="Secciones de personalización"
-          className="w-full overflow-x-auto sm:w-fit"
+      <WorkspacePageTabs>
+        <Tabs
+          selectedKey={tab}
+          onSelectionChange={(key) => {
+            setSaved(false)
+            void navigate({
+              to: '/personalizar',
+              search: { tab: key as 'marca' | 'documentos' | 'listas' },
+            })
+          }}
         >
-          <TabsTrigger id="marca">Identidad</TabsTrigger>
-          <TabsTrigger id="documentos">Documentos y correos</TabsTrigger>
-          <TabsTrigger id="listas">Listas</TabsTrigger>
-        </TabsList>
-      </Tabs>
+          <TabsList aria-label="Secciones de personalización">
+            <TabsTrigger id="marca">Identidad</TabsTrigger>
+            <TabsTrigger id="documentos">Documentos y correos</TabsTrigger>
+            <TabsTrigger id="listas">Listas</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </WorkspacePageTabs>
 
       {tab === 'marca' ? (
         <>
