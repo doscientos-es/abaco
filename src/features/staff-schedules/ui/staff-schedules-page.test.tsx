@@ -1,5 +1,7 @@
+import type * as UI from '@doscientos/ui'
 import type * as ReactQuery from '@tanstack/react-query'
 import type * as React from 'react'
+import { isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -18,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   selected: undefined as StaffSelection | undefined,
   filter: null as FilterProps | null,
+  popover: null as { open: boolean | undefined; placement: string | undefined } | null,
   events: [] as { id: string; title: string }[],
 }))
 vi.mock('react', async (original) => {
@@ -41,6 +44,19 @@ vi.mock('@tanstack/react-query', async (original) => ({
   ...(await original<typeof ReactQuery>()),
   useQuery: mocks.query,
 }))
+vi.mock('@doscientos/ui', async (original) => {
+  const actual = await original<typeof UI>()
+  return {
+    ...actual,
+    Popover: (props: React.ComponentProps<typeof actual.Popover>) => {
+      if ('trigger' in props && isValidElement<FilterProps>(props.children)) {
+        mocks.filter = props.children.props
+        mocks.popover = { open: props.isOpen, placement: props.placement }
+      }
+      return <actual.Popover {...props} />
+    },
+  }
+})
 vi.mock('@/features/auth', () => ({ useSession: mocks.session }))
 vi.mock('@/features/settings/application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team', 'company'] }),
@@ -71,6 +87,7 @@ describe('staff schedule access and availability', () => {
   beforeEach(() => {
     mocks.selected = undefined
     mocks.filter = null
+    mocks.popover = null
     mocks.events = []
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 10, 16, 12))
@@ -115,10 +132,19 @@ describe('staff schedule access and availability', () => {
     adminSession()
     const html = renderToStaticMarkup(<StaffSchedulesPage />)
     expect(html).toContain('Horarios del equipo')
-    expect(html).toContain('Buscar personas o equipos')
+    expect(html).not.toContain('Semana tipo actual')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).toContain('Personas y equipos · 2 de 2')
+    expect(html).not.toContain('Buscar personas o equipos')
+    expect(mocks.popover).toEqual({ open: false, placement: 'bottom start' })
     expect(html).toContain('Filtrar por función')
+    expect(html).not.toContain('Previstos ahora:')
+    expect(html).not.toContain('>Calendario</h2>')
     expect(html).not.toContain('Selecciona personas o equipos en el buscador')
     expect(html).toContain('Descargar PDF')
+    expect(html).toMatch(
+      /<select[^>]*aria-label="Filtrar por función".*?<\/select><button[^>]*aria-label="Descargar PDF"/,
+    )
     expect(mocks.events).toHaveLength(1)
     expect(mocks.filter?.selected.personIds).toEqual(['ana', 'luis'])
     expect(mocks.filter?.teams).toEqual([
@@ -131,7 +157,7 @@ describe('staff schedule access and availability', () => {
     renderToStaticMarkup(<StaffSchedulesPage />)
     mocks.filter?.onChange({ personIds: ['luis'], teamIds: ['north'] })
     const html = renderToStaticMarkup(<StaffSchedulesPage />)
-    expect(html).toMatch(/Previstos ahora:<\/strong>\s*Luis/)
+    expect(html).toContain('Personas y equipos · 2 de 2')
     expect(mocks.events).toHaveLength(1)
     expect(mocks.events[0]?.title).toBe('Luis')
     expect(html).not.toMatch(/<div><span[^>]*>Ana<\/span>/)
@@ -144,6 +170,8 @@ describe('staff schedule access and availability', () => {
       <StaffSchedulesPage memberIds={['luis']} title="Equipo Sur" embedded />,
     )
     expect(html).toContain('Equipo Sur')
+    expect(html).toContain('<h2 class="sr-only">Equipo Sur</h2>')
+    expect(html).toContain('Editar horario')
     expect(html).not.toContain('<h1')
     expect(mocks.filter?.people.map((person) => person.userId)).toEqual(['luis'])
     expect(mocks.filter?.teams[0]?.memberIds).toEqual(['luis'])
@@ -173,11 +201,13 @@ describe('staff schedule access and availability', () => {
           }
         : originalQuery?.(options),
     )
-    renderToStaticMarkup(<StaffSchedulesPage />)
+    const html = renderToStaticMarkup(<StaffSchedulesPage />)
     expect(mocks.filter?.people).toHaveLength(154)
+    expect(html).toContain('Personas y equipos · 0 de 154')
+    expect(html).not.toContain('Descargar PDF')
     expect(mocks.events).toHaveLength(0)
     mocks.filter?.onChange({ personIds: ['luis'], teamIds: [] })
-    renderToStaticMarkup(<StaffSchedulesPage />)
+    expect(renderToStaticMarkup(<StaffSchedulesPage />)).toContain('Personas y equipos · 1 de 154')
     expect(mocks.events).toHaveLength(1)
     expect(mocks.events[0]?.title).toBe('Persona 153')
   })
@@ -192,6 +222,7 @@ describe('staff schedule access and availability', () => {
     const html = renderToStaticMarkup(<StaffSchedulesPage />)
     expect(html).toContain('Mi horario')
     expect(html).toContain('Electricidad')
+    expect(html).toMatch(/Mis funciones:.*?<button[^>]*aria-label="Descargar PDF"[^>]*disabled/)
     expect(html).not.toContain('Luis')
     expect(
       mocks.query.mock.calls.find(([options]) => options.queryKey[0] === 'team')?.[0].enabled,

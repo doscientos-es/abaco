@@ -39,16 +39,11 @@ export function WorkTeamsSection({
   const archivedCount = (teams.data?.length ?? 0) - activeCount
 
   return (
-    <section
-      aria-labelledby="work-teams-heading"
-      className="border-border bg-card space-y-4 rounded-lg border p-5"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 id="work-teams-heading" className="text-sm font-semibold">
-            Equipos de trabajo
-          </h2>
-        </div>
+    <section aria-labelledby="work-teams-heading" className="space-y-4">
+      <h2 id="work-teams-heading" className="sr-only">
+        Equipos de trabajo
+      </h2>
+      <div className="flex justify-end">
         <Button
           variant="outline"
           isDisabled={!peopleReady || !people.length || teams.isPending || teams.isError}
@@ -123,7 +118,7 @@ export function WorkTeamsSection({
               {pager.pageItems.map((team) => (
                 <li
                   key={team.id}
-                  className="border-border flex min-w-0 items-start gap-3 rounded-xl border p-4"
+                  className="border-border bg-card flex min-w-0 items-start gap-3 rounded-xl border p-4"
                 >
                   <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
                     <UsersThreeIcon aria-hidden="true" className="size-5" />

@@ -12,7 +12,13 @@ import {
 } from '../application/staff-schedule-actions'
 import type { StaffFunction } from '../domain/staff-schedule'
 
-export function StaffFunctionsSection({ tenantId }: { tenantId: string }) {
+export function StaffFunctionsSection({
+  tenantId,
+  embedded = false,
+}: {
+  tenantId: string
+  embedded?: boolean
+}) {
   const query = useQuery(staffFunctionsQuery(tenantId))
   const client = useQueryClient()
   const [name, setName] = useState('')
@@ -38,11 +44,11 @@ export function StaffFunctionsSection({ tenantId }: { tenantId: string }) {
 
   return (
     <section
-      className="border-border bg-card space-y-4 rounded-lg border p-5"
+      className={embedded ? 'space-y-4' : 'border-border bg-card space-y-4 rounded-lg border p-5'}
       aria-labelledby="staff-functions-heading"
     >
       <div>
-        <h2 id="staff-functions-heading" className="font-semibold">
+        <h2 id="staff-functions-heading" className={embedded ? 'sr-only' : 'font-semibold'}>
           Funciones del equipo
         </h2>
       </div>

@@ -1,5 +1,5 @@
 import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
-import { TrashIcon, UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -32,16 +32,19 @@ import {
   type TeamResult,
 } from '../application/team-actions'
 import { TeamImportDialog } from './team-import-dialog'
+import { TeamPersonCard, TeamPersonDetails } from './team-person'
 
 /** Members of the company. Only rendered for people allowed to manage the team. */
 export function TeamSection({
   tenantId,
   mode = 'manage',
   memberIds,
+  personId,
 }: {
   tenantId: string
   mode?: 'manage' | 'invite'
   memberIds?: string[] | undefined
+  personId?: string | undefined
 }) {
   const inviting = mode === 'invite'
   const session = useSession()
@@ -110,183 +113,132 @@ export function TeamSection({
   const matching = (team.data ?? []).filter(
     (member) =>
       (!memberIds || memberIds.includes(member.userId)) &&
+      (!personId || member.userId === personId) &&
       fuzzySearch(search, member.fullName, member.email, roleLabels[member.role]),
   )
   const pager = usePagination(matching, `${tenantId}:${search}:${memberIds?.join(',') ?? ''}`, 25)
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="people-heading" className="border-border bg-card rounded-lg border">
-        <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b p-5">
-          <div className="flex items-start gap-3">
-            <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
-              <UsersThreeIcon aria-hidden="true" className="size-5" />
-            </span>
-            <div>
-              <h2 id="people-heading" className="text-sm font-semibold">
-                {inviting ? 'Invitar personas' : 'Personas y permisos'}
-              </h2>
+      <section
+        aria-labelledby="people-heading"
+        className={inviting ? 'border-border bg-card rounded-lg border' : 'space-y-4'}
+      >
+        {inviting ? (
+          <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b p-5">
+            <div className="flex items-start gap-3">
+              <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                <UsersThreeIcon aria-hidden="true" className="size-5" />
+              </span>
+              <div>
+                <h2 id="people-heading" className="text-sm font-semibold">
+                  Invitar personas
+                </h2>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="outline"
+                isDisabled={busy || !team.isSuccess}
+                onPress={() => setImportOpen(true)}
+              >
+                Importar personas
+              </Button>
+              <Button
+                aria-haspopup="dialog"
+                aria-expanded={inviteOpen}
+                isDisabled={busy}
+                onPress={() => {
+                  setMessage(null)
+                  setInviteOpen(true)
+                }}
+              >
+                <UserPlusIcon aria-hidden="true" />
+                Invitar usuario
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {!inviting && team.isSuccess ? (
-              <Badge variant="neutral">
-                {matching.length} {matching.length === 1 ? 'persona' : 'personas'}
-              </Badge>
-            ) : null}
-            {inviting ? (
-              <>
-                <Button
-                  variant="outline"
-                  isDisabled={busy || !team.isSuccess}
-                  onPress={() => setImportOpen(true)}
-                >
-                  Importar personas
-                </Button>
-                <Button
-                  aria-haspopup="dialog"
-                  aria-expanded={inviteOpen}
-                  isDisabled={busy}
-                  onPress={() => {
-                    setMessage(null)
-                    setInviteOpen(true)
-                  }}
-                >
-                  <UserPlusIcon aria-hidden="true" />
-                  Invitar usuario
-                </Button>
-              </>
-            ) : (
-              <Link
-                to="/ajustes"
-                search={{ tab: 'equipo' }}
-                className="text-primary text-sm font-medium underline-offset-4 hover:underline"
-              >
-                Invitar personas
-              </Link>
-            )}
-          </div>
-        </div>
+        ) : (
+          <h2 id="people-heading" className="sr-only">
+            {personId ? 'Datos de la persona' : 'Personas'}
+          </h2>
+        )}
 
-        {!inviting && team.isSuccess && team.data.length > 0 ? (
-          <div className="px-5 pt-4">
-            <TextField
-              label="Buscar personas"
-              value={search}
-              onChange={setSearch}
-              placeholder="Nombre, correo o rol"
-            />
+        {!inviting && !personId && team.isSuccess ? (
+          <div className="flex flex-wrap items-end gap-3">
+            {team.data.length > 0 ? (
+              <div className="min-w-0 flex-1">
+                <TextField
+                  label="Buscar personas"
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Nombre, correo o rol"
+                />
+              </div>
+            ) : null}
+            <Badge variant="neutral">
+              {matching.length} {matching.length === 1 ? 'persona' : 'personas'}
+            </Badge>
           </div>
         ) : null}
         {!inviting && (functions.isError || schedules.isError) ? (
-          <p role="alert" className="text-destructive px-5 pt-4 text-sm">
+          <p role="alert" className="text-destructive text-sm">
             No se pudieron cargar las funciones del equipo. Recarga la página para editarlas.
           </p>
         ) : null}
         {!inviting ? (
-          <ul className="divide-border divide-y">
+          <ul className={personId ? '' : 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'}>
             {pager.pageItems.map((member) => {
               const isMe = member.userId === session?.userId
               const editable = !isMe && options.includes(member.role)
               const schedule = schedules.data?.find((item) => item.userId === member.userId)
               const assigned =
                 functions.data?.filter((item) => schedule?.functionIds.includes(item.id)) ?? []
-              const initials = (member.fullName.trim() || member.email)
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((part) => part.charAt(0).toLocaleUpperCase())
-                .join('')
-              return (
-                <li
-                  key={member.userId}
-                  className="flex flex-wrap items-center gap-3 px-5 py-4 sm:flex-nowrap"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="bg-secondary text-secondary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                  >
-                    {initials}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium break-words">
-                      <Link
-                        to="/trabajadores"
-                        search={{ persona: member.userId }}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {member.fullName || member.email}
-                      </Link>
-                      {isMe ? (
-                        <span className="text-muted-foreground font-normal"> · Tú</span>
-                      ) : null}
-                    </p>
-                    {member.fullName ? (
-                      <p className="text-muted-foreground mt-0.5 text-xs break-all">
-                        {member.email}
-                      </p>
-                    ) : null}
-                    {functions.isSuccess && schedules.isSuccess ? (
-                      <p className="text-muted-foreground mt-1 text-xs break-words">
-                        {assigned.length
-                          ? assigned.map((item) => item.name).join(' · ')
-                          : 'Sin funciones asignadas'}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant="outline"
-                    isDisabled={!functions.isSuccess || !schedules.isSuccess || busy}
-                    aria-label={`Editar funciones de ${member.fullName || member.email}`}
-                    onPress={() => setEditingFunctions(member)}
-                  >
-                    Funciones
-                  </Button>
-                  {editable ? (
-                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:shrink-0">
-                      <SelectField
-                        hideLabel
-                        label={`Rol de ${member.email}`}
-                        value={member.role}
-                        className="w-40"
-                        isDisabled={busy}
-                        options={options.map((r) => ({ value: r, label: roleLabels[r] }))}
-                        onChange={(value) => {
-                          if (isRole(value))
-                            void run(
-                              () => changeMemberRole(tenantId, member.userId, value),
-                              'Rol actualizado.',
-                            )
-                        }}
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon-lg"
-                        isDisabled={busy}
-                        aria-label={`Quitar a ${member.fullName || member.email} del equipo`}
-                        onPress={() => setRemoving(member)}
-                      >
-                        <TrashIcon aria-hidden="true" className="size-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Badge variant="outline">{roleLabels[member.role]}</Badge>
-                  )}
+              const functionNames =
+                functions.isSuccess && schedules.isSuccess
+                  ? assigned.map((item) => item.name)
+                  : null
+              return personId ? (
+                <li key={member.userId}>
+                  <TeamPersonDetails
+                    member={member}
+                    isMe={isMe}
+                    editable={editable}
+                    options={options}
+                    functions={functionNames}
+                    busy={busy}
+                    onEditFunctions={() => setEditingFunctions(member)}
+                    onChangeRole={(value) =>
+                      void run(
+                        () => changeMemberRole(tenantId, member.userId, value),
+                        'Rol actualizado.',
+                      )
+                    }
+                    onRemove={() => setRemoving(member)}
+                  />
                 </li>
+              ) : (
+                <TeamPersonCard
+                  key={member.userId}
+                  member={member}
+                  isMe={isMe}
+                  functions={functionNames}
+                />
               )
             })}
             {team.isError ? (
-              <li className="text-destructive px-5 py-3 text-sm">No se pudo cargar el equipo.</li>
+              <li className="text-destructive text-sm">No se pudo cargar el equipo.</li>
             ) : null}
             {team.isPending ? (
-              <li className="text-muted-foreground px-5 py-4 text-sm">Cargando personas…</li>
+              <li className="text-muted-foreground text-sm">Cargando personas…</li>
             ) : null}
             {team.isSuccess && team.data.length === 0 ? (
-              <li className="text-muted-foreground px-5 py-4 text-sm">
+              <li className="text-muted-foreground text-sm">
                 Todavía no hay personas en el equipo.
               </li>
             ) : null}
             {team.isSuccess && team.data.length > 0 && matching.length === 0 ? (
-              <li className="text-muted-foreground px-5 py-4 text-sm">
+              <li className="text-muted-foreground text-sm">
                 No hay personas que coincidan con la búsqueda.
               </li>
             ) : null}
@@ -298,10 +250,8 @@ export function TeamSection({
             </Link>
           </div>
         )}
-        {!inviting && matching.length > 10 ? (
-          <div className="p-5">
-            <TablePagination controller={pager} noun="personas" />
-          </div>
+        {!inviting && !personId && matching.length > 10 ? (
+          <TablePagination controller={pager} noun="personas" />
         ) : null}
 
         {inviting && team.isError ? (
@@ -312,7 +262,14 @@ export function TeamSection({
         ) : null}
 
         {!inviteOpen && message ? (
-          <output aria-live="polite" className="text-muted-foreground block px-5 pb-4 text-sm">
+          <output
+            aria-live="polite"
+            className={
+              inviting
+                ? 'text-muted-foreground block px-5 pb-4 text-sm'
+                : 'text-muted-foreground block text-sm'
+            }
+          >
             {message}
           </output>
         ) : null}

@@ -50,7 +50,7 @@ vi.mock('@doscientos/ui', () => ({
     'aria-label'?: string
   }) => {
     mocks.presses.set(label ?? (typeof children === 'string' ? children : ''), onPress)
-    return <button>{children}</button>
+    return <button aria-label={label}>{children}</button>
   },
   Dialog: ({ children }: { children: ReactNode }) => <>{children}</>,
   DialogContent: ({ children }: { children: ReactNode }) => <section>{children}</section>,
@@ -138,11 +138,14 @@ describe('global command palette', () => {
   })
 
   it('shows only supplied navigation shortcuts in its help', () => {
-    render()
+    const trigger = render()
+    expect(trigger).toContain('</button><button aria-label="Atajos de teclado">')
     mocks.presses.get('Atajos de teclado')?.()
     const html = render()
     expect(html).toContain('<kbd>g c</kbd>')
     expect(html).not.toContain('<kbd>g f</kbd>')
     expect(html).not.toContain('role="combobox"')
+    mocks.presses.get('Abrir búsqueda')?.()
+    expect(render()).toContain('role="combobox"')
   })
 })

@@ -10,6 +10,14 @@
 
 La navegación principal se agrupa en **Resumen**, **Presupuestos**, **Clientes**, **Catálogo**, **Trabajos**, **Contratos**, **Agenda**, **Facturas**, **Contabilidad** y **Ajustes**. En móvil, las secciones adicionales aparecen en **Más**.
 
+### Instalar Ábaco y trabajar sin conexión
+
+- Desde el navegador, usa **Instalar aplicación** o **Añadir a pantalla de inicio**. En iPhone y iPad, abre el menú Compartir de Safari y selecciona **Añadir a pantalla de inicio**. La instalación requiere una primera visita con conexión.
+- La aplicación guarda sus recursos de interfaz en el dispositivo. Si se pierde la conexión mientras está abierta, puedes consultar los datos ya cargados; podrían estar desactualizados. Las pantallas que necesiten datos nuevos o validar la sesión requieren conexión.
+- Los cambios de oficina pendientes se mantienen solo mientras la aplicación siga abierta. No cierres ni recargues hasta recuperar la conexión y confirmar el guardado. Las operaciones de servidor, facturación, invitaciones y envíos requieren internet.
+- Los borradores y colas de partes, actividades, fotos e incidencias disponibles en el dispositivo tienen sus propios avisos y controles. Revisa y sincroniza los pendientes antes de cerrar sesión: cerrar sesión elimina los datos locales de trabajo de campo.
+- Por seguridad, la caché de la aplicación no guarda sesiones ni respuestas privadas de la API. Abrir Ábaco de nuevo después de cerrarla requiere conexión para verificar los permisos y cargar datos.
+
 ### Qué permite cada rol
 
 | Rol                         | Uso principal                                                                                           |

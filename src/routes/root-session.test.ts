@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sessionQuery } from '@/features/auth/application/auth-actions'
 
@@ -27,6 +27,36 @@ vi.mock('@/shared/store/store', () => ({
 describe('root session guard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('uses an already verified in-memory session offline, but never an invalidated one', async () => {
+    vi.stubGlobal('navigator', { onLine: false })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const visit = () =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: '/', href: '/' },
+      } as Parameters<typeof beforeLoad>[0])
+    await expect(visit()).rejects.toThrow('Se necesita conexión')
+    const session = {
+      userId: 'user-1',
+      email: '',
+      fullName: '',
+      tenantId: 'company-1',
+      role: 'admin' as const,
+      companies: [],
+      needsWelcome: false,
+    }
+    queryClient.setQueryData(sessionQuery.queryKey, session)
+    hydrateStore.mockResolvedValue(undefined)
+    await expect(visit()).resolves.toEqual({ session })
+    expect(loadSession).not.toHaveBeenCalled()
+    await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey, refetchType: 'none' })
+    await expect(visit()).rejects.toThrow('Se necesita conexión')
+    queryClient.clear()
   })
 
   it('reloads an invalidated anonymous session before entering the dashboard', async () => {

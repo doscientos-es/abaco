@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 
 import { queryClient, router } from '@/app/router'
 import { sessionQuery } from '@/features/auth'
+import { PwaRuntime } from '@/pwa/pwa-runtime'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { resetStore, setRepository } from '@/shared/store/store'
 import { createSupabaseRepository } from '@/shared/store/supabase-repository'
@@ -34,6 +35,7 @@ if (!rootElement) throw new Error('No se ha encontrado el elemento raíz de la a
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <PwaRuntime />
       <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,

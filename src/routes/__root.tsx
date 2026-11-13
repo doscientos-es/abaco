@@ -25,7 +25,14 @@ const isPublicPath = (path: string) =>
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ context, location }) => {
     // Invalidated sessions must be refreshed before deciding whether to redirect.
-    const session = await context.queryClient.fetchQuery(sessionQuery)
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+    const cached = context.queryClient.getQueryState(sessionQuery.queryKey)
+    if (offline && (!cached || cached.isInvalidated || cached.data === undefined)) {
+      throw new Error('Se necesita conexión para comprobar la sesión.')
+    }
+    const session = offline
+      ? (cached?.data ?? null)
+      : await context.queryClient.fetchQuery(sessionQuery)
     const path = location.pathname
     const isPlatformPage = path === '/superadmin'
     if (!session && !isPublicPath(path)) {

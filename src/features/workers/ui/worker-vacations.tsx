@@ -4,7 +4,7 @@ import type { TeamMember } from '@/features/settings/application/team-actions'
 import {
   defaultStaffSelection,
   selectedStaffIds,
-  StaffPeopleFilter,
+  StaffPeopleFilterPopover,
   type StaffSelection,
 } from '@/features/staff-schedules'
 import { VacationManagementPage } from '@/features/vacations'
@@ -35,20 +35,25 @@ export function WorkerVacations({
     .filter((team) => team.memberIds.length)
   const selected = selection ?? defaultStaffSelection(available, memberIds !== undefined)
   const visible = [...selectedStaffIds(available, groups, selected)]
+  const filter = (
+    <StaffPeopleFilterPopover
+      people={available}
+      teams={groups}
+      selected={selected}
+      onChange={setSelection}
+    />
+  )
   return (
     <div className="space-y-5">
-      <StaffPeopleFilter
-        people={available}
-        teams={groups}
-        selected={selected}
-        onChange={setSelection}
-      />
       {visible.length ? (
-        <VacationManagementPage memberIds={visible} embedded />
+        <VacationManagementPage memberIds={visible} embedded headerFilter={filter} />
       ) : (
-        <p className="text-muted-foreground text-sm">
-          Selecciona personas o equipos para consultar sus vacaciones y ausencias.
-        </p>
+        <>
+          {filter}
+          <p className="text-muted-foreground text-sm">
+            Selecciona personas o equipos para consultar sus vacaciones y ausencias.
+          </p>
+        </>
       )}
     </div>
   )

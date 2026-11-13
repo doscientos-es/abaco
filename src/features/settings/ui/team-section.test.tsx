@@ -7,9 +7,15 @@ import type * as Auth from '@/features/auth'
 import { TeamSection } from './team-section'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
-    <a href={to}>{children}</a>
-  ),
+  Link: ({
+    children,
+    to,
+    search,
+  }: {
+    children: React.ReactNode
+    to: string
+    search?: Record<string, string>
+  }) => <a href={`${to}${search ? `?${new URLSearchParams(search)}` : ''}`}>{children}</a>,
 }))
 
 const { query, functionQuery, scheduleQuery } = vi.hoisted(() => ({
@@ -47,7 +53,7 @@ describe('TeamSection', () => {
     scheduleQuery.mockReturnValue({ isSuccess: true, data: [] })
   })
 
-  it('shows people and the invitation button while protecting the current user from editing', () => {
+  it('shows navigable person cards without exposing management actions in the directory', () => {
     query.mockReturnValue({
       isSuccess: true,
       data: [
@@ -56,16 +62,21 @@ describe('TeamSection', () => {
       ],
     })
     const html = renderToStaticMarkup(<TeamSection tenantId="company" />)
+    expect(html).toContain('<section aria-labelledby="people-heading" class="space-y-4">')
+    expect(html).toContain('<h2 id="people-heading" class="sr-only">Personas</h2>')
+    expect(html).toContain('Buscar personas')
     expect(html).toContain('2 personas')
     expect(html).toContain('Pol Gubau')
-    expect(html).toContain('Administrador')
-    expect(html).not.toContain('Quitar a Pol Gubau')
-    expect(html).toContain('Quitar a Ana García del equipo')
-    expect(html).toContain('sm:flex-nowrap')
-    expect(html).toContain('sm:w-auto sm:shrink-0')
-    expect(html).toContain('data-variant="destructive"')
-    expect(html).toContain('data-size="icon-lg"')
-    expect(html).toContain('Invitar personas')
+    expect(html).toContain('<span class="sr-only">Administrador</span>')
+    expect(html).toContain('title="Administrador"')
+    expect(html).not.toContain('>Usuario</span>')
+    expect(html.match(/title="Administrador"/g)).toHaveLength(1)
+    expect(html).toContain('/trabajadores?persona=ana')
+    expect(html).toContain('/trabajadores?persona=me')
+    expect(html).toContain('Ver ficha')
+    expect(html).not.toContain('Quitar acceso')
+    expect(html).not.toContain('Editar funciones')
+    expect(html).not.toContain('Invitar personas')
     expect(html).not.toContain('Nombre (opcional)')
     expect(html).not.toContain('Enviar invitación')
   })
@@ -76,6 +87,7 @@ describe('TeamSection', () => {
       data: [{ userId: 'ana', fullName: 'Ana', email: 'ana@example.com', role: 'user' }],
     })
     const html = renderToStaticMarkup(<TeamSection tenantId="company" mode="invite" />)
+    expect(html).toContain('border-border bg-card rounded-lg border')
     expect(html).toContain('Invitar usuario')
     expect(html).toContain('Importar personas')
     expect(html).toContain('Ir a Trabajadores')
@@ -96,7 +108,7 @@ describe('TeamSection', () => {
     expect(html).not.toContain('bea@example.com')
   })
 
-  it('shows multiple assignments and permits editing functions for every person', () => {
+  it('shows assignments on cards and provides management actions only in the selected profile', () => {
     query.mockReturnValue({
       isSuccess: true,
       data: [
@@ -117,9 +129,18 @@ describe('TeamSection', () => {
     })
     const html = renderToStaticMarkup(<TeamSection tenantId="company" />)
     expect(html).toContain('Electricidad · Fontanería')
-    expect(html).toContain('Editar funciones de Ana')
-    expect(html).toContain('Editar funciones de Pol')
     expect(html).toContain('Sin funciones asignadas')
+    const profile = renderToStaticMarkup(<TeamSection tenantId="company" personId="ana" />)
+    expect(profile).toContain('Electricidad · Fontanería')
+    expect(profile).toContain('Editar funciones de Ana')
+    expect(profile).toContain('Rol en la empresa')
+    expect(profile).toContain('Quitar a Ana del equipo')
+    expect(profile).not.toContain('pol@example.com')
+    expect(profile).not.toContain('Buscar personas')
+    const ownProfile = renderToStaticMarkup(<TeamSection tenantId="company" personId="me" />)
+    expect(ownProfile).toContain('Editar funciones de Pol')
+    expect(ownProfile).not.toContain('Quitar acceso')
+    expect(ownProfile).not.toContain('Rol en la empresa')
   })
 
   it('does not allow editing if functions or schedules could not load', () => {
@@ -128,7 +149,7 @@ describe('TeamSection', () => {
       data: [{ userId: 'ana', fullName: 'Ana', email: 'ana@example.com', role: 'user' }],
     })
     scheduleQuery.mockReturnValue({ isError: true })
-    const html = renderToStaticMarkup(<TeamSection tenantId="company" />)
+    const html = renderToStaticMarkup(<TeamSection tenantId="company" personId="ana" />)
     expect(html).toContain('No se pudieron cargar las funciones del equipo')
     expect(html).toMatch(
       /disabled=""[^>]*aria-label="Editar funciones de Ana"|aria-label="Editar funciones de Ana"[^>]*disabled=""/,

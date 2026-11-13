@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as Auth from '@/features/auth'
+import type * as StaffSchedules from '@/features/staff-schedules'
 
 import { TeamSection } from './team-section'
 
@@ -13,8 +14,8 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-const { state, button, dialog, confirm, field, invite, remove, invalidate, query } = vi.hoisted(
-  () => ({
+const { state, button, dialog, confirm, field, invite, remove, changeRole, invalidate, query } =
+  vi.hoisted(() => ({
     state: vi.fn(),
     button: vi.fn(),
     dialog: vi.fn(),
@@ -22,10 +23,11 @@ const { state, button, dialog, confirm, field, invite, remove, invalidate, query
     field: vi.fn(),
     invite: vi.fn(),
     remove: vi.fn(),
+    changeRole: vi.fn(),
     invalidate: vi.fn(),
     query: vi.fn(),
-  }),
-)
+  }))
+const functionsDialog = vi.hoisted(() => vi.fn())
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
@@ -52,6 +54,10 @@ vi.mock('@/features/auth', async (importOriginal) => ({
   useSession: () => ({ userId: 'me', role: 'admin' }),
 }))
 vi.mock('@/features/work-teams', () => ({ WorkTeamsSection: () => null }))
+vi.mock('@/features/staff-schedules', async (importOriginal) => ({
+  ...(await importOriginal<typeof StaffSchedules>()),
+  StaffMemberFunctionsDialog: functionsDialog,
+}))
 vi.mock('@/shared/ui/field-icons', () => ({ fieldIcons: {} }))
 vi.mock('@/shared/ui/form', () => ({ TextField: field, SelectField: field }))
 vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: dialog }))
@@ -59,7 +65,7 @@ vi.mock('./team-import-dialog', () => ({ TeamImportDialog: () => null }))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
   inviteMember: invite,
-  changeMemberRole: vi.fn(),
+  changeMemberRole: changeRole,
   removeMember: remove,
 }))
 
@@ -67,13 +73,13 @@ describe('team invitation dialog', () => {
   let values: unknown[]
   let cursor: number
 
-  function render(mode: 'manage' | 'invite' = 'invite') {
+  function render(mode: 'manage' | 'invite' = 'invite', personId?: string) {
     cursor = 0
     button.mockClear()
     dialog.mockClear()
     confirm.mockClear()
     field.mockClear()
-    return renderToStaticMarkup(<TeamSection tenantId="company" mode={mode} />)
+    return renderToStaticMarkup(<TeamSection tenantId="company" mode={mode} personId={personId} />)
   }
 
   function dialogProps() {
@@ -103,6 +109,7 @@ describe('team invitation dialog', () => {
       open ? <div>{children}</div> : null,
     )
     confirm.mockReturnValue(null)
+    functionsDialog.mockReturnValue(null)
     field.mockImplementation(({ label }: { label: string }) => <span>{label}</span>)
     invalidate.mockResolvedValue(undefined)
     query.mockReturnValue({ isSuccess: true, data: [] })
@@ -149,21 +156,56 @@ describe('team invitation dialog', () => {
       data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
     })
     remove.mockResolvedValue({ ok: false, message: 'No se pudo quitar a la persona.' })
-    render('manage')
+    render('manage', 'ana')
     const removeButton = button.mock.calls.find(
       ([props]) => props['aria-label'] === 'Quitar a Ana del equipo',
     )?.[0]
-    expect(removeButton).toMatchObject({ variant: 'destructive', size: 'icon-lg' })
+    expect(removeButton).toMatchObject({ variant: 'destructive' })
     expect(remove).not.toHaveBeenCalled()
     removeButton.onPress()
-    render()
+    render('manage', 'ana')
     expect(confirm.mock.calls[0]?.[0].open).toBe(true)
     confirm.mock.calls[0]?.[0].onConfirm()
-    await vi.waitFor(() => expect(render()).toContain('No se pudo quitar a la persona.'))
+    await vi.waitFor(() =>
+      expect(render('manage', 'ana')).toContain('No se pudo quitar a la persona.'),
+    )
     await vi.waitFor(() => {
-      render()
+      render('manage', 'ana')
       expect(confirm.mock.calls[0]?.[0].open).toBe(false)
     })
     expect(remove).toHaveBeenCalledWith('company', 'ana')
+  })
+
+  it('updates the selected person role from their profile', async () => {
+    query.mockReturnValue({
+      isSuccess: true,
+      data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
+    })
+    changeRole.mockResolvedValue({ ok: true })
+    render('manage', 'ana')
+    const role = field.mock.calls.find(([props]) => props.label === 'Rol en la empresa')?.[0]
+    role.onChange('invalid')
+    expect(changeRole).not.toHaveBeenCalled()
+    role.onChange('admin')
+    await vi.waitFor(() => expect(changeRole).toHaveBeenCalledWith('company', 'ana', 'admin'))
+    await vi.waitFor(() => expect(render('manage', 'ana')).toContain('Rol actualizado.'))
+    expect(invalidate).toHaveBeenCalled()
+  })
+
+  it('opens the functions editor for the selected person', () => {
+    query.mockReturnValue({
+      isSuccess: true,
+      data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
+    })
+    render('manage', 'ana')
+    const edit = button.mock.calls.find(
+      ([props]) => props['aria-label'] === 'Editar funciones de Ana',
+    )?.[0]
+    edit.onPress()
+    render('manage', 'ana')
+    expect(functionsDialog.mock.calls[0]?.[0]).toMatchObject({
+      tenantId: 'company',
+      person: { userId: 'ana', name: 'Ana' },
+    })
   })
 })

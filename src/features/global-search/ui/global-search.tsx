@@ -78,7 +78,7 @@ export function GlobalSearch({
           className="workspace-search-trigger"
         >
           <MagnifyingGlass aria-hidden="true" className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Buscar en Ábaco…</span>
+          <span className="min-w-0 flex-1 truncate text-left">Buscar en Ábaco…</span>
           <Kbd className="hidden sm:inline-flex">Ctrl / ⌘ K</Kbd>
         </Button>
         <Button
@@ -89,9 +89,9 @@ export function GlobalSearch({
             setHelp(true)
             setOpen(true)
           }}
-          className="size-9 shrink-0 p-0"
+          className="mr-0.5 size-8 shrink-0 p-0"
         >
-          <Question aria-hidden="true" className="size-4" />
+          <Question aria-hidden="true" className="size-3.5" />
         </Button>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>

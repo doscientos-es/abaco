@@ -10,7 +10,7 @@ import {
 } from '@doscientos/ui'
 import { CalendarBlank } from '@phosphor-icons/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 
 import { useSession } from '@/features/auth'
 import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
@@ -48,9 +48,11 @@ const filterDateFormat = new Intl.DateTimeFormat('es-ES', {
 export function VacationManagementPage({
   memberIds,
   embedded = false,
+  headerFilter,
 }: {
   memberIds?: string[] | undefined
   embedded?: boolean | undefined
+  headerFilter?: ReactNode
 }) {
   const session = useSession()
   const tenantId = session?.tenantId
@@ -149,11 +151,13 @@ export function VacationManagementPage({
     <div className="@container min-w-0 space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         {embedded ? (
-          <h2 className="text-lg font-semibold">Vacaciones y ausencias</h2>
+          <h2 className="sr-only">Vacaciones y ausencias</h2>
         ) : (
           <h1 className="text-xl font-semibold">Solicitudes de ausencia</h1>
         )}
+        {headerFilter}
         <Button
+          className="ml-auto shrink-0"
           isDisabled={memberIds?.length === 0}
           onPress={() => {
             setCalendarProposal(undefined)

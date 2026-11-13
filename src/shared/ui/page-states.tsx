@@ -39,13 +39,15 @@ export function PageLoading() {
 
 /** Friendly error for a whole page. Explains what to do in plain words. */
 export function PageError({ reset }: { reset?: () => void }) {
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
   return (
     <ErrorState className="mx-auto mt-8 max-w-lg py-10">
       <ErrorStateIcon className="size-8" />
-      <ErrorStateTitle>Algo no ha ido bien</ErrorStateTitle>
+      <ErrorStateTitle>{offline ? 'Sin conexión' : 'Algo no ha ido bien'}</ErrorStateTitle>
       <ErrorStateDescription>
-        No hemos podido mostrar esta pantalla. Tus datos están a salvo. Prueba a intentarlo de nuevo
-        o vuelve al inicio.
+        {offline
+          ? 'Esta pantalla necesita datos o una sesión que aún no se han cargado. Conéctate y vuelve a intentarlo.'
+          : 'No hemos podido mostrar esta pantalla. Prueba a intentarlo de nuevo o vuelve al inicio.'}
       </ErrorStateDescription>
       <ErrorStateActions>
         {reset ? <Button onPress={reset}>Intentarlo de nuevo</Button> : null}

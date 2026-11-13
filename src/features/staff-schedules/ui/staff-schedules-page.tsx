@@ -1,6 +1,6 @@
 import { Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { teamQuery } from '@/features/settings/application/team-actions'
@@ -21,7 +21,7 @@ import {
   selectedStaffIds,
   type StaffSelection,
 } from '../domain/staff-selection'
-import { StaffPeopleFilter } from './staff-people-filter'
+import { StaffPeopleFilterPopover } from './staff-people-filter-popover'
 import { StaffScheduleEditor } from './staff-schedule-editor'
 
 type ScheduleContext = {
@@ -67,11 +67,6 @@ function ScheduleView({
   const [itemId, setItemId] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState('')
   const [exporting, setExporting] = useState(false)
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 60_000)
-    return () => window.clearInterval(timer)
-  }, [])
   const days = calendarDays(date, view)
   const from = dateValue(days[0] ?? date)
   const to = dateValue(days[days.length - 1] ?? date)
@@ -127,13 +122,6 @@ function ScheduleView({
       (!functionFilter || person.schedule?.functionIds.includes(functionFilter)),
   )
   const occurrences = scheduleOccurrences(visible, absences.data ?? [], date, view)
-  const activeNow = [
-    ...new Map(
-      occurrences
-        .filter((item) => item.start <= now && item.end > now)
-        .map((item) => [item.userId, item.name]),
-    ).values(),
-  ]
   const selectedItem = occurrences.find((item) => item.id === itemId)
   const editing = people.find((person) => person.userId === editingId)
   const events = occurrences.map((item) => ({
@@ -165,16 +153,12 @@ function ScheduleView({
     <div className="space-y-5">
       <header>
         {embedded ? (
-          <h2 className="text-lg font-semibold">{title ?? 'Horarios'}</h2>
+          <h2 className="sr-only">{title ?? 'Horarios'}</h2>
         ) : (
           <h1 className="text-xl font-semibold">
             {title ?? (admin ? 'Horarios del equipo' : 'Mi horario')}
           </h1>
         )}
-        <p className="text-muted-foreground text-sm">
-          Semana tipo actual, no presencia real ni historial de horarios. Se excluyen las ausencias
-          aprobadas.
-        </p>
         {admin && scopeIds?.length === 1 && people[0] && !loading && !failed ? (
           <Button
             className="mt-3"
@@ -207,39 +191,54 @@ function ScheduleView({
         </div>
       ) : (
         <>
-          {admin ? (
-            <section
-              className="flex flex-wrap items-center gap-2"
-              aria-label="Filtrar trabajadores"
-            >
-              <StaffPeopleFilter
-                people={people}
-                teams={availableTeams}
-                selected={selected}
-                onChange={setSelected}
-                onEdit={setEditingId}
-              />
-              <select
-                aria-label="Filtrar por función"
-                className="border-border bg-background h-9 rounded-lg border px-3 text-sm"
-                value={functionFilter}
-                onChange={(event) => setFunctionFilter(event.target.value)}
-              >
-                <option value="">Todas las funciones</option>
-                {(functions.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </section>
-          ) : (
-            <p className="text-sm">
-              <strong>Mis funciones:</strong>{' '}
-              {(functions.data ?? []).map((item) => item.name).join(', ') ||
-                'Sin funciones asignadas'}
-            </p>
-          )}
+          <section aria-label={admin ? 'Filtrar trabajadores' : 'Horario'}>
+            <div className="flex items-center gap-2">
+              {admin ? (
+                <>
+                  <StaffPeopleFilterPopover
+                    people={people}
+                    teams={availableTeams}
+                    selected={selected}
+                    onChange={setSelected}
+                    onEdit={setEditingId}
+                  />
+                  <select
+                    aria-label="Filtrar por función"
+                    className="border-border bg-background h-9 min-w-0 flex-1 rounded-lg border px-3 text-sm sm:flex-none"
+                    value={functionFilter}
+                    onChange={(event) => setFunctionFilter(event.target.value)}
+                  >
+                    <option value="">Todas las funciones</option>
+                    {(functions.data ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="min-w-0 flex-1 text-sm">
+                  <strong>Mis funciones:</strong>{' '}
+                  {(functions.data ?? []).map((item) => item.name).join(', ') ||
+                    'Sin funciones asignadas'}
+                </p>
+              )}
+              {visible.length > 0 ? (
+                <Button
+                  variant="outline"
+                  className="ml-auto h-9 shrink-0 px-3"
+                  aria-label={exporting ? 'Generando PDF…' : 'Descargar PDF'}
+                  isDisabled={exporting || !occurrences.length}
+                  onPress={() => void download()}
+                >
+                  <span className="sm:hidden">PDF</span>
+                  <span className="hidden sm:inline">
+                    {exporting ? 'Generando PDF…' : 'Descargar PDF'}
+                  </span>
+                </Button>
+              ) : null}
+            </div>
+          </section>
           {editing ? (
             <StaffScheduleEditor
               key={editing.userId}
@@ -249,24 +248,8 @@ function ScheduleView({
               onClose={() => setEditingId(null)}
             />
           ) : null}
-          {admin && visible.length > 0 && from <= dateValue(now) && dateValue(now) <= to ? (
-            <p className="text-sm" aria-live="polite">
-              <strong>Previstos ahora:</strong>{' '}
-              {activeNow.length ? activeNow.join(', ') : 'ninguna persona'}.
-            </p>
-          ) : null}
           {visible.length > 0 ? (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold">Calendario</h2>
-                <Button
-                  variant="outline"
-                  isDisabled={exporting || !occurrences.length}
-                  onPress={() => void download()}
-                >
-                  {exporting ? 'Generando PDF…' : 'Descargar PDF'}
-                </Button>
-              </div>
               {pdfError ? <p role="alert">{pdfError}</p> : null}
               <CalendarToolbar
                 value={date}

@@ -22,7 +22,7 @@ export function WorkerOrganization({ people, teams }: { people: TeamMember[]; te
   )
   return (
     <section className="space-y-5" aria-label="Organización de la empresa">
-      <div className="border-border bg-card rounded-xl border p-5">
+      <div>
         <h2 className="font-semibold">Toda la empresa · {people.length} personas</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Empresa → equipos → personas. Una persona puede pertenecer a varios equipos; esta vista no

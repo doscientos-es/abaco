@@ -23,7 +23,7 @@ vi.mock('react', async (load) => ({
 }))
 vi.mock('@/features/staff-schedules', async () => ({
   ...(await import('../../staff-schedules/domain/staff-selection')),
-  StaffPeopleFilter: mocks.filter,
+  StaffPeopleFilterPopover: mocks.filter,
 }))
 vi.mock('@/features/vacations', () => ({ VacationManagementPage: mocks.calendar }))
 
@@ -49,7 +49,9 @@ describe('worker absence scope', () => {
     vi.clearAllMocks()
     mocks.selection = undefined
     mocks.filter.mockReturnValue(null)
-    mocks.calendar.mockReturnValue(null)
+    mocks.calendar.mockImplementation(({ headerFilter }: { headerFilter: React.ReactNode }) => (
+      <div>{headerFilter}</div>
+    ))
   })
 
   it('shows the whole company for a small workforce', () => {

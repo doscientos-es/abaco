@@ -37,6 +37,9 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
   const memberIds = person ? [person.userId] : team?.memberIds
   const title = person ? person.fullName || person.email : (team?.name ?? 'Trabajadores')
   const activeTeams = data.teams.filter((item) => !item.archived)
+  const personTeams = person
+    ? activeTeams.filter((group) => group.memberIds.includes(person.userId))
+    : []
 
   if (data.pending) return <output>Cargando trabajadores y equipos…</output>
   if (data.failed)
@@ -92,7 +95,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             <Button variant="outline" onPress={() => setEditingTeam(true)}>
               Editar equipo
             </Button>
-          ) : (
+          ) : !person ? (
             <Link
               to="/ajustes"
               search={{ tab: 'equipo' }}
@@ -100,15 +103,15 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             >
               Invitar personas
             </Link>
-          )
+          ) : null
         }
       />
       <WorkspacePageTabs>
         <WorkersNavigation search={search} view={view} scoped={scoped} />
       </WorkspacePageTabs>
-      {person || team?.description || team?.archived ? (
+      {(person && view !== 'personas') || team?.description || team?.archived ? (
         <div className="space-y-2">
-          {person || team?.description ? (
+          {(person && view !== 'personas') || team?.description ? (
             <p className="text-muted-foreground max-w-2xl text-sm">
               {person ? person.email : team?.description}
             </p>
@@ -117,26 +120,32 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
         </div>
       ) : null}
       {person ? (
-        <div className="flex flex-wrap gap-2" aria-label="Equipos de la persona">
-          {activeTeams
-            .filter((group) => group.memberIds.includes(person.userId))
-            .map((group) => (
-              <Link
-                key={group.id}
-                to="/trabajadores"
-                search={{ equipo: group.id }}
-                className="border-border hover:bg-muted rounded-full border px-3 py-1 text-xs"
-              >
-                {group.name} →
-              </Link>
-            ))}
-        </div>
+        <section aria-label="Equipos de la persona" className="space-y-2">
+          <h2 className="text-sm font-semibold">Equipos</h2>
+          {personTeams.length ? (
+            <div className="flex flex-wrap gap-2">
+              {personTeams.map((group) => (
+                <Link
+                  key={group.id}
+                  to="/trabajadores"
+                  search={{ equipo: group.id }}
+                  className="border-border hover:bg-muted rounded-full border px-3 py-1 text-xs"
+                >
+                  {group.name} →
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">Sin equipos asignados.</p>
+          )}
+        </section>
       ) : null}
       {view === 'personas' ? (
         <TeamSection
           key={search.persona ?? search.equipo ?? 'company'}
           tenantId={tenantId}
           memberIds={memberIds}
+          personId={person?.userId}
         />
       ) : null}
       {view === 'equipos' ? (
@@ -169,7 +178,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
       {view === 'organigrama' ? (
         <WorkerOrganization people={data.people} teams={data.teams} />
       ) : null}
-      {view === 'funciones' ? <StaffFunctionsSection tenantId={tenantId} /> : null}
+      {view === 'funciones' ? <StaffFunctionsSection tenantId={tenantId} embedded /> : null}
       {editingTeam && team ? (
         <WorkTeamForm
           key={team.id}

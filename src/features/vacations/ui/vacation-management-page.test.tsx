@@ -54,14 +54,20 @@ vi.mock('@doscientos/ui', () => ({
   Button: ({
     children,
     onPress,
+    isDisabled,
     ...props
   }: {
     children: ReactNode
     onPress?: () => void
+    isDisabled?: boolean
     'aria-label'?: string
   }) => {
     if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
-    return <button aria-label={props['aria-label']}>{children}</button>
+    return (
+      <button aria-label={props['aria-label']} disabled={isDisabled}>
+        {children}
+      </button>
+    )
   },
   Tabs: ({
     children,
@@ -184,6 +190,25 @@ describe('VacationManagementPage', () => {
     expect(html).toContain('Ana')
     expect(html).not.toContain('Bea')
     expect(html).not.toContain('<h1')
+    expect(html).toContain('<h2 class="sr-only">Vacaciones y ausencias</h2>')
+    expect(html).toContain('Registrar ausencia')
+  })
+
+  it('places the people filter and the absence action in the same header', () => {
+    const html = renderToStaticMarkup(
+      <VacationManagementPage
+        memberIds={['ana']}
+        embedded
+        headerFilter={<button>Personas y equipos</button>}
+      />,
+    )
+    expect(html).toMatch(/<header[^>]*>.*Personas y equipos.*Registrar ausencia.*<\/header>/)
+    expect(mocks.buttons.has('Registrar ausencia')).toBe(true)
+  })
+
+  it('keeps absence creation disabled when the scope is empty', () => {
+    const html = renderToStaticMarkup(<VacationManagementPage memberIds={[]} embedded />)
+    expect(html).toContain('<button disabled="">Registrar ausencia</button>')
   })
 
   it('summarizes a complete or open-ended date filter in one accessible control', () => {

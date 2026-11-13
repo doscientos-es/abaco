@@ -267,7 +267,7 @@ h3 {
 @media (min-width: 48rem) {
   .workspace-topbar__row:has(.workspace-topbar__heading:not(:empty)) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) min(25rem, 40%);
+    grid-template-columns: minmax(0, 1fr) min(20rem, 40%);
     gap: 0.25rem 1.5rem;
   }
 
@@ -330,9 +330,11 @@ h3 {
 
 .workspace-tools {
   display: flex;
-  width: min(100%, 25rem);
+  width: min(100%, 20rem);
   align-items: center;
-  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
 }
 
 .workspace-search-trigger[data-slot='button'] {
@@ -342,11 +344,8 @@ h3 {
   flex: 1;
   justify-content: flex-start;
   gap: 0.625rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
   padding-inline: 0.75rem;
   color: var(--muted-foreground);
-  background: var(--surface-subtle);
   font-weight: 400;
 }
 

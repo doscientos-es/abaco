@@ -111,6 +111,18 @@ describe('workers module navigation', () => {
     expect(html).toContain('ana@example.com')
   })
 
+  it('opens the person profile without offering a new invitation there', () => {
+    mocks.search = { persona: 'ana' }
+    const html = renderToStaticMarkup(<WorkersPage />)
+    expect(mocks.directory.mock.calls[0]?.[0]).toMatchObject({
+      personId: 'ana',
+      memberIds: ['ana'],
+    })
+    expect(html).toContain('vista=horarios')
+    expect(html).toContain('vista=vacaciones')
+    expect(html).not.toContain('Invitar personas')
+  })
+
   it.each(['', 'Personal de la zona norte'])(
     'preserves only user-defined team descriptions: %s',
     (description) => {
