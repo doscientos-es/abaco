@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update changelog with new PWA features and improvements",
             "Restructure PWA files and implement service worker functionality",
             "Implement PWA functionality with service worker and manifest",
             "Update changelog for new features and fixes",
@@ -49,6 +50,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "98741913aa17e7c9b294d06d70bf478e48907f2c",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog with new PWA features and improvements"
+        },
         {
           "sha": "3301b29f03413fced86d59b13d7acb9f909dfdf1",
           "type": "feat",

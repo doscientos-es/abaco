@@ -1,3 +1,6 @@
+import type { EstimateAgreement } from './estimate-agreement'
+import type { EstimateFormat, EstimateSection } from './estimate-document'
+
 /** Money is always stored as integer cents to avoid floating point drift. */
 export type Cents = number
 
@@ -95,6 +98,9 @@ export type Estimate = {
   clientId: string
   title: string
   status: EstimateStatus
+  /** Missing on historical documents, which retain the original price-table layout. */
+  documentFormat?: EstimateFormat
+  sections?: EstimateSection[]
   /** Conversion route agreed in the published proposal. Legacy proposals use work. */
   conversionDestination?: 'work' | 'contract'
   contractBillingFrequency?: 'once' | 'monthly' | 'quarterly' | 'yearly'
@@ -160,6 +166,8 @@ export type InvoiceSnapshot = {
   contractTitle?: string
   contractPeriodStart?: string
   contractPeriodEnd?: string
+  /** Original agreement, not the amount of this particular milestone or billing period. */
+  estimateAgreement?: EstimateAgreement
 }
 
 /** Issued invoice from one estimate milestone, approved work extra, or contract period. */

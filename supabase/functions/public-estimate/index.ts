@@ -8,6 +8,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { publicEstimateDocument } from '../_shared/public-estimate-document.ts'
 import { sendEmail } from '../_shared/resend.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -200,24 +201,7 @@ Deno.serve(async (request) => {
   }
 
   // Explicit output contract: adding a database column can never expose it via the public link.
-  const publicEstimate = {
-    id: publishedEstimate.id,
-    tenant_id: publishedEstimate.tenant_id,
-    number: publishedEstimate.number,
-    client_id: publishedEstimate.client_id,
-    title: publishedEstimate.title,
-    status: estimate.status,
-    vat_rate: publishedEstimate.vat_rate,
-    discount_type: publishedEstimate.discount_type,
-    discount_value: publishedEstimate.discount_value,
-    clauses: publishedEstimate.clauses,
-    valid_until: publishedEstimate.valid_until,
-    created_at: publishedEstimate.created_at,
-    responded_at: estimate.responded_at,
-    responded_by: estimate.responded_by,
-    estimate_lines: publishedEstimate.estimate_lines,
-    estimate_milestones: publishedEstimate.estimate_milestones,
-  }
+  const publicEstimate = publicEstimateDocument(publishedEstimate, estimate)
   const publicTenant = {
     id: publishedTenant.id,
     name: publishedTenant.name,

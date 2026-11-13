@@ -10,6 +10,7 @@ import {
   type PublicEstimate,
 } from '../application/public-estimate-actions'
 import { EstimateDocument } from './estimate-document'
+import { useEstimatePrint } from './use-estimate-print'
 
 const errorTexts: Record<string, string> = {
   not_found: 'Este enlace no es válido o el presupuesto ya no está disponible.',
@@ -21,6 +22,7 @@ const errorTexts: Record<string, string> = {
 
 /** Page the client opens from the emailed link: no account, the token in the URL is the credential. */
 export function PublicEstimatePage({ token }: { token: string }) {
+  const { documentRef, print } = useEstimatePrint()
   const [state, setState] = useState<
     { loading: true } | { loading: false; data?: PublicEstimate; error?: string }
   >({
@@ -77,7 +79,12 @@ export function PublicEstimatePage({ token }: { token: string }) {
           empresa el documento original si necesitas comprobar su contenido histórico.
         </p>
       ) : null}
-      <EstimateDocument estimate={estimate} client={client} tenant={tenant} />
+      <EstimateDocument
+        estimate={estimate}
+        client={client}
+        tenant={tenant}
+        documentRef={documentRef}
+      />
       <Card className="mx-auto max-w-3xl print:hidden">
         <CardContent className="space-y-4 pt-6">
           {estimate.status === 'accepted' || estimate.status === 'rejected' ? (
@@ -117,7 +124,7 @@ export function PublicEstimatePage({ token }: { token: string }) {
               </div>
             </>
           )}
-          <Button variant="outline" onPress={() => window.print()}>
+          <Button variant="outline" onPress={print}>
             Imprimir o guardar PDF
           </Button>
         </CardContent>

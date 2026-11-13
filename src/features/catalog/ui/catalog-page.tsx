@@ -3,6 +3,7 @@ import {
   Button,
   ConfirmDialog,
   FilterBar,
+  IconButton,
   Input,
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { UploadSimple } from '@phosphor-icons/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -139,9 +141,13 @@ export function CatalogPage() {
         title="Catálogo"
         actions={
           <>
-            <Button variant="outline" onPress={() => setImportOpen(true)}>
-              Importar de Excel
-            </Button>
+            <IconButton
+              label="Importar de Excel"
+              variant="outline"
+              onPress={() => setImportOpen(true)}
+            >
+              <UploadSimple aria-hidden="true" className="size-4" />
+            </IconButton>
             <Button onPress={create}>Nuevo artículo</Button>
           </>
         }

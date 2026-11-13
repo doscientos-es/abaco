@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
   HighlightMatch,
   Input,
+  toast,
 } from '@doscientos/ui'
 import { ArrowDown, ArrowUp, Copy, DotsThree, Trash } from '@phosphor-icons/react'
 import { useState } from 'react'
@@ -17,7 +18,7 @@ import { formatEuros, lineTotal } from '@/shared/domain/money'
 import type { CatalogItem, Estimate, EstimateLine } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
 
-import { patchEstimate } from '../application/estimate-actions'
+import { usePatchEstimate } from './estimate-draft-context'
 import { PriceInput } from './price-input'
 
 import './lines-editor.css'
@@ -36,11 +37,25 @@ function MobileLabel({ children }: { children: string }) {
 
 type PickerItem = { key: string; label: string; meta?: string; free?: boolean }
 
-export function LinesEditor({ estimate, catalog }: { estimate: Estimate; catalog: CatalogItem[] }) {
+export function LinesEditor({
+  estimate,
+  catalog,
+  onChange,
+}: {
+  estimate: Estimate
+  catalog: CatalogItem[]
+  onChange?: (lines: EstimateLine[]) => void
+}) {
+  const patchEstimate = usePatchEstimate()
   const [query, setQuery] = useState('')
 
   function setLines(lines: EstimateLine[]) {
-    patchEstimate(estimate.id, { lines })
+    if (onChange && lines.length > 500) {
+      toast.error('Máximo 500 partidas por sección. Añade otro bloque de precios.')
+      return
+    }
+    if (onChange) onChange(lines)
+    else patchEstimate(estimate.id, { lines })
   }
 
   function updateLine(id: string, patch: Partial<EstimateLine>) {

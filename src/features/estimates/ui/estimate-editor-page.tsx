@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Input,
+  IconButton,
   PageHeader,
   PageHeaderActions,
   PageHeaderHeading,
@@ -33,45 +33,48 @@ import {
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { convertAcceptedEstimate, findWorkOrderForEstimate } from '@/features/work-orders'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
-import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import {
-  clampPercent,
   estimateTotals,
   milestoneAmounts,
   milestonePercentSum,
   paidForEstimate,
 } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
-import { formatEuros } from '@/shared/domain/money'
 import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { whatsappLink } from '@/shared/lib/whatsapp'
 import { getSaveStatus, refreshStore, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
-import { FormField, SelectField, TextField, TextareaField } from '@/shared/ui/form'
+import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { PageNotFound } from '@/shared/ui/page-states'
 import { StatusBadge } from '@/shared/ui/status-badge'
 
-import { deleteEstimate, duplicateEstimate, patchEstimate } from '../application/estimate-actions'
+import { deleteEstimate, duplicateEstimate } from '../application/estimate-actions'
 import {
   loadManualEstimateAcceptance,
   loadPublishedEstimate,
   publishEstimate,
 } from '../application/estimate-publication-actions'
 import { recordManualApproval } from '../application/record-manual-approval'
+import { requiredEstimateSectionsError } from '../domain/estimate-sections'
 import { EstimateAutoSaveStatus } from './estimate-auto-save-status'
 import { EstimateDocument } from './estimate-document'
-import { LinesEditor } from './lines-editor'
+import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
+import { EstimatePricingEditor } from './estimate-pricing-editor'
+import { EstimateSectionsEditor } from './estimate-sections-editor'
 import { ManualAcceptanceCard } from './manual-acceptance-card'
 import { MilestonesEditor } from './milestones-editor'
-import { PriceInput } from './price-input'
 import { ServiceProposalAssistant } from './service-proposal-assistant'
+import { useEstimatePrint } from './use-estimate-print'
 
 export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
+  const creation = useEstimateDraft()
+  const patchEstimate = usePatchEstimate()
   const { estimates, clients, catalog, tenant, ledger } = useTenantData()
   const navigate = useNavigate()
   const session = useSession()
   const [preview, setPreview] = useState(false)
+  const { documentRef, print } = useEstimatePrint()
   const [creatingClient, setCreatingClient] = useState(false)
   const [converting, setConverting] = useState(false)
   const conversionOperationId = useRef(crypto.randomUUID())
@@ -84,7 +87,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [manualEvidence, setManualEvidence] = useState('')
   const [acceptingManually, setAcceptingManually] = useState(false)
   const manualOperationId = useRef(crypto.randomUUID())
-  const estimate = estimates.find((e) => e.id === estimateId)
+  const estimate = creation?.estimate ?? estimates.find((e) => e.id === estimateId)
   const [titleEdit, setTitleEdit] = useState<{ estimateId: string; value: string } | null>(null)
   const publication = useQuery({
     queryKey: ['estimate-publication', tenant.id, estimateId],
@@ -162,6 +165,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
 
   async function sendByEmail() {
     if (!estimate) return
+    const sectionsError =
+      estimate.status === 'draft' ? requiredEstimateSectionsError(estimate) : null
+    if (sectionsError) {
+      toast.error('No se puede enviar el presupuesto', { description: sectionsError })
+      return
+    }
     if (getSaveStatus().state !== 'saved') {
       toast.error('Espera a que termine el guardado antes de enviar.')
       return
@@ -315,9 +324,14 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           <Button variant="outline" onPress={() => setPreview(false)}>
             Volver a editar
           </Button>
-          <Button onPress={() => window.print()}>Imprimir o guardar PDF</Button>
+          <Button onPress={print}>Imprimir o guardar PDF</Button>
         </div>
-        <EstimateDocument estimate={estimate} client={client} tenant={tenant} />
+        <EstimateDocument
+          estimate={estimate}
+          client={client}
+          tenant={tenant}
+          documentRef={documentRef}
+        />
       </div>
     )
   }
@@ -389,14 +403,13 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               </Link>
             ) : null}
             <Button onPress={() => void sendByEmail()}>Enviar por email</Button>
-            <Button variant="outline" onPress={() => window.print()}>
+            <Button variant="outline" onPress={print}>
               Imprimir o guardar PDF
             </Button>
             <DropdownMenuTrigger>
-              <Button variant="outline" aria-label="Más opciones del presupuesto">
+              <IconButton variant="outline" label="Más opciones del presupuesto">
                 <DotsThree aria-hidden="true" weight="bold" className="size-4" />
-                Más opciones
-              </Button>
+              </IconButton>
               <DropdownMenuContent placement="bottom end">
                 <DropdownMenuItem onAction={() => void sendByWhatsapp()}>
                   <WhatsappLogo aria-hidden="true" className="size-4" />
@@ -554,6 +567,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           estimate={publication.data.estimate}
           client={publication.data.client}
           tenant={publication.data.tenant}
+          documentRef={documentRef}
         />
         {publication.data.estimate.conversionDestination !== 'contract' ? (
           <Card>
@@ -583,313 +597,262 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>
-            {estimate.number} <StatusBadge status={estimate.status} />
+            {creation ? (
+              'Nuevo presupuesto'
+            ) : (
+              <>
+                {estimate.number} <StatusBadge status={estimate.status} />
+              </>
+            )}
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
-          {can(session?.role, 'estimates:write') ? (
+          {!creation && can(session?.role, 'estimates:write') ? (
             <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
               Marcar como aprobado
             </Button>
           ) : null}
-          <Button onPress={() => void sendByEmail()}>
-            <span className="inline-flex items-center gap-2">
-              {fieldIcons.mail}
-              Enviar por email
-            </span>
-          </Button>
+          {!creation ? (
+            <Button onPress={() => void sendByEmail()}>
+              <span className="inline-flex items-center gap-2">
+                {fieldIcons.mail}
+                Enviar por email
+              </span>
+            </Button>
+          ) : null}
           <Button variant="outline" onPress={() => setPreview(true)}>
             <span className="inline-flex items-center gap-2">
               <Eye aria-hidden="true" className="size-4" />
               Vista del cliente
             </span>
           </Button>
-          <DropdownMenuTrigger>
-            <Button variant="outline" aria-label="Más opciones del presupuesto">
-              <span className="inline-flex items-center gap-2">
+          {!creation ? (
+            <DropdownMenuTrigger>
+              <IconButton variant="outline" label="Más opciones del presupuesto">
                 <DotsThree aria-hidden="true" weight="bold" className="size-4" />
-                Más opciones
-              </span>
-            </Button>
-            <DropdownMenuContent placement="bottom end">
-              <DropdownMenuItem onAction={() => void sendByWhatsapp()}>
-                <WhatsappLogo aria-hidden="true" className="size-4" />
-                Enviar por WhatsApp
-              </DropdownMenuItem>
-              <DropdownMenuItem onAction={() => void copyPublicLink()}>
-                <Copy aria-hidden="true" className="size-4" />
-                Copiar enlace del cliente
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onAction={() => {
-                  const id = duplicateEstimate(estimate.id)
-                  if (id)
-                    void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
-                }}
-              >
-                <Files aria-hidden="true" className="size-4" />
-                Duplicar presupuesto
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onAction={() => {
-                  deleteEstimate(estimate.id)
-                  void navigate({ to: '/presupuestos' })
-                }}
-              >
-                <Trash aria-hidden="true" className="size-4" />
-                Eliminar presupuesto
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenuTrigger>
+              </IconButton>
+              <DropdownMenuContent placement="bottom end">
+                <DropdownMenuItem onAction={() => void sendByWhatsapp()}>
+                  <WhatsappLogo aria-hidden="true" className="size-4" />
+                  Enviar por WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onAction={() => void copyPublicLink()}>
+                  <Copy aria-hidden="true" className="size-4" />
+                  Copiar enlace del cliente
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onAction={() => {
+                    const id = duplicateEstimate(estimate.id)
+                    if (id)
+                      void navigate({
+                        to: '/presupuestos/$estimateId',
+                        params: { estimateId: id },
+                      })
+                  }}
+                >
+                  <Files aria-hidden="true" className="size-4" />
+                  Duplicar presupuesto
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onAction={() => {
+                    deleteEstimate(estimate.id)
+                    void navigate({ to: '/presupuestos' })
+                  }}
+                >
+                  <Trash aria-hidden="true" className="size-4" />
+                  Eliminar presupuesto
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuTrigger>
+          ) : null}
         </PageHeaderActions>
       </PageHeader>
 
       {manualAcceptanceCard}
 
-      <Card className="@container">
-        <CardHeader>
-          <CardTitle>Datos generales</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 @min-[44rem]:grid-cols-4">
-          <TextField
-            label="Título del servicio o acuerdo"
-            minLength={1}
-            maxLength={formLimits.estimateTitle}
-            required
-            showCount
-            className="sm:col-span-2"
-            placeholder="Ej. Limpieza de oficinas"
-            icon={fieldIcons.file}
-            value={titleDraft}
-            onChange={(value) => setTitleEdit({ estimateId: estimate.id, value })}
-            onBlur={() => {
-              const title = titleDraft.trim()
-              setTitleEdit(null)
-              if (title.length >= 1 && title.length <= formLimits.estimateTitle) {
-                patchEstimate(estimate.id, { title })
-              }
-            }}
-          />
-          <div className="flex min-w-0 flex-col gap-1.5 @min-[44rem]:col-span-2">
-            <SelectField
-              label="Cliente"
-              value={estimate.clientId}
-              options={[
-                { value: '', label: 'Sin cliente' },
-                ...clients
-                  .filter((c) => !c.archivedAt || c.id === estimate.clientId)
-                  .map((c) => ({ value: c.id, label: c.name })),
-              ]}
-              onChange={(clientId) => patchEstimate(estimate.id, { clientId })}
-            />
-            {can(session?.role, 'clients:write') ? (
-              <button
-                type="button"
-                className="text-primary self-start text-xs font-medium hover:underline"
-                onClick={() => setCreatingClient(true)}
-              >
-                {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
-              </button>
-            ) : null}
-          </div>
-          <TextField
-            label="Válido hasta"
-            type="date"
-            placeholder="dd/mm/aaaa"
-            helper="Pasada esta fecha el presupuesto caduca."
-            value={estimate.validUntil}
-            onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
-          />
-          {!estimate.automaticContract ? (
-            <SelectField
-              label="Destino tras la aceptación"
-              className={
-                estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
-              }
-              value={estimate.conversionDestination ?? 'work'}
-              options={[
-                { value: 'work', label: 'Trabajo' },
-                { value: 'contract', label: 'Contrato recurrente' },
-              ]}
+      <fieldset disabled={creation?.submitted} className="min-w-0 space-y-5">
+        <Card className="@container">
+          <CardHeader>
+            <CardTitle>Datos generales</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 @min-[44rem]:grid-cols-4">
+            <TextField
+              label="Título del servicio o acuerdo"
+              minLength={1}
+              maxLength={formLimits.estimateTitle}
+              required
+              showCount
+              className="sm:col-span-2"
+              placeholder="Ej. Limpieza de oficinas"
+              icon={fieldIcons.file}
+              value={titleDraft}
               onChange={(value) =>
-                patchEstimate(estimate.id, {
-                  conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
-                })
+                creation
+                  ? patchEstimate(estimate.id, { title: value })
+                  : setTitleEdit({ estimateId: estimate.id, value })
               }
+              onBlur={() => {
+                if (creation) return
+                const title = titleDraft.trim()
+                setTitleEdit(null)
+                if (title.length >= 1 && title.length <= formLimits.estimateTitle) {
+                  patchEstimate(estimate.id, { title })
+                }
+              }}
             />
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como
-              trabajo pendiente de configurar.
-            </p>
-          )}
-          {estimate.conversionDestination === 'contract' ? (
-            <SelectField
-              label="El importe presupuestado corresponde a"
-              value={estimate.contractBillingFrequency ?? 'monthly'}
-              options={Object.entries(contractBillingLabels).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-              onChange={(value) =>
-                patchEstimate(estimate.id, {
-                  contractBillingFrequency: value as NonNullable<
-                    Estimate['contractBillingFrequency']
-                  >,
-                })
-              }
-            />
-          ) : null}
-          <FormField label="IVA %">
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              placeholder="10"
-              value={estimate.vatRate}
-              onChange={(event) =>
-                patchEstimate(estimate.id, {
-                  vatRate:
-                    Math.round(Math.min(100, Math.max(0, Number(event.target.value) || 0)) * 100) /
-                    100,
-                })
-              }
-            />
-          </FormField>
-        </CardContent>
-      </Card>
-
-      <Card className="@container">
-        <CardHeader>
-          <CardTitle>Partidas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <LinesEditor estimate={estimate} catalog={catalog} />
-          <div className="grid gap-4 @min-[36rem]:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)]">
-            <div className="border-border bg-surface-subtle flex flex-wrap items-end gap-3 rounded-lg border p-3">
+            <div className="flex min-w-0 flex-col gap-1.5 @min-[44rem]:col-span-2">
               <SelectField
-                label="Descuento global"
-                className="w-full @min-[36rem]:max-w-56"
-                value={estimate.discountType}
+                label="Cliente"
+                value={estimate.clientId}
                 options={[
-                  { value: 'none', label: 'Sin descuento' },
-                  { value: 'percent', label: 'Porcentaje (%)' },
-                  { value: 'amount', label: 'Importe (€)' },
+                  { value: '', label: 'Sin cliente' },
+                  ...clients
+                    .filter((c) => !c.archivedAt || c.id === estimate.clientId)
+                    .map((c) => ({ value: c.id, label: c.name })),
                 ]}
-                onChange={(discountType) =>
+                onChange={(clientId) => patchEstimate(estimate.id, { clientId })}
+              />
+              {can(session?.role, 'clients:write') ? (
+                <button
+                  type="button"
+                  className="text-primary self-start text-xs font-medium hover:underline"
+                  onClick={() => setCreatingClient(true)}
+                >
+                  {clients.length === 0 ? '+ Crear tu primer cliente' : '+ Crear cliente nuevo'}
+                </button>
+              ) : null}
+            </div>
+            <TextField
+              label="Válido hasta"
+              type="date"
+              placeholder="dd/mm/aaaa"
+              helper="Pasada esta fecha el presupuesto caduca."
+              value={estimate.validUntil}
+              onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
+            />
+            {!estimate.automaticContract ? (
+              <SelectField
+                label="Destino tras la aceptación"
+                className={
+                  estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
+                }
+                value={estimate.conversionDestination ?? 'work'}
+                options={[
+                  { value: 'work', label: 'Trabajo' },
+                  { value: 'contract', label: 'Contrato recurrente' },
+                ]}
+                onChange={(value) =>
                   patchEstimate(estimate.id, {
-                    discountType: discountType as Estimate['discountType'],
-                    discountValue: 0,
+                    conversionDestination: value as NonNullable<Estimate['conversionDestination']>,
                   })
                 }
               />
-              {estimate.discountType === 'percent' ? (
-                <FormField label="Porcentaje" className="w-28">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="any"
-                    value={estimate.discountValue || ''}
-                    onChange={(event) =>
-                      patchEstimate(estimate.id, {
-                        discountValue: clampPercent(Number(event.target.value) || 0),
-                      })
-                    }
-                  />
-                </FormField>
-              ) : null}
-              {estimate.discountType === 'amount' ? (
-                <FormField label="Importe sin IVA (€)" className="w-28">
-                  <PriceInput
-                    label="Importe del descuento"
-                    cents={estimate.discountValue}
-                    onCommit={(discountValue) => patchEstimate(estimate.id, { discountValue })}
-                  />
-                </FormField>
-              ) : null}
-            </div>
-            <dl className="ml-auto w-full max-w-xs space-y-1 tabular-nums">
-              {totals.lineDiscountCents + totals.globalDiscountCents > 0 ? (
-                <>
-                  <Line label="Suma de partidas" value={totals.grossCents} />
-                  {totals.lineDiscountCents > 0 ? (
-                    <Line label="Descuentos por partida" value={-totals.lineDiscountCents} />
-                  ) : null}
-                  {totals.globalDiscountCents > 0 ? (
-                    <Line label="Descuento global" value={-totals.globalDiscountCents} />
-                  ) : null}
-                </>
-              ) : null}
-              <Line label="Base imponible" value={totals.subtotalCents} />
-              <Line label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
-              <div className="flex justify-between border-t pt-2 text-lg font-semibold">
-                <dt>Total</dt>
-                <dd>{formatEuros(totals.totalCents)}</dd>
-              </div>
-            </dl>
-          </div>
-        </CardContent>
-      </Card>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como
+                trabajo pendiente de configurar.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      {estimate.conversionDestination !== 'contract' ? (
-        <Card>
+        {estimate.documentFormat === 'sections' ? (
+          <EstimateSectionsEditor estimate={estimate} />
+        ) : null}
+
+        <Card className="@container">
           <CardHeader>
-            <CardTitle>Hitos de pago</CardTitle>
+            <CardTitle>
+              {estimate.documentFormat === 'sections' ? 'Resumen económico' : 'Partidas'}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <MilestonesEditor
+          <CardContent className="space-y-4">
+            <EstimatePricingEditor
               estimate={estimate}
-              amounts={amounts}
-              percentSum={percentSum}
-              paidCents={paid}
-              totalCents={totals.totalCents}
-              ledger={ledger}
+              catalog={catalog}
+              showLines={estimate.documentFormat !== 'sections'}
             />
           </CardContent>
         </Card>
-      ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Descripción y condiciones</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ServiceProposalAssistant
-            clauses={estimate.clauses}
-            onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
-          />
-          <TextareaField
-            label="Condiciones"
-            hideLabel
-            placeholder="Forma de pago, plazos, garantía, qué incluye y qué no…"
-            value={estimate.clauses}
-            maxLength={formLimits.estimateClauses}
-            helper={`Máximo ${formLimits.estimateClauses} caracteres.`}
-            onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
-          />
-        </CardContent>
-      </Card>
+        {estimate.conversionDestination !== 'contract' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Hitos de pago</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MilestonesEditor
+                estimate={estimate}
+                amounts={amounts}
+                percentSum={percentSum}
+                paidCents={paid}
+                totalCents={totals.totalCents}
+                ledger={ledger}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
-      <EstimateAutoSaveStatus />
+        {estimate.documentFormat !== 'sections' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Descripción y condiciones</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ServiceProposalAssistant
+                clauses={estimate.clauses}
+                onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
+              />
+              <TextareaField
+                label="Condiciones"
+                hideLabel
+                placeholder="Forma de pago, plazos, garantía, qué incluye y qué no…"
+                value={estimate.clauses}
+                maxLength={formLimits.estimateClauses}
+                helper={`Máximo ${formLimits.estimateClauses} caracteres.`}
+                onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+      </fieldset>
+
+      {creation ? (
+        <div className="space-y-3 border-t pt-4">
+          <p className="text-muted-foreground text-sm">
+            {creation.submitted
+              ? 'La creación está pendiente de confirmación. Reintenta sin duplicar el presupuesto.'
+              : 'El presupuesto no se guardará hasta que pulses «Crear presupuesto».'}
+          </p>
+          {creation.error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {creation.error}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-end gap-3">
+            <Link to="/presupuestos" className="text-sm underline">
+              Cancelar
+            </Link>
+            <Button type="submit" isDisabled={creation.busy}>
+              {creation.busy
+                ? 'Creando presupuesto…'
+                : creation.submitted
+                  ? 'Reintentar creación'
+                  : 'Crear presupuesto'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <EstimateAutoSaveStatus />
+      )}
 
       <ClientFormDialog
         open={creatingClient}
         onClose={() => setCreatingClient(false)}
         onSaved={(clientId) => patchEstimate(estimate.id, { clientId })}
       />
-    </div>
-  )
-}
-
-function Line({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{formatEuros(value)}</dd>
     </div>
   )
 }

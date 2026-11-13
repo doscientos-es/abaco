@@ -301,14 +301,14 @@ export function InvoicesPage() {
                           <Link
                             to="/facturas/$invoiceId"
                             params={{ invoiceId: invoice.id }}
-                            className="font-medium underline-offset-4 hover:underline"
+                            className="block text-sm leading-snug font-medium underline-offset-4 hover:underline"
                           >
                             {invoice.concept}
                           </Link>
                         </div>
                         <Badge variant={variant}>{label}</Badge>
                       </div>
-                      <p className="text-xl font-semibold tabular-nums md:shrink-0 md:text-base">
+                      <p className="text-sm font-medium whitespace-nowrap tabular-nums md:shrink-0">
                         {formatEuros(invoice.totalCents)}
                       </p>
                       <p className="text-xs md:w-48 md:shrink-0">

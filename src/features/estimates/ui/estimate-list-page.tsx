@@ -13,6 +13,7 @@ import { useState } from 'react'
 
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import { estimateTotalCents } from '@/shared/domain/estimate'
+import type { EstimateFormat } from '@/shared/domain/estimate-document'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
@@ -26,7 +27,7 @@ import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
-import { createEstimate } from '../application/estimate-actions'
+import { EstimateFormatPicker } from './estimate-format-picker'
 
 export function EstimateListPage() {
   const { estimates, clients } = useTenantData()
@@ -47,19 +48,23 @@ export function EstimateListPage() {
   const [creating, setCreating] = useState(false)
   const [newClientId, setNewClientId] = useState('')
   const [newTitle, setNewTitle] = useState('')
+  const [newFormat, setNewFormat] = useState<EstimateFormat>('table')
   const [creatingClient, setCreatingClient] = useState(false)
 
   function startNew() {
     setNewClientId(activeClients[0]?.id ?? '')
     setNewTitle('')
+    setNewFormat('table')
     setCreating(true)
   }
 
   function confirmNew() {
     if (!newClientId) return
-    const id = createEstimate(newClientId, newTitle)
     setCreating(false)
-    void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: id } })
+    void navigate({
+      to: '/presupuestos/nuevo',
+      search: { clientId: newClientId, title: newTitle, format: newFormat },
+    })
   }
 
   return (
@@ -203,8 +208,10 @@ export function EstimateListPage() {
         onOpenChange={setCreating}
         compact
         title="Nuevo presupuesto"
-        description="Elige el cliente y la obra. Después añades partidas desde el catálogo."
-        submitLabel="Crear y añadir partidas"
+        description="Elige el cliente, el título y cómo quieres construir este presupuesto."
+        submitLabel={
+          newFormat === 'sections' ? 'Continuar con las secciones' : 'Continuar con las partidas'
+        }
         submitDisabled={!newClientId}
         onSubmit={confirmNew}
       >
@@ -239,14 +246,15 @@ export function EstimateListPage() {
           </div>
         )}
         <TextField
-          label="Título de la obra"
+          label="Título del presupuesto"
           minLength={2}
           maxLength={formLimits.estimateTitle}
-          placeholder="Ej. Reforma de baño"
+          placeholder="Ej. Limpieza de oficinas"
           icon={fieldIcons.file}
           value={newTitle}
           onChange={setNewTitle}
         />
+        <EstimateFormatPicker value={newFormat} onChange={setNewFormat} />
       </FormDialog>
 
       <ClientFormDialog

@@ -1,3 +1,5 @@
+import { estimateAgreementSchema } from '../domain/estimate-agreement'
+import { estimateSectionsSchema } from '../domain/estimate-document'
 import type {
   CatalogItem,
   Client,
@@ -166,6 +168,8 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     clientId: str(row.client_id),
     title: str(row.title),
     status: str(row.status) as Estimate['status'],
+    documentFormat: row.document_format === 'sections' ? 'sections' : 'table',
+    sections: estimateSectionsSchema.parse(row.document_sections ?? []),
     conversionDestination: str(row.conversion_destination) === 'contract' ? 'contract' : 'work',
     automaticContract: row.automatic_contract === true,
     contractBillingFrequency: (['once', 'quarterly', 'yearly'].includes(
@@ -211,6 +215,8 @@ export const estimateToRow = (e: Estimate): Row => ({
   client_id: e.clientId,
   title: e.title,
   status: e.status,
+  document_format: e.documentFormat ?? 'table',
+  document_sections: e.sections ?? [],
   conversion_destination: e.conversionDestination ?? 'work',
   contract_billing_frequency: e.contractBillingFrequency ?? 'monthly',
   automatic_contract: e.automaticContract ?? false,
@@ -319,6 +325,9 @@ export function invoiceFromRow(row: Row): Invoice {
             : {}),
           ...(typeof snapshot.contractPeriodEnd === 'string'
             ? { contractPeriodEnd: snapshot.contractPeriodEnd }
+            : {}),
+          ...(snapshot.estimateAgreement != null
+            ? { estimateAgreement: estimateAgreementSchema.parse(snapshot.estimateAgreement) }
             : {}),
         }
       : undefined

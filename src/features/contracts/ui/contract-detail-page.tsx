@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
@@ -14,18 +14,17 @@ import {
   addContractVisitRule,
   generateContractVisits,
   loadServiceContract,
-  transitionServiceContract,
-  type ContractStatus,
   type ContractVisitRule,
 } from '../application/contract-actions'
-import { contractStatusLabels as statusLabels } from '../domain/contract-status'
-import { contractDatesError } from '../domain/weekly-schedule'
 import { CleaningServicesPanel } from './cleaning-services-panel'
+import { ContractActions } from './contract-actions'
 import { ContractAgreementForm } from './contract-agreement-form'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
 import { ContractDocument } from './contract-document'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
+import { ContractStatusBadge } from './contract-status-badge'
+import { ContractStatusPanel } from './contract-status-panel'
 
 const monthNames = [
   'Enero',
@@ -58,7 +57,6 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const [localStart, setLocalStart] = useState('09:00')
   const [duration, setDuration] = useState('60')
   const [ruleTitle, setRuleTitle] = useState('')
-  const [reason, setReason] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [generationMonth, setGenerationMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const operationIds = useRef(new Map<string, string>())
@@ -147,41 +145,6 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     }
   }
 
-  async function transition(nextStatus: Exclude<ContractStatus, 'draft'>) {
-    if (!contract || busy) return
-    const dateError = contractDatesError(contract.starts_on, contract.ends_on ?? '')
-    if (nextStatus === 'active' && dateError) {
-      toast.error(dateError)
-      return
-    }
-    if (nextStatus !== 'active' && !reason.trim()) return
-    const payload = {
-      tenantId: tenant.id,
-      contractId,
-      expectedUpdatedAt: contract.updated_at,
-      nextStatus,
-      reason: reason.trim(),
-    }
-    const key = `status:${JSON.stringify(payload)}`
-    const operationId = stableOperation(key)
-    setBusy(nextStatus)
-    try {
-      await transitionServiceContract({ ...payload, operationId })
-      operationIds.current.delete(key)
-      setReason('')
-      await refresh()
-      await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
-      toast.success(`Contrato ${statusLabels[nextStatus].toLowerCase()}`)
-    } catch (error) {
-      toast.error('No se pudo cambiar el contrato', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
-      })
-      await refresh()
-    } finally {
-      setBusy(null)
-    }
-  }
-
   async function generate() {
     if (busy) return
     setBusy('generate')
@@ -217,12 +180,25 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         Volver a contratos
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">{contract.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-semibold">{contract.title}</h1>
+          <ContractStatusBadge status={contract.status} />
+          <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
+            {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
+          </Badge>
+          <ContractActions contract={contract} />
+        </div>
+        {contract.signed_at ? (
+          <p className="text-muted-foreground mt-2 text-sm">
+            Firma registrada el {new Date(contract.signed_at).toLocaleDateString('es-ES')}
+          </p>
+        ) : null}
         <p className="text-muted-foreground text-sm">
           {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'} ·{' '}
-          {statusLabels[contract.status]} · {contract.timezone}
+          {contract.timezone}
         </p>
       </div>
+      <ContractStatusPanel key={contract.id} contract={contract} />
       <Card>
         <CardHeader>
           <CardTitle>Acuerdo</CardTitle>
@@ -445,10 +421,10 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         </Card>
       ) : null}
 
-      {contract.status !== 'expired' && contract.status !== 'canceled' ? (
+      {contract.status === 'active' && can(session?.role, 'contracts:write') ? (
         <Card>
           <CardHeader>
-            <CardTitle>Estado y generación</CardTitle>
+            <CardTitle>Generación de trabajos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <TextField
@@ -465,49 +441,13 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             >
               Revisar visitas del mes
             </Link>
-            {contract.status !== 'draft' ? (
-              <TextField
-                label="Motivo de la pausa o cancelación"
-                value={reason}
-                onChange={setReason}
-                placeholder="Describe el motivo"
-                maxLength={500}
-              />
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              {contract.status === 'draft' || contract.status === 'paused' ? (
-                <Button isDisabled={Boolean(busy)} onPress={() => void transition('active')}>
-                  {contract.status === 'draft'
-                    ? 'Activar y generar todos los trabajos'
-                    : 'Reanudar'}
-                </Button>
-              ) : null}
-              {contract.status === 'active' ? (
-                <>
-                  <Button
-                    variant="outline"
-                    isDisabled={Boolean(busy) || !/^\d{4}-\d{2}$/.test(generationMonth)}
-                    onPress={() => void generate()}
-                  >
-                    Preparar mes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    isDisabled={Boolean(busy) || !reason.trim()}
-                    onPress={() => void transition('paused')}
-                  >
-                    Pausar
-                  </Button>
-                </>
-              ) : null}
-              <Button
-                variant="outline"
-                isDisabled={Boolean(busy) || !reason.trim()}
-                onPress={() => void transition('canceled')}
-              >
-                Cancelar contrato
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              isDisabled={Boolean(busy) || !/^\d{4}-\d{2}$/.test(generationMonth)}
+              onPress={() => void generate()}
+            >
+              Preparar mes
+            </Button>
             <p className="text-muted-foreground text-xs">
               Al activar se generan todos los trabajos de este contrato entre las fechas de inicio y
               fin, con el equipo elegido. Los conflictos se muestran para revisión. Repetir no
@@ -573,15 +513,19 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             {query.data.events.map((event) => (
               <li key={event.id}>
                 {new Date(event.occurred_at).toLocaleString('es-ES')} ·{' '}
-                {event.kind === 'created'
-                  ? 'Creado'
-                  : event.kind === 'rule_added'
-                    ? 'Trabajo añadido'
-                    : event.kind === 'service_updated'
-                      ? 'Trabajo configurado'
-                      : event.kind === 'details_updated'
-                        ? 'Datos del contrato actualizados'
-                        : 'Estado cambiado'}
+                {event.kind === 'signed'
+                  ? 'Firma registrada por administración'
+                  : event.kind === 'signed_document_attached'
+                    ? 'PDF firmado adjuntado'
+                    : event.kind === 'created'
+                      ? 'Creado'
+                      : event.kind === 'rule_added'
+                        ? 'Trabajo añadido'
+                        : event.kind === 'service_updated'
+                          ? 'Trabajo configurado'
+                          : event.kind === 'details_updated'
+                            ? 'Datos del contrato actualizados'
+                            : 'Estado cambiado'}
                 {typeof event.payload.reason === 'string' && event.payload.reason
                   ? ` · ${event.payload.reason}`
                   : ''}

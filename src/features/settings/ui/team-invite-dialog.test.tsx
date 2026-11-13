@@ -41,11 +41,13 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: button,
+  IconButton: button,
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   ConfirmDialog: confirm,
 }))
 vi.mock('@phosphor-icons/react', () => ({
   TrashIcon: () => null,
+  UploadSimple: () => null,
   UserPlusIcon: () => null,
   UsersThreeIcon: () => null,
 }))

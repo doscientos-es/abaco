@@ -83,6 +83,7 @@ vi.mock('@/features/clients/ui/related-record-creation', () => ({
   }),
 }))
 
+import { EstimateDraftProvider } from './estimate-draft-context'
 import { EstimateEditorPage } from './estimate-editor-page'
 
 beforeEach(() => {
@@ -92,6 +93,29 @@ beforeEach(() => {
 })
 
 describe('acceso a la aprobación del presupuesto', () => {
+  it('offers a final submit for new estimates without autosave or premature sending actions', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDraftProvider
+        value={{ estimate, patch: vi.fn(), busy: false, submitted: false, error: null }}
+      >
+        <EstimateEditorPage estimateId="estimate" />
+      </EstimateDraftProvider>,
+    )
+    expect(html).toContain('Nuevo presupuesto')
+    expect(html).toContain('type="submit"')
+    expect(html).toContain('Crear presupuesto')
+    expect(html).not.toContain('Los cambios válidos se guardan automáticamente')
+    expect(html).not.toContain('Enviar por email')
+    expect(html).not.toContain('Marcar como aprobado')
+    expect(html).not.toContain('IVA %')
+  })
+
+  it('does not expose VAT as an editable general field for existing estimates either', () => {
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).not.toContain('IVA %')
+    expect(html).toContain('IVA 21%')
+  })
+
   it('shows the automatic save guidance only while the estimate is editable', () => {
     expect(renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)).toContain(
       'Los cambios válidos se guardan automáticamente',

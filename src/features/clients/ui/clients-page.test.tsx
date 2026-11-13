@@ -7,8 +7,10 @@ import { ClientsPage } from './clients-page'
 
 const mocks = vi.hoisted(() => ({
   archived: false,
+  hasClientTypes: true,
   target: null as { id: string; name: string } | null,
   stateIndex: 0,
+  setImportOpen: vi.fn(),
   setTarget: vi.fn(),
   navigate: vi.fn(),
   update: vi.fn(),
@@ -22,7 +24,7 @@ vi.mock('react', async (original) => ({
     const index = mocks.stateIndex++
     return [
       index === 2 ? mocks.archived : index === 3 ? mocks.target : initial,
-      index === 3 ? mocks.setTarget : vi.fn(),
+      index === 0 ? mocks.setImportOpen : index === 3 ? mocks.setTarget : vi.fn(),
     ]
   },
 }))
@@ -34,9 +36,17 @@ vi.mock('@doscientos/ui', () => {
       mocks.confirm = onConfirm
       return null
     },
-    IconButton: ({ label, onPress }: { label: string; onPress: () => void }) => {
+    IconButton: ({
+      label,
+      onPress,
+      isDisabled,
+    }: {
+      label: string
+      onPress: () => void
+      isDisabled?: boolean
+    }) => {
       mocks.actions.set(label, [...(mocks.actions.get(label) ?? []), onPress])
-      return <button aria-label={label} />
+      return <button aria-label={label} disabled={isDisabled} />
     },
     Input: () => null,
     PageHeader: Container,
@@ -52,7 +62,9 @@ vi.mock('@doscientos/ui', () => {
     TableRow: Container,
   }
 })
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [{ value: 'type' }] }) }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: mocks.hasClientTypes ? [{ value: 'type' }] : [] }),
+}))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/clientes">{children}</a>,
   useNavigate: () => mocks.navigate,
@@ -80,9 +92,25 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.stateIndex = 0
   mocks.archived = false
+  mocks.hasClientTypes = true
   mocks.target = null
   mocks.actions.clear()
   mocks.confirm = null
+})
+
+describe('client Excel import action', () => {
+  it('opens the import dialog from a labeled icon button without visible text', () => {
+    const html = renderToStaticMarkup(<ClientsPage />)
+    expect(html).toContain('<button aria-label="Importar de Excel"></button>')
+    mocks.actions.get('Importar de Excel')?.[0]?.()
+    expect(mocks.setImportOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('keeps the import icon disabled when no client types are available', () => {
+    mocks.hasClientTypes = false
+    const html = renderToStaticMarkup(<ClientsPage />)
+    expect(html).toContain('<button aria-label="Importar de Excel" disabled=""></button>')
+  })
 })
 
 describe('client row actions', () => {

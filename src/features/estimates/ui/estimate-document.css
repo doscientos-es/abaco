@@ -1,0 +1,59 @@
+.estimate-document {
+  overflow-wrap: anywhere;
+}
+
+.estimate-document__section[data-page-break] {
+  border-top: 1px dashed var(--border);
+  padding-top: 2rem;
+}
+
+@media print {
+  body.invoice-print .estimate-document {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: white;
+    color: #171717;
+    box-shadow: none;
+  }
+
+  body.invoice-print .estimate-document section {
+    break-inside: auto;
+  }
+
+  .estimate-document__section[data-page-break] {
+    break-before: page;
+    border: 0;
+    padding-top: 0;
+  }
+
+  .estimate-document :is(h2, h3) {
+    break-after: avoid;
+  }
+
+  .estimate-document :is(header, footer, tr, .estimate-document__totals) {
+    break-inside: avoid;
+  }
+
+  .estimate-document p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .estimate-document__table {
+    overflow: visible;
+  }
+
+  .estimate-document table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .estimate-document thead {
+    display: table-header-group;
+  }
+}

@@ -1,22 +1,34 @@
-import { estimateTotals, lineNetCents, milestoneAmounts } from '@/shared/domain/estimate'
+import type { Ref } from 'react'
+
+import { estimateTotals, milestoneAmounts } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Estimate, Tenant } from '@/shared/domain/types'
+
+import { EstimateDocumentSection } from './estimate-document-section'
+import { EstimatePriceSummary, EstimatePriceTable } from './estimate-price-document'
+
+import './estimate-document.css'
 
 /** Client-facing proposal. Rendered on screen and printed/saved as PDF via the browser. */
 export function EstimateDocument({
   estimate,
   client,
   tenant,
+  documentRef,
 }: {
   estimate: Estimate
   client: Client | undefined
   tenant: Tenant
+  documentRef?: Ref<HTMLElement>
 }) {
   const totals = estimateTotals(estimate)
   const milestones = milestoneAmounts(estimate.milestones, totals.totalCents)
 
   return (
-    <article className="estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
+    <article
+      ref={documentRef}
+      className="estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none"
+    >
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:gap-6">
         <div>
           {tenant.logoUrl ? (
@@ -51,82 +63,22 @@ export function EstimateDocument({
 
       <section>
         <h3 className="mb-3 text-base font-semibold">{estimate.title}</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-104">
-            <thead>
-              <tr className="text-muted-foreground border-b text-left text-xs">
-                <th className="py-2 font-medium">Concepto</th>
-                <th className="py-2 text-right font-medium">Cant.</th>
-                <th className="py-2 text-right font-medium">Precio</th>
-                <th className="py-2 text-right font-medium">Importe</th>
-              </tr>
-            </thead>
-            <tbody>
-              {estimate.lines.map((line) => (
-                <tr key={line.id} className="border-b">
-                  <td className="py-2">
-                    {line.description}
-                    {line.discountPercent > 0 ? (
-                      <span className="text-muted-foreground block text-xs">
-                        Descuento {line.discountPercent}%
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {line.quantity} {line.unit}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {formatEuros(line.unitPriceCents)}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {formatEuros(lineNetCents(line))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <dl className="mt-4 ml-auto w-full space-y-1 tabular-nums sm:w-64">
-          <Row label="Materiales" value={totals.materialsCents} />
-          <Row label="Mano de obra" value={totals.laborCents} />
-          {totals.otherCents > 0 ? <Row label="Otros" value={totals.otherCents} /> : null}
-          {totals.globalDiscountCents > 0 ? (
-            <Row
-              label={
-                estimate.discountType === 'percent'
-                  ? `Descuento ${estimate.discountValue}%`
-                  : 'Descuento'
-              }
-              value={-totals.globalDiscountCents}
-            />
-          ) : null}
-          <Row label="Base imponible" value={totals.subtotalCents} />
-          <Row label={`IVA ${estimate.vatRate}%`} value={totals.vatCents} />
-          <div className="flex justify-between border-t pt-2 text-base font-semibold">
-            <dt>
-              {estimate.conversionDestination === 'contract' &&
-              estimate.contractBillingFrequency !== 'once'
-                ? 'Total por periodo'
-                : 'Total'}
-            </dt>
-            <dd>{formatEuros(totals.totalCents)}</dd>
-          </div>
-        </dl>
-        {estimate.conversionDestination === 'contract' ? (
-          <p className="mt-3 text-sm font-medium">
-            {estimate.contractBillingFrequency === 'once'
-              ? 'Contrato · importe único'
-              : 'Contrato · precio por periodo'}{' '}
-            {estimate.contractBillingFrequency === 'once'
-              ? ''
-              : estimate.contractBillingFrequency === 'quarterly'
-                ? 'trimestral'
-                : estimate.contractBillingFrequency === 'yearly'
-                  ? 'anual'
-                  : 'mensual'}
-            . La vigencia y la planificación de cada trabajo se concretarán en el contrato.
-          </p>
+        {estimate.documentFormat !== 'sections' ? (
+          <EstimatePriceTable lines={estimate.lines} />
         ) : null}
+      </section>
+
+      {estimate.documentFormat === 'sections'
+        ? (estimate.sections ?? []).map((section) => (
+            <EstimateDocumentSection key={section.id} section={section} estimate={estimate} />
+          ))
+        : null}
+
+      <section aria-label="Resumen económico">
+        {estimate.documentFormat === 'sections' ? (
+          <h3 className="mb-3 text-base font-semibold">Resumen económico</h3>
+        ) : null}
+        <EstimatePriceSummary estimate={estimate} />
       </section>
 
       {estimate.conversionDestination !== 'contract' ? (
@@ -148,10 +100,12 @@ export function EstimateDocument({
         </section>
       ) : null}
 
-      <section>
-        <h3 className="mb-2 text-base font-semibold">Descripción y condiciones</h3>
-        <p className="text-muted-foreground whitespace-pre-line">{estimate.clauses}</p>
-      </section>
+      {estimate.documentFormat !== 'sections' || estimate.clauses ? (
+        <section>
+          <h3 className="mb-2 text-base font-semibold">Descripción y condiciones</h3>
+          <p className="text-muted-foreground whitespace-pre-line">{estimate.clauses}</p>
+        </section>
+      ) : null}
 
       <footer className="grid grid-cols-2 gap-4 pt-10 text-xs sm:gap-10">
         <div className="border-t pt-2">Firma de la empresa</div>
@@ -163,14 +117,5 @@ export function EstimateDocument({
         </p>
       ) : null}
     </article>
-  )
-}
-
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{formatEuros(value)}</dd>
-    </div>
   )
 }

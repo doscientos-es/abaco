@@ -1,33 +1,45 @@
-import { defaultMilestones, formatEstimateNumber } from '@/shared/domain/estimate'
+import { formatEstimateNumber } from '@/shared/domain/estimate'
+import type { EstimateFormat } from '@/shared/domain/estimate-document'
 import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, updateTenantData } from '@/shared/store/store'
 
-export function createEstimate(clientId: string, title = 'Nuevo servicio'): string {
-  const id = newId()
+import { copyEstimateSections } from '../domain/estimate-sections'
+import { buildEstimateDraft, newEstimateError } from '../domain/new-estimate'
+
+export function createEstimate(
+  clientId: string,
+  title = 'Nuevo servicio',
+  documentFormat: EstimateFormat = 'table',
+): string {
+  let id = ''
   updateTenantData((data) => {
+    const estimate = buildEstimateDraft(data.tenant, clientId, title, documentFormat, newId)
+    id = estimate.id
+    return {
+      ...data,
+      tenant: { ...data.tenant, nextEstimateNumber: data.tenant.nextEstimateNumber + 1 },
+      estimates: [estimate, ...data.estimates],
+    }
+  })
+  return id
+}
+
+/** Called once by the final submit, with the complete locally edited document. */
+export function submitEstimateDraft(draft: Estimate): string {
+  const error = newEstimateError(draft)
+  if (error) throw new Error(error)
+  updateTenantData((data) => {
+    if (draft.tenantId !== data.tenant.id)
+      throw new Error('La empresa activa ha cambiado. Vuelve a crear el presupuesto.')
+    if (data.estimates.some((estimate) => estimate.id === draft.id)) return data
+    if (!data.clients.some((client) => client.id === draft.clientId && !client.archivedAt))
+      throw new Error('Selecciona un cliente activo.')
     const now = new Date()
-    const validUntil = new Date(now.getTime() + 30 * 86_400_000).toISOString().slice(0, 10)
     const estimate: Estimate = {
-      id,
-      tenantId: data.tenant.id,
-      number: formatEstimateNumber(data.tenant.nextEstimateNumber, now.getFullYear()),
-      clientId,
-      title: title.trim() || 'Nuevo servicio',
+      ...draft,
+      title: draft.title.trim(),
       status: 'draft',
-      conversionDestination: 'contract',
-      automaticContract: true,
-      contractBillingFrequency: 'monthly',
-      lines: [],
-      discountType: 'none',
-      discountValue: 0,
-      vatRate: data.tenant.defaultVatRate,
-      milestones: defaultMilestones(data.tenant.defaultDepositPercent).map((milestone) => ({
-        ...milestone,
-        id: newId(),
-      })),
-      clauses:
-        'Validez de 30 días. Los cambios sobre lo presupuestado se facturan aparte. Los plazos dependen de la disponibilidad de materiales.',
-      validUntil,
+      number: formatEstimateNumber(data.tenant.nextEstimateNumber, now.getFullYear()),
       createdAt: now.toISOString().slice(0, 10),
     }
     return {
@@ -36,7 +48,7 @@ export function createEstimate(clientId: string, title = 'Nuevo servicio'): stri
       estimates: [estimate, ...data.estimates],
     }
   })
-  return id
+  return draft.id
 }
 
 export function patchEstimate(id: string, patch: Partial<Estimate>): void {
@@ -69,6 +81,12 @@ export function duplicateEstimate(id: string): string | null {
       emailSentAt: _emailSentAt,
       ...base
     } = source
+    const lineIds = new Map<string, string>()
+    const lines = source.lines.map((line) => {
+      const copiedId = newId()
+      lineIds.set(line.id, copiedId)
+      return { ...line, id: copiedId }
+    })
     const copy: Estimate = {
       ...base,
       id: created,
@@ -78,7 +96,10 @@ export function duplicateEstimate(id: string): string | null {
       automaticContract: true,
       createdAt: new Date().toISOString().slice(0, 10),
       // Fresh ids: rows are upserted by id, so reusing them would move the originals' children.
-      lines: source.lines.map((l) => ({ ...l, id: newId() })),
+      lines,
+      ...(source.sections
+        ? { sections: copyEstimateSections(source.sections, lineIds, newId) }
+        : {}),
       milestones: source.milestones.map((m) => ({ ...m, id: newId() })),
     }
     return {

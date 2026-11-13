@@ -1,5 +1,5 @@
-import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
-import { UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { Badge, Button, ConfirmDialog, IconButton } from '@doscientos/ui'
+import { UploadSimple, UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -137,13 +137,14 @@ export function TeamSection({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button
+              <IconButton
+                label="Importar personas"
                 variant="outline"
                 isDisabled={busy || !team.isSuccess}
                 onPress={() => setImportOpen(true)}
               >
-                Importar personas
-              </Button>
+                <UploadSimple aria-hidden="true" className="size-4" />
+              </IconButton>
               <Button
                 aria-haspopup="dialog"
                 aria-expanded={inviteOpen}

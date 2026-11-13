@@ -66,7 +66,7 @@ describe('contracted jobs list', () => {
     expect(html).toContain('/contratos/agreement#job')
     expect(html).toContain('Office TEST')
     expect(html).toContain('Pendiente de configurar')
-    expect(html).toContain('Borrador')
+    expect(html).toContain('Estado del contrato: Inactivo')
     expect(html).not.toContain('Una sola vez')
     expect(html).not.toContain('Órdenes por visita')
   })

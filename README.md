@@ -23,6 +23,20 @@ Los informes cerrados pueden compartirse mediante enlaces temporales revocables,
 correo y PDF. La generación de visitas o borradores no implica la emisión ni el
 envío automático de una factura.
 
+Al crear un presupuesto puedes elegir **Tabla de precios** o **Por secciones**.
+El segundo formato permite añadir títulos con descripciones, bloques de precios,
+tablas de trabajo y listas; ordenar, duplicar o eliminar secciones y marcar saltos
+de página para imprimir o guardar un PDF de varias páginas. Las tablas de trabajo
+son contenido de la propuesta: no programan visitas ni cambian la facturación.
+Ambos formatos comparten las partidas y los cálculos económicos. La publicación
+conserva el contenido acordado, también en el enlace del cliente.
+
+Los contratos se muestran en una tabla con acciones por fila. Un administrador
+puede **Marcar como firmado** y adjuntar un PDF firmado en papel (hasta 15 MB),
+en ese momento o después. El documento es privado y no puede sustituirse.
+Registrar esta conformidad no activa el contrato ni programa trabajos, y no
+equivale a una firma digital del cliente.
+
 **Estado:** el repositorio contiene funcionalidad en evolución. La existencia de
 código o migraciones no garantiza su despliegue ni su validación en un entorno.
 Quedan pendientes, entre otros, la firma digital del cliente, la asignación de

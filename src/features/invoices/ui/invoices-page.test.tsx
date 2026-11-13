@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { InvoicesPage } from './invoices-page'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/facturas">{children}</a>,
+  Link: ({ children, className }: { children: ReactNode; className?: string }) => (
+    <a href="/facturas" className={className}>
+      {children}
+    </a>
+  ),
   useNavigate: () => vi.fn(),
   useSearch: () => ({ q: 'F-2026-003' }),
 }))
@@ -57,5 +61,16 @@ describe('lista de facturas emitidas', () => {
     expect(html).toContain('xl:hidden')
     expect(html).toMatch(/data-slot="table-container" class="[^"]*max-xl:hidden/)
     expect(html).not.toMatch(/data-slot="table-container" class="[^"]*\shidden(?:\s|")/)
+  })
+
+  it('mantiene el concepto y el importe compactos en las tarjetas a cualquier ancho', () => {
+    const html = renderToStaticMarkup(<InvoicesPage />)
+    const cards = html.match(/<ul class="space-y-2 xl:hidden">([\s\S]*?)<\/ul>/)?.[1]
+    expect(cards).toMatch(/<a[^>]+class="[^"]*text-sm[^"]*"[^>]*>Reparación<\/a>/)
+    const amountClasses = cards?.match(/<p class="([^"]+)">[^<]*€<\/p>/)?.[1]?.split(' ')
+    expect(amountClasses).toEqual(
+      expect.arrayContaining(['text-sm', 'font-medium', 'tabular-nums', 'whitespace-nowrap']),
+    )
+    expect(cards).not.toMatch(/text-xl|md:text-base|font-semibold/)
   })
 })

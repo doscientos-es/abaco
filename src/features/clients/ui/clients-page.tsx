@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { Archive, ArrowCounterClockwise, PencilSimple } from '@phosphor-icons/react'
+import { Archive, ArrowCounterClockwise, PencilSimple, UploadSimple } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -96,13 +96,14 @@ export function ClientsPage() {
         title="Clientes"
         actions={
           <>
-            <Button
+            <IconButton
+              label="Importar de Excel"
               variant="outline"
               isDisabled={!types.data?.length}
               onPress={() => setImportOpen(true)}
             >
-              Importar de Excel
-            </Button>
+              <UploadSimple aria-hidden="true" className="size-4" />
+            </IconButton>
             <Button onPress={create}>Nuevo cliente</Button>
           </>
         }

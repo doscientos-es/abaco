@@ -1,7 +1,7 @@
 import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-import type { ContractStatus } from '../domain/contract-status'
+import type { ContractStatus, ContractStatusFilter } from '../domain/contract-status'
 
 export type { ContractStatus } from '../domain/contract-status'
 export type BillingFrequency = ContractBillingFrequency
@@ -25,6 +25,10 @@ export type ServiceContract = {
   default_assigned_user_id: string | null
   included_scope: Array<{ description: string }>
   schedule_version: number
+  signed_at?: string | null
+  signed_by?: string | null
+  signed_document_path?: string | null
+  signed_document_name?: string | null
   updated_at: string
   created_at: string
 }
@@ -42,7 +46,14 @@ export type ContractVisitRule = {
 
 export type ContractEvent = {
   id: string
-  kind: 'created' | 'rule_added' | 'status_changed' | 'details_updated' | 'service_updated'
+  kind:
+    | 'created'
+    | 'rule_added'
+    | 'status_changed'
+    | 'details_updated'
+    | 'service_updated'
+    | 'signed'
+    | 'signed_document_attached'
   payload: Record<string, unknown>
   occurred_at: string
 }
@@ -67,7 +78,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,default_assigned_user_id,included_scope,schedule_version,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()
@@ -129,12 +140,19 @@ export async function convertAcceptedEstimateToContract(input: {
   return data
 }
 
-export async function listServiceContracts(tenantId: string, page: number) {
+export async function listServiceContracts(
+  tenantId: string,
+  page: number,
+  status: ContractStatusFilter = 'all',
+) {
   const pageSize = 20
-  const { data, count, error } = await createBrowserSupabaseClient()
+  let query = createBrowserSupabaseClient()
     .from('service_contracts')
     .select(columns, { count: 'exact' })
     .eq('tenant_id', tenantId)
+  if (status === 'active') query = query.eq('status', 'active')
+  if (status === 'inactive') query = query.neq('status', 'active')
+  const { data, count, error } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1)
   if (error) throw new Error(error.message)

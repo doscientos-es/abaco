@@ -11,7 +11,8 @@ import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, useTenantData } from '@/shared/store/store'
 
-import { patchEstimate, registerMilestonePayment } from '../application/estimate-actions'
+import { registerMilestonePayment } from '../application/estimate-actions'
+import { usePatchEstimate } from './estimate-draft-context'
 
 type Props = {
   estimate: Estimate
@@ -32,6 +33,7 @@ export function MilestonesEditor({
   ledger,
   readOnly = false,
 }: Props) {
+  const patchEstimate = usePatchEstimate()
   const session = useSession()
   const { invoices } = useTenantData()
   const queryClient = useQueryClient()

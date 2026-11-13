@@ -42,6 +42,7 @@ import { Route as ITokenRouteImport } from './routes/i.$token'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as PresupuestosIndexRouteImport } from './routes/presupuestos.index'
 import { Route as PresupuestosEstimateIdRouteImport } from './routes/presupuestos.$estimateId'
+import { Route as PresupuestosNuevoRouteImport } from './routes/presupuestos.nuevo'
 import { Route as TrabajosIndexRouteImport } from './routes/trabajos.index'
 import { Route as TrabajosWorkOrderIdRouteImport } from './routes/trabajos.$workOrderId'
 import { Route as ClientesClientIdEditarRouteImport } from './routes/clientes.$clientId_.editar'
@@ -211,6 +212,11 @@ const PresupuestosEstimateIdRoute = PresupuestosEstimateIdRouteImport.update({
   path: '/presupuestos/$estimateId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PresupuestosNuevoRoute = PresupuestosNuevoRouteImport.update({
+  id: '/presupuestos/nuevo',
+  path: '/presupuestos/nuevo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrabajosIndexRoute = TrabajosIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/presupuestos/nuevo': typeof PresupuestosNuevoRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes/': typeof ClientesIndexRoute
   '/contratos/': typeof ContratosIndexRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/presupuestos/nuevo': typeof PresupuestosNuevoRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes': typeof ClientesIndexRoute
   '/contratos': typeof ContratosIndexRoute
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/i/$token': typeof ITokenRoute
   '/p/$token': typeof PTokenRoute
   '/presupuestos/$estimateId': typeof PresupuestosEstimateIdRoute
+  '/presupuestos/nuevo': typeof PresupuestosNuevoRoute
   '/trabajos/$workOrderId': typeof TrabajosWorkOrderIdRoute
   '/clientes/': typeof ClientesIndexRoute
   '/contratos/': typeof ContratosIndexRoute
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/presupuestos/nuevo'
     | '/trabajos/$workOrderId'
     | '/clientes/'
     | '/contratos/'
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/presupuestos/nuevo'
     | '/trabajos/$workOrderId'
     | '/clientes'
     | '/contratos'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/i/$token'
     | '/p/$token'
     | '/presupuestos/$estimateId'
+    | '/presupuestos/nuevo'
     | '/trabajos/$workOrderId'
     | '/clientes/'
     | '/contratos/'
@@ -477,6 +489,7 @@ export interface RootRouteChildren {
   ITokenRoute: typeof ITokenRoute
   PTokenRoute: typeof PTokenRoute
   PresupuestosEstimateIdRoute: typeof PresupuestosEstimateIdRoute
+  PresupuestosNuevoRoute: typeof PresupuestosNuevoRoute
   PresupuestosIndexRoute: typeof PresupuestosIndexRoute
 }
 
@@ -713,6 +726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresupuestosEstimateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/presupuestos/nuevo': {
+      id: '/presupuestos/nuevo'
+      path: '/presupuestos/nuevo'
+      fullPath: '/presupuestos/nuevo'
+      preLoaderRoute: typeof PresupuestosNuevoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trabajos/': {
       id: '/trabajos/'
       path: '/'
@@ -823,6 +843,7 @@ const rootRouteChildren: RootRouteChildren = {
   ITokenRoute: ITokenRoute,
   PTokenRoute: PTokenRoute,
   PresupuestosEstimateIdRoute: PresupuestosEstimateIdRoute,
+  PresupuestosNuevoRoute: PresupuestosNuevoRoute,
   PresupuestosIndexRoute: PresupuestosIndexRoute,
 }
 export const routeTree = rootRouteImport

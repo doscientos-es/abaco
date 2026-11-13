@@ -1,6 +1,6 @@
 import { DragDropProvider } from '@dnd-kit/react'
 import { isSortable } from '@dnd-kit/react/sortable'
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, IconButton } from '@doscientos/ui'
 import { ArrowCounterClockwise, Check, Plus, SlidersHorizontal, X } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState, type ComponentProps } from 'react'
@@ -147,10 +147,9 @@ export function DashboardPage() {
                   </Button>
                 </>
               ) : (
-                <Button variant="outline" onPress={startEditing}>
-                  <SlidersHorizontal aria-hidden="true" className="mr-2 size-4" />
-                  Personalizar
-                </Button>
+                <IconButton label="Personalizar resumen" variant="ghost" onPress={startEditing}>
+                  <SlidersHorizontal aria-hidden="true" className="size-4" />
+                </IconButton>
               )
             ) : null}
           </>

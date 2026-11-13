@@ -1,4 +1,17 @@
-import { Button, Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@doscientos/ui'
+import {
+  Badge,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -7,12 +20,15 @@ import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { SelectField } from '@/shared/ui/form'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { listServiceContracts } from '../application/contract-actions'
-import { contractStatusLabels as statusLabels } from '../domain/contract-status'
+import type { ContractStatusFilter } from '../domain/contract-status'
+import { ContractActions } from './contract-actions'
 import { ContractJobsPage } from './contract-jobs-page'
+import { ContractStatusBadge } from './contract-status-badge'
 
 export function ContractsPage() {
   const { tab } = useSearch({ from: '/contratos/' })
@@ -55,15 +71,30 @@ export function ContractsPage() {
 function ContractsList() {
   const { tenant, clients } = useTenantData()
   const [page, setPage] = useState(0)
+  const [status, setStatus] = useState<ContractStatusFilter>('all')
   const query = useQuery({
-    queryKey: ['service-contracts', tenant.id, page],
-    queryFn: () => listServiceContracts(tenant.id, page),
+    queryKey: ['service-contracts', tenant.id, page, status],
+    queryFn: () => listServiceContracts(tenant.id, page, status),
   })
   return (
     <div className="space-y-6">
       <Link to="/presupuestos" className="text-primary text-sm underline">
         Crear o revisar presupuesto
       </Link>
+      <SelectField
+        label="Estado del contrato"
+        value={status}
+        options={[
+          { value: 'all', label: 'Todos' },
+          { value: 'active', label: 'Activos' },
+          { value: 'inactive', label: 'Inactivos' },
+        ]}
+        onChange={(value) => {
+          setStatus(value as ContractStatusFilter)
+          setPage(0)
+        }}
+        className="max-w-xs"
+      />
       {query.isPending ? <output>Cargando contratos…</output> : null}
       {query.isError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -73,11 +104,19 @@ function ContractsList() {
       {query.isSuccess && query.data.items.length === 0 ? (
         <EmptyPanel
           icon={fieldIcons.file}
-          title={page > 0 ? 'No hay contratos en esta página' : 'Aún no hay contratos'}
+          title={
+            page > 0
+              ? 'No hay contratos en esta página'
+              : status === 'all'
+                ? 'Aún no hay contratos'
+                : `No hay contratos ${status === 'active' ? 'activos' : 'inactivos'}`
+          }
           description={
             page > 0
               ? 'El listado ha cambiado. Vuelve al inicio para consultar los contratos disponibles.'
-              : 'Al aceptar un nuevo presupuesto aparecerá aquí su contrato, con las partidas pendientes de configurar como trabajos.'
+              : status === 'all'
+                ? 'Al aceptar un nuevo presupuesto aparecerá aquí su contrato, con las partidas pendientes de configurar como trabajos.'
+                : 'Prueba con otro estado para consultar el resto de contratos.'
           }
         >
           {page > 0 ? (
@@ -88,31 +127,54 @@ function ContractsList() {
         </EmptyPanel>
       ) : null}
       {query.data?.items.length ? (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {query.data.items.map((contract) => (
-            <li key={contract.id}>
-              <Card className="h-full">
-                <CardContent className="space-y-2 p-4">
+        <Table aria-label="Contratos de servicio">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Contrato</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Firma</TableHead>
+              <TableHead className="text-right">Importe</TableHead>
+              <TableHead>Facturación</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.data.items.map((contract) => (
+              <TableRow key={contract.id}>
+                <TableCell className="min-w-48 font-medium">
                   <Link
                     to="/contratos/$contractId"
                     params={{ contractId: contract.id }}
-                    className="text-primary font-semibold underline-offset-4 hover:underline"
+                    className="underline-offset-4 hover:underline"
                   >
                     {contract.title}
                   </Link>
-                  <p className="text-muted-foreground text-sm">
-                    {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}{' '}
-                    · {statusLabels[contract.status]}
-                  </p>
-                  <p className="text-sm">
-                    {formatEuros(contract.price_cents)} ·{' '}
-                    {contractBillingLabels[contract.billing_frequency]}
-                  </p>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                </TableCell>
+                <TableCell>
+                  {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+                </TableCell>
+                <TableCell>
+                  <ContractStatusBadge status={contract.status} />
+                </TableCell>
+                <TableCell>
+                  <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
+                    {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
+                  {formatEuros(contract.price_cents)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {contractBillingLabels[contract.billing_frequency]}
+                </TableCell>
+                <TableCell className="text-right">
+                  <ContractActions contract={contract} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       ) : null}
       {query.data && query.data.count > 0 ? (
         <div className="flex items-center justify-between text-sm">
