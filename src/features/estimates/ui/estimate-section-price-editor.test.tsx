@@ -162,10 +162,15 @@ describe('simple price section editor', () => {
     expect(mocks.patch).toHaveBeenCalledWith('estimate', { contractBillingFrequency: 'yearly' })
   })
 
-  it('does not silently save a price with inconsistent fiscal rounding', () => {
+  it('saves the exact price even when reverse VAT rounding differs', () => {
     renderToStaticMarkup(<EstimateSectionPriceEditor estimate={estimate} section={section} />)
     priceProps().onCommit(21_633)
-    expect(mocks.patch).not.toHaveBeenCalled()
-    expect(mocks.setError).toHaveBeenCalledWith(expect.stringContaining('216,34'))
+    expect(mocks.patch).toHaveBeenCalledWith(
+      'estimate',
+      expect.objectContaining({
+        sections: [expect.objectContaining({ grossCents: 21_633 })],
+      }),
+    )
+    expect(mocks.setError).toHaveBeenCalledWith(null)
   })
 })

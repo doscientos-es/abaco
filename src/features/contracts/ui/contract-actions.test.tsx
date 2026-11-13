@@ -10,6 +10,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ServiceContract } from '../application/contract-actions'
+import type {
+  ContractAssignmentDraft,
+  ContractSignatureSetup,
+} from '../domain/contract-task-assignment'
 import { ContractActions } from './contract-actions'
 
 type Dialog = {
@@ -33,6 +37,11 @@ const mocks = vi.hoisted(() => ({
   url: vi.fn(),
   navigate: vi.fn(),
   error: vi.fn(),
+  setup: undefined as ContractSignatureSetup | undefined,
+  setupError: false,
+  setupPending: false,
+  changeAssignments: undefined as ((drafts: ContractAssignmentDraft[]) => void) | undefined,
+  refetch: vi.fn(),
 }))
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
@@ -67,12 +76,21 @@ vi.mock('@doscientos/ui', () => {
     IconButton: ({ children, label }: { children: ReactNode; label: string }) => (
       <button aria-label={label}>{children}</button>
     ),
+    Button: Container,
     toast: { error: mocks.error },
   }
 })
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
+  useQuery: () => ({
+    data: mocks.setup,
+    isPending: mocks.setupPending,
+    isFetching: mocks.setupPending,
+    isError: mocks.setupError,
+    error: new Error('No disponible'),
+    refetch: mocks.refetch,
+  }),
 }))
 vi.mock('@/features/auth', () => ({
   useSession: () => ({ role: mocks.role, tenantId: mocks.tenantId }),
@@ -81,6 +99,17 @@ vi.mock('@/features/auth', () => ({
 vi.mock('../application/contract-signature-actions', () => ({
   recordContractSignature: mocks.record,
   signedContractDocumentUrl: mocks.url,
+  loadContractSignatureSetup: vi.fn(),
+}))
+vi.mock('./contract-assignment-editor', () => ({
+  ContractAssignmentEditor: ({
+    onChange,
+  }: {
+    onChange: (drafts: ContractAssignmentDraft[]) => void
+  }) => {
+    mocks.changeAssignments = onChange
+    return <section>Responsables de trabajos y tareas</section>
+  },
 }))
 vi.mock('@/shared/ui/form-dialog', () => ({
   FormDialog: (props: Dialog) => {
@@ -126,6 +155,24 @@ describe('contract row actions and signature dialog', () => {
     mocks.tenantId = 'tenant-1'
     mocks.record.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
+    mocks.setupPending = false
+    mocks.setupError = false
+    mocks.setup = {
+      updated_at: 'version-setup',
+      jobs: [{ id: 'job-1', title: 'Limpieza', assigned_user_id: 'person-1', work_team_id: null }],
+      tasks: [
+        {
+          task_key: 'service:s1:r1',
+          title: 'Cristales',
+          section_title: 'Servicios',
+          frequency: '',
+          notes: '',
+        },
+      ],
+      assignments: [],
+      people: [{ id: 'person-1', label: 'Ana' }],
+      teams: [{ id: 'team-1', name: 'Brigada' }],
+    }
   })
 
   it('lets the administrator sign without a PDF and refreshes both list and detail', async () => {
@@ -135,19 +182,93 @@ describe('contract row actions and signature dialog', () => {
     expect(mocks.dialog?.submitDisabled).toBe(false)
     mocks.dialog?.onSubmit()
     mocks.dialog?.onSubmit()
-    await vi.waitFor(() => expect(mocks.invalidate).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(mocks.invalidate).toHaveBeenCalledTimes(5))
     expect(mocks.record).toHaveBeenCalledExactlyOnceWith({
       tenantId: 'tenant-1',
       contractId: 'contract-1',
-      expectedUpdatedAt: 'version-1',
+      expectedUpdatedAt: 'version-setup',
       operationId: expect.any(String),
       file: null,
+      assignments: [
+        {
+          task_key: 'job:job-1',
+          job_id: 'job-1',
+          assigned_user_ids: ['person-1'],
+          work_team_id: null,
+        },
+        {
+          task_key: 'service:s1:r1',
+          job_id: 'job-1',
+          assigned_user_ids: ['person-1'],
+          work_team_id: null,
+        },
+      ],
     })
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['service-contracts', 'tenant-1'] })
     expect(mocks.invalidate).toHaveBeenCalledWith({
       queryKey: ['service-contract', 'tenant-1', 'contract-1'],
     })
     await vi.waitFor(() => expect(render()).not.toContain('<dialog'))
+  })
+
+  it.each(['loading', 'error', 'unassigned'])('does not sign while setup is %s', (state) => {
+    if (state === 'loading') {
+      mocks.setup = undefined
+      mocks.setupPending = true
+    }
+    if (state === 'error') mocks.setupError = true
+    if (state === 'unassigned' && mocks.setup)
+      mocks.setup.jobs[0] = {
+        id: 'job-1',
+        title: 'Limpieza',
+        assigned_user_id: null,
+        work_team_id: null,
+      }
+    render()
+    mocks.actions.get('Marcar como firmado')?.()
+    render()
+    expect(mocks.dialog?.submitDisabled).toBe(true)
+    mocks.dialog?.onSubmit()
+    expect(mocks.record).not.toHaveBeenCalled()
+  })
+
+  it('saves changed job and task owners together with the signature', async () => {
+    render()
+    mocks.actions.get('Marcar como firmado')?.()
+    render()
+    mocks.changeAssignments?.([
+      { task_key: 'job:job-1', job_id: 'job-1', mode: 'team', user_ids: [], team_id: 'team-1' },
+      {
+        task_key: 'service:s1:r1',
+        job_id: 'job-1',
+        mode: 'people',
+        user_ids: ['person-1'],
+        team_id: null,
+      },
+    ])
+    render()
+    expect(mocks.dialog?.submitDisabled).toBe(false)
+    mocks.dialog?.onSubmit()
+    await vi.waitFor(() =>
+      expect(mocks.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignments: [
+            {
+              task_key: 'job:job-1',
+              job_id: 'job-1',
+              assigned_user_ids: [],
+              work_team_id: 'team-1',
+            },
+            {
+              task_key: 'service:s1:r1',
+              job_id: 'job-1',
+              assigned_user_ids: ['person-1'],
+              work_team_id: null,
+            },
+          ],
+        }),
+      ),
+    )
   })
 
   it('allows attaching a PDF later but requires a file for an already signed contract', async () => {

@@ -64,10 +64,40 @@ export function calculateTotals(
 }
 
 export function estimateTotals(estimate: Estimate): EstimateTotals {
-  return calculateTotals(estimate.lines, estimate.vatRate, {
+  const totals = calculateTotals(estimate.lines, estimate.vatRate, {
     type: estimate.discountType,
     value: estimate.discountValue,
   })
+  const price =
+    estimate.documentFormat === 'sections' &&
+    estimate.sections?.find(
+      (section) => section.type === 'prices' && section.grossCents !== undefined,
+    )
+  const line = estimate.lines[0]
+  if (
+    !price ||
+    price.type !== 'prices' ||
+    price.grossCents === undefined ||
+    estimate.lines.length !== 1 ||
+    price.lineIds.length !== 1 ||
+    !line ||
+    line.id !== price.lineIds[0] ||
+    line.quantity !== 1 ||
+    line.discountPercent !== 0 ||
+    line.unitPriceCents !== Math.round(price.grossCents / (1 + estimate.vatRate / 100))
+  )
+    return totals
+  const base = line.unitPriceCents
+  const rounding = price.grossCents - base - applyRate(base, estimate.vatRate)
+  const adjustment =
+    base === 0
+      ? 0
+      : Math.sign(rounding) * Math.round((Math.abs(rounding) * totals.subtotalCents) / base)
+  return {
+    ...totals,
+    vatCents: totals.vatCents + adjustment,
+    totalCents: totals.totalCents + adjustment,
+  }
 }
 
 export type MilestoneAmount = Milestone & { amountCents: Cents }

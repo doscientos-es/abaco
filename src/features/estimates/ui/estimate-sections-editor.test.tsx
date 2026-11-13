@@ -2,16 +2,16 @@ import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { EstimateSection } from '@/shared/domain/estimate-document'
 import type { Estimate } from '@/shared/domain/types'
-import type { SelectField } from '@/shared/ui/form'
 
 import { EstimateSectionsEditor } from './estimate-sections-editor'
 
 const mocks = vi.hoisted(() => ({
   state: vi.fn(),
-  changeType: vi.fn(),
   patch: vi.fn(),
-  selects: [] as React.ComponentProps<typeof SelectField>[],
+  newId: vi.fn(),
+  buttons: [] as { children: React.ReactNode; onPress?: () => void; isDisabled?: boolean }[],
   icons: [] as { label: string; onPress: () => void }[],
   dialogs: [] as { open: boolean; onConfirm: () => void; onOpenChange: (open: boolean) => void }[],
 }))
@@ -22,16 +22,16 @@ vi.mock('react', async (original) => ({
 vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>
   return {
-    Button: Container,
+    Button: (props: (typeof mocks.buttons)[number]) => {
+      mocks.buttons.push(props)
+      return <button disabled={props.isDisabled}>{props.children}</button>
+    },
     Card: Container,
     CardContent: Container,
     IconButton: (props: (typeof mocks.icons)[number]) => {
       mocks.icons.push(props)
       return <button aria-label={props.label} />
     },
-    DropdownMenuContent: Container,
-    DropdownMenuItem: Container,
-    DropdownMenuTrigger: Container,
     ConfirmDialog: (props: (typeof mocks.dialogs)[number]) => {
       mocks.dialogs.push(props)
       return null
@@ -40,12 +40,8 @@ vi.mock('@doscientos/ui', () => {
 })
 vi.mock('@/shared/ui/form', () => ({
   TextField: () => null,
-  SelectField: (props: React.ComponentProps<typeof SelectField>) => {
-    mocks.selects.push(props)
-    return <span>{props.label}</span>
-  },
 }))
-vi.mock('@/shared/store/store', () => ({ newId: () => '80000000-0000-4000-8000-000000000050' }))
+vi.mock('@/shared/store/store', () => ({ newId: mocks.newId }))
 vi.mock('../application/estimate-actions', () => ({ patchEstimate: mocks.patch }))
 vi.mock('./estimate-section-price-editor', () => ({
   EstimateSectionPriceEditor: () => <p>Editor de precios</p>,
@@ -77,8 +73,8 @@ const estimate: Estimate = {
   createdAt: '2026-11-13',
 }
 
-function render(value = estimate, pending: { sectionId: string; type: string } | null = null) {
-  mocks.state.mockReturnValueOnce([null, vi.fn()]).mockReturnValueOnce([pending, mocks.changeType])
+function render(value = estimate, removing: EstimateSection | null = null) {
+  mocks.state.mockReturnValueOnce([removing, vi.fn()])
   return renderToStaticMarkup(<EstimateSectionsEditor estimate={value} />)
 }
 
@@ -90,44 +86,47 @@ function first<T>(values: T[]): T {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.selects.length = 0
+  mocks.newId.mockReturnValue('80000000-0000-4000-8000-000000000050')
+  mocks.buttons.length = 0
   mocks.icons.length = 0
   mocks.dialogs.length = 0
 })
 
-describe('estimate section type selector', () => {
-  it('only offers optional text in type selectors and rejects stale required-type callbacks', () => {
-    expect(render()).toContain('Editor de description')
-    expect(mocks.selects[0]?.options.map(({ label }) => label)).toEqual(['Texto'])
-    first(mocks.selects).onChange('work_table')
-    expect(mocks.changeType).not.toHaveBeenCalled()
-    expect(mocks.patch).not.toHaveBeenCalled()
-  })
-
-  it('requires confirmation before discarding content and leaves cancellation untouched', () => {
-    const value: Estimate = {
+describe('estimate sections editor', () => {
+  it('does not offer a page-break option even for sections saved with one', () => {
+    const html = render({
       ...estimate,
       sections: [
         {
           id: 'section',
-          type: 'list',
+          type: 'description',
           title: 'Alcance',
-          pageBreakBefore: false,
-          items: [{ id: 'item', text: 'Texto existente' }],
+          pageBreakBefore: true,
+          content: '',
         },
       ],
-    }
-    render(value)
-    first(mocks.selects).onChange('description')
-    expect(mocks.patch).not.toHaveBeenCalled()
-    expect(mocks.changeType).toHaveBeenCalledWith({ sectionId: 'section', type: 'description' })
-    first(mocks.dialogs).onOpenChange(false)
-    expect(mocks.changeType).toHaveBeenLastCalledWith(null)
+    })
+    expect(html).not.toContain('Empezar esta sección en una página nueva al imprimir')
+    expect(html).not.toContain('type="checkbox"')
     expect(mocks.patch).not.toHaveBeenCalled()
   })
 
-  it('allows confirmation for converting a historical list to optional text', () => {
-    const value: Estimate = {
+  it('adds a text section directly without showing any type selector', () => {
+    const html = render()
+    expect(html).toContain('Editor de description')
+    expect(html).toContain('Añadir sección de texto')
+    expect(html).not.toContain('Tipo de la sección')
+    first(mocks.buttons).onPress?.()
+    expect(mocks.patch).toHaveBeenCalledWith('estimate', {
+      sections: [
+        ...(estimate.sections ?? []),
+        expect.objectContaining({ type: 'description', content: '', title: 'Texto' }),
+      ],
+    })
+  })
+
+  it('keeps historical lists editable without changing their content', () => {
+    const html = render({
       ...estimate,
       sections: [
         {
@@ -138,30 +137,42 @@ describe('estimate section type selector', () => {
           items: [{ id: 'item', text: 'Productos' }],
         },
       ],
-    }
-    render(value, { sectionId: 'section', type: 'description' })
-    expect(mocks.dialogs[0]?.open).toBe(true)
-    first(mocks.dialogs).onConfirm()
-    const patch = first(mocks.patch.mock.calls)[1] as Partial<Estimate>
-    expect(patch.sections?.[0]).toMatchObject({ type: 'description', content: '' })
+    })
+    expect(html).toContain('Editor de list')
+    expect(html).not.toContain('Tipo de la sección')
+    expect(mocks.patch).not.toHaveBeenCalled()
   })
 
-  it('keeps historical lists editable and lets them switch to a current type', () => {
-    render({
-      ...estimate,
-      sections: [
-        { id: 'section', type: 'list', title: 'Incluye', pageBreakBefore: false, items: [] },
-      ],
-    })
-    expect(mocks.selects[0]?.value).toBe('list')
-    expect(mocks.selects[0]?.options.map(({ label }) => label)).toEqual(['Texto', 'Lista'])
-    first(mocks.selects).onChange('description')
-    expect(mocks.patch).toHaveBeenCalledWith(
-      'estimate',
-      expect.objectContaining({
-        sections: [expect.objectContaining({ type: 'description', content: '' })],
-      }),
-    )
+  it('adds multiple text sections while preserving existing sections', () => {
+    mocks.newId
+      .mockReturnValueOnce('80000000-0000-4000-8000-000000000050')
+      .mockReturnValueOnce('80000000-0000-4000-8000-000000000051')
+    render()
+    first(mocks.buttons).onPress?.()
+    const firstPatch = first(mocks.patch.mock.calls)[1] as Partial<Estimate>
+    mocks.buttons.length = 0
+    render({ ...estimate, ...firstPatch })
+    first(mocks.buttons).onPress?.()
+    const secondPatch = mocks.patch.mock.calls[1]?.[1] as Partial<Estimate>
+    expect(secondPatch.sections?.map((section) => section.type)).toEqual([
+      'description',
+      'description',
+      'description',
+    ])
+    expect(new Set(secondPatch.sections?.map((section) => section.id)).size).toBe(3)
+  })
+
+  it('disables adding text when the existing persisted section limit is reached', () => {
+    const sections = Array.from({ length: 50 }, (_, index) => ({
+      id: String(index),
+      type: 'description' as const,
+      title: 'Texto',
+      pageBreakBefore: false,
+      content: '',
+    }))
+    const html = render({ ...estimate, sections })
+    expect(first(mocks.buttons).isDisabled).toBe(true)
+    expect(html).toContain('Máximo 50 secciones')
   })
 
   it('keeps both required blocks reorderable but hides deletion, duplication and type selectors', () => {
@@ -182,7 +193,7 @@ describe('estimate section type selector', () => {
     const html = render(value)
     expect(html).toContain('Editor de precios')
     expect(html).toContain('Editor de work_table')
-    expect(mocks.selects.map((select) => select.label)).toEqual(['Tipo de la sección 3'])
+    expect(html).not.toContain('Tipo de la sección')
     const labels = mocks.icons.map((icon) => icon.label)
     expect(labels).not.toContain('Eliminar sección 1')
     expect(labels).not.toContain('Eliminar sección 2')

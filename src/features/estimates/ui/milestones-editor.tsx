@@ -75,7 +75,13 @@ export function MilestonesEditor({
       )
     )
       return
-    patchEstimate(estimate.id, { milestones })
+    try {
+      patchEstimate(estimate.id, { milestones })
+    } catch (error) {
+      toast.error('No se pudo modificar el hito', {
+        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+      })
+    }
   }
 
   function update(id: string, patch: Partial<Milestone>) {
@@ -227,7 +233,7 @@ export function MilestonesEditor({
                         size="sm"
                         variant="ghost"
                         className="text-destructive"
-                        isDisabled={registered}
+                        isDisabled={registered || invoiced}
                         onPress={() =>
                           setMilestones(estimate.milestones.filter((x) => x.id !== m.id))
                         }

@@ -3,13 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { EstimateFormat } from '@/shared/domain/estimate-document'
 import type { Estimate } from '@/shared/domain/types'
-import {
-  getSaveStatus,
-  newId,
-  retryStoreSaves,
-  useSaveStatus,
-  useTenantData,
-} from '@/shared/store/store'
+import { newId, synchronizeStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
 import { submitEstimateDraft } from '../application/estimate-actions'
 import { buildEstimateDraft } from '../domain/new-estimate'
@@ -34,9 +28,11 @@ export function EstimateCreatePage({
   const submitted = useRef(false)
   const saved = useRef(false)
   const [pending, setPending] = useState(false)
+  const [synchronizing, setSynchronizing] = useState(false)
+  const submitting = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const status = useSaveStatus()
-  const busy = pending && status.state !== 'error'
+  const busy = synchronizing || (pending && status.state !== 'error')
 
   useBlocker({
     shouldBlockFn: () =>
@@ -62,28 +58,28 @@ export function EstimateCreatePage({
     setError(null)
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     if (event.target !== event.currentTarget) return
     event.preventDefault()
-    if (busy) return
+    if (busy || submitting.current) return
     // Keyboard submission must also commit inputs that normally commit on blur.
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     if (!event.currentTarget.reportValidity()) return
+    submitting.current = true
+    setSynchronizing(true)
     setError(null)
     try {
-      if (submitted.current) {
-        retryStoreSaves()
-      } else {
-        if (getSaveStatus().state === 'error')
-          throw new Error(
-            'Hay cambios pendientes de guardar. Reintenta la sincronización antes de crear el presupuesto.',
-          )
+      await synchronizeStoreSaves()
+      if (!submitted.current) {
         submitEstimateDraft(draftRef.current)
         submitted.current = true
       }
       setPending(true)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo crear el presupuesto.')
+    } finally {
+      submitting.current = false
+      setSynchronizing(false)
     }
   }
 
@@ -93,7 +89,7 @@ export function EstimateCreatePage({
         estimate: draft,
         patch,
         busy,
-        submitted: submitted.current,
+        submitted: pending,
         error:
           error ??
           (pending && status.state === 'error'
@@ -101,7 +97,11 @@ export function EstimateCreatePage({
             : null),
       }}
     >
-      <form onSubmit={submit}>
+      <form
+        onSubmit={(event) => {
+          void submit(event)
+        }}
+      >
         <fieldset disabled={busy} className="min-w-0">
           <EstimateEditorPage estimateId={draft.id} />
         </fieldset>

@@ -9,6 +9,7 @@ import {
   retryStoreSaves,
   setActiveTenantId,
   setRepository,
+  synchronizeStoreSaves,
   updateTenantData,
   type AppState,
   type TenantRepository,
@@ -36,6 +37,51 @@ const initial = (): AppState => ({
   activeTenantId: 'a',
   tenants: { a: tenant('a', 'A'), b: tenant('b', 'B') },
 })
+
+const billedState = (): AppState => {
+  const snapshot = initial()
+  const data = tenant('a', 'A')
+  snapshot.tenants.a = data
+  data.estimates = [
+    {
+      id: 'estimate',
+      tenantId: 'a',
+      number: 'P-1',
+      clientId: 'client',
+      title: 'Servicio',
+      status: 'draft',
+      lines: [],
+      milestones: [{ id: 'milestone', label: 'Señal', percent: 100 }],
+      vatRate: 21,
+      discountType: 'none',
+      discountValue: 0,
+      clauses: '',
+      validUntil: '2026-12-01',
+      createdAt: '2026-11-01',
+    },
+  ]
+  data.invoices = [
+    {
+      id: 'invoice',
+      tenantId: 'a',
+      number: 'F-1',
+      clientId: 'client',
+      estimateId: 'estimate',
+      milestoneId: 'milestone',
+      workExtraId: null,
+      concept: 'Señal',
+      totalCents: 12100,
+      paidCents: 0,
+      vatRate: 21,
+      status: 'issued',
+      documentStatus: 'issued',
+      emailAcceptedAt: null,
+      issuedAt: '2026-11-01',
+      dueDate: '2026-12-01',
+    },
+  ]
+  return snapshot
+}
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void
@@ -114,5 +160,130 @@ describe('store persistence', () => {
     oldLoad.resolve(initial())
     await stale
     expect(currentTenantData()?.tenant.id).toBe('b')
+  })
+
+  it('recovers a rejected invoice-source deletion and persists later edits', async () => {
+    let server = billedState()
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('violates invoices_milestone_id_tenant_id_fkey'))
+      .mockImplementation(async (_previous: AppState, next: AppState) => {
+        server = next
+      })
+    setRepository({ load: async () => server, save })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, estimates: [] }))
+    await vi.waitFor(() => expect(getSaveStatus().state).toBe('error'))
+    updateTenantData((data) => ({ ...data, tenant: { ...data.tenant, name: 'Editado después' } }))
+
+    await synchronizeStoreSaves()
+
+    expect(getSaveStatus().state).toBe('saved')
+    expect(currentTenantData()?.estimates[0]?.id).toBe('estimate')
+    expect(currentTenantData()?.invoices).toHaveLength(1)
+    expect(currentTenantData()?.tenant.name).toBe('Editado después')
+    expect(server.tenants.a?.tenant.name).toBe('Editado después')
+    expect(save).toHaveBeenCalledTimes(3)
+  })
+
+  it('keeps the entire queue if loading recovery data fails, and can retry recovery', async () => {
+    let server = billedState()
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(server)
+      .mockRejectedValueOnce(new Error('Sin conexión al recuperar'))
+      .mockImplementation(async () => server)
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('violates invoices_milestone_id_tenant_id_fkey'))
+      .mockImplementation(async (_previous: AppState, next: AppState) => {
+        server = next
+      })
+    setRepository({ load, save })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, estimates: [] }))
+    await vi.waitFor(() => expect(getSaveStatus().state).toBe('error'))
+    await expect(synchronizeStoreSaves()).rejects.toThrow('Sin conexión al recuperar')
+    expect(currentTenantData()?.estimates).toEqual([])
+    expect(save).toHaveBeenCalledOnce()
+    await synchronizeStoreSaves()
+    expect(getSaveStatus().state).toBe('saved')
+    expect(currentTenantData()?.estimates).toHaveLength(1)
+  })
+
+  it('includes edits queued while recovery is loading', async () => {
+    let server = billedState()
+    const recovering = deferred<AppState>()
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(server)
+      .mockImplementationOnce(() => recovering.promise)
+      .mockImplementation(async () => server)
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('violates invoices_milestone_id_tenant_id_fkey'))
+      .mockImplementation(async (_previous: AppState, next: AppState) => {
+        server = next
+      })
+    setRepository({ load, save })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, estimates: [] }))
+    await vi.waitFor(() => expect(getSaveStatus().state).toBe('error'))
+    const synchronization = synchronizeStoreSaves()
+    updateTenantData((data) => ({ ...data, tenant: { ...data.tenant, phone: '123' } }))
+    recovering.resolve(server)
+    await synchronization
+    expect(currentTenantData()?.tenant.phone).toBe('123')
+    expect(currentTenantData()?.estimates).toHaveLength(1)
+  })
+
+  it('does not resolve synchronization until an in-flight save completes', async () => {
+    const saving = deferred<AppState | undefined>()
+    setRepository({ load: async () => initial(), save: () => saving.promise })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, tenant: { ...data.tenant, name: 'Editado' } }))
+    let finished = false
+    const synchronization = synchronizeStoreSaves().then(() => {
+      finished = true
+    })
+    await Promise.resolve()
+    expect(finished).toBe(false)
+    saving.resolve(undefined)
+    await synchronization
+    expect(finished).toBe(true)
+  })
+
+  it('rejects synchronization and ignores recovery results after a session change', async () => {
+    const recovering = deferred<AppState>()
+    const save = vi
+      .fn()
+      .mockRejectedValue(new Error('violates invoices_milestone_id_tenant_id_fkey'))
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(billedState())
+      .mockImplementationOnce(() => recovering.promise)
+    setRepository({ load, save })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, estimates: [] }))
+    await vi.waitFor(() => expect(getSaveStatus().state).toBe('error'))
+    const synchronization = synchronizeStoreSaves()
+    setRepository({ load: async () => initial(), save: async () => undefined })
+    await expect(synchronization).rejects.toThrow('sesión ha cambiado')
+    await hydrateStore()
+    recovering.resolve(billedState())
+    await Promise.resolve()
+    expect(currentTenantData()?.estimates).toEqual([])
+    expect(save).toHaveBeenCalledOnce()
+  })
+
+  it('returns the actual synchronization error without dropping unsaved edits', async () => {
+    const save = vi.fn().mockRejectedValue(new Error('Sin conexión real'))
+    setRepository({ load: async () => initial(), save })
+    await hydrateStore()
+    updateTenantData((data) => ({ ...data, tenant: { ...data.tenant, name: 'Pendiente' } }))
+    await vi.waitFor(() => expect(getSaveStatus().state).toBe('error'))
+    await expect(synchronizeStoreSaves()).rejects.toThrow('Sin conexión real')
+    expect(currentTenantData()?.tenant.name).toBe('Pendiente')
+    expect(save).toHaveBeenCalledTimes(2)
   })
 })

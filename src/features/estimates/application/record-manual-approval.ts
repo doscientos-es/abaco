@@ -7,10 +7,11 @@ export async function recordManualApproval(input: {
   tenantId: string
   estimateId: string
   operationId: string
-  name: string
-  evidence: string
   onPublished: () => void
 }) {
+  if (input.status !== 'draft' && input.status !== 'sent') {
+    throw new Error('Solo se pueden aprobar presupuestos en borrador o enviados.')
+  }
   if (input.status === 'draft') {
     await publishEstimate(input.tenantId, input.estimateId)
     input.onPublished()
@@ -19,7 +20,7 @@ export async function recordManualApproval(input: {
     input.tenantId,
     input.estimateId,
     input.operationId,
-    input.name,
-    input.evidence,
+    'Oficina',
+    'Aprobación directa desde oficina, sin persona ni comprobante aportados.',
   )
 }

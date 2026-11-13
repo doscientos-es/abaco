@@ -1,6 +1,26 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import { signedContractBucket, validateSignedContractPdf } from '../domain/contract-signature'
+import type {
+  ContractAssignmentSetup,
+  ContractTaskAssignment,
+} from '../domain/contract-task-assignment'
+
+export async function loadContractAssignmentSetup(
+  tenantId: string,
+  contractId: string,
+): Promise<ContractAssignmentSetup> {
+  const { data, error } = await createBrowserSupabaseClient().rpc(
+    'load_contract_assignment_setup',
+    {
+      p_tenant_id: tenantId,
+      p_contract_id: contractId,
+    },
+  )
+  if (error || !data)
+    throw new Error(error?.message ?? 'No se pudieron cargar las tareas del contrato.')
+  return data as ContractAssignmentSetup
+}
 
 export async function recordContractSignature(input: {
   tenantId: string
@@ -8,6 +28,7 @@ export async function recordContractSignature(input: {
   expectedUpdatedAt: string
   operationId: string
   file: File | null
+  assignments?: ContractTaskAssignment[]
 }): Promise<void> {
   const db = createBrowserSupabaseClient()
   let path: string | null = null
@@ -28,6 +49,7 @@ export async function recordContractSignature(input: {
     p_operation_id: input.operationId,
     p_document_path: path,
     p_document_name: input.file?.name.slice(0, 240) ?? null,
+    ...(input.assignments ? { p_assignments: input.assignments } : {}),
   })
   if (error) throw new Error(error.message)
 }

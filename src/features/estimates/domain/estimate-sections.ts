@@ -21,7 +21,11 @@ export function createEstimateSection(
     case 'list':
       return { ...base, type, items: [{ id: newId(), text: '' }] }
     case 'work_table':
-      return { ...base, type, rows: [{ id: newId(), task: '', frequency: '', notes: '' }] }
+      return {
+        ...base,
+        type,
+        rows: [{ id: newId(), task: '', frequency: '', notes: '', periodicities: [] }],
+      }
   }
 }
 
@@ -34,8 +38,10 @@ export function estimateSectionHasContent(section: EstimateSection): boolean {
     case 'list':
       return section.items.some((item) => item.text.trim().length > 0)
     case 'work_table':
-      return section.rows.some((row) =>
-        [row.task, row.frequency, row.notes].some((text) => text.trim().length > 0),
+      return section.rows.some(
+        (row) =>
+          (row.periodicities?.length ?? 0) > 0 ||
+          [row.task, row.frequency, row.notes].some((text) => text.trim().length > 0),
       )
   }
 }

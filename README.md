@@ -20,8 +20,10 @@ y funciones TypeScript en Vercel para los PDF de partes de visita.
 | Equipo                     | Gestionar miembros, equipos de trabajo y vacaciones.                                                                                                                       |
 
 Los informes cerrados pueden compartirse mediante enlaces temporales revocables,
-correo y PDF. La generación de visitas o borradores no implica la emisión ni el
-envío automático de una factura.
+correo y PDF. Las visitas no emiten facturas. En contratos activos, el vencimiento
+del borrador programa su emisión automática diaria, su envío por email al cliente
+y un aviso a los administradores. Los vencimientos anteriores a la activación de
+esta automatización quedan para revisión manual; los contratos inactivos no se emiten.
 
 Al crear un presupuesto puedes elegir **Tabla de precios** o **Por secciones**.
 El segundo formato permite añadir títulos con descripciones, bloques de precios,
@@ -34,7 +36,11 @@ conserva el contenido acordado, también en el enlace del cliente.
 Los contratos se muestran en una tabla con acciones por fila. Un administrador
 puede **Marcar como firmado** y adjuntar un PDF firmado en papel (hasta 15 MB),
 en ese momento o después. El documento es privado y no puede sustituirse.
-Registrar esta conformidad no activa el contrato ni programa trabajos, y no
+Al firmar se asigna una persona o equipo a cada trabajo y se vincula cada tarea
+de «Servicios» del presupuesto aceptado con su trabajo. Las tareas pueden heredar
+el responsable del trabajo o tener varias personas o un equipo propios. Todas las
+asignaciones se guardan junto con la firma; no se permiten responsables de otra empresa.
+Registrar esta conformidad no activa el contrato ni programa visitas, y no
 equivale a una firma digital del cliente.
 
 **Estado:** el repositorio contiene funcionalidad en evolución. La existencia de
@@ -140,6 +146,13 @@ secretos exclusivamente en el entorno de servidor correspondiente.
   Resend `/functions/v1/visit-report-email-events` para `email.delivery_delayed`,
   `email.delivered`, `email.bounced`, `email.complained`, `email.failed` y
   `email.suppressed`. Verifica la entrega de eventos con un envío de prueba.
+- **Facturas de contratos:** `contract-invoice-issuance` emite diariamente a las
+  06:15 UTC; `contract-invoice-email-worker` envía la cola cada cinco minutos.
+  Despliega `contract-invoice-worker` con `RESEND_API_KEY` y `RESEND_FROM`.
+  La migración crea su credencial en Vault sin exponerla al navegador. El email
+  contiene los datos fiscales de la factura, sin PDF adjunto. Los reintentos usan
+  una clave estable y se detienen tras ocho intentos o veinte horas desde el primero.
+  El aviso **Facturas automáticas** muestra el resultado; emitir no registra un cobro.
 
 Otras integraciones, como pagos o envío de documentos, requieren su propia
 configuración y validación. Consulta las funciones correspondientes antes de activarlas.

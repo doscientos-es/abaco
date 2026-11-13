@@ -62,7 +62,6 @@ import { EstimateDocument } from './estimate-document'
 import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 import { EstimatePricingEditor } from './estimate-pricing-editor'
 import { EstimateSectionsEditor } from './estimate-sections-editor'
-import { ManualAcceptanceCard } from './manual-acceptance-card'
 import { MilestonesEditor } from './milestones-editor'
 import { ServiceProposalAssistant } from './service-proposal-assistant'
 import { useEstimatePrint } from './use-estimate-print'
@@ -82,10 +81,8 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   const [contractStart, setContractStart] = useState(() => new Date().toISOString().slice(0, 10))
   const [contractEnd, setContractEnd] = useState('')
   const [contractTechnicianId, setContractTechnicianId] = useState('')
-  const [showManualAcceptance, setShowManualAcceptance] = useState(false)
-  const [manualName, setManualName] = useState('')
-  const [manualEvidence, setManualEvidence] = useState('')
   const [acceptingManually, setAcceptingManually] = useState(false)
+  const manualAcceptanceInFlight = useRef(false)
   const manualOperationId = useRef(crypto.randomUUID())
   const estimate = creation?.estimate ?? estimates.find((e) => e.id === estimateId)
   const [titleEdit, setTitleEdit] = useState<{ estimateId: string; value: string } | null>(null)
@@ -267,11 +264,14 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
   }
 
   async function recordManualAcceptance() {
-    if (!estimate || acceptingManually) return
-    if (manualName.trim().length < 2 || manualEvidence.trim().length < 12) {
-      toast.error('Indica quién aceptó y dónde se conserva la evidencia.')
+    if (
+      !estimate ||
+      creation ||
+      manualAcceptanceInFlight.current ||
+      !can(session?.role, 'estimates:write')
+    )
       return
-    }
+    manualAcceptanceInFlight.current = true
     setAcceptingManually(true)
     let published = false
     try {
@@ -280,42 +280,22 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         tenantId: tenant.id,
         estimateId,
         operationId: manualOperationId.current,
-        name: manualName,
-        evidence: manualEvidence,
         onPublished: () => {
           published = true
         },
       })
-      setShowManualAcceptance(false)
-      toast.success('Aceptación manual registrada')
+      toast.success('Presupuesto aprobado')
       await refreshStore()
     } catch (error) {
-      toast.error('No se pudo registrar la aceptación', {
+      toast.error('No se pudo aprobar el presupuesto', {
         description: `${published ? 'El presupuesto quedó publicado. ' : estimate.status === 'draft' ? 'Comprueba si el presupuesto quedó publicado. ' : ''}${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`,
       })
       await refreshStore()
     } finally {
+      manualAcceptanceInFlight.current = false
       setAcceptingManually(false)
     }
   }
-
-  const manualAcceptanceCard = showManualAcceptance ? (
-    <ManualAcceptanceCard
-      draft={estimate.status === 'draft'}
-      name={manualName}
-      evidence={manualEvidence}
-      busy={acceptingManually}
-      onNameChange={(value) => {
-        setManualName(value)
-        manualOperationId.current = crypto.randomUUID()
-      }}
-      onEvidenceChange={(value) => {
-        setManualEvidence(value)
-        manualOperationId.current = crypto.randomUUID()
-      }}
-      onSubmit={() => void recordManualAcceptance()}
-    />
-  ) : null
 
   if (preview) {
     return (
@@ -369,8 +349,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </PageHeaderHeading>
           <PageHeaderActions>
             {estimate.status === 'sent' && can(session?.role, 'estimates:write') ? (
-              <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
-                Marcar como aprobado
+              <Button
+                variant="outline"
+                isDisabled={acceptingManually}
+                onPress={() => void recordManualAcceptance()}
+              >
+                {acceptingManually ? 'Aprobando…' : 'Marcar como aprobado'}
               </Button>
             ) : null}
             {estimate.status === 'accepted' && existingWork.data ? (
@@ -440,12 +424,11 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           Las partidas y condiciones del presupuesto publicado están bloqueadas. Para cambiarlo,
           crea una revisión en borrador.
         </p>
-        {estimate.status === 'sent' ? manualAcceptanceCard : null}
         {estimate.status === 'accepted' && manualAcceptance.data ? (
           <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
-            Aceptación registrada por oficina a nombre de {manualAcceptance.data.accepted_by} el{' '}
-            {new Date(manualAcceptance.data.accepted_at).toLocaleString('es-ES')}. Evidencia
-            indicada: {manualAcceptance.data.evidence_description}
+            Aprobación registrada por oficina el{' '}
+            {new Date(manualAcceptance.data.accepted_at).toLocaleString('es-ES')}. Registro:{' '}
+            {manualAcceptance.data.accepted_by}. {manualAcceptance.data.evidence_description}
           </p>
         ) : null}
         {estimate.status === 'accepted' &&
@@ -608,8 +591,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </PageHeaderHeading>
         <PageHeaderActions>
           {!creation && can(session?.role, 'estimates:write') ? (
-            <Button variant="outline" onPress={() => setShowManualAcceptance((value) => !value)}>
-              Marcar como aprobado
+            <Button
+              variant="outline"
+              isDisabled={acceptingManually}
+              onPress={() => void recordManualAcceptance()}
+            >
+              {acceptingManually ? 'Aprobando…' : 'Marcar como aprobado'}
             </Button>
           ) : null}
           {!creation ? (
@@ -669,8 +656,6 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           ) : null}
         </PageHeaderActions>
       </PageHeader>
-
-      {manualAcceptanceCard}
 
       <fieldset disabled={creation?.submitted} className="min-w-0 space-y-5">
         <Card className="@container">
@@ -760,22 +745,16 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
 
         {estimate.documentFormat === 'sections' ? (
           <EstimateSectionsEditor estimate={estimate} />
-        ) : null}
-
-        <Card className="@container">
-          <CardHeader>
-            <CardTitle>
-              {estimate.documentFormat === 'sections' ? 'Resumen económico' : 'Partidas'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <EstimatePricingEditor
-              estimate={estimate}
-              catalog={catalog}
-              showLines={estimate.documentFormat !== 'sections'}
-            />
-          </CardContent>
-        </Card>
+        ) : (
+          <Card className="@container">
+            <CardHeader>
+              <CardTitle>Partidas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <EstimatePricingEditor estimate={estimate} catalog={catalog} />
+            </CardContent>
+          </Card>
+        )}
 
         {estimate.conversionDestination !== 'contract' ? (
           <Card>

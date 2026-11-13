@@ -6,6 +6,7 @@
 
 ### Nuevas funciones
 
+- Implement estimate sections and pricing editor
 - Update changelog with new PWA features and improvements
 - Restructure PWA files and implement service worker functionality
 - Implement PWA functionality with service worker and manifest

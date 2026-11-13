@@ -1,5 +1,7 @@
 import {
   Button,
+  ConfirmDialog,
+  IconButton,
   Input,
   Table,
   TableBody,
@@ -7,17 +9,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  toast,
 } from '@doscientos/ui'
+import { Eye, Trash } from '@phosphor-icons/react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { can, useSession } from '@/features/auth'
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import { estimateTotalCents } from '@/shared/domain/estimate'
 import type { EstimateFormat } from '@/shared/domain/estimate-document'
+import { estimateRemovalError } from '@/shared/domain/estimate-removal'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
-import type { EstimateStatus } from '@/shared/domain/types'
+import type { Estimate, EstimateStatus } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -27,10 +33,42 @@ import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
+import { deleteEstimate } from '../application/estimate-actions'
 import { EstimateFormatPicker } from './estimate-format-picker'
 
+function EstimateActions({
+  estimate,
+  canDelete,
+  onOpen,
+  onDelete,
+}: {
+  estimate: Estimate
+  canDelete: boolean
+  onOpen: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="inline-flex items-center gap-1">
+      <IconButton label={`Abrir presupuesto ${estimate.number}`} variant="outline" onPress={onOpen}>
+        <Eye aria-hidden="true" className="size-4" />
+      </IconButton>
+      {canDelete && estimate.status === 'draft' ? (
+        <IconButton
+          label={`Eliminar presupuesto ${estimate.number}`}
+          variant="ghost"
+          className="text-destructive"
+          onPress={onDelete}
+        >
+          <Trash aria-hidden="true" className="size-4" />
+        </IconButton>
+      ) : null}
+    </div>
+  )
+}
+
 export function EstimateListPage() {
-  const { estimates, clients } = useTenantData()
+  const { estimates, clients, invoices } = useTenantData()
+  const session = useSession()
   const activeClients = clients.filter((client) => !client.archivedAt)
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | EstimateStatus>('all')
@@ -50,6 +88,13 @@ export function EstimateListPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newFormat, setNewFormat] = useState<EstimateFormat>('table')
   const [creatingClient, setCreatingClient] = useState(false)
+  const [toDelete, setToDelete] = useState<Estimate | null>(null)
+
+  function canDeleteEstimate(estimate: Estimate) {
+    return (
+      can(session?.role, 'estimates:write') && !estimateRemovalError(estimate, undefined, invoices)
+    )
+  }
 
   function startNew() {
     setNewClientId(activeClients[0]?.id ?? '')
@@ -142,11 +187,14 @@ export function EstimateListPage() {
         <>
           <ul className="space-y-3 md:hidden">
             {pager.pageItems.map((estimate) => (
-              <li key={estimate.id}>
+              <li
+                key={estimate.id}
+                className="border-border bg-card rounded-lg border shadow-(--ui-shadow-hairline)"
+              >
                 <Link
                   to="/presupuestos/$estimateId"
                   params={{ estimateId: estimate.id }}
-                  className="border-border bg-card active:bg-muted/60 block space-y-2 rounded-lg border p-4 shadow-(--ui-shadow-hairline)"
+                  className="active:bg-muted/60 block space-y-2 rounded-lg p-4"
                 >
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0 font-medium">{estimate.title}</span>
@@ -160,6 +208,19 @@ export function EstimateListPage() {
                     {formatEuros(estimateTotalCents(estimate))}
                   </span>
                 </Link>
+                <div className="flex justify-end px-4 pb-4">
+                  <EstimateActions
+                    estimate={estimate}
+                    canDelete={canDeleteEstimate(estimate)}
+                    onOpen={() =>
+                      void navigate({
+                        to: '/presupuestos/$estimateId',
+                        params: { estimateId: estimate.id },
+                      })
+                    }
+                    onDelete={() => setToDelete(estimate)}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -171,6 +232,7 @@ export function EstimateListPage() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -195,6 +257,19 @@ export function EstimateListPage() {
                   <TableCell className="text-right tabular-nums">
                     {formatEuros(estimateTotalCents(estimate))}
                   </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <EstimateActions
+                      estimate={estimate}
+                      canDelete={canDeleteEstimate(estimate)}
+                      onOpen={() =>
+                        void navigate({
+                          to: '/presupuestos/$estimateId',
+                          params: { estimateId: estimate.id },
+                        })
+                      }
+                      onDelete={() => setToDelete(estimate)}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -202,6 +277,32 @@ export function EstimateListPage() {
         </>
       )}
       <TablePagination controller={pager} noun="presupuestos" />
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setToDelete(null)
+        }}
+        title="¿Eliminar presupuesto?"
+        description={
+          toDelete
+            ? `Se eliminará el borrador ${toDelete.number} «${toDelete.title}». Esta acción no se puede deshacer.`
+            : null
+        }
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => {
+          if (!toDelete || !can(session?.role, 'estimates:write')) return
+          try {
+            deleteEstimate(toDelete.id)
+            setToDelete(null)
+          } catch (error) {
+            toast.error('No se pudo eliminar el presupuesto', {
+              description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+            })
+          }
+        }}
+      />
 
       <FormDialog
         open={creating && !creatingClient}

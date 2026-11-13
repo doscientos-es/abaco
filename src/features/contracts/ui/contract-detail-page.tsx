@@ -19,6 +19,7 @@ import {
 import { CleaningServicesPanel } from './cleaning-services-panel'
 import { ContractActions } from './contract-actions'
 import { ContractAgreementForm } from './contract-agreement-form'
+import { ContractAssignmentsPanel } from './contract-assignments-panel'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
 import { ContractDocument } from './contract-document'
@@ -199,6 +200,11 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
         </p>
       </div>
       <ContractStatusPanel key={contract.id} contract={contract} />
+      {contract.signed_at &&
+      session?.tenantId === contract.tenant_id &&
+      can(session?.role, 'contracts:write') ? (
+        <ContractAssignmentsPanel tenantId={contract.tenant_id} contractId={contract.id} />
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Acuerdo</CardTitle>

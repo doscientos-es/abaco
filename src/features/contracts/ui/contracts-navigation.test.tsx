@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -15,6 +15,11 @@ const state = vi.hoisted(() => ({
   filter: undefined as ((value: string) => void) | undefined,
   actions: new Map<string, () => void>(),
   statuses: [] as string[],
+  collections: [] as ({
+    due_on: string
+    source: 'invoice' | 'draft'
+    is_overdue: boolean
+  } | null)[],
   loadContracts: vi.fn(),
   queryFn: undefined as (() => Promise<unknown>) | undefined,
 }))
@@ -42,7 +47,7 @@ vi.mock('@doscientos/ui', () => {
     Badge: Container,
     Card: Container,
     CardContent: Container,
-    Table: ({ children }: { children: ReactNode }) => <table>{children}</table>,
+    Table: (props: ComponentProps<'table'>) => <table {...props} />,
     TableHeader: ({ children }: { children: ReactNode }) => <thead>{children}</thead>,
     TableBody: ({ children }: { children: ReactNode }) => <tbody>{children}</tbody>,
     TableRow: ({ children }: { children: ReactNode }) => <tr>{children}</tr>,
@@ -97,6 +102,7 @@ vi.mock('@tanstack/react-query', () => ({
             status,
             price_cents: 10000,
             billing_frequency: 'monthly',
+            next_collection: state.collections[index] ?? null,
           })),
           count: state.statuses.length ? 40 : 0,
           pageSize: 20,
@@ -161,6 +167,7 @@ describe('contracts navigation', () => {
     state.filter = undefined
     state.actions.clear()
     state.statuses = []
+    state.collections = []
     state.loadContracts.mockClear()
   })
 
@@ -196,7 +203,7 @@ describe('contracts navigation', () => {
   it('lists contracts in a table with signature status and an action menu per row', () => {
     state.statuses = ['draft', 'active']
     const html = renderToStaticMarkup(<ContractsPage />)
-    expect(html).toContain('<table>')
+    expect(html).toContain('<table aria-label="Contratos de servicio">')
     for (const heading of [
       'Contrato',
       'Cliente',
@@ -231,5 +238,32 @@ describe('contracts navigation', () => {
       await state.queryFn?.()
       expect(state.loadContracts).toHaveBeenLastCalledWith('tenant', 0, status)
     }
+  })
+
+  it('renders contract rows with their next collection date and an honest empty state', () => {
+    state.statuses = ['active', 'paused']
+    state.collections = [{ due_on: '2026-12-15', source: 'invoice', is_overdue: false }, null]
+    const html = renderToStaticMarkup(<ContractsPage />)
+    expect(html).toContain('<table aria-label="Contratos de servicio">')
+    for (const heading of [
+      'Contrato',
+      'Cliente',
+      'Estado',
+      'Firma',
+      'Importe',
+      'Facturación',
+      'Próximo cobro',
+      'Acciones',
+    ]) {
+      expect(html).toContain(`<th>${heading}</th>`)
+    }
+    const rows = html.match(/<tr>.*?<\/tr>/g) ?? []
+    expect(rows).toHaveLength(3)
+    expect(rows[1]).toContain('Contrato 0')
+    expect(rows[1]).toContain('15/12/2026')
+    expect(rows[1]).toContain('Pendiente de cobro')
+    expect(rows[2]).toContain('Contrato 1')
+    expect(rows[2]).toContain('Sin cobro programado')
+    expect(html).toContain('aria-label="Acciones de Contrato 0"')
   })
 })

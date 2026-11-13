@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { signedContractBucket, signedContractMaxBytes } from '../domain/contract-signature'
-import { recordContractSignature, signedContractDocumentUrl } from './contract-signature-repository'
+import {
+  loadContractAssignmentSetup,
+  recordContractSignature,
+  signedContractDocumentUrl,
+} from './contract-signature-repository'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
@@ -42,6 +46,34 @@ describe('contract signature persistence', () => {
       p_document_path: null,
       p_document_name: null,
     })
+  })
+
+  it('loads the tenant-scoped accepted tasks and propagates errors', async () => {
+    const setup = { jobs: [], tasks: [], assignments: [], updated_at: 'v1' }
+    mocks.rpc.mockResolvedValueOnce({ data: setup, error: null })
+    expect(await loadContractAssignmentSetup('tenant-1', 'contract-1')).toEqual(setup)
+    expect(mocks.rpc).toHaveBeenCalledWith('load_contract_assignment_setup', {
+      p_tenant_id: 'tenant-1',
+      p_contract_id: 'contract-1',
+    })
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'Sin permiso' } })
+    await expect(loadContractAssignmentSetup('other', 'contract-1')).rejects.toThrow('Sin permiso')
+  })
+
+  it('sends all assignments in the same signing transaction', async () => {
+    const assignments = [
+      {
+        task_key: 'job:job-1',
+        job_id: 'job-1',
+        assigned_user_ids: ['person-1'],
+        work_team_id: null,
+      },
+    ]
+    await recordContractSignature({ ...input, assignments })
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      'record_contract_signature',
+      expect.objectContaining({ p_assignments: assignments }),
+    )
   })
 
   it('uploads an immutable PDF before registering its tenant-scoped path', async () => {

@@ -1,5 +1,6 @@
 import { formatEstimateNumber } from '@/shared/domain/estimate'
 import type { EstimateFormat } from '@/shared/domain/estimate-document'
+import { estimateRemovalError } from '@/shared/domain/estimate-removal'
 import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, updateTenantData } from '@/shared/store/store'
 
@@ -54,17 +55,24 @@ export function submitEstimateDraft(draft: Estimate): string {
 export function patchEstimate(id: string, patch: Partial<Estimate>): void {
   updateTenantData((data) => ({
     ...data,
-    estimates: data.estimates.map((e) =>
-      e.id === id && e.status === 'draft' ? { ...e, ...patch } : e,
-    ),
+    estimates: data.estimates.map((estimate) => {
+      if (estimate.id !== id || estimate.status !== 'draft') return estimate
+      const next = { ...estimate, ...patch }
+      const error = estimateRemovalError(estimate, next, data.invoices)
+      if (error) throw new Error(error)
+      return next
+    }),
   }))
 }
 
 export function deleteEstimate(id: string): void {
-  updateTenantData((data) => ({
-    ...data,
-    estimates: data.estimates.filter((e) => e.id !== id || e.status !== 'draft'),
-  }))
+  updateTenantData((data) => {
+    const estimate = data.estimates.find((item) => item.id === id)
+    if (!estimate || estimate.status !== 'draft') return data
+    const error = estimateRemovalError(estimate, undefined, data.invoices)
+    if (error) throw new Error(error)
+    return { ...data, estimates: data.estimates.filter((item) => item.id !== id) }
+  })
 }
 
 export function duplicateEstimate(id: string): string | null {

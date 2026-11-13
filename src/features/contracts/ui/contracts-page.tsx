@@ -28,6 +28,7 @@ import { listServiceContracts } from '../application/contract-actions'
 import type { ContractStatusFilter } from '../domain/contract-status'
 import { ContractActions } from './contract-actions'
 import { ContractJobsPage } from './contract-jobs-page'
+import { ContractNextCollectionCell } from './contract-next-collection'
 import { ContractStatusBadge } from './contract-status-badge'
 
 export function ContractsPage() {
@@ -136,6 +137,7 @@ function ContractsList() {
               <TableHead>Firma</TableHead>
               <TableHead className="text-right">Importe</TableHead>
               <TableHead>Facturación</TableHead>
+              <TableHead>Próximo cobro</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -167,6 +169,9 @@ function ContractsList() {
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {contractBillingLabels[contract.billing_frequency]}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <ContractNextCollectionCell collection={contract.next_collection} />
                 </TableCell>
                 <TableCell className="text-right">
                   <ContractActions contract={contract} />

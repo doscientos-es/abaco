@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { servicePeriodicitiesSchema } from './service-periodicity'
+
 export const estimateFormatLabels = {
   table: 'Tabla de precios',
   sections: 'Por secciones',
@@ -40,6 +42,7 @@ export const estimateSectionsSchema = z
           ...base,
           type: z.literal('prices'),
           lineIds: z.array(z.string().uuid()).max(500),
+          grossCents: z.number().int().min(0).max(99_999_999_999).optional(),
         })
         .strict(),
       z
@@ -70,6 +73,7 @@ export const estimateSectionsSchema = z
                   task: z.string().max(2000),
                   frequency: z.string().max(200),
                   notes: z.string().max(2000),
+                  periodicities: servicePeriodicitiesSchema.optional(),
                 })
                 .strict(),
             )

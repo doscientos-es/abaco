@@ -1,11 +1,35 @@
-import type { ReactNode } from 'react'
+import type * as UI from '@doscientos/ui'
+import type { ComponentProps, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { can } from '@/features/auth/domain/permissions'
 import type { Estimate } from '@/shared/domain/types'
 
-const state = vi.hoisted(() => ({ status: 'draft', role: 'admin', automaticContract: false }))
+const state = vi.hoisted(() => ({
+  status: 'draft',
+  role: 'admin',
+  automaticContract: false,
+  documentFormat: 'table' as 'table' | 'sections',
+}))
+const approval = vi.hoisted(() => ({
+  run: vi.fn(),
+  success: vi.fn(),
+  error: vi.fn(),
+  button: null as ComponentProps<typeof UI.Button> | null,
+}))
+vi.mock('@doscientos/ui', async (original) => {
+  const ui = await original<typeof UI>()
+  return {
+    ...ui,
+    toast: Object.assign(vi.fn(), ui.toast, { success: approval.success, error: approval.error }),
+    Button: (props: ComponentProps<typeof UI.Button>) => {
+      if (props.children === 'Marcar como aprobado') approval.button = props
+      return <ui.Button {...props} />
+    },
+  }
+})
+vi.mock('../application/record-manual-approval', () => ({ recordManualApproval: approval.run }))
 const estimate = {
   id: 'estimate',
   tenantId: 'tenant',
@@ -22,6 +46,10 @@ const estimate = {
   createdAt: '2026-11-01',
   clauses: '',
 } as Estimate
+const sections: NonNullable<Estimate['sections']> = [
+  { id: 'price', type: 'prices', title: 'Precio', pageBreakBefore: false, lineIds: [] },
+  { id: 'services', type: 'work_table', title: 'Servicios', pageBreakBefore: false, rows: [] },
+]
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/presupuestos">{children}</a>,
@@ -58,6 +86,8 @@ vi.mock('@/shared/store/store', () => ({
         status: state.status,
         automaticContract: state.automaticContract,
         conversionDestination: 'contract',
+        documentFormat: state.documentFormat,
+        sections,
       },
     ],
     catalog: [],
@@ -87,12 +117,78 @@ import { EstimateDraftProvider } from './estimate-draft-context'
 import { EstimateEditorPage } from './estimate-editor-page'
 
 beforeEach(() => {
+  vi.clearAllMocks()
+  approval.run.mockResolvedValue(undefined)
+  approval.button = null
   state.status = 'draft'
   state.role = 'admin'
   state.automaticContract = false
+  state.documentFormat = 'table'
 })
 
 describe('acceso a la aprobación del presupuesto', () => {
+  function pressApproval() {
+    if (!approval.button?.onPress) throw new Error('Missing approval action')
+    approval.button.onPress({} as never)
+  }
+
+  it.each(['draft', 'sent'])(
+    'aprueba un presupuesto %s con un clic sin pedir persona ni comprobante',
+    async (status) => {
+      state.status = status
+      const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+      expect(html).not.toContain('Nombre de quien aceptó')
+      expect(html).not.toContain('Referencia de la evidencia')
+      expect(html).not.toContain('Confirmar aprobación')
+      pressApproval()
+      expect(approval.run).toHaveBeenCalledWith({
+        status,
+        tenantId: 'tenant',
+        estimateId: 'estimate',
+        operationId: expect.any(String),
+        onPublished: expect.any(Function),
+      })
+      await vi.waitFor(() => expect(approval.success).toHaveBeenCalledWith('Presupuesto aprobado'))
+    },
+  )
+
+  it('evita enviar dos aprobaciones mientras la primera está pendiente', async () => {
+    let finish: (() => void) | undefined
+    approval.run.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        }),
+    )
+    renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    pressApproval()
+    pressApproval()
+    expect(approval.run).toHaveBeenCalledOnce()
+    if (!finish) throw new Error('Approval was not started')
+    finish()
+    await vi.waitFor(() => expect(approval.success).toHaveBeenCalledWith('Presupuesto aprobado'))
+  })
+
+  it('muestra el error y permite reintentar con la misma clave de operación', async () => {
+    approval.run.mockRejectedValueOnce(new Error('Sin conexión'))
+    renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    pressApproval()
+    await vi.waitFor(() =>
+      expect(approval.error).toHaveBeenCalledWith(
+        'No se pudo aprobar el presupuesto',
+        expect.objectContaining({
+          description: expect.stringContaining('Sin conexión'),
+        }),
+      ),
+    )
+    pressApproval()
+    expect(approval.run).toHaveBeenCalledTimes(2)
+    expect(approval.run.mock.calls[1]?.[0].operationId).toBe(
+      approval.run.mock.calls[0]?.[0].operationId,
+    )
+    await vi.waitFor(() => expect(approval.success).toHaveBeenCalledWith('Presupuesto aprobado'))
+  })
+
   it('offers a final submit for new estimates without autosave or premature sending actions', () => {
     const html = renderToStaticMarkup(
       <EstimateDraftProvider
@@ -114,6 +210,49 @@ describe('acceso a la aprobación del presupuesto', () => {
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
     expect(html).not.toContain('IVA %')
     expect(html).toContain('IVA 21%')
+  })
+
+  it.each(['create', 'edit'])(
+    'does not duplicate pricing or discounts in section estimates on %s',
+    (mode) => {
+      state.documentFormat = 'sections'
+      const page = <EstimateEditorPage estimateId="estimate" />
+      const html = renderToStaticMarkup(
+        mode === 'create' ? (
+          <EstimateDraftProvider
+            value={{
+              estimate: {
+                ...estimate,
+                documentFormat: 'sections',
+                sections,
+              },
+              patch: vi.fn(),
+              busy: false,
+              submitted: false,
+              error: null,
+            }}
+          >
+            {page}
+          </EstimateDraftProvider>
+        ) : (
+          page
+        ),
+      )
+      expect(html).toContain('Precio con impuestos incluidos')
+      expect(html).toContain('Periodicidad')
+      expect(html).not.toContain('Resumen económico')
+      expect(html).not.toContain('Descuento global')
+      expect(html).not.toContain('Sin descuento')
+      expect(html).not.toContain('Base imponible')
+    },
+  )
+
+  it('preserves discounts and totals for traditional line estimates', () => {
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('Partidas')
+    expect(html).toContain('Descuento global')
+    expect(html).toContain('Sin descuento')
+    expect(html).toContain('Base imponible')
   })
 
   it('shows the automatic save guidance only while the estimate is editable', () => {

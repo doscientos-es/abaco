@@ -13,8 +13,6 @@ const input = () => ({
   tenantId: 'tenant',
   estimateId: 'estimate',
   operationId: 'operation',
-  name: 'María',
-  evidence: 'Correo conservado en el expediente',
   onPublished: vi.fn(),
 })
 
@@ -29,8 +27,8 @@ describe('recordManualApproval', () => {
       'tenant',
       'estimate',
       'operation',
-      'María',
-      values.evidence,
+      'Oficina',
+      'Aprobación directa desde oficina, sin persona ni comprobante aportados.',
     )
     expect(vi.mocked(publishEstimate).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(acceptEstimateManually).mock.invocationCallOrder[0] ?? 0,
@@ -44,6 +42,14 @@ describe('recordManualApproval', () => {
     expect(publishEstimate).not.toHaveBeenCalled()
     expect(values.onPublished).not.toHaveBeenCalled()
     expect(acceptEstimateManually).toHaveBeenCalledOnce()
+  })
+
+  it.each(['accepted', 'rejected'] as const)('no aprueba un presupuesto %s', async (status) => {
+    await expect(recordManualApproval({ ...input(), status })).rejects.toThrow(
+      'Solo se pueden aprobar',
+    )
+    expect(publishEstimate).not.toHaveBeenCalled()
+    expect(acceptEstimateManually).not.toHaveBeenCalled()
   })
 
   it('no registra la aceptación si falla la publicación', async () => {

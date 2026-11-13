@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { estimateRemovalError, invoicedMilestoneRemovalMessage } from '../domain/estimate-removal'
 import type { TenantData } from '../domain/types'
 import type { AppState, TenantRepository } from './store'
 import {
@@ -114,6 +115,13 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
   async function remove(table: string, ids: string[]): Promise<void> {
     if (ids.length === 0) return
     const { error } = await supabase.from(table).delete().in('id', ids)
+    if (
+      table === 'estimate_milestones' &&
+      error?.code === '23503' &&
+      error.message.includes('invoices_milestone_id_tenant_id_fkey')
+    ) {
+      throw new Error(invoicedMilestoneRemovalMessage)
+    }
     if (error) throw new Error(`${table}: ${error.message}`)
   }
 
@@ -140,6 +148,12 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
   })
 
   async function saveTenant(before: TenantData, after: TenantData): Promise<boolean> {
+    // Validate before any deletion: an invalid change must not partially save other rows.
+    const estimates = new Map(after.estimates.map((estimate) => [estimate.id, estimate]))
+    for (const estimate of before.estimates) {
+      const error = estimateRemovalError(estimate, estimates.get(estimate.id), before.invoices)
+      if (error) throw new Error(error)
+    }
     const a = rows(before)
     const b = rows(after)
     const d = {

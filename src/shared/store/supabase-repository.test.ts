@@ -90,4 +90,104 @@ describe('Supabase repository', () => {
     await expect(repository.save(previous, next)).rejects.toThrow('se archivan')
     expect(from).not.toHaveBeenCalled()
   })
+
+  it.each(['milestone', 'estimate'])(
+    'rejects removing a billed %s before deleting any rows',
+    async (target) => {
+      const before: TenantData = {
+        ...data,
+        estimates: [
+          { ...estimate, milestones: [{ id: 'milestone', label: 'Señal', percent: 100 }] },
+        ],
+        invoices: [
+          {
+            id: 'invoice',
+            tenantId: 'tenant-1',
+            number: 'F-1',
+            clientId: 'client-1',
+            estimateId: estimate.id,
+            milestoneId: 'milestone',
+            workExtraId: null,
+            concept: 'Señal',
+            totalCents: 12100,
+            paidCents: 0,
+            vatRate: 21,
+            status: 'issued',
+            documentStatus: 'issued',
+            emailAcceptedAt: null,
+            issuedAt: '2026-11-01',
+            dueDate: '2026-12-01',
+          },
+        ],
+      }
+      const from = vi.fn()
+      const repository = createSupabaseRepository({ from } as unknown as SupabaseClient)
+      const previous: AppState = { activeTenantId: 'tenant-1', tenants: { 'tenant-1': before } }
+      const next: AppState = {
+        ...previous,
+        tenants: {
+          'tenant-1': {
+            ...before,
+            estimates: target === 'estimate' ? [] : [estimate],
+            invoices: [],
+          },
+        },
+      }
+
+      await expect(repository.save(previous, next)).rejects.toThrow('con facturas emitidas')
+      expect(from).not.toHaveBeenCalled()
+    },
+  )
+
+  it('explains a foreign key rejection when the linked invoice is absent from the local snapshot', async () => {
+    const remove = vi.fn(() => ({
+      in: async () => ({
+        error: {
+          code: '23503',
+          message: 'violates foreign key constraint "invoices_milestone_id_tenant_id_fkey"',
+        },
+      }),
+    }))
+    const repository = createSupabaseRepository({
+      from: () => ({ delete: remove }),
+    } as unknown as SupabaseClient)
+    const previous: AppState = {
+      activeTenantId: 'tenant-1',
+      tenants: {
+        'tenant-1': {
+          ...data,
+          estimates: [
+            { ...estimate, milestones: [{ id: 'milestone', label: 'Señal', percent: 100 }] },
+          ],
+        },
+      },
+    }
+    const next: AppState = { ...previous, tenants: { 'tenant-1': data } }
+
+    await expect(repository.save(previous, next)).rejects.toThrow(
+      'No se puede eliminar un hito con facturas emitidas',
+    )
+  })
+
+  it('still deletes unbilled milestones', async () => {
+    const removeIds = vi.fn(async () => ({ error: null }))
+    const from = vi.fn(() => ({ delete: () => ({ in: removeIds }) }))
+    const repository = createSupabaseRepository({ from } as unknown as SupabaseClient)
+    const previous: AppState = {
+      activeTenantId: 'tenant-1',
+      tenants: {
+        'tenant-1': {
+          ...data,
+          estimates: [
+            { ...estimate, milestones: [{ id: 'milestone', label: 'Señal', percent: 100 }] },
+          ],
+        },
+      },
+    }
+    const next: AppState = { ...previous, tenants: { 'tenant-1': data } }
+
+    await repository.save(previous, next)
+    expect(from).toHaveBeenCalledExactlyOnceWith('estimate_milestones')
+    expect(removeIds).toHaveBeenCalledExactlyOnceWith('id', ['milestone'])
+  })
 })

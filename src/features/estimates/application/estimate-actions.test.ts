@@ -10,7 +10,12 @@ vi.mock('@/shared/store/store', () => ({
   },
 }))
 
-import { createEstimate, duplicateEstimate } from './estimate-actions'
+import {
+  createEstimate,
+  deleteEstimate,
+  duplicateEstimate,
+  patchEstimate,
+} from './estimate-actions'
 
 beforeEach(() => {
   state.data = {
@@ -81,4 +86,51 @@ describe('estimate formats', () => {
     expect(copy?.sections?.[0]?.id).not.toBe(original.sections?.[0]?.id)
     expect(original.lines[0]?.id).toBe(lineId)
   })
+})
+
+it('removes only the selected draft and preserves published estimates', () => {
+  const draftId = createEstimate('client', 'Borrador')
+  const sentId = createEstimate('client', 'Publicado')
+  const sent = state.data?.estimates.find((estimate) => estimate.id === sentId)
+  if (!sent) throw new Error('Missing estimate')
+  sent.status = 'sent'
+
+  deleteEstimate(sentId)
+  expect(state.data?.estimates).toHaveLength(2)
+  deleteEstimate(draftId)
+  expect(state.data?.estimates.map((estimate) => estimate.id)).toEqual([sentId])
+})
+
+it('rejects deleting an invoiced draft or its milestone without changing local state', () => {
+  const estimateId = createEstimate('client', 'Borrador histórico')
+  const before = state.data
+  const estimate = before?.estimates[0]
+  if (!before || !estimate) throw new Error('Missing estimate')
+  estimate.milestones = [{ id: 'milestone', label: 'Señal', percent: 100 }]
+  before.invoices.push({
+    id: 'invoice',
+    tenantId: 'tenant',
+    number: 'F-1',
+    clientId: 'client',
+    estimateId,
+    milestoneId: 'milestone',
+    workExtraId: null,
+    concept: 'Señal',
+    totalCents: 12100,
+    paidCents: 0,
+    vatRate: 21,
+    status: 'issued',
+    documentStatus: 'issued',
+    emailAcceptedAt: null,
+    issuedAt: '2026-11-01',
+    dueDate: '2026-12-01',
+  })
+
+  expect(() => deleteEstimate(estimateId)).toThrow('presupuesto con facturas emitidas')
+  expect(state.data).toBe(before)
+  expect(() => patchEstimate(estimateId, { milestones: [] })).toThrow('hito con facturas emitidas')
+  expect(state.data).toBe(before)
+  expect(state.data?.estimates[0]?.milestones).toHaveLength(1)
+  patchEstimate(estimateId, { title: 'Corregido' })
+  expect(state.data?.estimates[0]?.title).toBe('Corregido')
 })

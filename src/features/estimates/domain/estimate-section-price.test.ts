@@ -114,10 +114,49 @@ describe('simple price sections', () => {
     expect(value.lines).toHaveLength(3)
   })
 
-  it('never saves an amount that would disagree with VAT rounding', () => {
-    const result = changeSectionPrice(estimate, section, 21_633, () => id(20))
-    expect(result).toMatchObject({ ok: false, error: expect.stringContaining('216,34') })
-    expect(estimate.lines).toEqual([])
+  it.each([1_000, 21_633])('preserves arbitrary tax-inclusive prices (%i cents)', (amount) => {
+    const updated = setPrice(estimate, section, amount)
+    const priceSection = updated.sections?.[0] as PriceSection
+    const line = updated.lines[0]
+    if (!line) throw new Error('Missing price line')
+    expect(sectionPriceBeforeDiscount(updated, priceSection)).toBe(amount)
+    expect(sectionPriceTotal(updated, priceSection)).toBe(amount)
+    expect(estimateTotals(updated).totalCents).toBe(amount)
+    expect(estimateTotals(updated).vatCents).toBe(amount - line.unitPriceCents)
+    expect(estimateSectionsSchema.parse(updated.sections)).toEqual(updated.sections)
+  })
+
+  it('round-trips the exact price with an existing global discount', () => {
+    const updated = setPrice(
+      { ...estimate, discountType: 'percent', discountValue: 50 },
+      section,
+      1000,
+    )
+    const row: EstimateRow = {
+      ...estimateToRow(updated),
+      estimate_lines: updated.lines.map((item, index) => ({
+        ...lineToRow(updated, item, index),
+        id: item.id,
+        estimate_id: updated.id,
+      })),
+      estimate_milestones: [],
+    }
+    const loaded = estimateFromRow(row)
+    const price = loaded.sections?.[0] as PriceSection
+    expect(sectionPriceBeforeDiscount(loaded, price)).toBe(1000)
+    expect(estimateTotals(loaded)).toMatchObject({
+      subtotalCents: 413,
+      vatCents: 88,
+      totalCents: 501,
+    })
+  })
+
+  it('ignores an exact price if its taxable line changes', () => {
+    const updated = setPrice(estimate, section, 1000)
+    const stale = { ...updated, lines: [line(20, 1000)] }
+    const price = stale.sections?.[0] as PriceSection
+    expect(estimateTotals(stale).totalCents).toBe(1210)
+    expect(sectionPriceBeforeDiscount(stale, price)).toBe(1210)
   })
 
   it('does not consolidate or erase historical details just by focusing and blurring the price', () => {

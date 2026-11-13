@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 import type { TenantData } from '../domain/types'
+import { isInvoicedRemovalFailure, recoverInvoicedRemovals } from './store-recovery'
 
 /** Repository operations are serialized; an adapter may return server-assigned values. */
 export type TenantRepository = {
@@ -29,6 +30,7 @@ let epoch = 0
 let revision = 0
 let drainingEpoch: number | null = null
 let needsReload = false
+let invoiceRecoveryRequired = false
 let queue: PendingChange[] = []
 let saveStatus: SaveStatus = { state: 'saved' }
 const listeners = new Set<() => void>()
@@ -51,6 +53,7 @@ export function setRepository(next: TenantRepository): void {
   hydration = undefined
   queue = []
   needsReload = false
+  invoiceRecoveryRequired = false
   setSaveStatus({ state: 'saved' })
 }
 
@@ -60,6 +63,7 @@ export function resetStore(): void {
   hydration = undefined
   queue = []
   needsReload = false
+  invoiceRecoveryRequired = false
   setSaveStatus({ state: 'saved' })
 }
 
@@ -168,15 +172,73 @@ async function drainQueue(): Promise<void> {
     if (startedIn === epoch && queue.length === 0) setSaveStatus({ state: 'saved' })
   } finally {
     if (drainingEpoch === startedIn) drainingEpoch = null
-    if (startedIn === epoch && queue.length && getSaveStatus().state !== 'error') void drainQueue()
+    if (startedIn === epoch && queue.length && getSaveStatus().state !== 'error') {
+      if (invoiceRecoveryRequired) void recoverInvoiceQueue()
+      else void drainQueue()
+    }
   }
 }
 
-/** Retries the same pending changes after a recoverable network or server error. */
+async function recoverInvoiceQueue(): Promise<void> {
+  if (drainingEpoch === epoch) return
+  const startedIn = epoch
+  drainingEpoch = startedIn
+  try {
+    const loaded = await repository.load()
+    if (startedIn !== epoch) return
+    const repaired = recoverInvoicedRemovals(queue, loaded)
+    const selected = current().activeTenantId
+    queue = repaired.map((change) => ({ ...change, epoch: startedIn }))
+    const recovered = repaired.at(-1)?.next ?? loaded
+    state = {
+      ...recovered,
+      activeTenantId: recovered.tenants[selected] ? selected : recovered.activeTenantId,
+    }
+    invoiceRecoveryRequired = false
+    needsReload = true
+    revision += 1
+    emit()
+  } catch (error) {
+    if (startedIn !== epoch) return
+    setSaveStatus({
+      state: 'error',
+      message: error instanceof Error ? error.message : 'No se pudo recuperar la sincronización.',
+    })
+  } finally {
+    if (drainingEpoch === startedIn) drainingEpoch = null
+    if (startedIn === epoch && getSaveStatus().state !== 'error') void drainQueue()
+  }
+}
+
+/** Retry transient errors; rejected invoice-source removals are restored before replaying edits. */
 export function retryStoreSaves(): void {
   if (saveStatus.state !== 'error') return
+  invoiceRecoveryRequired ||= isInvoicedRemovalFailure(saveStatus.message)
   setSaveStatus({ state: 'saving' })
-  void drainQueue()
+  if (invoiceRecoveryRequired) void recoverInvoiceQueue()
+  else void drainQueue()
+}
+
+/** Await actual persistence, not just the start of a retry; identity changes cancel the caller. */
+export function synchronizeStoreSaves(): Promise<void> {
+  if (saveStatus.state === 'saved') return Promise.resolve()
+  const startedIn = epoch
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      if (startedIn !== epoch) {
+        unsubscribe()
+        reject(new Error('La sesión ha cambiado. Vuelve a intentarlo.'))
+      } else if (saveStatus.state === 'saved' || saveStatus.state === 'error') {
+        unsubscribe()
+        if (saveStatus.state === 'saved') resolve()
+        else
+          reject(new Error(saveStatus.message ?? 'No se pudieron guardar los cambios pendientes.'))
+      }
+    }
+    const unsubscribe = subscribeStatus(check)
+    retryStoreSaves()
+    check()
+  })
 }
 
 export function updateState(mutator: (draft: AppState) => AppState): void {

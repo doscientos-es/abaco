@@ -1,33 +1,20 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  ConfirmDialog,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  IconButton,
-} from '@doscientos/ui'
+import { Button, Card, CardContent, ConfirmDialog, IconButton } from '@doscientos/ui'
 import { ArrowDown, ArrowUp, Copy, Plus, Trash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 import {
-  editableEstimateSectionTypes,
   estimateSectionLabels,
   estimateSectionLimits,
   isRequiredEstimateSection,
   type EstimateSection,
-  type EstimateSectionType,
 } from '@/shared/domain/estimate-document'
 import type { Estimate } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
-import { SelectField, TextField } from '@/shared/ui/form'
+import { TextField } from '@/shared/ui/form'
 
 import {
-  changeEstimateSectionType,
   createEstimateSection,
   duplicateEstimateSection,
-  estimateSectionHasContent,
   ensureRequiredEstimateSections,
   requiredEstimateSectionsError,
   moveEstimateSection,
@@ -41,10 +28,6 @@ export function EstimateSectionsEditor({ estimate }: { estimate: Estimate }) {
   const patchEstimate = usePatchEstimate()
   const sections = estimate.sections ?? []
   const [removing, setRemoving] = useState<EstimateSection | null>(null)
-  const [changingType, setChangingType] = useState<{
-    sectionId: string
-    type: EstimateSectionType
-  } | null>(null)
   const atLimit = sections.length >= estimateSectionLimits.sections
   const setSections = (value: EstimateSection[]) => patchEstimate(estimate.id, { sections: value })
   const updateSection = (value: EstimateSection) =>
@@ -129,33 +112,6 @@ export function EstimateSectionsEditor({ estimate }: { estimate: Estimate }) {
                 ) : null}
               </div>
             </div>
-            {!isRequiredEstimateSection(section.type) ? (
-              <SelectField
-                label={`Tipo de la sección ${index + 1}`}
-                value={section.type}
-                options={[
-                  ...editableEstimateSectionTypes.map((type) => ({
-                    value: type,
-                    label: estimateSectionLabels[type],
-                  })),
-                  ...(section.type === 'list'
-                    ? [{ value: 'list', label: estimateSectionLabels.list }]
-                    : []),
-                ]}
-                onChange={(value) => {
-                  const type = value as EstimateSectionType
-                  if (section.type === type || isRequiredEstimateSection(type)) return
-                  if (estimateSectionHasContent(section)) {
-                    setChangingType({ sectionId: section.id, type })
-                  } else {
-                    patchEstimate(
-                      estimate.id,
-                      changeEstimateSectionType(estimate, section.id, type, newId),
-                    )
-                  }
-                }}
-              />
-            ) : null}
             {section.type !== 'prices' ? (
               <TextField
                 label={`Título de la sección ${index + 1}`}
@@ -170,59 +126,22 @@ export function EstimateSectionsEditor({ estimate }: { estimate: Estimate }) {
             ) : (
               <EstimateSectionContentEditor section={section} onChange={updateSection} />
             )}
-            <label className="flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                checked={section.pageBreakBefore}
-                onChange={(event) =>
-                  updateSection({ ...section, pageBreakBefore: event.target.checked })
-                }
-              />
-              Empezar esta sección en una página nueva al imprimir
-            </label>
           </CardContent>
         </Card>
       ))}
-      <DropdownMenuTrigger>
-        <Button variant="outline" isDisabled={atLimit}>
-          <Plus aria-hidden="true" className="size-4" />
-          Añadir sección
-        </Button>
-        <DropdownMenuContent placement="bottom start">
-          {editableEstimateSectionTypes.map((type) => (
-            <DropdownMenuItem
-              key={type}
-              onAction={() => setSections([...sections, createEstimateSection(type, newId)])}
-            >
-              {estimateSectionLabels[type]}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenuTrigger>
+      <Button
+        variant="outline"
+        isDisabled={atLimit}
+        onPress={() => setSections([...sections, createEstimateSection('description', newId)])}
+      >
+        <Plus aria-hidden="true" className="size-4" />
+        Añadir sección de texto
+      </Button>
       {atLimit ? (
         <p className="text-muted-foreground text-xs">
           Máximo {estimateSectionLimits.sections} secciones por presupuesto.
         </p>
       ) : null}
-      <ConfirmDialog
-        open={changingType !== null}
-        onOpenChange={(open) => {
-          if (!open) setChangingType(null)
-        }}
-        title="¿Cambiar el tipo de sección?"
-        description="Se eliminará el contenido de esta sección para usar el nuevo tipo. El título y la posición se conservarán."
-        destructive
-        confirmLabel="Cambiar tipo"
-        onConfirm={() => {
-          if (changingType) {
-            patchEstimate(
-              estimate.id,
-              changeEstimateSectionType(estimate, changingType.sectionId, changingType.type, newId),
-            )
-          }
-          setChangingType(null)
-        }}
-      />
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => {

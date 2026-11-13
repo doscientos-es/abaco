@@ -18,6 +18,16 @@ export function estimatePriceFrequency(estimate: Estimate): ContractBillingFrequ
 }
 
 export function sectionPriceBeforeDiscount(estimate: Estimate, section: PriceSection): number {
+  const line = estimate.lines.find((item) => item.id === section.lineIds[0])
+  if (
+    section.grossCents !== undefined &&
+    section.lineIds.length === 1 &&
+    line &&
+    line.quantity === 1 &&
+    line.discountPercent === 0 &&
+    line.unitPriceCents === Math.round(section.grossCents / (1 + estimate.vatRate / 100))
+  )
+    return section.grossCents
   return calculateTotals(
     estimate.lines.filter((line) => section.lineIds.includes(line.id)),
     estimate.vatRate,
@@ -27,6 +37,12 @@ export function sectionPriceBeforeDiscount(estimate: Estimate, section: PriceSec
 /** Allocate discounts and VAT cumulatively so all price paragraphs add up to the payable total. */
 export function sectionPriceTotal(estimate: Estimate, section: PriceSection): number {
   const totals = estimateTotals(estimate)
+  if (
+    estimate.lines.length === 1 &&
+    section.lineIds.length === 1 &&
+    estimate.lines[0]?.id === section.lineIds[0]
+  )
+    return totals.totalCents
   const netTotal = totals.subtotalCents + totals.globalDiscountCents
   if (netTotal === 0) return 0
   const ids = new Set(section.lineIds)
@@ -65,13 +81,6 @@ export function changeSectionPrice(
     return { ok: true, patch: {} }
   }
   const base = Math.round(amountCents / (1 + estimate.vatRate / 100))
-  const actual = base + Math.round((base * estimate.vatRate) / 100)
-  if (actual !== amountCents) {
-    return {
-      ok: false,
-      error: `Con el IVA del ${estimate.vatRate}%, el precio con impuestos más cercano es ${formatEuros(actual)}. Introduce ese importe para que el precio y el resumen coincidan.`,
-    }
-  }
   const patch = replaceSectionLines(estimate, section.id, [
     {
       id: existing?.id ?? newId(),
@@ -90,8 +99,12 @@ export function changeSectionPrice(
     patch: {
       ...patch,
       sections: patch.sections.map((item) =>
-        item.id === section.id && !item.title.trim()
-          ? { ...item, title: estimateSectionLabels.prices }
+        item.id === section.id && item.type === 'prices'
+          ? {
+              ...item,
+              title: item.title.trim() ? item.title : estimateSectionLabels.prices,
+              grossCents: amountCents,
+            }
           : item,
       ),
     },

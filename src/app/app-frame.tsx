@@ -30,6 +30,7 @@ import {
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
 import { GlobalSearch, type SearchItem } from '@/features/global-search'
+import { ContractInvoiceNotifications } from '@/features/invoices'
 import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
@@ -299,6 +300,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-1 px-2 pb-2">
               <SaveStatusIndicator status={saveStatus} />
               <div className="ml-auto flex items-center gap-1">
+                {can(session?.role, 'invoices:read') && session?.tenantId ? (
+                  <ContractInvoiceNotifications
+                    tenantId={session.tenantId}
+                    userId={session.userId}
+                  />
+                ) : null}
                 {can(session?.role, 'vacations:manage') && session?.tenantId ? (
                   <PendingAbsenceNotifications tenantId={session.tenantId} />
                 ) : null}
@@ -350,6 +357,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
               </span>
             </Link>
             <SaveStatusIndicator status={saveStatus} />
+            {can(session?.role, 'invoices:read') && session?.tenantId ? (
+              <ContractInvoiceNotifications tenantId={session.tenantId} userId={session.userId} />
+            ) : null}
             <DropdownMenuTrigger>
               <Button
                 variant="ghost"

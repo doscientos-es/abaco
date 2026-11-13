@@ -53,7 +53,18 @@ describe('customer-facing estimate', () => {
     )
     expect(html).toContain('Limpieza ordinaria')
     expect(html).toContain('Condiciones originales')
+    expect(html).toContain('Base imponible')
+    expect(html).toContain('IVA 21%')
     expect(html).not.toContain('data-page-break')
+    expect(html).toContain('estimate-document__cover')
+    expect(html).toContain('estimate-document__index')
+    expect(html).toContain('estimate-document__content')
+    expect(html.indexOf('estimate-document__cover')).toBeLessThan(
+      html.indexOf('estimate-document__index'),
+    )
+    expect(html.indexOf('estimate-document__index')).toBeLessThan(
+      html.indexOf('estimate-document__content'),
+    )
   })
 
   it('renders every section in order, escapes text and counts prices only once', () => {
@@ -76,7 +87,16 @@ describe('customer-facing estimate', () => {
               type: 'work_table',
               title: 'Plan de trabajo',
               pageBreakBefore: true,
-              rows: [{ id: id(12), task: 'Cristales', frequency: 'Semanal', notes: 'Portal' }],
+              rows: [
+                { id: id(12), task: 'Cristales', frequency: 'Semanal', notes: 'Portal' },
+                {
+                  id: id(16),
+                  task: 'Puerta principal',
+                  frequency: '',
+                  notes: 'Sin lejía',
+                  periodicities: ['daily', 'monthly'],
+                },
+              ],
             },
             {
               id: id(13),
@@ -98,10 +118,28 @@ describe('customer-facing estimate', () => {
         client={undefined}
       />,
     )
-    expect(html.indexOf('Presentación')).toBeLessThan(html.indexOf('Plan de trabajo'))
-    expect(html.indexOf('Plan de trabajo')).toBeLessThan(html.indexOf('Incluye'))
-    expect(html.indexOf('Incluye')).toBeLessThan(html.indexOf('PRESUPUESTO ÚNICO. -'))
+    expect(html).toContain('1. Presentación')
+    expect(html).toContain('2. Plan de trabajo')
+    expect(html).toContain('3. Incluye')
+    expect(html).toContain('4. PRESUPUESTO ÚNICO. -')
+    const index = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
+    const content = html.slice(html.indexOf('estimate-document__content'))
+    for (const heading of [
+      '1. Presentación',
+      '2. Plan de trabajo',
+      '3. Incluye',
+      '4. PRESUPUESTO ÚNICO. -',
+    ]) {
+      expect(index).toContain(heading)
+      expect(content).toContain(heading)
+    }
+    expect(html.indexOf('1. Presentación')).toBeLessThan(html.indexOf('2. Plan de trabajo'))
+    expect(html.indexOf('2. Plan de trabajo')).toBeLessThan(html.indexOf('3. Incluye'))
+    expect(html.indexOf('3. Incluye')).toBeLessThan(html.indexOf('4. PRESUPUESTO ÚNICO. -'))
     expect(html).toContain('Semanal')
+    expect(html.match(/>X<\/span>/g)).toHaveLength(3)
+    expect(html).toContain('Puerta principal')
+    expect(html).toContain('Sin lejía')
     expect(html).toContain('Productos profesionales')
     expect(html).toContain('data-page-break="true"')
     expect(html).not.toContain('<script>')
@@ -109,8 +147,26 @@ describe('customer-facing estimate', () => {
     expect(html.match(/<table/g)).toHaveLength(1)
     expect(html).not.toContain('Concepto')
     expect(html).toContain('CIENTO VEINTIÚN EUROS (121,00.-) impuestos incluidos.')
-    expect(html.match(/Base imponible/g)).toHaveLength(1)
+    expect(html).not.toContain('Resumen económico')
+    expect(html).not.toContain('Base imponible')
     expect(html).not.toContain('Condiciones originales')
+  })
+
+  it('renumbers section titles when their order changes', () => {
+    const sections: NonNullable<Estimate['sections']> = [
+      { id: id(10), type: 'description', title: 'Primera', pageBreakBefore: false, content: '' },
+      { id: id(11), type: 'description', title: 'Segunda', pageBreakBefore: false, content: '' },
+    ]
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={{ ...estimate, documentFormat: 'sections', sections: [...sections].reverse() }}
+        tenant={tenant}
+        client={undefined}
+      />,
+    )
+    expect(html).toContain('1. Segunda')
+    expect(html).toContain('2. Primera')
+    expect(sections[0]?.title).toBe('Primera')
   })
 
   it('renders the agreed monthly price as a paragraph, not a table of quantities or services', () => {
@@ -136,18 +192,32 @@ describe('customer-facing estimate', () => {
         client={undefined}
       />,
     )
-    expect(html).toContain('PRESUPUESTO MENSUAL. -')
+    expect(html).toContain('1. PRESUPUESTO MENSUAL. -')
     expect(html).toContain(
       'Asciende el presente presupuesto a la cantidad MENSUAL de DOSCIENTOS DIECISÉIS EUROS CON TREINTA Y DOS CÉNTIMOS (216,32.-) impuestos incluidos.',
     )
     expect(html).not.toContain('<table')
     expect(html).not.toContain('Limpieza ordinaria')
-    expect(html).toContain('216,32')
+    expect(html.match(/216,32/g)).toHaveLength(1)
+    for (const text of [
+      'Resumen económico',
+      'Materiales',
+      'Mano de obra',
+      'Base imponible',
+      'IVA 21%',
+      'Total por periodo',
+      'La vigencia y la planificación de cada trabajo',
+    ]) {
+      expect(html).not.toContain(text)
+    }
   })
 
   it('allows long sections to paginate instead of forcing them onto one page', () => {
     const css = readFileSync(new URL('./estimate-document.css', import.meta.url), 'utf8')
     expect(css).toContain('break-before: page')
+    expect(css).toMatch(
+      /\.estimate-document__index,\s*\.estimate-document__content\s*\{\s*break-before: page/,
+    )
     expect(css).toMatch(/\.estimate-document section\s*\{\s*break-inside: auto/)
     expect(css).toContain('display: table-header-group')
   })

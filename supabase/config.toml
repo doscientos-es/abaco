@@ -50,3 +50,7 @@ verify_jwt = false
 [functions.vacation-notification-worker]
 verify_jwt = false
 
+# Authenticated against the scheduler credential kept in Vault (service-only RPC).
+[functions.contract-invoice-worker]
+verify_jwt = false
+

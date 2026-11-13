@@ -29,11 +29,12 @@ describe('contract activity persistence', () => {
       method.mockReturnValue(query)
     }
     mocks.range.mockResolvedValue({ data: [{ id: 'contract-1' }], count: 21, error: null })
+    mocks.rpc.mockResolvedValue({ data: [], error: null })
   })
 
   it('keeps the default list unfiltered and scopes pagination and count to the tenant', async () => {
     expect(await listServiceContracts('tenant-1', 1)).toEqual({
-      items: [{ id: 'contract-1' }],
+      items: [{ id: 'contract-1', next_collection: null }],
       count: 21,
       pageSize: 20,
     })
@@ -64,6 +65,42 @@ describe('contract activity persistence', () => {
   it('propagates list errors instead of presenting an empty result', async () => {
     mocks.range.mockResolvedValue({ data: null, count: null, error: { message: 'Sin conexión' } })
     await expect(listServiceContracts('tenant-1', 0, 'active')).rejects.toThrow('Sin conexión')
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('loads collection dates once for the page and associates them by contract id', async () => {
+    mocks.range.mockResolvedValue({
+      data: [{ id: 'contract-1' }, { id: 'contract-2' }, { id: 'contract-3' }],
+      count: 43,
+      error: null,
+    })
+    const collection = { due_on: '2026-12-15', source: 'invoice', is_overdue: false }
+    mocks.rpc.mockResolvedValue({
+      data: [{ contract_id: 'contract-2', ...collection }],
+      error: null,
+    })
+    const result = await listServiceContracts('tenant-1', 1)
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('list_contract_next_collections', {
+      p_tenant_id: 'tenant-1',
+      p_contract_ids: ['contract-1', 'contract-2', 'contract-3'],
+    })
+    expect(result.items).toEqual([
+      { id: 'contract-1', next_collection: null },
+      { id: 'contract-2', next_collection: collection },
+      { id: 'contract-3', next_collection: null },
+    ])
+    expect(result.count).toBe(43)
+  })
+
+  it('skips the collection lookup on an empty page', async () => {
+    mocks.range.mockResolvedValue({ data: [], count: 0, error: null })
+    expect((await listServiceContracts('tenant-1', 0)).items).toEqual([])
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not disguise collection lookup failures as unscheduled payments', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: 'Cobros no disponibles' } })
+    await expect(listServiceContracts('tenant-1', 0)).rejects.toThrow('Cobros no disponibles')
   })
 
   it('preserves version, operation identity and audit reason when deactivating', async () => {

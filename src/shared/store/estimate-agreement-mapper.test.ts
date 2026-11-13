@@ -92,11 +92,34 @@ describe('structured estimate agreement persistence', () => {
     ).not.toHaveProperty('estimateAgreement')
   })
 
+  it('preserves checked periodicities in drafts and invoice agreement snapshots', () => {
+    const periodicities = ['daily', 'monthly'] as const
+    const rows = [{ ...service, frequency: '', periodicities: [...periodicities] }]
+    const documentSections = [{ ...services, rows }]
+    const saved = estimateFromRow({
+      document_format: 'sections',
+      document_sections: documentSections,
+      estimate_lines: [],
+      estimate_milestones: [],
+    })
+    expect(estimateToRow(saved).document_sections).toEqual(documentSections)
+    const structured = {
+      ...agreement,
+      services: [{ ...rows[0], sectionId: id(2), sourceLineId: null }],
+    }
+    const invoice = invoiceFromRow({
+      document_snapshot: { ...snapshot, estimateAgreement: structured },
+    })
+    expect(invoice.snapshot?.estimateAgreement).toEqual(structured)
+  })
+
   it.each([
     { ...agreement, version: 2 },
     { ...agreement, price: { ...agreement.price, totalCents: 216.32 } },
     { ...agreement, price: { ...agreement.price, billingFrequency: 'weekly' } },
     { ...agreement, services: [{ ...agreement.services[0], id: 'invalid' }] },
+    { ...agreement, services: [{ ...agreement.services[0], periodicities: ['weekly', 'weekly'] }] },
+    { ...agreement, services: [{ ...agreement.services[0], periodicities: ['invalid'] }] },
   ])('rejects malformed metadata rather than silently dropping it', (estimateAgreement) => {
     expect(() =>
       invoiceFromRow({ document_snapshot: { ...snapshot, estimateAgreement } }),

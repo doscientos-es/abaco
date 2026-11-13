@@ -8,6 +8,7 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Implement estimate sections and pricing editor",
             "Update changelog with new PWA features and improvements",
             "Restructure PWA files and implement service worker functionality",
             "Implement PWA functionality with service worker and manifest",
@@ -50,6 +51,13 @@
         }
       ],
       "changes": [
+        {
+          "sha": "aad3bb7033180105e67a84ef6e960b0187da9f1d",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Implement estimate sections and pricing editor"
+        },
         {
           "sha": "98741913aa17e7c9b294d06d70bf478e48907f2c",
           "type": "feat",

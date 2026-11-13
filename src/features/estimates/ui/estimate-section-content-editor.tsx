@@ -5,6 +5,8 @@ import { estimateSectionLimits, type EstimateSection } from '@/shared/domain/est
 import { newId } from '@/shared/store/store'
 import { TextareaField, TextField } from '@/shared/ui/form'
 
+import { EstimateServicesEditor } from './estimate-services-editor'
+
 export function EstimateSectionContentEditor({
   section,
   onChange,
@@ -67,83 +69,6 @@ export function EstimateSectionContentEditor({
         </div>
       )
     case 'work_table':
-      return (
-        <div className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            Describe el plan acordado. Esta tabla no programa visitas ni cambia la facturación.
-          </p>
-          {section.rows.map((row, index) => (
-            <div
-              key={row.id}
-              className="grid items-end gap-2 rounded-lg border p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_auto]"
-            >
-              <TextField
-                label={`Trabajo ${index + 1}`}
-                placeholder="Ej. Limpieza de cristales"
-                value={row.task}
-                maxLength={estimateSectionLimits.item}
-                onChange={(task) =>
-                  onChange({
-                    ...section,
-                    rows: section.rows.map((item) =>
-                      item.id === row.id ? { ...item, task } : item,
-                    ),
-                  })
-                }
-              />
-              <TextField
-                label={`Frecuencia del trabajo ${index + 1}`}
-                placeholder="Ej. Cada semana"
-                value={row.frequency}
-                maxLength={200}
-                onChange={(frequency) =>
-                  onChange({
-                    ...section,
-                    rows: section.rows.map((item) =>
-                      item.id === row.id ? { ...item, frequency } : item,
-                    ),
-                  })
-                }
-              />
-              <TextField
-                label={`Detalle del trabajo ${index + 1}`}
-                placeholder="Zona, medios o instrucciones"
-                value={row.notes}
-                maxLength={estimateSectionLimits.item}
-                onChange={(notes) =>
-                  onChange({
-                    ...section,
-                    rows: section.rows.map((item) =>
-                      item.id === row.id ? { ...item, notes } : item,
-                    ),
-                  })
-                }
-              />
-              <IconButton
-                label={`Eliminar trabajo ${index + 1}`}
-                variant="ghost"
-                onPress={() =>
-                  onChange({ ...section, rows: section.rows.filter((item) => item.id !== row.id) })
-                }
-              >
-                <Trash aria-hidden="true" className="size-4" />
-              </IconButton>
-            </div>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            isDisabled={section.rows.length >= estimateSectionLimits.rows}
-            onPress={() =>
-              onChange({
-                ...section,
-                rows: [...section.rows, { id: newId(), task: '', frequency: '', notes: '' }],
-              })
-            }
-          >
-            Añadir trabajo
-          </Button>
-        </div>
-      )
+      return <EstimateServicesEditor section={section} onChange={onChange} />
   }
 }

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 const state = vi.hoisted(() => ({
   pathname: '/',
   canManageVacations: true,
+  canReadInvoices: true,
   canEditSettings: true,
 }))
 vi.mock('@tanstack/react-router', () => ({
@@ -17,9 +18,11 @@ vi.mock('@/features/auth', () => ({
   can: (_role: string, permission: string) =>
     permission === 'vacations:manage'
       ? state.canManageVacations
-      : permission === 'settings:write'
-        ? state.canEditSettings
-        : true,
+      : permission === 'invoices:read'
+        ? state.canReadInvoices
+        : permission === 'settings:write'
+          ? state.canEditSettings
+          : true,
   CompanyDialog: () => null,
   roleLabels: { admin: 'Administrador' },
   useCompanyActions: () => ({ switchTo: vi.fn() }),
@@ -28,6 +31,9 @@ vi.mock('@/features/auth', () => ({
 }))
 vi.mock('@/features/billing', () => ({ PlanBanner: () => null }))
 vi.mock('@/features/global-search', () => ({ GlobalSearch: () => <span>Búsqueda global</span> }))
+vi.mock('@/features/invoices', () => ({
+  ContractInvoiceNotifications: () => <span>Avisos de facturas</span>,
+}))
 vi.mock('@/features/superadmin', () => ({ platformAccessQuery: () => ({}) }))
 vi.mock('@/features/vacations', () => ({ PendingAbsenceNotifications: () => <span>Avisos</span> }))
 vi.mock('@/shared/store/store', () => ({
@@ -110,6 +116,7 @@ describe('estado de guardado en la aplicación', () => {
 
   it('hides the footer actions when the user lacks their permissions', () => {
     state.canManageVacations = false
+    state.canReadInvoices = false
     state.canEditSettings = false
     try {
       const html = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
@@ -117,6 +124,7 @@ describe('estado de guardado en la aplicación', () => {
       expect(html).not.toContain('Avisos')
     } finally {
       state.canManageVacations = true
+      state.canReadInvoices = true
       state.canEditSettings = true
     }
   })

@@ -25,6 +25,15 @@
     break-inside: auto;
   }
 
+  .estimate-document__index,
+  .estimate-document__content {
+    break-before: page;
+  }
+
+  .estimate-document__content > .estimate-document__section:first-child[data-page-break] {
+    break-before: auto;
+  }
+
   .estimate-document__section[data-page-break] {
     break-before: page;
     border: 0;
@@ -55,5 +64,10 @@
 
   .estimate-document thead {
     display: table-header-group;
+  }
+
+  .estimate-services-table {
+    font-size: 9pt;
+    print-color-adjust: exact;
   }
 }

@@ -1,6 +1,7 @@
 import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
+import type { ContractNextCollection } from '../domain/contract-collection'
 import type { ContractStatus, ContractStatusFilter } from '../domain/contract-status'
 
 export type { ContractStatus } from '../domain/contract-status'
@@ -31,6 +32,10 @@ export type ServiceContract = {
   signed_document_name?: string | null
   updated_at: string
   created_at: string
+}
+
+export type ServiceContractListItem = ServiceContract & {
+  next_collection: ContractNextCollection | null
 }
 
 export type ContractVisitRule = {
@@ -146,7 +151,8 @@ export async function listServiceContracts(
   status: ContractStatusFilter = 'all',
 ) {
   const pageSize = 20
-  let query = createBrowserSupabaseClient()
+  const db = createBrowserSupabaseClient()
+  let query = db
     .from('service_contracts')
     .select(columns, { count: 'exact' })
     .eq('tenant_id', tenantId)
@@ -156,7 +162,24 @@ export async function listServiceContracts(
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1)
   if (error) throw new Error(error.message)
-  return { items: (data ?? []) as ServiceContract[], count: count ?? 0, pageSize }
+  const contracts = (data ?? []) as ServiceContract[]
+  if (!contracts.length)
+    return { items: [] as ServiceContractListItem[], count: count ?? 0, pageSize }
+  const collections = await db.rpc('list_contract_next_collections', {
+    p_tenant_id: tenantId,
+    p_contract_ids: contracts.map((contract) => contract.id),
+  })
+  if (collections.error) throw new Error(collections.error.message)
+  const byContract = new Map(
+    ((collections.data ?? []) as (ContractNextCollection & { contract_id: string })[]).map(
+      ({ contract_id, ...collection }) => [contract_id, collection],
+    ),
+  )
+  const items: ServiceContractListItem[] = contracts.map((contract) => ({
+    ...contract,
+    next_collection: byContract.get(contract.id) ?? null,
+  }))
+  return { items, count: count ?? 0, pageSize }
 }
 
 export async function loadServiceContract(tenantId: string, contractId: string) {
