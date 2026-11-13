@@ -30,7 +30,7 @@ export function pwaPlugin(): Plugin {
     generateBundle: {
       order: 'post',
       async handler(_options, bundle) {
-        const worker = await readFile(`${root}/src/pwa/service-worker.js`, 'utf8')
+        const worker = await readFile(`${root}/src/app/pwa/service-worker.js`, 'utf8')
         const manifest = await readFile(`${root}/public/manifest.webmanifest`)
         const assets = Object.keys(bundle)
           .filter(
