@@ -5,6 +5,7 @@ import type {
   ContractAssignmentDraft,
   ContractSignatureSetup,
 } from '../domain/contract-task-assignment'
+import { ContractTaskScheduleEditor } from './contract-task-schedule-editor'
 
 export function ContractAssignmentEditor({
   setup,
@@ -83,6 +84,13 @@ export function ContractAssignmentEditor({
                   ]}
                   onChange={(job_id) => update(draft.task_key, { job_id })}
                 />
+                {draft.schedule ? (
+                  <ContractTaskScheduleEditor
+                    schedule={draft.schedule}
+                    disabled={disabled}
+                    onChange={(schedule) => update(draft.task_key, { schedule })}
+                  />
+                ) : null}
                 <ResponsiblePicker
                   draft={draft}
                   setup={setup}

@@ -1,10 +1,19 @@
 import type { ServicePeriodicity } from '@/shared/domain/service-periodicity'
 
+export type ContractTaskSchedule = {
+  frequency: 'once' | 'weekly' | 'fortnightly' | 'days15' | 'monthly' | 'semiannual' | 'annual'
+  anchor_on: string
+  weekdays: number[]
+  start_minute: number
+  duration_minutes: number
+}
+
 export type ContractTaskAssignment = {
   task_key: string
   job_id: string
   assigned_user_ids: string[]
   work_team_id: string | null
+  schedule?: ContractTaskSchedule | null
 }
 
 export type ContractAssignmentSetup = {
@@ -38,10 +47,12 @@ export type ContractAssignmentDraft = {
   mode: 'people' | 'team' | 'inherit'
   user_ids: string[]
   team_id: string | null
+  schedule?: ContractTaskSchedule | null
 }
 
 export function initialContractAssignments(
   setup: ContractAssignmentSetup,
+  startsOn?: string,
 ): ContractAssignmentDraft[] {
   const saved = new Map(setup.assignments.map((item) => [item.task_key, item]))
   return [
@@ -65,6 +76,17 @@ export function initialContractAssignments(
       job_id: item.job_id,
       user_ids: item.assigned_user_ids,
       team_id: item.work_team_id,
+      schedule:
+        item.schedule ??
+        (startsOn && !item.task_key.startsWith('job:')
+          ? {
+              frequency: 'weekly',
+              anchor_on: startsOn,
+              weekdays: [((new Date(`${startsOn}T00:00:00Z`).getUTCDay() + 6) % 7) + 1],
+              start_minute: 540,
+              duration_minutes: 60,
+            }
+          : null),
       mode: item.work_team_id
         ? 'team'
         : item.assigned_user_ids.length || item.task_key.startsWith('job:')
@@ -86,6 +108,7 @@ export function resolveContractAssignments(
       assigned_user_ids:
         responsible?.mode === 'people' ? [...new Set(responsible.user_ids)].sort() : [],
       work_team_id: responsible?.mode === 'team' ? responsible.team_id : null,
+      ...(draft.schedule ? { schedule: draft.schedule } : {}),
     }
   })
 }
@@ -110,6 +133,20 @@ export function contractAssignmentError(
   const teams = new Set(setup.teams.map((team) => team.id))
   for (const assignment of resolveContractAssignments(drafts)) {
     if (!jobs.has(assignment.job_id)) return 'Asocia cada tarea a un trabajo del contrato.'
+    const schedule = assignment.schedule
+    if (
+      schedule &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(schedule.anchor_on) ||
+        !Number.isInteger(schedule.start_minute) ||
+        schedule.start_minute < 0 ||
+        schedule.start_minute >= 1440 ||
+        !Number.isInteger(schedule.duration_minutes) ||
+        schedule.duration_minutes < 15 ||
+        schedule.duration_minutes > 720 ||
+        schedule.weekdays.some((day) => !Number.isInteger(day) || day < 1 || day > 7) ||
+        (['weekly', 'fortnightly'].includes(schedule.frequency) && !schedule.weekdays.length))
+    )
+      return 'Revisa la fecha, los días, la hora y la duración de cada tarea.'
     if (
       assignment.task_key.startsWith('job:') &&
       assignment.task_key !== `job:${assignment.job_id}`

@@ -43,7 +43,8 @@ export function ContractSignatureDialog({
     staleTime: 0,
     refetchOnWindowFocus: false,
   })
-  const currentDrafts = drafts ?? (setup.data ? initialContractAssignments(setup.data) : [])
+  const currentDrafts =
+    drafts ?? (setup.data ? initialContractAssignments(setup.data, contract.starts_on) : [])
   const assignmentError = !signed
     ? setup.data && !setup.isFetching && !setup.isError
       ? contractAssignmentError(setup.data, currentDrafts)
