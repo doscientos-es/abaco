@@ -16,8 +16,6 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
-import { contractBillingLabels } from '@/shared/domain/contract-billing'
-import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -30,14 +28,13 @@ import {
 } from '../application/contract-actions'
 import { CleaningServicesPanel } from './cleaning-services-panel'
 import { ContractActions } from './contract-actions'
-import { ContractAgreementForm } from './contract-agreement-form'
 import { ContractAssignmentsPanel } from './contract-assignments-panel'
 import { ContractBillingPanel } from './contract-billing-panel'
 import { ContractCostsPanel } from './contract-costs-panel'
-import { ContractDocument } from './contract-document'
+import { ContractDocument, type ContractDocumentHandle } from './contract-document'
 import { ContractProfitabilityPanel } from './contract-profitability-panel'
 import { ContractStatusBadge } from './contract-status-badge'
-import { ContractStatusPanel } from './contract-status-panel'
+import { ContractSummary } from './contract-summary'
 
 const monthNames = [
   'Enero',
@@ -78,6 +75,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [generationMonth, setGenerationMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const operationIds = useRef(new Map<string, string>())
+  const documentRef = useRef<ContractDocumentHandle>(null)
   const queryKey = ['service-contract', tenant.id, contractId]
   const query = useQuery({
     queryKey,
@@ -192,30 +190,45 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     )
   }
 
+  const jobsPanel = (
+    <CleaningServicesPanel
+      tenantId={tenant.id}
+      contractId={contract.id}
+      targetJobId={tab === 'trabajos' ? hash : ''}
+      clientId={contract.client_id}
+      clientName={clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+      startsOn={contract.starts_on}
+      endsOn={contract.ends_on}
+      updatedAt={contract.updated_at}
+      draft={contract.status === 'draft'}
+      compact={tab === 'resumen'}
+      editable={
+        can(session?.role, 'contracts:write') &&
+        (contract.status === 'draft' || contract.status === 'active')
+      }
+    />
+  )
+
   return (
     <div className="space-y-6">
-      <Link to="/contratos" className="text-primary text-sm underline">
-        Volver a contratos
-      </Link>
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">{contract.title}</h1>
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold tracking-tight break-words">{contract.title}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+            {contract.signed_at
+              ? ` · Firma registrada el ${new Date(contract.signed_at).toLocaleDateString('es-ES')}`
+              : ''}
+          </p>
+        </div>
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
           <ContractStatusBadge status={contract.status} />
           <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
             {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
           </Badge>
           <ContractActions contract={contract} />
         </div>
-        {contract.signed_at ? (
-          <p className="text-muted-foreground mt-2 text-sm">
-            Firma registrada el {new Date(contract.signed_at).toLocaleDateString('es-ES')}
-          </p>
-        ) : null}
-        <p className="text-muted-foreground text-sm">
-          {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'} ·{' '}
-          {contract.timezone}
-        </p>
-      </div>
+      </header>
       <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key))}>
         <div className="overflow-x-auto">
           <TabsList aria-label="Secciones del contrato" className="min-w-max">
@@ -234,58 +247,19 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           id="resumen"
           className="mt-5 space-y-4"
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Datos básicos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p>
-                Desde {contract.starts_on}
-                {contract.ends_on ? ` hasta ${contract.ends_on}` : ' sin fecha de fin'} ·{' '}
-                {contract.price_cents > 0
-                  ? formatEuros(contract.price_cents)
-                  : 'Precio pendiente / no facturable'}{' '}
-                · {contractBillingLabels[contract.billing_frequency]}
-              </p>
-              <p className="text-muted-foreground">
-                El importe es la condición económica pactada, independiente de la frecuencia de cada
-                trabajo.
-              </p>
-              {contract.included_scope.length ? (
-                <ul className="list-inside list-disc">
-                  {contract.included_scope.map((item, index) => (
-                    <li key={`${item.description}:${index}`}>{item.description}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {contract.origin_estimate_id ? (
-                <Link
-                  to="/presupuestos/$estimateId"
-                  params={{ estimateId: contract.origin_estimate_id }}
-                  className="text-primary underline"
-                >
-                  Ver presupuesto aceptado
-                </Link>
-              ) : null}
-              {contract.status === 'draft' && can(session?.role, 'contracts:write') ? (
-                <ContractAgreementForm key={contract.updated_at} contract={contract} />
-              ) : (
-                <>
-                  <p>
-                    Renovación:{' '}
-                    {contract.renewal_mode === 'pending'
-                      ? 'Pendiente de acordar'
-                      : contract.renewal_mode === 'automatic'
-                        ? 'Automática, según acuerdo'
-                        : 'Manual'}
-                  </p>
-                  <p className="whitespace-pre-wrap">{contract.notes}</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <ContractStatusPanel key={contract.id} contract={contract} />
+          <ContractSummary
+            contract={contract}
+            canEdit={can(session?.role, 'contracts:write')}
+            client={clients.find((client) => client.id === contract.client_id)}
+            active={tab === 'resumen'}
+            onPrint={() => {
+              if (documentRef.current) documentRef.current.print()
+              else toast.error('El documento todavía se está preparando')
+            }}
+            onViewDocument={() => setTab('documento')}
+          >
+            {tab === 'resumen' ? jobsPanel : null}
+          </ContractSummary>
         </TabsContent>
         <TabsContent
           shouldForceMount
@@ -293,23 +267,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
           id="trabajos"
           className="mt-5 space-y-4"
         >
-          <CleaningServicesPanel
-            tenantId={tenant.id}
-            contractId={contract.id}
-            targetJobId={tab === 'trabajos' ? hash : ''}
-            clientId={contract.client_id}
-            clientName={
-              clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'
-            }
-            startsOn={contract.starts_on}
-            endsOn={contract.ends_on}
-            updatedAt={contract.updated_at}
-            draft={contract.status === 'draft'}
-            editable={
-              can(session?.role, 'contracts:write') &&
-              (contract.status === 'draft' || contract.status === 'active')
-            }
-          />
+          {tab === 'trabajos' ? jobsPanel : null}
 
           {contract.signed_at &&
           session?.tenantId === contract.tenant_id &&
@@ -317,8 +275,9 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
             <ContractAssignmentsPanel tenantId={contract.tenant_id} contractId={contract.id} />
           ) : null}
         </TabsContent>
-        <TabsContent id="documento" className="mt-5">
+        <TabsContent shouldForceMount hidden={tab !== 'documento'} id="documento" className="mt-5">
           <ContractDocument
+            ref={documentRef}
             contract={contract}
             tenant={tenant}
             client={clients.find((client) => client.id === contract.client_id)}

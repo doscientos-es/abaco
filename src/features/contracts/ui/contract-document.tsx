@@ -1,6 +1,6 @@
 import { Button, toast } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useImperativeHandle, useRef, type Ref } from 'react'
 
 import { loadPublishedEstimate } from '@/features/estimates/application/estimate-publication-actions'
 import { EstimateDocument } from '@/features/estimates/ui/estimate-document'
@@ -12,17 +12,22 @@ import { printDocument } from '@/shared/lib/print-document'
 import type { ServiceContract } from '../application/contract-actions'
 import type { ContractDocumentSection } from '../application/contract-document-template-actions'
 import { ApplyContractTemplateButton } from './apply-contract-template-button'
+import { ContractTemplateContent } from './contract-template-content'
+
+export type ContractDocumentHandle = { print: () => void }
 
 export function ContractDocument({
   contract,
   tenant,
   client,
   canEdit = false,
+  ref,
 }: {
   contract: ServiceContract
   tenant: Tenant
   client: Client | undefined
   canEdit?: boolean
+  ref?: Ref<ContractDocumentHandle>
 }) {
   const document = useRef<HTMLElement>(null)
   const publication = useQuery({
@@ -34,6 +39,28 @@ export function ContractDocument({
   const customer = publication.data?.client ?? client
   const waiting = Boolean(contract.origin_estimate_id) && publication.isPending
   const unavailable = Boolean(contract.origin_estimate_id) && publication.isError
+
+  function print(fromSummary = false) {
+    if (waiting || unavailable || !document.current) {
+      toast.error(
+        waiting ? 'El documento todavía se está preparando' : 'No se pudo preparar el documento',
+        unavailable
+          ? { description: 'No se pudo cargar el presupuesto aceptado. Reinténtalo en Documento.' }
+          : {},
+      )
+      return
+    }
+    if (fromSummary && publication.data?.source === 'migration') {
+      toast.error('Revisa el presupuesto reconstruido antes de generar el documento', {
+        description: 'Abre la pestaña Documento para comprobar el anexo.',
+      })
+      return
+    }
+    void printDocument(document.current, `Contrato ${contract.title}`).catch(() =>
+      toast.error('No se pudo preparar el documento'),
+    )
+  }
+  useImperativeHandle(ref, () => ({ print: () => print(true) }))
 
   return (
     <section className="space-y-3 rounded-lg border p-4" aria-label="Documento del contrato">
@@ -59,15 +86,7 @@ export function ContractDocument({
       ) : null}
       {!waiting && !unavailable ? (
         <>
-          <Button
-            variant="outline"
-            onPress={() => {
-              if (document.current)
-                void printDocument(document.current, `Contrato ${contract.title}`).catch(() =>
-                  toast.error('No se pudo preparar el documento'),
-                )
-            }}
-          >
+          <Button variant="outline" onPress={() => print()}>
             Imprimir o guardar contrato en PDF
           </Button>
           <details>
@@ -152,6 +171,7 @@ export function ContractDocument({
                     estimate={publication.data.estimate}
                     client={publication.data.client}
                     tenant={publication.data.tenant}
+                    paginated={false}
                   />
                 </section>
               ) : null}
@@ -167,16 +187,7 @@ export function ContractDocument({
 
 /** Render the contract's saved copy, never the current company template. */
 function TemplateSections({ sections }: { sections: ContractDocumentSection[] }) {
-  return sections.map((section) => (
-    <section
-      key={section.id}
-      className="contract-template-section"
-      data-page-break={section.pageBreakBefore || undefined}
-    >
-      {section.title ? <h2 className="font-semibold">{section.title}</h2> : null}
-      <p className="whitespace-pre-wrap">{section.content}</p>
-    </section>
-  ))
+  return sections.map((section) => <ContractTemplateContent key={section.id} section={section} />)
 }
 
 function Signatures() {

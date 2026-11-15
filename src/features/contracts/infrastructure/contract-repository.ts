@@ -25,6 +25,8 @@ export type ServiceContract = {
   renewal_mode: 'pending' | 'manual' | 'automatic'
   notes: string
   document_sections: ContractDocumentSections | null
+  document_template_id: string | null
+  document_template_name: string | null
   default_assigned_user_id: string | null
   included_scope: Array<{ description: string }>
   schedule_version: number
@@ -85,7 +87,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,document_template_id,document_template_name,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()

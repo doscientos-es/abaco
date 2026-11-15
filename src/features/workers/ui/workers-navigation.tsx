@@ -8,19 +8,22 @@ const labels: Record<WorkerView, string> = {
   horarios: 'Horarios',
   vacaciones: 'Vacaciones',
   funciones: 'Funciones',
+  documentos: 'Documentos',
 }
 
 export function WorkersNavigation({
   search,
   view,
   scoped,
+  showDocuments,
 }: {
   search: WorkersSearch
   view: WorkerView
   scoped: boolean
+  showDocuments: boolean
 }) {
   const views: WorkerView[] = scoped
-    ? ['personas', 'horarios', 'vacaciones']
+    ? ['personas', 'horarios', 'vacaciones', ...(showDocuments ? (['documentos'] as const) : [])]
     : ['personas', 'horarios', 'vacaciones', 'funciones']
   return (
     <nav

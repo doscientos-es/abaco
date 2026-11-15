@@ -31,12 +31,15 @@ import { ContractActions } from './contract-actions'
 import { ContractJobsPage } from './contract-jobs-page'
 import { ContractNextCollectionCell } from './contract-next-collection'
 import { ContractStatusBadge } from './contract-status-badge'
-import { ContractTemplateEditor } from './contract-template-editor'
+import { ContractTemplateLibrary } from './contract-template-library'
 
 export function ContractsPage() {
   const { tab } = useSearch({ from: '/contratos/' })
   const navigate = useNavigate({ from: '/contratos/' })
-  const selected = tab === 'trabajos' ? 'trabajos' : 'contratos'
+  const session = useSession()
+  const canEditTemplates = can(session?.role, 'contracts:write')
+  const selected =
+    tab === 'trabajos' || (tab === 'plantillas' && canEditTemplates) ? tab : 'contratos'
   return (
     <div className="space-y-5">
       <WorkspacePageHeading
@@ -53,7 +56,7 @@ export function ContractsPage() {
         onSelectionChange={(key) =>
           void navigate({
             to: '/contratos',
-            search: key === 'trabajos' ? { tab: 'trabajos' } : {},
+            search: key === 'trabajos' || key === 'plantillas' ? { tab: key } : {},
           })
         }
       >
@@ -61,19 +64,30 @@ export function ContractsPage() {
           <TabsList aria-label="Secciones de contratos">
             <TabsTrigger id="contratos">Contratos</TabsTrigger>
             <TabsTrigger id="trabajos">Trabajos contratados</TabsTrigger>
+            {canEditTemplates ? <TabsTrigger id="plantillas">Plantillas</TabsTrigger> : null}
           </TabsList>
         </WorkspacePageTabs>
         <TabsContent id={selected} key={selected}>
-          {selected === 'contratos' ? <ContractsList /> : <ContractJobsPage />}
+          {selected === 'contratos' ? (
+            <ContractsList />
+          ) : selected === 'trabajos' ? (
+            <ContractJobsPage />
+          ) : (
+            <ContractTemplates />
+          )}
         </TabsContent>
       </Tabs>
     </div>
   )
 }
 
+function ContractTemplates() {
+  const { tenant } = useTenantData()
+  return <ContractTemplateLibrary tenantId={tenant.id} />
+}
+
 function ContractsList() {
   const { tenant, clients } = useTenantData()
-  const session = useSession()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<ContractStatusFilter>('all')
   const query = useQuery({
@@ -85,14 +99,6 @@ function ContractsList() {
       <Link to="/presupuestos" className="text-primary text-sm underline">
         Crear o revisar presupuesto
       </Link>
-      {can(session?.role, 'contracts:write') ? (
-        <details className="rounded-lg border p-4">
-          <summary className="cursor-pointer font-medium">
-            Personalizar plantilla de contrato
-          </summary>
-          <ContractTemplateEditor tenantId={tenant.id} />
-        </details>
-      ) : null}
       <SelectField
         label="Estado del contrato"
         value={status}

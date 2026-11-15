@@ -2,6 +2,92 @@
   overflow-wrap: anywhere;
 }
 
+.estimate-document--paged {
+  page: estimate;
+  width: 210mm;
+  color: #171717;
+}
+
+.estimate-document__page {
+  box-sizing: border-box;
+  width: 210mm;
+  height: 297mm;
+  margin-bottom: 5mm;
+  padding: 14mm;
+  background: white;
+  box-shadow: 0 2px 12px rgb(15 23 42 / 8%);
+  print-color-adjust: exact;
+}
+
+.estimate-document__viewport {
+  width: 182mm;
+  height: 269mm;
+  overflow: hidden;
+}
+
+.estimate-document__flow {
+  width: 182mm;
+  height: 269mm;
+  column-width: 182mm;
+  column-gap: 0;
+  column-fill: auto;
+}
+
+.estimate-document--paged .estimate-document__section[data-page-break] {
+  break-before: column;
+  border: 0;
+  padding-top: 0;
+}
+
+.estimate-document--paged
+  .estimate-document__content
+  > .estimate-document__section:first-child[data-page-break] {
+  break-before: auto;
+}
+
+.estimate-document--paged .estimate-document__table {
+  overflow: visible;
+}
+
+.estimate-document--paged table {
+  width: 100%;
+  min-width: 0;
+}
+
+.estimate-document--paged :is(h2, h3) {
+  break-after: avoid;
+}
+
+.estimate-document--paged :is(header, footer, tr, .estimate-document__totals) {
+  break-inside: avoid;
+}
+
+.estimate-document--paged .estimate-document__totals {
+  width: 16rem;
+}
+
+.estimate-document--paged footer {
+  gap: 2.5rem;
+}
+
+.estimate-document--paged thead {
+  display: table-header-group;
+}
+
+.estimate-document--paged .estimate-services-table {
+  font-size: 9pt;
+}
+
+.estimate-document--paged p {
+  orphans: 3;
+  widows: 3;
+}
+
+@page estimate {
+  size: A4 portrait;
+  margin: 0;
+}
+
 .estimate-document__section[data-page-break] {
   border-top: 1px dashed var(--border);
   padding-top: 2rem;
@@ -25,8 +111,8 @@
     break-inside: auto;
   }
 
-  .estimate-document__index,
-  .estimate-document__content {
+  .estimate-document:not(.estimate-document--paged) .estimate-document__index,
+  .estimate-document:not(.estimate-document--paged) .estimate-document__content {
     break-before: page;
   }
 
@@ -44,7 +130,8 @@
     break-after: avoid;
   }
 
-  .estimate-document :is(header, footer, tr, .estimate-document__totals) {
+  .estimate-document:not(.estimate-document--paged)
+    :is(header, footer, tr, .estimate-document__totals) {
     break-inside: avoid;
   }
 
@@ -69,5 +156,22 @@
   .estimate-services-table {
     font-size: 9pt;
     print-color-adjust: exact;
+  }
+
+  body.invoice-print .estimate-document--paged {
+    width: 210mm;
+  }
+
+  .estimate-document--paged .estimate-document__page {
+    margin: 0;
+    box-shadow: none;
+  }
+
+  .estimate-document--paged .estimate-document__page + .estimate-document__page {
+    break-before: page;
+  }
+
+  .estimate-document--paged .estimate-document__section[data-page-break] {
+    break-before: column;
   }
 }

@@ -1,8 +1,8 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
+import { validateWorkerDocumentFile } from '../domain/worker-document-file'
+
 const bucket = 'worker-documents'
-const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
-const maxBytes = 15 * 1024 * 1024
 
 export type WorkerDocument = {
   id: string
@@ -29,11 +29,9 @@ export async function uploadWorkerDocument(input: {
   file: File
 }) {
   const { tenantId, workerId, id, file } = input
-  if (!allowedTypes.includes(file.type) || file.size === 0 || file.size > maxBytes) {
-    throw new Error('Usa un PDF, JPEG, PNG o WebP de hasta 15 MB.')
-  }
+  const validationError = validateWorkerDocumentFile(file)
+  if (validationError) throw new Error(validationError)
   const name = file.name.trim().slice(0, 240)
-  if (!name) throw new Error('El documento debe tener un nombre.')
   const db = createBrowserSupabaseClient()
   const path = `${tenantId}/${workerId}/${id}`
   const upload = await db.storage.from(bucket).upload(path, file, {

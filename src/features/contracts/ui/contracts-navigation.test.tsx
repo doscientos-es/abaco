@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ContractsPage } from './contracts-page'
 
 const state = vi.hoisted(() => ({
-  tab: undefined as 'trabajos' | undefined,
+  tab: undefined as 'trabajos' | 'plantillas' | undefined,
   navigate: vi.fn(),
   selectTab: undefined as ((key: string) => void) | undefined,
   queries: [] as unknown[][],
@@ -136,8 +136,8 @@ vi.mock('@/features/auth', () => ({
   can: () => state.canWriteContracts,
   useSession: () => ({ role: 'admin' }),
 }))
-vi.mock('./contract-template-editor', () => ({
-  ContractTemplateEditor: () => <span>Editor de plantilla</span>,
+vi.mock('./contract-template-library', () => ({
+  ContractTemplateLibrary: () => <span>Editor de plantilla</span>,
 }))
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'tenant' }, clients: [{ id: 'client-1', name: 'Ana' }] }),
@@ -191,12 +191,20 @@ describe('contracts navigation', () => {
   })
 
   it('only shows template customization to users allowed to edit contracts', () => {
-    expect(renderToStaticMarkup(<ContractsPage />)).not.toContain('Personalizar plantilla')
+    state.tab = 'plantillas'
+    const restricted = renderToStaticMarkup(<ContractsPage />)
+    expect(restricted).not.toContain('Plantillas')
+    expect(restricted).not.toContain('Editor de plantilla')
     state.canWriteContracts = true
     state.cursor = 0
     const html = renderToStaticMarkup(<ContractsPage />)
-    expect(html).toContain('Personalizar plantilla de contrato')
+    expect(html).toContain('Plantillas')
     expect(html).toContain('Editor de plantilla')
+    state.selectTab?.('plantillas')
+    expect(state.navigate).toHaveBeenCalledWith({ to: '/contratos', search: { tab: 'plantillas' } })
+    state.tab = undefined
+    state.cursor = 0
+    expect(renderToStaticMarkup(<ContractsPage />)).not.toContain('Editor de plantilla')
   })
 
   it('lists contracted jobs with links to their contract and job', () => {

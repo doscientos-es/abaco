@@ -2,6 +2,7 @@ import { Button, Card, CardContent } from '@doscientos/ui'
 import { useEffect, useState } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
+import { DocumentPreview } from '@/shared/ui/document-preview'
 import { TextField } from '@/shared/ui/form'
 
 import {
@@ -79,12 +80,14 @@ export function PublicEstimatePage({ token }: { token: string }) {
           empresa el documento original si necesitas comprobar su contenido histórico.
         </p>
       ) : null}
-      <EstimateDocument
-        estimate={estimate}
-        client={client}
-        tenant={tenant}
-        documentRef={documentRef}
-      />
+      <DocumentPreview label="del presupuesto">
+        <EstimateDocument
+          estimate={estimate}
+          client={client}
+          tenant={tenant}
+          documentRef={documentRef}
+        />
+      </DocumentPreview>
       <Card className="mx-auto max-w-3xl print:hidden">
         <CardContent className="space-y-4 pt-6">
           {estimate.status === 'accepted' || estimate.status === 'rejected' ? (

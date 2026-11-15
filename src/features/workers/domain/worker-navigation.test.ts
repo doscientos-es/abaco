@@ -13,6 +13,10 @@ describe('worker navigation', () => {
       vista: 'horarios',
       persona: 'ana',
     })
+    expect(validateWorkersSearch({ vista: 'documentos', persona: 'ana' })).toEqual({
+      vista: 'documentos',
+      persona: 'ana',
+    })
   })
 
   it('gives person context precedence and ignores unsupported views', () => {

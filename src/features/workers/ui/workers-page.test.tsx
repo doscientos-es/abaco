@@ -140,7 +140,16 @@ describe('workers module navigation', () => {
     })
     expect(html).toContain('vista=horarios')
     expect(html).toContain('vista=vacaciones')
+    expect(html).toContain('vista=documentos')
     expect(html).not.toContain('Invitar personas')
+    expect(mocks.documents).not.toHaveBeenCalled()
+  })
+
+  it('opens documents in a separate person tab', () => {
+    mocks.search = { persona: 'ana', vista: 'documentos' }
+    const html = renderToStaticMarkup(<WorkersPage />)
+    expect(html).toMatch(/aria-current="page"[^>]*>Documentos<\/a>/)
+    expect(mocks.directory).not.toHaveBeenCalled()
     expect(mocks.documents.mock.calls[0]?.[0]).toMatchObject({
       tenantId: 'company',
       workerId: 'ana',
@@ -148,13 +157,16 @@ describe('workers module navigation', () => {
   })
 
   it('does not expose documents to non-administrators or on another view', () => {
-    mocks.search = { persona: 'ana' }
+    mocks.search = { persona: 'ana', vista: 'documentos' }
     mocks.role = 'user'
-    renderToStaticMarkup(<WorkersPage />)
+    expect(renderToStaticMarkup(<WorkersPage />)).not.toContain('vista=documentos')
     expect(mocks.documents).not.toHaveBeenCalled()
     mocks.role = 'admin'
     mocks.search = { persona: 'ana', vista: 'horarios' }
     renderToStaticMarkup(<WorkersPage />)
+    expect(mocks.documents).not.toHaveBeenCalled()
+    mocks.search = { equipo: 'north', vista: 'documentos' }
+    expect(renderToStaticMarkup(<WorkersPage />)).not.toContain('vista=documentos')
     expect(mocks.documents).not.toHaveBeenCalled()
   })
 

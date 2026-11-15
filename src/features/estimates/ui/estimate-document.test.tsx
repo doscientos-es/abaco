@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import type { Estimate, Tenant } from '@/shared/domain/types'
 
 import { EstimateDocument } from './estimate-document'
+import { estimatePageCount } from './estimate-page-flow'
 
 const id = (value: number) => `82000000-0000-4000-8000-${String(value).padStart(12, '0')}`
 const estimate: Estimate = {
@@ -214,13 +215,41 @@ describe('customer-facing estimate', () => {
     }
   })
 
-  it('allows long sections to paginate instead of forcing them onto one page', () => {
-    const css = readFileSync(new URL('./estimate-document.css', import.meta.url), 'utf8')
-    expect(css).toContain('break-before: page')
-    expect(css).toMatch(
-      /\.estimate-document__index,\s*\.estimate-document__content\s*\{\s*break-before: page/,
+  it('renders cover, index and content on separate A4 sheets', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument estimate={estimate} tenant={tenant} client={undefined} />,
     )
+    const pages = html.split('class="estimate-document__page"').slice(1)
+    expect(pages).toHaveLength(3)
+    expect(pages[0]).toContain('estimate-document__cover')
+    expect(pages[1]).toContain('estimate-document__index')
+    expect(pages[2]).toContain('estimate-document__content')
+  })
+
+  it('counts overflow and explicit column breaks without losing long content', () => {
+    expect(estimatePageCount(688, 688)).toBe(1)
+    expect(estimatePageCount(1376, 688)).toBe(2)
+    expect(estimatePageCount(2064, 688)).toBe(3)
+    expect(estimatePageCount(0, 0)).toBe(1)
+  })
+
+  it('shares A4 geometry and section breaks between preview and print', () => {
+    const css = readFileSync(new URL('./estimate-document.css', import.meta.url), 'utf8')
+    expect(css).toContain('width: 210mm')
+    expect(css).toContain('height: 297mm')
+    expect(css).toContain('column-fill: auto')
+    expect(css).toContain('break-before: column')
+    expect(css).toContain('@page estimate')
+    expect(css).toContain('break-before: page')
     expect(css).toMatch(/\.estimate-document section\s*\{\s*break-inside: auto/)
     expect(css).toContain('display: table-header-group')
+  })
+
+  it('keeps the unpaginated contract annex available for contract printing', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument estimate={estimate} tenant={tenant} client={undefined} paginated={false} />,
+    )
+    expect(html).not.toContain('estimate-document__page')
+    expect(html).toContain('Condiciones originales')
   })
 })

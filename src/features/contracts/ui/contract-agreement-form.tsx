@@ -7,7 +7,15 @@ import { TextareaField, TextField } from '@/shared/ui/form'
 import { updateDraftContractDetails, type ServiceContract } from '../application/contract-actions'
 import { contractDatesError } from '../domain/weekly-schedule'
 
-export function ContractAgreementForm({ contract }: { contract: ServiceContract }) {
+export function ContractAgreementForm({
+  contract,
+  onSaved,
+  onCancel,
+}: {
+  contract: ServiceContract
+  onSaved?: () => void
+  onCancel?: () => void
+}) {
   const cache = useQueryClient()
   const [startsOn, setStartsOn] = useState(contract.starts_on)
   const [endsOn, setEndsOn] = useState(contract.ends_on ?? '')
@@ -29,6 +37,7 @@ export function ContractAgreementForm({ contract }: { contract: ServiceContract 
       })
       await cache.invalidateQueries({ queryKey: ['service-contracts', contract.tenant_id] })
       toast.success('Datos del contrato guardados')
+      onSaved?.()
     } catch (error) {
       toast.error('No se pudo guardar el contrato', {
         description: error instanceof Error ? error.message : 'Reintenta.',
@@ -39,43 +48,50 @@ export function ContractAgreementForm({ contract }: { contract: ServiceContract 
   }
   return (
     <form
-      className="grid gap-3 sm:grid-cols-2"
+      className="bg-muted/40 grid gap-4 rounded-xl p-4 sm:grid-cols-2 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault()
         void save()
       }}
     >
-      <p className="text-muted-foreground text-sm sm:col-span-2">
-        Confirma la vigencia antes de configurar los trabajos. La fecha inicial provisional es la de
-        aceptación; el precio y el alcance proceden de la versión aceptada.
-      </p>
-      <TextField
-        label="Fecha de inicio · obligatoria"
-        type="date"
-        value={startsOn}
-        onChange={setStartsOn}
-        placeholder="Inicio"
-      />
-      <TextField
-        label="Fecha de fin · obligatoria"
-        type="date"
-        value={endsOn}
-        onChange={setEndsOn}
-        placeholder="Fin del contrato"
-      />
-      <TextareaField
-        label="Notas (opcional)"
-        value={notes}
-        onChange={setNotes}
-        maxLength={5000}
-        placeholder="Coordinar el acceso con recepción"
-      />
+      <fieldset disabled={busy} className="grid min-w-0 gap-4 sm:col-span-2 sm:grid-cols-2">
+        <TextField
+          label="Fecha de inicio · obligatoria"
+          type="date"
+          value={startsOn}
+          onChange={setStartsOn}
+          placeholder="Inicio"
+        />
+        <TextField
+          label="Fecha de fin · obligatoria"
+          type="date"
+          value={endsOn}
+          onChange={setEndsOn}
+          placeholder="Fin del contrato"
+        />
+        <TextareaField
+          label="Notas (opcional)"
+          value={notes}
+          onChange={setNotes}
+          maxLength={5000}
+          placeholder="Coordinar el acceso con recepción"
+        />
+      </fieldset>
       {dateError ? (
-        <p className="text-muted-foreground text-sm sm:col-span-2">{dateError}</p>
+        <p role="alert" className="text-destructive text-sm sm:col-span-2">
+          {dateError}
+        </p>
       ) : null}
-      <Button type="submit" isDisabled={busy || Boolean(dateError)}>
-        {busy ? 'Guardando…' : 'Guardar datos del contrato'}
-      </Button>
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <Button type="submit" isDisabled={busy || Boolean(dateError)}>
+          {busy ? 'Guardando…' : 'Guardar cambios'}
+        </Button>
+        {onCancel ? (
+          <Button variant="outline" isDisabled={busy} onPress={onCancel}>
+            Cancelar
+          </Button>
+        ) : null}
+      </div>
     </form>
   )
 }

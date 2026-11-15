@@ -33,8 +33,12 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
     : undefined
   const scoped = Boolean(search.equipo || search.persona)
   const requested = search.vista ?? 'personas'
+  const showDocuments = Boolean(person && can(session?.role, 'team:manage'))
   const view =
-    scoped && !['personas', 'horarios', 'vacaciones'].includes(requested) ? 'personas' : requested
+    (requested === 'documentos' && !showDocuments) ||
+    (scoped && !['personas', 'horarios', 'vacaciones', 'documentos'].includes(requested))
+      ? 'personas'
+      : requested
   const memberIds = person ? [person.userId] : team?.memberIds
   const title = person ? person.fullName || person.email : (team?.name ?? 'Trabajadores')
   const activeTeams = data.teams.filter((item) => !item.archived)
@@ -100,7 +104,12 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
         }
       />
       <WorkspacePageTabs>
-        <WorkersNavigation search={search} view={view} scoped={scoped} />
+        <WorkersNavigation
+          search={search}
+          view={view}
+          scoped={scoped}
+          showDocuments={showDocuments}
+        />
       </WorkspacePageTabs>
       {(person && view !== 'personas') || team?.description || team?.archived ? (
         <div className="space-y-2">
@@ -142,7 +151,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           showInviteLink={!scoped}
         />
       ) : null}
-      {person && view === 'personas' && can(session?.role, 'team:manage') ? (
+      {person && view === 'documentos' && showDocuments ? (
         <WorkerDocuments key={person.userId} tenantId={tenantId} workerId={person.userId} />
       ) : null}
       {view === 'equipos' ? (

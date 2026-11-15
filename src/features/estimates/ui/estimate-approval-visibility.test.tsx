@@ -11,6 +11,13 @@ const state = vi.hoisted(() => ({
   role: 'admin',
   automaticContract: false,
   documentFormat: 'table' as 'table' | 'sections',
+  manualAcceptance: null as null | {
+    accepted_at: string
+    accepted_by: string
+    evidence_description: string
+  },
+  emailSentAt: '',
+  contractId: '',
 }))
 const approval = vi.hoisted(() => ({
   run: vi.fn(),
@@ -52,7 +59,11 @@ const sections: NonNullable<Estimate['sections']> = [
 ]
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/presupuestos">{children}</a>,
+  Link: ({ children, className }: { children: ReactNode; className?: string }) => (
+    <a href="/presupuestos" className={className}>
+      {children}
+    </a>
+  ),
   useNavigate: () => vi.fn(),
 }))
 vi.mock('@tanstack/react-query', () => ({
@@ -69,9 +80,13 @@ vi.mock('@tanstack/react-query', () => ({
             client: { name: 'Cliente' },
             tenant: { name: 'Empresa' },
           }
-        : queryKey[0] === 'work-target-options'
-          ? { locations: [], assets: [] }
-          : null,
+        : queryKey[0] === 'estimate-manual-acceptance'
+          ? state.manualAcceptance
+          : queryKey[0] === 'estimate-contract'
+            ? state.contractId || null
+            : queryKey[0] === 'work-target-options'
+              ? { locations: [], assets: [] }
+              : null,
     isPending: false,
   }),
 }))
@@ -88,6 +103,7 @@ vi.mock('@/shared/store/store', () => ({
         conversionDestination: 'contract',
         documentFormat: state.documentFormat,
         sections,
+        emailSentAt: state.emailSentAt,
       },
     ],
     catalog: [],
@@ -124,6 +140,9 @@ beforeEach(() => {
   state.role = 'admin'
   state.automaticContract = false
   state.documentFormat = 'table'
+  state.manualAcceptance = null
+  state.emailSentAt = ''
+  state.contractId = ''
 })
 
 describe('acceso a la aprobación del presupuesto', () => {
@@ -298,5 +317,35 @@ describe('acceso a la aprobación del presupuesto', () => {
     expect(html).toContain('Crear contrato')
     expect(html).toContain('Crear centro')
     expect(html).not.toContain('Piscina o activo')
+  })
+
+  it('keeps approval and sending evidence in a compact expandable detail', () => {
+    state.status = 'accepted'
+    state.contractId = 'contract'
+    state.manualAcceptance = {
+      accepted_at: '2026-11-13T15:27:42Z',
+      accepted_by: 'Oficina',
+      evidence_description: 'Aprobación directa',
+    }
+    state.emailSentAt = '2026-11-13T15:30:00Z'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('<details')
+    expect(html).toContain('<summary')
+    expect(html).toContain('Detalles de aprobación y envío')
+    expect(html).toContain('Aprobación directa')
+    expect(html).toContain('Último envío confirmado')
+    expect(html).not.toContain(
+      'Las partidas y condiciones del presupuesto publicado están bloqueadas',
+    )
+    expect(html).not.toContain('Correo: sin confirmación')
+    expect(html).toMatch(/class="[^"]*inline-flex[^"]*"[^>]*>Abrir contrato/)
+    expect(html).toContain('data-size="icon-lg"')
+  })
+
+  it('does not show empty approval or email notices', () => {
+    state.status = 'sent'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).not.toContain('Detalles de aprobación y envío')
+    expect(html).not.toContain('Correo: sin confirmación')
   })
 })

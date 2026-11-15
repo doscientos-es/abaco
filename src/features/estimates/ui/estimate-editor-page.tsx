@@ -1,5 +1,6 @@
 import {
   Button,
+  buttonVariants,
   Card,
   CardContent,
   CardHeader,
@@ -44,6 +45,7 @@ import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { whatsappLink } from '@/shared/lib/whatsapp'
 import { getSaveStatus, refreshStore, useTenantData } from '@/shared/store/store'
+import { DocumentPreview } from '@/shared/ui/document-preview'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { PageNotFound } from '@/shared/ui/page-states'
@@ -306,12 +308,14 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </Button>
           <Button onPress={print}>Imprimir o guardar PDF</Button>
         </div>
-        <EstimateDocument
-          estimate={estimate}
-          client={client}
-          tenant={tenant}
-          documentRef={documentRef}
-        />
+        <DocumentPreview label="del presupuesto">
+          <EstimateDocument
+            estimate={estimate}
+            client={client}
+            tenant={tenant}
+            documentRef={documentRef}
+          />
+        </DocumentPreview>
       </div>
     )
   }
@@ -361,7 +365,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               <Link
                 to="/trabajos/$workOrderId"
                 params={{ workOrderId: existingWork.data }}
-                className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium"
+                className={buttonVariants()}
               >
                 Abrir trabajo
               </Link>
@@ -381,17 +385,19 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               <Link
                 to="/contratos/$contractId"
                 params={{ contractId: existingContract.data }}
-                className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium"
+                className={buttonVariants()}
               >
                 Abrir contrato
               </Link>
             ) : null}
-            <Button onPress={() => void sendByEmail()}>Enviar por email</Button>
+            <Button variant="outline" onPress={() => void sendByEmail()}>
+              Enviar por email
+            </Button>
             <Button variant="outline" onPress={print}>
               Imprimir o guardar PDF
             </Button>
             <DropdownMenuTrigger>
-              <IconButton variant="outline" label="Más opciones del presupuesto">
+              <IconButton variant="outline" size="icon-lg" label="Más opciones del presupuesto">
                 <DotsThree aria-hidden="true" weight="bold" className="size-4" />
               </IconButton>
               <DropdownMenuContent placement="bottom end">
@@ -420,16 +426,23 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </DropdownMenuTrigger>
           </PageHeaderActions>
         </PageHeader>
-        <p className="border-border bg-surface-subtle rounded-lg border px-4 py-3 text-sm">
-          Las partidas y condiciones del presupuesto publicado están bloqueadas. Para cambiarlo,
-          crea una revisión en borrador.
-        </p>
-        {estimate.status === 'accepted' && manualAcceptance.data ? (
-          <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
-            Aprobación registrada por oficina el{' '}
-            {new Date(manualAcceptance.data.accepted_at).toLocaleString('es-ES')}. Registro:{' '}
-            {manualAcceptance.data.accepted_by}. {manualAcceptance.data.evidence_description}
-          </p>
+        {(estimate.status === 'accepted' && manualAcceptance.data) || estimate.emailSentAt ? (
+          <details className="text-muted-foreground text-sm">
+            <summary className="cursor-pointer font-medium">Detalles de aprobación y envío</summary>
+            {estimate.status === 'accepted' && manualAcceptance.data ? (
+              <p className="mt-2">
+                Aprobado en oficina el{' '}
+                {new Date(manualAcceptance.data.accepted_at).toLocaleString('es-ES')}
+                {' · '}
+                {manualAcceptance.data.accepted_by}. {manualAcceptance.data.evidence_description}
+              </p>
+            ) : null}
+            {estimate.emailSentAt ? (
+              <p className="mt-2">
+                Último envío confirmado: {new Date(estimate.emailSentAt).toLocaleString('es-ES')}
+              </p>
+            ) : null}
+          </details>
         ) : null}
         {estimate.status === 'accepted' &&
         !publication.data.estimate.automaticContract &&
@@ -535,23 +548,20 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </Button>
           </div>
         ) : null}
-        <p className="text-muted-foreground text-sm">
-          {estimate.emailSentAt
-            ? `Último envío por email confirmado: ${new Date(estimate.emailSentAt).toLocaleString('es-ES')}`
-            : 'Correo: sin confirmación de envío registrada.'}
-        </p>
         {publication.data.source === 'migration' ? (
           <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
             Esta copia se reconstruyó durante la migración con los datos disponibles entonces; no
             acredita el contenido exacto del envío original.
           </p>
         ) : null}
-        <EstimateDocument
-          estimate={publication.data.estimate}
-          client={publication.data.client}
-          tenant={publication.data.tenant}
-          documentRef={documentRef}
-        />
+        <DocumentPreview label="del presupuesto">
+          <EstimateDocument
+            estimate={publication.data.estimate}
+            client={publication.data.client}
+            tenant={publication.data.tenant}
+            documentRef={documentRef}
+          />
+        </DocumentPreview>
         {publication.data.estimate.conversionDestination !== 'contract' ? (
           <Card>
             <CardHeader>

@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 /** Scale the paper, not its layout: small screens see the exact same A4 document. */
-export function DocumentPreview({ children }: { children: ReactNode }) {
+export function DocumentPreview({
+  children,
+  label = 'de la factura',
+}: {
+  children: ReactNode
+  label?: string
+}) {
   const container = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
 
@@ -22,7 +28,7 @@ export function DocumentPreview({ children }: { children: ReactNode }) {
   return (
     <section aria-label="Vista previa del documento" className="min-w-0 space-y-3">
       <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs print:hidden">
-        <span className="font-medium">Vista previa de la factura</span>
+        <span className="font-medium">Vista previa {label}</span>
       </div>
       <div className="border-border bg-muted/70 rounded-xl border p-3 sm:p-5 print:border-0 print:bg-transparent print:p-0">
         <div ref={container} className="min-w-0 overflow-x-auto">

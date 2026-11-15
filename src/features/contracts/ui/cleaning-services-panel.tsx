@@ -46,6 +46,7 @@ export function CleaningServicesPanel({
   updatedAt,
   draft,
   editable,
+  compact = false,
 }: {
   tenantId: string
   contractId: string
@@ -57,6 +58,7 @@ export function CleaningServicesPanel({
   updatedAt: string
   draft: boolean
   editable: boolean
+  compact?: boolean
 }) {
   const cache = useQueryClient()
   const services = useQuery({
@@ -168,15 +170,12 @@ export function CleaningServicesPanel({
   }
   return (
     <section className="space-y-5" aria-label="Trabajos del contrato">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Trabajos contratados</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Consulta y configura los trabajos incluidos en este contrato.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {!compact ? <h2 className="text-lg font-semibold">Trabajos contratados</h2> : null}
         {editable ? (
           <Button
+            size="sm"
+            variant="outline"
             onPress={() => {
               setForm(emptyContractJob(startsOn))
               setEditingId(null)
@@ -197,13 +196,8 @@ export function CleaningServicesPanel({
         </p>
       ) : null}
       {services.data?.length === 0 ? (
-        <div className="border-border bg-card rounded-xl border border-dashed p-8 text-center">
-          <p className="font-medium">Todavía no hay trabajos</p>
-          {editable ? (
-            <p className="text-muted-foreground mt-1 text-sm">
-              Añade el primer trabajo de este contrato.
-            </p>
-          ) : null}
+        <div className="border-border bg-card rounded-xl border border-dashed px-4 py-3">
+          <p className="text-muted-foreground text-sm">Todavía no hay trabajos.</p>
         </div>
       ) : null}
       <div className="grid gap-4 xl:grid-cols-2">
