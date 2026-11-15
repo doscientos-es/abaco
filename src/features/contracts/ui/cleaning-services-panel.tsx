@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { serviceFrequencySelection } from '@/shared/domain/service-periodicity'
-import { calendarDate, dateValue, moveDays } from '@/shared/lib/date-range'
-import { calendarDays } from '@/shared/lib/event-calendar'
+import { calendarDate, moveDays } from '@/shared/lib/date-range'
 import { printDocument } from '@/shared/lib/print-document'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
@@ -27,7 +26,6 @@ import {
   type ContractJobDraft,
 } from '../domain/contract-job'
 import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
-import { WeeklyScheduleEditor } from './weekly-schedule-editor'
 
 const days = scheduleDays
 export const frequencyLabels = jobFrequencyLabels
@@ -98,21 +96,19 @@ export function CleaningServicesPanel({
     assigned_user_id: [...assignedUserIds].sort()[0] ?? null,
     work_team_id: workTeamId,
   }
-  const error = contractJobError(effectiveForm, startsOn, endsOn)
   const weekly = form.frequency === 'weekly' || form.frequency === 'fortnightly'
   const editingService = services.data?.find((service) => service.id === editingId)
   const editingFrequency = editingService ? quotedJobFrequency(editingService, quotedScope) : ''
   const agreedFrequency = suggestedJobFrequency(editingFrequency)
   const periodicity = serviceFrequencySelection({ frequency: editingFrequency }).periodicities[0]
-  const daily = periodicity === 'daily'
-  const multipleWeeklyDays = daily || periodicity === 'twice_weekly'
+  const daily = periodicity === 'daily' || form.frequency === 'daily'
+  const error = contractJobError(effectiveForm, startsOn, endsOn, daily)
+  const multipleWeeklyDays = periodicity === 'twice_weekly'
   const selectedDays = new Set(form.weekly_slots.map((slot) => slot.weekday)).size
   const agreedDaysError =
-    form.frequency === 'weekly' && daily && selectedDays !== 7
-      ? 'Marca una franja para cada día de la semana, según el presupuesto.'
-      : form.frequency === 'weekly' && periodicity === 'twice_weekly' && selectedDays !== 2
-        ? 'Marca franjas en dos días diferentes, según el presupuesto.'
-        : null
+    !daily && form.frequency === 'weekly' && periodicity === 'twice_weekly' && selectedDays !== 2
+      ? 'Selecciona dos días diferentes, según el presupuesto.'
+      : null
   function edit(service: CleaningService) {
     const initial = emptyContractJob(startsOn)
     const values = Object.fromEntries(
@@ -122,8 +118,10 @@ export function CleaningServicesPanel({
       service.configured
         ? {
             ...values,
-            frequency:
-              suggestedJobFrequency(quotedJobFrequency(service, quotedScope)) ?? values.frequency,
+            frequency: service.weekly_slots?.some((slot) => slot.id.startsWith('auto-daily-'))
+              ? 'daily'
+              : (suggestedJobFrequency(quotedJobFrequency(service, quotedScope)) ??
+                values.frequency),
             weekly_slots: service.weekly_slots?.length
               ? service.weekly_slots
               : (service.frequency === 'weekly' || service.frequency === 'fortnightly') &&
@@ -163,7 +161,7 @@ export function CleaningServicesPanel({
       !targets.data.locations.some((l) => l.id === contractLocationId)
     )
       return
-    const service = normalizeContractJob(effectiveForm)
+    const service = normalizeContractJob(effectiveForm, daily)
     const key = JSON.stringify([editingId, service])
     const id = operation.current.get(key) ?? crypto.randomUUID()
     operation.current.set(key, id)
@@ -231,6 +229,9 @@ export function CleaningServicesPanel({
         {services.data?.map((service) => {
           const location = targets.data?.locations.find((item) => item.id === service.location_id)
           const quotedFrequency = quotedJobFrequency(service, quotedScope)
+          const automaticDaily = Boolean(
+            service.weekly_slots?.some((slot) => slot.id.startsWith('auto-daily-')),
+          )
           return (
             <article
               key={service.id}
@@ -292,9 +293,11 @@ export function CleaningServicesPanel({
                         <div>
                           <p className="text-muted-foreground text-xs">Planificación del trabajo</p>
                           <p className="mt-1 font-medium">
-                            {service.frequency
-                              ? frequencyLabels[service.frequency]
-                              : 'Pauta por temporada existente'}
+                            {automaticDaily
+                              ? 'Cada día'
+                              : service.frequency
+                                ? frequencyLabels[service.frequency]
+                                : 'Pauta por temporada existente'}
                           </p>
                           <p className="text-muted-foreground text-xs">
                             Desde {service.anchor_on ?? startsOn}
@@ -307,10 +310,9 @@ export function CleaningServicesPanel({
                         <div>
                           <p className="text-muted-foreground text-xs">Horario y duración</p>
                           <p className="mt-1 font-medium">
-                            {service.time_known
-                              ? service.local_start.slice(0, 5)
-                              : 'Sin horario fijo'}{' '}
-                            · {service.duration_minutes} min
+                            {automaticDaily
+                              ? 'Se calcula para cada visita'
+                              : `${service.time_known ? service.local_start.slice(0, 5) : 'Sin horario fijo'} · ${service.duration_minutes} min`}
                           </p>
                         </div>
                       </div>
@@ -321,7 +323,7 @@ export function CleaningServicesPanel({
                         acordada.
                       </p>
                     ) : null}
-                    {service.weekly_slots?.length ? (
+                    {service.weekly_slots?.length && !automaticDaily ? (
                       <ul
                         className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs"
                         aria-label="Franjas de trabajo"
@@ -341,7 +343,8 @@ export function CleaningServicesPanel({
                       </p>
                       <p className="mt-1 text-sm whitespace-pre-wrap">{service.tasks}</p>
                     </div>
-                    {(service.frequency === 'weekly' || service.frequency === 'fortnightly'
+                    {(!automaticDaily &&
+                    (service.frequency === 'weekly' || service.frequency === 'fortnightly')
                       ? service.weekdays
                       : []
                     ).map((day) => (
@@ -443,8 +446,7 @@ export function CleaningServicesPanel({
         ) : null}
         {editingFrequency ? (
           <p className="text-muted-foreground text-sm sm:col-span-2">
-            Frecuencia acordada en el presupuesto: <strong>{editingFrequency}</strong>. Completa la
-            planificación indicando todos los días y horas acordados.
+            Frecuencia acordada en el presupuesto: <strong>{editingFrequency}</strong>.
           </p>
         ) : null}
         {!agreedFrequency ? (
@@ -473,7 +475,7 @@ export function CleaningServicesPanel({
             onChange={(value) => set('weekdays', value ? [Number(value)] : [])}
           />
         ) : null}
-        {weekly && !multipleWeeklyDays ? (
+        {weekly && !daily && !multipleWeeklyDays ? (
           <SelectField
             label="Día de la semana favorito · obligatorio"
             value={form.weekdays[0] ? String(form.weekdays[0]) : ''}
@@ -485,7 +487,9 @@ export function CleaningServicesPanel({
               setForm((current) => ({
                 ...current,
                 weekdays: [weekday],
-                weekly_slots: current.weekly_slots.map((slot) => ({ ...slot, weekday })),
+                weekly_slots: current.weekly_slots.length
+                  ? current.weekly_slots.map((slot) => ({ ...slot, weekday }))
+                  : [{ id: `weekly-${weekday}`, weekday, start_minute: 540, duration_minutes: 60 }],
               }))
             }}
           />
@@ -521,27 +525,79 @@ export function CleaningServicesPanel({
             />
           </>
         ) : null}
-        {form.frequency && form.frequency !== 'once' ? (
-          <div className="border-border border-b pb-2 sm:col-span-2">
-            <h3 className="font-semibold">Horario de trabajo</h3>
-            <p className="text-muted-foreground text-sm">Marca las franjas en el calendario.</p>
+        {daily ? (
+          <p className="text-muted-foreground text-sm sm:col-span-2">
+            Las visitas diarias se calcularán al activar el contrato según el horario del centro, la
+            disponibilidad del personal y la programación de las tareas.
+          </p>
+        ) : null}
+        {weekly && multipleWeeklyDays ? (
+          <div className="flex flex-wrap gap-3 sm:col-span-2" aria-label="Días de trabajo">
+            {days.map((day, index) => {
+              const weekday = index + 1
+              return (
+                <label key={day} className="flex items-center gap-1 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.weekly_slots.some((slot) => slot.weekday === weekday)}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        weekly_slots: event.target.checked
+                          ? [
+                              ...current.weekly_slots,
+                              {
+                                id: `weekly-${weekday}`,
+                                weekday,
+                                start_minute: current.weekly_slots[0]?.start_minute ?? 540,
+                                duration_minutes: current.weekly_slots[0]?.duration_minutes ?? 60,
+                              },
+                            ]
+                          : current.weekly_slots.filter((slot) => slot.weekday !== weekday),
+                      }))
+                    }
+                  />
+                  {day}
+                </label>
+              )
+            })}
           </div>
         ) : null}
-        {weekly ? (
-          <WeeklyScheduleEditor
-            value={form.weekly_slots}
-            startsOn={form.anchor_on ?? startsOn}
-            endsOn={endsOn ?? ''}
-            alternate={form.frequency === 'fortnightly'}
-            initialWeekday={form.weekdays[0] ?? 1}
-            onChange={(slots) =>
-              setForm((current) => ({
-                ...current,
-                weekly_slots: slots,
-                weekdays: [...new Set(slots.map((slot) => slot.weekday))],
-              }))
-            }
-          />
+        {weekly && !daily && form.weekly_slots.length ? (
+          <>
+            <TextField
+              label="Hora prevista"
+              type="time"
+              value={minuteLabel(form.weekly_slots[0]?.start_minute ?? 540)}
+              onChange={(value) => {
+                const [hour, minute] = value.split(':').map(Number)
+                const start_minute =
+                  hour === undefined || minute === undefined ? -1 : hour * 60 + minute
+                setForm((current) => ({
+                  ...current,
+                  weekly_slots: current.weekly_slots.map((slot) => ({ ...slot, start_minute })),
+                }))
+              }}
+              placeholder="09:00"
+            />
+            <TextField
+              label="Duración estimada (min)"
+              type="number"
+              min={15}
+              max={720}
+              value={String(form.weekly_slots[0]?.duration_minutes ?? 60)}
+              onChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  weekly_slots: current.weekly_slots.map((slot) => ({
+                    ...slot,
+                    duration_minutes: Number(value),
+                  })),
+                }))
+              }
+              placeholder="60"
+            />
+          </>
         ) : null}
         {form.frequency === 'monthly' ? (
           <>
@@ -568,40 +624,31 @@ export function CleaningServicesPanel({
           </>
         ) : null}
         {form.frequency === 'days15' ? (
-          <WeeklyScheduleEditor
-            value={
-              form.local_start
-                ? [
-                    {
-                      id: 'reference',
-                      weekday: ((calendarDate(form.anchor_on ?? startsOn).getDay() + 6) % 7) + 1,
-                      start_minute:
-                        Number(form.local_start.slice(0, 2)) * 60 +
-                        Number(form.local_start.slice(3, 5)),
-                      duration_minutes: form.duration_minutes,
-                    },
-                  ]
-                : []
-            }
-            startsOn={form.anchor_on ?? startsOn}
-            endsOn={endsOn ?? ''}
-            referenceDate={form.anchor_on ?? startsOn}
-            recurrenceLabel={'cada 15 días'}
-            onChange={(slots) => {
-              const slot = slots[0]
-              if (!slot) {
-                set('local_start', '')
-                return
-              }
-              const week = calendarDays(calendarDate(form.anchor_on ?? startsOn), 'week')[0]
-              setForm((current) => ({
-                ...current,
-                local_start: minuteLabel(slot.start_minute),
-                duration_minutes: slot.duration_minutes,
-                anchor_on: week ? moveDays(dateValue(week), slot.weekday - 1) : current.anchor_on,
-              }))
-            }}
-          />
+          <>
+            <TextField
+              label="Fecha de referencia"
+              type="date"
+              value={form.anchor_on ?? startsOn}
+              onChange={(value) => set('anchor_on', value)}
+              placeholder="Fecha"
+            />
+            <TextField
+              label="Hora prevista"
+              type="time"
+              value={form.local_start}
+              onChange={(value) => set('local_start', value)}
+              placeholder="09:00"
+            />
+            <TextField
+              label="Duración estimada (min)"
+              type="number"
+              min={15}
+              max={720}
+              value={String(form.duration_minutes)}
+              onChange={(value) => set('duration_minutes', Number(value))}
+              placeholder="60"
+            />
+          </>
         ) : null}
 
         <TextareaField

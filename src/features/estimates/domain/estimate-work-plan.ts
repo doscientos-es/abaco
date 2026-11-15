@@ -29,5 +29,5 @@ export function estimateWorkPlanError(
 }
 
 export function normalizeEstimateWorkPlan(plan: EstimateWorkPlan): EstimateWorkPlan {
-  return { ...plan, jobs: plan.jobs.map(normalizeContractJob) }
+  return { ...plan, jobs: plan.jobs.map((job) => normalizeContractJob(job)) }
 }

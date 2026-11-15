@@ -8,6 +8,17 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Actualizar datos y horarios de contratos",
+            "Update estimate format labels for clarity and consistency",
+            "Add tests for worker personal data management and user role validation",
+            "Extend contracts navigation to include templates and update validation logic",
+            "Mejorar contratos, documentos y presupuestos",
+            "Remove renewal field from ContractAgreementForm and update related logic",
+            "Implement ContractResponsiblePicker component for managing responsible personnel selection",
+            "Add coordinates field to client passport and location forms",
+            "Update release date and add new features to changelog",
+            "Update release date and add new features to changelog",
+            "Add task scheduling functionality with validation and UI components",
             "Add tests for vacation coverage component to validate team visit display",
             "Update estimate creation tests to reflect new default document structure and section requirements",
             "Configure multiple workers for contract jobs",
@@ -56,6 +67,83 @@
         }
       ],
       "changes": [
+        {
+          "sha": "4b431978e2c68036da4341756020aa223ab394b5",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Actualizar datos y horarios de contratos"
+        },
+        {
+          "sha": "78e8430cce8f4932f957a5da86e88c20934e8cf9",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Update estimate format labels for clarity and consistency"
+        },
+        {
+          "sha": "77f2ce8ce40e990e11d55655dfc4d3d131dcdc15",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add tests for worker personal data management and user role validation"
+        },
+        {
+          "sha": "e67b06ad7ef128d71807466942c6b349065cc830",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Extend contracts navigation to include templates and update validation logic"
+        },
+        {
+          "sha": "2459ba3a82f8c70ffd48f5357cd39ec289a3f1da",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Mejorar contratos, documentos y presupuestos"
+        },
+        {
+          "sha": "0bbf30c3b9524a871bfd39e7adf74ae6b2ee3df1",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Remove renewal field from ContractAgreementForm and update related logic"
+        },
+        {
+          "sha": "5cacdec99981dbe3796db0d0720d11be32c98075",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Implement ContractResponsiblePicker component for managing responsible personnel selection"
+        },
+        {
+          "sha": "41b13171ee2c202ce5f8dbac7f88dd4da1f35040",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add coordinates field to client passport and location forms"
+        },
+        {
+          "sha": "fad69b403e80c511904159b96f6c5196bacdca07",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update release date and add new features to changelog"
+        },
+        {
+          "sha": "4fba3d424b4dcdd6a9fcb220993efa02a8aecc58",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update release date and add new features to changelog"
+        },
+        {
+          "sha": "f3b73d3a658a47691c6c6d857e971ba0306024a3",
+          "type": "feat",
+          "scope": "contracts",
+          "breaking": false,
+          "description": "Add task scheduling functionality with validation and UI components"
+        },
         {
           "sha": "c8bb190a28102e6b873e3f234187562f2bf1cb84",
           "type": "feat",

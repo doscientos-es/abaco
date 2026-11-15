@@ -1,3 +1,5 @@
+import { openingScheduleError, type OpeningSchedule } from './location-opening-schedule'
+
 export type ServiceLocation = {
   id: string
   name: string
@@ -8,6 +10,7 @@ export type ServiceLocation = {
   latitude: number | null
   longitude: number | null
   opening_hours: string
+  opening_schedule?: OpeningSchedule | null
   operational_contact: string
   access_notes: string
   notes: string
@@ -17,9 +20,10 @@ export type ServiceLocation = {
 
 export type LocationInput = Omit<
   ServiceLocation,
-  'id' | 'updated_at' | 'latitude' | 'longitude'
+  'id' | 'updated_at' | 'latitude' | 'longitude' | 'opening_schedule'
 > & {
   coordinates: string
+  opening_schedule: OpeningSchedule | null
 }
 export type LocationDraft = {
   id: string
@@ -45,6 +49,7 @@ export function locationInput(location?: ServiceLocation): LocationInput {
         ? `${location.latitude ?? ''}, ${location.longitude ?? ''}`
         : '',
     opening_hours: location?.opening_hours ?? '',
+    opening_schedule: location?.opening_schedule ?? null,
     operational_contact: location?.operational_contact ?? '',
     access_notes: location?.access_notes ?? '',
     notes: location?.notes ?? '',
@@ -97,7 +102,9 @@ export function sameLocationInput(left: LocationInput, right: LocationInput): bo
     key === 'coordinates' && leftCoordinates && rightCoordinates
       ? leftCoordinates.latitude === rightCoordinates.latitude &&
         leftCoordinates.longitude === rightCoordinates.longitude
-      : value === clean[key as keyof LocationInput],
+      : key === 'opening_schedule'
+        ? JSON.stringify(value) === JSON.stringify(clean.opening_schedule)
+        : value === clean[key as keyof LocationInput],
   )
 }
 
@@ -109,6 +116,7 @@ export function validLocationInput(input: LocationInput): boolean {
     clean.address.length > 0 &&
     clean.address.length <= 500 &&
     clean.opening_hours.length <= 2000 &&
+    openingScheduleError(clean.opening_schedule) === null &&
     clean.operational_contact.length <= 1000 &&
     clean.access_notes.length <= 2000 &&
     clean.notes.length <= 2000 &&

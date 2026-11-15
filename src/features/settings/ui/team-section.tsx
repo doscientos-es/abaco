@@ -17,6 +17,7 @@ import {
   staffFunctionsQuery,
   staffSchedulesQuery,
 } from '@/features/staff-schedules'
+import { WorkerVacationAllowance } from '@/features/vacations'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -248,6 +249,9 @@ export function TeamSection({
                   />
                   <div className="mt-5">
                     <WorkerPersonalDataSection tenantId={tenantId} workerId={member.userId} />
+                  </div>
+                  <div className="mt-5">
+                    <WorkerVacationAllowance tenantId={tenantId} workerId={member.userId} />
                   </div>
                 </li>
               ) : (

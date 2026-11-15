@@ -41,7 +41,7 @@ export async function loadClientPassport(
     db
       .from('service_locations')
       .select(
-        'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,operational_contact,access_notes,notes,active,updated_at',
+        'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,opening_schedule,operational_contact,access_notes,notes,active,updated_at',
       )
       .eq('tenant_id', tenantId)
       .eq('client_id', clientId)
@@ -128,15 +128,20 @@ export async function updateContact(
 export async function updateLocation(
   tenantId: string,
   location: ServiceLocation,
-  input: Omit<LocationInput, 'postal_code' | 'coordinates'> & {
+  input: Omit<LocationInput, 'postal_code' | 'coordinates' | 'opening_schedule'> & {
     postal_code?: string
     coordinates?: string
+    opening_schedule?: LocationInput['opening_schedule']
   },
 ): Promise<void> {
   await updateClientLocation(tenantId, location, {
     ...input,
     postal_code: input.postal_code ?? location.postal_code,
     coordinates: input.coordinates ?? locationInput(location).coordinates,
+    opening_schedule:
+      input.opening_schedule === undefined
+        ? (location.opening_schedule ?? null)
+        : input.opening_schedule,
   })
 }
 

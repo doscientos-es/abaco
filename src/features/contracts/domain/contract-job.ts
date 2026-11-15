@@ -31,6 +31,7 @@ export function suggestedJobFrequency(frequency: string): ContractJobDraft['freq
 
 export const jobFrequencyLabels = {
   once: 'Una sola vez',
+  daily: 'Cada día',
   weekly: 'Cada semana',
   fortnightly: 'Cada dos semanas (14 días)',
   days15: 'Cada 15 días',
@@ -83,7 +84,12 @@ export function emptyContractJob(startsOn: string): ContractJobDraft {
   }
 }
 
-export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn: string | null) {
+export function contractJobError(
+  job: ContractJobDraft,
+  startsOn: string,
+  endsOn: string | null,
+  automaticDaily = job.frequency === 'daily',
+) {
   if (!job.title.trim() || job.title.trim().length > 200 || !job.tasks.trim())
     return 'Indica el nombre y qué hay que hacer.'
   if (!job.location_id) return 'Selecciona un centro.'
@@ -102,7 +108,7 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
     return 'Las fechas deben estar dentro de la vigencia del contrato.'
   if (job.frequency === 'once' && job.modality !== 'mobile')
     return 'Un trabajo puntual genera una orden, no una hoja permanente.'
-  if (job.frequency === 'weekly' || job.frequency === 'fortnightly') {
+  if (!automaticDaily && (job.frequency === 'weekly' || job.frequency === 'fortnightly')) {
     const error = weeklyScheduleError(job.weekly_slots)
     if (error) return error
   }
@@ -122,12 +128,13 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
   )
     return 'Selecciona personas o un equipo para realizar los trabajos.'
   if (
+    !automaticDaily &&
     job.frequency !== 'once' &&
     job.frequency !== 'weekly' &&
     job.frequency !== 'fortnightly' &&
     !job.local_start
   )
-    return 'Marca la franja horaria de referencia en el calendario.'
+    return 'Indica la hora prevista.'
   if (job.weekdays.some((day) => !Number.isInteger(day) || day < 1 || day > 7))
     return 'Los días de la semana no son válidos.'
   if (
@@ -144,7 +151,26 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
   return null
 }
 
-export function normalizeContractJob(job: ContractJobDraft): ContractJobDraft {
+export function normalizeContractJob(
+  job: ContractJobDraft,
+  automaticDaily = job.frequency === 'daily',
+): ContractJobDraft {
+  if (automaticDaily) {
+    return {
+      ...normalizeContractJob({
+        ...job,
+        frequency: 'weekly',
+        weekly_slots: Array.from({ length: 7 }, (_, index) => ({
+          id: `auto-daily-${index + 1}`,
+          weekday: index + 1,
+          start_minute: 540,
+          duration_minutes: 60,
+        })),
+      }),
+      local_start: job.local_start,
+      duration_minutes: job.duration_minutes,
+    }
+  }
   const weekly = job.frequency === 'weekly' || job.frequency === 'fortnightly'
   const weekdays = weekly
     ? [...new Set(job.weekly_slots.map((slot) => slot.weekday))].sort((a, b) => a - b)

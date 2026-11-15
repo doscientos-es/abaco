@@ -51,6 +51,21 @@ describe('contracted job configuration', () => {
     expect(contractJobError(validJob(), '2026-12-01', null)).toBeNull()
   })
 
+  it('configures daily work without drawing days or hours', () => {
+    const daily = { ...validJob(), frequency: 'daily' as const, assigned_user_ids: ['person'] }
+    expect(contractJobError(daily, '2026-12-01', '2026-12-31')).toBeNull()
+    const saved = normalizeContractJob(daily)
+    expect(saved.frequency).toBe('weekly')
+    expect(saved.weekdays).toEqual([1, 2, 3, 4, 5, 6, 7])
+    expect(saved.local_start).toBe('')
+    expect(saved.weekly_slots.map((slot) => slot.id)).toEqual(
+      [1, 2, 3, 4, 5, 6, 7].map((day) => `auto-daily-${day}`),
+    )
+    expect(
+      contractJobError({ ...daily, assigned_user_ids: [] }, '2026-12-01', '2026-12-31'),
+    ).toContain('personas o un equipo')
+  })
+
   it('distinguishes one-off orders from recurring permanent sheets', () => {
     expect(contractJobError({ ...validJob(), modality: 'fixed' }, '2026-12-01', null)).toBeTruthy()
     expect(

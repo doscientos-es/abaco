@@ -9,7 +9,7 @@ import {
 } from '../domain/client-location'
 
 const columns =
-  'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,operational_contact,access_notes,notes,active,updated_at'
+  'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,opening_schedule,operational_contact,access_notes,notes,active,updated_at'
 
 export async function insertClientLocation(
   tenantId: string,

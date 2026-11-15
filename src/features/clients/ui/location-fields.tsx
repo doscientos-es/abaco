@@ -7,6 +7,7 @@ import {
   type LocationInput,
 } from '../domain/client-location'
 import { LocationCoordinateSearch } from './location-coordinate-search'
+import { LocationOpeningScheduleEditor } from './location-opening-schedule-editor'
 
 export function LocationFields({
   value,
@@ -92,6 +93,10 @@ export function LocationFields({
         placeholder="Lunes a viernes, 8:00–18:00"
         maxLength={2000}
         className="sm:col-span-2"
+      />
+      <LocationOpeningScheduleEditor
+        value={value.opening_schedule}
+        onChange={(opening_schedule) => onChange({ ...value, opening_schedule })}
       />
       <TextareaField
         label="Acceso al centro"

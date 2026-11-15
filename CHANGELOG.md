@@ -6,6 +6,17 @@
 
 ### Nuevas funciones
 
+- Actualizar datos y horarios de contratos
+- Update estimate format labels for clarity and consistency
+- Add tests for worker personal data management and user role validation
+- Extend contracts navigation to include templates and update validation logic
+- Mejorar contratos, documentos y presupuestos
+- Remove renewal field from ContractAgreementForm and update related logic
+- Implement ContractResponsiblePicker component for managing responsible personnel selection
+- Add coordinates field to client passport and location forms
+- Update release date and add new features to changelog
+- Update release date and add new features to changelog
+- Add task scheduling functionality with validation and UI components
 - Add tests for vacation coverage component to validate team visit display
 - Update estimate creation tests to reflect new default document structure and section requirements
 - Configure multiple workers for contract jobs

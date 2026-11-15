@@ -32,4 +32,29 @@ describe('centre coordinates', () => {
     expect(sameLocationInput(input, { ...input, coordinates: '35.2923457, -2.9381000' })).toBe(true)
     expect(sameLocationInput(input, { ...input, coordinates: '' })).toBe(false)
   })
+
+  it('validates and compares structured opening hours without losing free-text hours', () => {
+    const monday = { weekday: 1, start: '09:00', end: '18:00' }
+    const slots = [monday]
+    const input = {
+      ...locationInput(),
+      name: 'Centro',
+      address: 'Calle',
+      opening_hours: 'Texto anterior',
+      opening_schedule: slots,
+    }
+    expect(validLocationInput(input)).toBe(true)
+    expect(sameLocationInput(input, { ...input, opening_schedule: [...slots] })).toBe(true)
+    expect(sameLocationInput(input, { ...input, opening_schedule: null })).toBe(false)
+    expect(
+      validLocationInput({
+        ...input,
+        opening_schedule: [...slots, { ...monday, start: '12:00' }],
+      }),
+    ).toBe(false)
+    expect(locationPersistenceInput(input)).toMatchObject({
+      opening_hours: 'Texto anterior',
+      opening_schedule: slots,
+    })
+  })
 })
