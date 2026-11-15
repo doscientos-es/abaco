@@ -1,6 +1,7 @@
 export {
   loadPaperVisit,
   loadPaperSnapshots,
+  listSignedDocuments,
   listClientVisitHistory,
   updatePaperVisit,
   uploadSignedDocument,

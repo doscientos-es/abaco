@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(22);
+select plan(29);
 
 insert into public.tenants(id, name) values
   ('76000000-0000-4000-8000-000000000001', 'Paper operations test'),
@@ -12,11 +12,13 @@ insert into public.clients(id, tenant_id, name) values
 insert into auth.users(id, email) values
   ('76000000-0000-4000-8000-000000000004', 'paper-admin@example.test'),
   ('76000000-0000-4000-8000-000000000005', 'paper-tech@example.test'),
-  ('76000000-0000-4000-8000-000000000006', 'paper-other@example.test');
+  ('76000000-0000-4000-8000-000000000006', 'paper-other@example.test'),
+  ('76000000-0000-4000-8000-000000000017', 'paper-unassigned@example.test');
 insert into public.memberships(tenant_id, user_id, role) values
   ('76000000-0000-4000-8000-000000000001', '76000000-0000-4000-8000-000000000004', 'admin'),
   ('76000000-0000-4000-8000-000000000001', '76000000-0000-4000-8000-000000000005', 'technician'),
-  ('76000000-0000-4000-8000-000000000002', '76000000-0000-4000-8000-000000000006', 'admin');
+  ('76000000-0000-4000-8000-000000000002', '76000000-0000-4000-8000-000000000006', 'admin'),
+  ('76000000-0000-4000-8000-000000000001', '76000000-0000-4000-8000-000000000017', 'technician');
 
 set local role authenticated;
 set local request.jwt.claim.sub = '76000000-0000-4000-8000-000000000004';
@@ -88,9 +90,9 @@ select throws_ok($$update public.visit_signed_documents set name = 'Changed.pdf'
 
 set local request.jwt.claim.sub = '76000000-0000-4000-8000-000000000005';
 select is((select count(*) from public.visit_signed_documents
-  where visit_id = current_setting('test.paper_visit')::uuid), 0::bigint, 'Technician cannot see office documents');
+  where visit_id = current_setting('test.paper_visit')::uuid), 1::bigint, 'Assigned technician can see documents');
 select is((select count(*) from storage.objects where bucket_id = 'signed-work-sheets'
-  and name = current_setting('test.paper_path')), 0::bigint, 'Technician cannot read signed-sheet objects');
+  and name = current_setting('test.paper_path')), 1::bigint, 'Assigned technician can read signed-sheet objects');
 select throws_ok($$insert into storage.objects(bucket_id, name)
   values ('signed-work-sheets', current_setting('test.paper_path') || '-tech')$$,
   '42501', null, 'Technician cannot upload office evidence');
@@ -116,6 +118,34 @@ select throws_ok($$insert into public.visit_signed_documents(id, tenant_id, visi
     current_setting('test.paper_visit')::uuid, '76000000-0000-4000-8000-000000000001/' ||
     current_setting('test.paper_visit') || '/76000000-0000-4000-8000-000000000016', 'Other.pdf')$$,
   '42501', null, 'Other company cannot register documents');
+
+set local request.jwt.claim.sub = '76000000-0000-4000-8000-000000000004';
+select set_config('test.future_visit', public.create_service_visit(
+  '76000000-0000-4000-8000-000000000001', '76000000-0000-4000-8000-000000000003',
+  null, null, null, 'Future visit', '76000000-0000-4000-8000-000000000005',
+  '2099-11-13 08:00+00', '2099-11-13 09:00+00', 'normal', '',
+  '76000000-0000-4000-8000-000000000018')::text, true);
+select set_config('test.future_path', '76000000-0000-4000-8000-000000000001/' ||
+  current_setting('test.future_visit') || '/76000000-0000-4000-8000-000000000019', true);
+set local request.jwt.claim.sub = '76000000-0000-4000-8000-000000000005';
+select is((select count(*) from public.service_visits where id = current_setting('test.future_visit')::uuid),
+  1::bigint, 'Assigned technician can read a future visit and its snapshot');
+select lives_ok($$insert into storage.objects(bucket_id, name)
+  values ('signed-work-sheets', current_setting('test.future_path'))$$, 'Assigned technician may upload');
+select lives_ok($$insert into public.visit_signed_documents(id, tenant_id, visit_id, object_path, name)
+  values ('76000000-0000-4000-8000-000000000019', '76000000-0000-4000-8000-000000000001',
+    current_setting('test.future_visit')::uuid, current_setting('test.future_path'), 'Signed.jpg')$$,
+  'Assigned technician may register a signed sheet');
+select is((select count(*) from public.visit_signed_documents where visit_id = current_setting('test.future_visit')::uuid),
+  1::bigint, 'Assigned technician sees their signed sheet');
+set local request.jwt.claim.sub = '76000000-0000-4000-8000-000000000017';
+select is((select count(*) from public.visit_signed_documents where visit_id = current_setting('test.future_visit')::uuid),
+  0::bigint, 'Unassigned technician cannot see signed sheets');
+select is((select count(*) from storage.objects where bucket_id = 'signed-work-sheets' and name = current_setting('test.future_path')),
+  0::bigint, 'Unassigned technician cannot read signed objects');
+select throws_ok($$insert into storage.objects(bucket_id, name) values ('signed-work-sheets',
+  '76000000-0000-4000-8000-000000000001/' || current_setting('test.future_visit') || '/76000000-0000-4000-8000-000000000020')$$,
+  '42501', null, 'Unassigned technician cannot upload');
 
 select * from finish();
 rollback;

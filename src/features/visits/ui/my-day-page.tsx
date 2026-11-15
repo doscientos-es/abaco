@@ -24,6 +24,7 @@ import {
   visitReportDraftKey,
 } from '../application/visit-report-local-draft'
 import { VisitReportEditor } from './visit-report-editor'
+import { WorkerPaperReport } from './worker-paper-report'
 
 const todayInMadrid = () =>
   new Intl.DateTimeFormat('sv-SE', {
@@ -281,6 +282,9 @@ export function MyDayPage() {
                     </div>
                   ))}
               </section>
+            ) : null}
+            {tenantId ? (
+              <WorkerPaperReport key={visit.id} tenantId={tenantId} visit={visit} />
             ) : null}
             {visit.status === 'scheduled' ? (
               <Button

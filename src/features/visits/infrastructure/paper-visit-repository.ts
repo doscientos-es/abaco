@@ -7,6 +7,7 @@ export type PaperSnapshot = {
   center?: string
   address?: string
   tasks?: string
+  scheduledTasks?: { title: string; startMinute: number; durationMinutes: number }[]
   instructions?: string
   requiresAcceptance?: boolean
   timeKnown?: boolean
@@ -104,6 +105,17 @@ export async function loadPaperSnapshots(tenantId: string, ids: string[]) {
     for (const row of data ?? []) snapshots[row.id] = row.paper_snapshot as PaperSnapshot
   }
   return snapshots
+}
+
+export async function listSignedDocuments(tenantId: string, visitId: string) {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('visit_signed_documents')
+    .select('id,name,object_path,created_at')
+    .eq('tenant_id', tenantId)
+    .eq('visit_id', visitId)
+    .order('created_at')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as SignedDocument[]
 }
 
 export async function loadPaperVisit(tenantId: string, visitId: string) {
