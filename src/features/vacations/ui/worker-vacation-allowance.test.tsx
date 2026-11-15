@@ -18,6 +18,7 @@ vi.mock('react', async (original) => ({
   useState: mocks.state,
 }))
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQuery: mocks.query,
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
 }))

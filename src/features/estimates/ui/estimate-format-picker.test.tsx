@@ -18,8 +18,8 @@ describe('estimate format cards', () => {
       )
       expect(html).toContain('<legend')
       expect(html).toContain('Tipo de presupuesto')
-      expect(html).toContain('Tabla de precios')
-      expect(html).toContain('Por secciones')
+      expect(html).toContain('Instalación')
+      expect(html).toContain('Mantenimiento')
       expect(html.match(/type="radio"/g)).toHaveLength(2)
       expect(html.match(/checked=""/g)).toHaveLength(1)
       const selectedInput = html
