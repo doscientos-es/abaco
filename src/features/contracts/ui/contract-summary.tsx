@@ -12,6 +12,7 @@ import type { ServiceContract } from '../application/contract-actions'
 import { ContractAgreementForm } from './contract-agreement-form'
 import { ContractLocations } from './contract-locations'
 import { ContractQuickActions } from './contract-quick-actions'
+import { ContractResourcesSummary } from './contract-resources-summary'
 import { ContractStatusPanel } from './contract-status-panel'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' })
@@ -50,7 +51,7 @@ export function ContractSummary({
   children: ReactNode
 }) {
   const [editing, setEditing] = useState(false)
-  const canEditDetails = canEdit && contract.status === 'draft'
+  const canEditDetails = canEdit && (contract.status === 'draft' || contract.status === 'active')
 
   return (
     <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)]">
@@ -95,6 +96,7 @@ export function ContractSummary({
                 </div>
               </div>
             </dl>
+            {active ? <ContractResourcesSummary contract={contract} /> : null}
             {contract.notes ? (
               <div>
                 <h4 className="text-muted-foreground text-xs font-medium">Notas</h4>

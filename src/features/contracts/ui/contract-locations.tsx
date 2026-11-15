@@ -1,22 +1,10 @@
 import { ArrowSquareOut, MapPin } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 
 import { clientPassportQuery } from '@/features/clients/application/client-location-actions'
 import type { ServiceLocation } from '@/features/clients/domain/client-location'
 
-import { listCleaningServices, type CleaningService } from '../application/cleaning-service-actions'
 import type { ServiceContract } from '../application/contract-actions'
-
-export function contractLocationIds(contract: ServiceContract, jobs: CleaningService[]): string[] {
-  return [
-    ...new Set(
-      [contract.location_id, ...jobs.map((job) => job.location_id)].filter((id): id is string =>
-        Boolean(id),
-      ),
-    ),
-  ]
-}
 
 export function locationMapLinks(location: ServiceLocation) {
   const { latitude: lat, longitude: lon } = location
@@ -46,24 +34,15 @@ export function locationMapLinks(location: ServiceLocation) {
 }
 
 export function ContractLocations({ contract }: { contract: ServiceContract }) {
-  const jobs = useQuery({
-    queryKey: ['cleaning-services', contract.tenant_id, contract.id],
-    queryFn: () => listCleaningServices(contract.tenant_id, contract.id),
-  })
   const passport = useQuery(clientPassportQuery(contract.tenant_id, contract.client_id))
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const ids = contractLocationIds(contract, jobs.data ?? [])
-  const locations = ids
-    .map((id) => passport.data?.locations.find((location) => location.id === id))
-    .filter((location): location is ServiceLocation => Boolean(location))
-  const selected = locations.find((location) => location.id === selectedId) ?? locations[0]
+  const selected = passport.data?.locations.find((location) => location.id === contract.location_id)
   const links = selected ? locationMapLinks(selected) : null
-  const pending = jobs.isPending || passport.isPending
-  const failed = jobs.isError || passport.isError
+  const pending = passport.isPending
+  const failed = passport.isError
   return (
     <section
       className="border-border bg-card overflow-hidden rounded-xl border"
-      aria-label="Centros del contrato"
+      aria-label="Mapa del centro"
     >
       <div className="p-5">
         <div className="flex items-start gap-3">
@@ -71,9 +50,9 @@ export function ContractLocations({ contract }: { contract: ServiceContract }) {
             <MapPin className="size-5" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="font-semibold">Centros del contrato</h2>
+            <h2 className="font-semibold">Centro del contrato</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Ubicaciones del contrato y sus trabajos.
+              Ubicación compartida por todos los trabajos.
             </p>
           </div>
         </div>
@@ -83,32 +62,13 @@ export function ContractLocations({ contract }: { contract: ServiceContract }) {
             No se pudieron cargar los centros. Vuelve a intentarlo más tarde.
           </p>
         ) : null}
-        {!pending && !failed && !ids.length ? (
-          <p className="text-muted-foreground mt-4 text-sm">Todavía no hay centros asignados.</p>
+        {!pending && !failed && !contract.location_id ? (
+          <p className="text-muted-foreground mt-4 text-sm">Todavía no hay centro asignado.</p>
         ) : null}
-        {!pending && !failed && ids.length > locations.length ? (
+        {!pending && !failed && contract.location_id && !selected ? (
           <p role="alert" className="text-muted-foreground mt-4 text-sm">
-            Algunos centros asignados no están disponibles.
+            El centro asignado no está disponible.
           </p>
-        ) : null}
-        {!pending && !failed && locations.length > 1 ? (
-          <div className="mt-4 flex flex-wrap gap-2" aria-label="Seleccionar centro">
-            {locations.map((location) => (
-              <button
-                key={location.id}
-                type="button"
-                aria-pressed={selected?.id === location.id}
-                onClick={() => setSelectedId(location.id)}
-                className={
-                  selected?.id === location.id
-                    ? 'bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-xs font-medium'
-                    : 'bg-muted hover:bg-muted/70 rounded-full px-3 py-1.5 text-xs font-medium'
-                }
-              >
-                {location.name}
-              </button>
-            ))}
-          </div>
         ) : null}
         {!pending && !failed && selected ? (
           <div className="mt-4">

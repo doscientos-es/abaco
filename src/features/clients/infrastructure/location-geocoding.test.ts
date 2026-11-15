@@ -43,6 +43,7 @@ describe('address lookup', () => {
     const url = fetch.mock.calls[0]?.[0] as URL
     expect(url.origin).toBe('https://photon.komoot.io')
     expect(url.searchParams.get('q')).toBe('Calle A 1, Melilla')
+    expect(url.searchParams.has('lang')).toBe(false)
     expect(fetch.mock.calls[0]?.[1]).toMatchObject({ credentials: 'omit' })
   })
 

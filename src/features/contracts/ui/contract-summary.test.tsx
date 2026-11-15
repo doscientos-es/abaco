@@ -47,6 +47,9 @@ vi.mock('./contract-quick-actions', () => ({
   ContractQuickActions: () => <div>Acciones rápidas</div>,
 }))
 vi.mock('./contract-locations', () => ({ ContractLocations: () => <div>Centros</div> }))
+vi.mock('./contract-resources-summary', () => ({
+  ContractResourcesSummary: () => <div>Centro y responsables</div>,
+}))
 
 const contract = {
   id: 'contract',
@@ -110,9 +113,9 @@ describe('contract summary', () => {
     expect(render()).not.toContain('Formulario de edición')
   })
 
-  it('does not offer editing of active contracts or to read-only users', () => {
+  it('offers resource editing on active contracts but not to read-only users', () => {
     const html = render({ ...contract, status: 'active' })
-    expect(html).not.toContain('Editar datos')
+    expect(html).toContain('Editar datos')
     expect(html).toContain('solo se pueden editar antes de activar')
     expect(render(contract, false)).not.toContain('Editar datos')
   })

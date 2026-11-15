@@ -34,7 +34,7 @@ export const jobFrequencyLabels = {
   weekly: 'Cada semana',
   fortnightly: 'Cada dos semanas (14 días)',
   days15: 'Cada 15 días',
-  monthly: 'Cada mes, conservando el día de referencia',
+  monthly: 'Cada mes, el primer día de la semana elegido',
 } as const
 
 export type ContractJobDraft = {
@@ -107,6 +107,14 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
     if (error) return error
   }
   if (
+    job.frequency === 'monthly' &&
+    (job.weekdays.length !== 1 ||
+      !Number.isInteger(job.weekdays[0]) ||
+      (job.weekdays[0] ?? 0) < 1 ||
+      (job.weekdays[0] ?? 8) > 7)
+  )
+    return 'Selecciona el día de la semana favorito.'
+  if (
     job.frequency !== 'once' &&
     job.modality === 'mobile' &&
     !job.work_team_id &&
@@ -140,7 +148,9 @@ export function normalizeContractJob(job: ContractJobDraft): ContractJobDraft {
   const weekly = job.frequency === 'weekly' || job.frequency === 'fortnightly'
   const weekdays = weekly
     ? [...new Set(job.weekly_slots.map((slot) => slot.weekday))].sort((a, b) => a - b)
-    : []
+    : job.frequency === 'monthly' && job.weekdays.length === 1
+      ? job.weekdays
+      : []
   const first = job.weekly_slots[0]
   const people = [...new Set(job.assigned_user_ids)].sort()
   return {

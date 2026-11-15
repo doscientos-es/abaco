@@ -1,6 +1,11 @@
-import { Button } from '@doscientos/ui'
+import { Button, toast } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+
+import {
+  WeeklyScheduleCalendar,
+  type WeeklyCalendarSlot,
+} from '@/shared/ui/weekly-schedule-calendar'
 
 import { saveStaffSchedule, staffSchedulesQuery } from '../application/staff-schedule-actions'
 import {
@@ -38,9 +43,26 @@ export function StaffScheduleEditor({
   const [expectedVersion] = useState(() => person.schedule?.updatedAt ?? null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [editing, setEditing] = useState(false)
   const error = scheduleError(slots)
   const update = (index: number, patch: Partial<StaffSlot>) =>
     setSlots((current) => current.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)))
+  const calendarSlots = slots.map((slot, index) => ({
+    id: String(index),
+    weekday: slot.weekday,
+    start_minute: slot.start,
+    duration_minutes: slot.end - slot.start,
+  }))
+  const staffSlot = (slot: WeeklyCalendarSlot): StaffSlot => ({
+    weekday: slot.weekday,
+    start: slot.start_minute,
+    end: slot.start_minute + slot.duration_minutes,
+  })
+  function apply(next: StaffSlot[]) {
+    const nextError = scheduleError(next)
+    if (nextError) toast.error(nextError)
+    else setSlots(next)
+  }
 
   async function save() {
     if (error || busy) return
@@ -70,70 +92,119 @@ export function StaffScheduleEditor({
         </p>
       </div>
       <StaffFunctionPicker functions={functions} selected={functionIds} onChange={setFunctionIds} />
-      <div className="space-y-2">
-        <h3 className="font-medium">Franjas semanales</h3>
-        {slots.map((slot, index) => (
-          <div key={index} className="flex flex-wrap items-end gap-2">
-            <label className="text-sm">
-              Día
-              <select
-                className="bg-background block rounded border p-2"
-                value={slot.weekday}
-                onChange={(event) => update(index, { weekday: Number(event.target.value) })}
-              >
-                {weekdays.map((day, i) => (
-                  <option key={day} value={i + 1}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              Inicio
-              <input
-                aria-label={`Inicio de franja ${index + 1}`}
-                className="bg-background block rounded border p-2"
-                type="time"
-                value={slot.start >= 0 && slot.start < 1440 ? formatTime(slot.start) : ''}
-                onChange={(event) => update(index, { start: parseTime(event.target.value) })}
-              />
-            </label>
-            <label className="text-sm">
-              Fin
-              <input
-                aria-label={`Fin de franja ${index + 1}`}
-                className="bg-background block rounded border p-2"
-                type="time"
-                value={
-                  slot.end === 1440
-                    ? '00:00'
-                    : slot.end >= 0 && slot.end < 1440
-                      ? formatTime(slot.end)
-                      : ''
-                }
-                onChange={(event) => {
-                  const time = parseTime(event.target.value)
-                  update(index, { end: time === 0 ? 1440 : time })
-                }}
-              />
-            </label>
-            <Button
-              variant="outline"
-              aria-label={`Quitar franja ${index + 1}`}
-              onPress={() => setSlots((current) => current.filter((_, i) => i !== index))}
-            >
-              Quitar
-            </Button>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-semibold">Dibuja el horario semanal</h3>
+          <p className="text-muted-foreground text-sm">
+            Arrastra para añadir turnos; también puedes moverlos o ampliar su borde inferior.
+          </p>
+        </div>
         <Button
           variant="outline"
-          isDisabled={slots.length >= 56}
-          onPress={() => setSlots((current) => [...current, { weekday: 1, start: 540, end: 1020 }])}
+          onPress={() => {
+            const monday = slots.filter((slot) => slot.weekday === 1)
+            if (!monday.length) {
+              toast.error('Marca primero el horario del lunes.')
+              return
+            }
+            apply([
+              ...slots.filter((slot) => slot.weekday > 5),
+              ...[1, 2, 3, 4, 5].flatMap((weekday) => monday.map((slot) => ({ ...slot, weekday }))),
+            ])
+          }}
         >
-          Añadir franja
+          Copiar lunes a lunes–viernes
         </Button>
       </div>
+      <WeeklyScheduleCalendar
+        label={`Semana tipo de ${person.name}`}
+        eventTitle={`Horario de ${person.name}`}
+        slots={calendarSlots}
+        onOpen={() => setEditing(true)}
+        onAdd={(slot) => apply([...slots, staffSlot(slot)])}
+        onUpdate={(slot) =>
+          apply(slots.map((item, index) => (String(index) === slot.id ? staffSlot(slot) : item)))
+        }
+      />
+      <output className="block text-sm" aria-live="polite">
+        {slots.length} franjas ·{' '}
+        {slots.reduce((total, slot) => total + slot.end - slot.start, 0) / 60} h por semana
+      </output>
+      <details
+        className="rounded-lg border p-3"
+        open={editing || slots.length === 0}
+        onToggle={(event) => setEditing(event.currentTarget.open)}
+      >
+        <summary className="cursor-pointer text-sm font-medium">
+          Editar horas sin arrastrar o eliminar franjas
+        </summary>
+        <div className="mt-3 space-y-2">
+          <h3 className="font-medium">Franjas semanales</h3>
+          {slots.map((slot, index) => (
+            <div key={index} className="flex flex-wrap items-end gap-2">
+              <label className="text-sm">
+                Día
+                <select
+                  className="bg-background block rounded border p-2"
+                  value={slot.weekday}
+                  onChange={(event) => update(index, { weekday: Number(event.target.value) })}
+                >
+                  {weekdays.map((day, i) => (
+                    <option key={day} value={i + 1}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                Inicio
+                <input
+                  aria-label={`Inicio de franja ${index + 1}`}
+                  className="bg-background block rounded border p-2"
+                  type="time"
+                  value={slot.start >= 0 && slot.start < 1440 ? formatTime(slot.start) : ''}
+                  onChange={(event) => update(index, { start: parseTime(event.target.value) })}
+                />
+              </label>
+              <label className="text-sm">
+                Fin
+                <input
+                  aria-label={`Fin de franja ${index + 1}`}
+                  className="bg-background block rounded border p-2"
+                  type="time"
+                  value={
+                    slot.end === 1440
+                      ? '00:00'
+                      : slot.end >= 0 && slot.end < 1440
+                        ? formatTime(slot.end)
+                        : ''
+                  }
+                  onChange={(event) => {
+                    const time = parseTime(event.target.value)
+                    update(index, { end: time === 0 ? 1440 : time })
+                  }}
+                />
+              </label>
+              <Button
+                variant="outline"
+                aria-label={`Quitar franja ${index + 1}`}
+                onPress={() => setSlots((current) => current.filter((_, i) => i !== index))}
+              >
+                Quitar
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            isDisabled={slots.length >= 56}
+            onPress={() =>
+              setSlots((current) => [...current, { weekday: 1, start: 540, end: 1020 }])
+            }
+          >
+            Añadir franja
+          </Button>
+        </div>
+      </details>
       {error ? (
         <p role="alert" className="text-destructive text-sm">
           {error}

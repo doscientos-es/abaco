@@ -70,7 +70,9 @@ export function initialContractAssignments(
       work_team_id: null,
     })),
   ].map((initial) => {
-    const item = saved.get(initial.task_key) ?? initial
+    const item = initial.task_key.startsWith('job:')
+      ? initial
+      : (saved.get(initial.task_key) ?? initial)
     return {
       task_key: item.task_key,
       job_id: item.job_id,

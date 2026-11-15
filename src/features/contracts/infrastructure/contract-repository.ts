@@ -28,6 +28,8 @@ export type ServiceContract = {
   document_template_id: string | null
   document_template_name: string | null
   default_assigned_user_id: string | null
+  assigned_user_ids: string[]
+  work_team_id: string | null
   included_scope: Array<{
     description: string
     source_section_id?: string | null
@@ -92,7 +94,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,document_template_id,document_template_name,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,document_template_id,document_template_name,default_assigned_user_id,assigned_user_ids,work_team_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()
@@ -122,6 +124,34 @@ export async function updateDraftContractDetails(input: {
     p_ends_on: input.endsOn || null,
     p_renewal_mode: input.renewal,
     p_notes: input.notes,
+    p_operation_id: input.operationId,
+  })
+  if (error) throw new Error(error.message)
+}
+
+export async function updateContractGeneralDetails(input: {
+  contract: ServiceContract
+  startsOn: string
+  endsOn: string
+  renewal: ServiceContract['renewal_mode']
+  notes: string
+  locationId: string
+  people: string[]
+  team: string | null
+  operationId: string
+}) {
+  const { contract } = input
+  const { error } = await createBrowserSupabaseClient().rpc('update_contract_general_details', {
+    p_tenant_id: contract.tenant_id,
+    p_contract_id: contract.id,
+    p_expected_updated_at: contract.updated_at,
+    p_starts_on: input.startsOn,
+    p_ends_on: input.endsOn || null,
+    p_renewal_mode: input.renewal,
+    p_notes: input.notes,
+    p_location_id: input.locationId,
+    p_assigned_user_ids: input.people,
+    p_work_team_id: input.team,
     p_operation_id: input.operationId,
   })
   if (error) throw new Error(error.message)

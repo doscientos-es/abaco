@@ -25,26 +25,11 @@ export function ContractAssignmentEditor({
   return (
     <div className="space-y-6 sm:col-span-2">
       <section className="space-y-3" aria-label="Responsables de los trabajos">
-        <h3 className="font-semibold">1. ¿Quién realizará cada trabajo?</h3>
+        <h3 className="font-semibold">1. Responsables del contrato</h3>
         <p className="text-muted-foreground text-sm">
-          Elige personas o un equipo para cada trabajo. La programación se configura después. Las
-          visitas solo asignan una persona o un equipo, no a todas las personas del trabajo.
+          Todos los trabajos comparten los responsables indicados en los datos generales del
+          contrato. Para cambiarlos, vuelve a editar esos datos antes de firmar.
         </p>
-        {setup.jobs.map((job) => {
-          const draft = byKey.get(`job:${job.id}`)
-          return draft ? (
-            <fieldset key={job.id} disabled={disabled} className="space-y-3 rounded-lg border p-4">
-              <legend className="px-1 text-sm font-medium">{job.title}</legend>
-              <ResponsiblePicker
-                draft={draft}
-                setup={setup}
-                job
-                disabled={disabled}
-                onChange={(changes) => update(draft.task_key, changes)}
-              />
-            </fieldset>
-          ) : null
-        })}
       </section>
       {setup.tasks.length ? (
         <section className="space-y-3" aria-label="Asignación de tareas del presupuesto">
@@ -114,13 +99,11 @@ export function ContractAssignmentEditor({
 function ResponsiblePicker({
   draft,
   setup,
-  job = false,
   disabled,
   onChange,
 }: {
   draft: ContractAssignmentDraft
   setup: ContractSignatureSetup
-  job?: boolean
   disabled: boolean
   onChange: (changes: Partial<ContractAssignmentDraft>) => void
 }) {
@@ -131,7 +114,7 @@ function ResponsiblePicker({
         isDisabled={disabled}
         value={draft.mode}
         options={[
-          ...(!job ? [{ value: 'inherit', label: 'Responsables del trabajo' }] : []),
+          { value: 'inherit', label: 'Responsables del trabajo' },
           { value: 'people', label: 'Personas' },
           { value: 'team', label: 'Un equipo' },
         ]}

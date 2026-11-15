@@ -81,7 +81,7 @@ describe('contract assignment controls', () => {
     expect(drafts[1]).toMatchObject({ mode: 'team', team_id: 't1', user_ids: [] })
   })
 
-  it('allows several people on the job itself', () => {
+  it('keeps job ownership in the contract rather than editing it at signing', () => {
     const html = renderToStaticMarkup(
       <ContractAssignmentEditor
         setup={setup}
@@ -90,11 +90,8 @@ describe('contract assignment controls', () => {
         onChange={vi.fn()}
       />,
     )
-    const mode = mocks.controls.find((control) => control.label === 'Asignar a')
-    expect(mode?.options.map((option) => option.value)).toEqual(['people', 'team'])
-    expect(html).toContain('Personas asignadas')
-    expect(html).toContain('Ana')
-    expect(html).toContain('Pol')
+    expect(html).toContain('Todos los trabajos comparten los responsables')
+    expect(mocks.controls.filter((control) => control.label === 'Asignar a')).toHaveLength(1)
   })
 
   it('disables all selects while saving, including controls rendered in portals', () => {

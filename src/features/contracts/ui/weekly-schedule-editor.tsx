@@ -2,13 +2,8 @@ import { Button, toast } from '@doscientos/ui'
 import { useState } from 'react'
 
 import { calendarDate } from '@/shared/lib/date-range'
-import {
-  atCalendarMinutes,
-  calendarDays,
-  wallTimeNumber,
-  type CalendarEvent,
-} from '@/shared/lib/event-calendar'
-import { EventCalendar } from '@/shared/ui/event-calendar'
+import { calendarDays } from '@/shared/lib/event-calendar'
+import { WeeklyScheduleCalendar } from '@/shared/ui/weekly-schedule-calendar'
 
 import {
   minuteLabel,
@@ -18,20 +13,6 @@ import {
   type WeeklyTimeSlot,
 } from '../domain/weekly-schedule'
 
-// A stable, DST-free template week; these dates are never persisted as actual work dates.
-const monday = new Date(2026, 0, 5)
-function slotEvent(slot: WeeklyTimeSlot, week: Date): CalendarEvent {
-  const day = new Date(week)
-  day.setDate(day.getDate() + slot.weekday - 1)
-  return {
-    id: slot.id,
-    title: 'Horario de trabajo',
-    start: atCalendarMinutes(day, slot.start_minute),
-    end: atCalendarMinutes(day, slot.start_minute + slot.duration_minutes),
-    editable: true,
-  }
-}
-
 export function WeeklyScheduleEditor({
   value,
   onChange,
@@ -40,6 +21,7 @@ export function WeeklyScheduleEditor({
   alternate = false,
   referenceDate,
   recurrenceLabel,
+  initialWeekday = 1,
 }: {
   value: WeeklyTimeSlot[]
   onChange: (slots: WeeklyTimeSlot[]) => void
@@ -48,23 +30,14 @@ export function WeeklyScheduleEditor({
   alternate?: boolean
   referenceDate?: string | undefined
   recurrenceLabel?: string | undefined
+  initialWeekday?: number | undefined
 }) {
   const [editing, setEditing] = useState(false)
-  const week = referenceDate
-    ? (calendarDays(calendarDate(referenceDate), 'week')[0] ?? monday)
-    : monday
+  const week = referenceDate ? calendarDays(calendarDate(referenceDate), 'week')[0] : undefined
   function apply(slots: WeeklyTimeSlot[]) {
     const error = slots.length ? weeklyScheduleError(slots) : null
     if (error) toast.error(error)
     else onChange(slots)
-  }
-  function rangeSlot(id: string, start: Date, end: Date): WeeklyTimeSlot {
-    return {
-      id,
-      weekday: ((start.getDay() + 6) % 7) + 1,
-      start_minute: start.getHours() * 60 + start.getMinutes(),
-      duration_minutes: (wallTimeNumber(end) - wallTimeNumber(start)) / 60000,
-    }
   }
   const minutes = value.reduce((sum, slot) => sum + slot.duration_minutes, 0)
   return (
@@ -108,23 +81,15 @@ export function WeeklyScheduleEditor({
           </Button>
         ) : null}
       </div>
-      <EventCalendar
-        aria-label="Semana tipo del contrato"
-        value={week}
-        view="week"
-        items={value
-          .filter((slot) => Number.isFinite(slot.start_minute) && slot.duration_minutes >= 15)
-          .map((slot) => slotEvent(slot, week))}
-        showAllDay={false}
-        showToday={Boolean(referenceDate)}
-        renderDayLabel={referenceDate ? undefined : (day) => scheduleDays[(day.getDay() + 6) % 7]}
-        onItemClick={() => setEditing(true)}
-        onRangeSelect={({ start, end }) =>
-          apply([...(referenceDate ? [] : value), rangeSlot(crypto.randomUUID(), start, end)])
-        }
-        onItemChange={({ item, start, end }) =>
-          apply(value.map((slot) => (slot.id === item.id ? rangeSlot(slot.id, start, end) : slot)))
-        }
+      <WeeklyScheduleCalendar
+        label="Semana tipo del contrato"
+        eventTitle="Horario de trabajo"
+        week={week}
+        dated={Boolean(referenceDate)}
+        slots={value}
+        onOpen={() => setEditing(true)}
+        onAdd={(slot) => apply([...(referenceDate ? [] : value), slot])}
+        onUpdate={(slot) => apply(value.map((item) => (item.id === slot.id ? slot : item)))}
       />
       <output className="block text-sm" aria-live="polite">
         {value.length} franjas · {minutes / 60} h{' '}
@@ -215,7 +180,9 @@ export function WeeklyScheduleEditor({
                 ...(referenceDate ? [] : value),
                 {
                   id: crypto.randomUUID(),
-                  weekday: referenceDate ? ((calendarDate(referenceDate).getDay() + 6) % 7) + 1 : 1,
+                  weekday: referenceDate
+                    ? ((calendarDate(referenceDate).getDay() + 6) % 7) + 1
+                    : initialWeekday,
                   start_minute: 540,
                   duration_minutes: 60,
                 },

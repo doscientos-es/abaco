@@ -119,7 +119,7 @@ describe('contracted job configuration', () => {
   })
 
   it('requires an end date and people or a team for recurring mobile work', () => {
-    const job = { ...validJob(), frequency: 'monthly' as const }
+    const job = { ...validJob(), frequency: 'monthly' as const, weekdays: [1] }
     expect(contractJobError(job, '2026-12-01', null)).toContain('fin obligatoria')
     expect(contractJobError(job, '2026-12-01', '2026-12-31')).toContain('personas o un equipo')
     expect(
@@ -136,6 +136,21 @@ describe('contracted job configuration', () => {
         '2026-12-31',
       ),
     ).toBeNull()
+  })
+
+  it('requires and retains exactly one preferred weekday for monthly work', () => {
+    const job = {
+      ...validJob(),
+      frequency: 'monthly' as const,
+      local_start: '09:00',
+      work_team_id: 'team',
+    }
+    expect(contractJobError(job, '2026-12-01', '2026-12-31')).toContain('día de la semana')
+    expect(contractJobError({ ...job, weekdays: [1, 2] }, '2026-12-01', '2026-12-31')).toContain(
+      'día de la semana',
+    )
+    expect(contractJobError({ ...job, weekdays: [1] }, '2026-12-01', '2026-12-31')).toBeNull()
+    expect(normalizeContractJob({ ...job, weekdays: [1] }).weekdays).toEqual([1])
   })
 
   it('normalizes multiple people and keeps a compatible primary assignee', () => {

@@ -197,6 +197,9 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
       targetJobId={tab === 'trabajos' ? hash : ''}
       clientId={contract.client_id}
       clientName={clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+      contractLocationId={contract.location_id}
+      assignedUserIds={contract.assigned_user_ids}
+      workTeamId={contract.work_team_id}
       quotedScope={contract.included_scope ?? []}
       startsOn={contract.starts_on}
       endsOn={contract.ends_on}

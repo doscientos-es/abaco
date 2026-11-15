@@ -105,4 +105,20 @@ describe('searchable multi-selection', () => {
     const html = render(['a'], true)
     expect(html.match(/disabled=""/g)).toHaveLength(6)
   })
+
+  it('disables new choices at the limit while allowing selected choices to be removed', () => {
+    const html = renderToStaticMarkup(
+      <MultiSelectField
+        label="Funciones"
+        options={options}
+        value={['a']}
+        onChange={mocks.change}
+        maxSelections={1}
+      />,
+    )
+    expect(html).toContain('Máximo: 1 seleccionados.')
+    expect(html.match(/disabled=""/g)).toHaveLength(2)
+    mocks.options.get('Electricidad')?.(false)
+    expect(mocks.change).toHaveBeenCalledWith([])
+  })
 })

@@ -2,13 +2,8 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
-import {
-  RelatedCreateButton,
-  useRelatedRecordCreation,
-} from '@/features/clients/ui/related-record-creation'
-import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
-import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
+import { serviceFrequencySelection } from '@/shared/domain/service-periodicity'
 import { calendarDate, dateValue, moveDays } from '@/shared/lib/date-range'
 import { calendarDays } from '@/shared/lib/event-calendar'
 import { printDocument } from '@/shared/lib/print-document'
@@ -32,7 +27,6 @@ import {
   type ContractJobDraft,
 } from '../domain/contract-job'
 import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
-import { ContractResponsiblePicker } from './contract-responsible-picker'
 import { WeeklyScheduleEditor } from './weekly-schedule-editor'
 
 const days = scheduleDays
@@ -44,6 +38,9 @@ export function CleaningServicesPanel({
   targetJobId,
   clientId,
   clientName,
+  contractLocationId,
+  assignedUserIds,
+  workTeamId,
   quotedScope = [],
   startsOn,
   endsOn,
@@ -57,6 +54,9 @@ export function CleaningServicesPanel({
   targetJobId?: string
   clientId: string
   clientName: string
+  contractLocationId: string | null
+  assignedUserIds: string[]
+  workTeamId: string | null
   quotedScope?: ServiceContract['included_scope']
   startsOn: string
   endsOn: string | null
@@ -81,29 +81,38 @@ export function CleaningServicesPanel({
     queryKey: ['work-target-options', tenantId, clientId],
     queryFn: () => loadWorkTargetOptions(tenantId, clientId),
   })
-  const teams = useQuery(workTeamsQuery(tenantId))
-  const people = useQuery({
-    queryKey: ['technicians', tenantId],
-    queryFn: () => listTechnicians(tenantId),
-  })
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState<ContractJobDraft>(() => emptyContractJob(startsOn))
   const [editingId, setEditingId] = useState<string | null>(null)
-  const related = useRelatedRecordCreation({
-    tenantId,
-    clientId,
-    onLocationCreated: (id) => set('location_id', id),
-  })
   const operation = useRef(new Map<string, string>())
   const sheets = useRef(new Map<string, HTMLElement>())
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }))
   }
-  const error = contractJobError(form, startsOn, endsOn)
+  const effectiveForm = {
+    ...form,
+    location_id: contractLocationId,
+    ends_on: null,
+    assigned_user_ids: assignedUserIds,
+    assigned_user_id: [...assignedUserIds].sort()[0] ?? null,
+    work_team_id: workTeamId,
+  }
+  const error = contractJobError(effectiveForm, startsOn, endsOn)
   const weekly = form.frequency === 'weekly' || form.frequency === 'fortnightly'
   const editingService = services.data?.find((service) => service.id === editingId)
   const editingFrequency = editingService ? quotedJobFrequency(editingService, quotedScope) : ''
+  const agreedFrequency = suggestedJobFrequency(editingFrequency)
+  const periodicity = serviceFrequencySelection({ frequency: editingFrequency }).periodicities[0]
+  const daily = periodicity === 'daily'
+  const multipleWeeklyDays = daily || periodicity === 'twice_weekly'
+  const selectedDays = new Set(form.weekly_slots.map((slot) => slot.weekday)).size
+  const agreedDaysError =
+    form.frequency === 'weekly' && daily && selectedDays !== 7
+      ? 'Marca una franja para cada día de la semana, según el presupuesto.'
+      : form.frequency === 'weekly' && periodicity === 'twice_weekly' && selectedDays !== 2
+        ? 'Marca franjas en dos días diferentes, según el presupuesto.'
+        : null
   function edit(service: CleaningService) {
     const initial = emptyContractJob(startsOn)
     const values = Object.fromEntries(
@@ -113,6 +122,8 @@ export function CleaningServicesPanel({
       service.configured
         ? {
             ...values,
+            frequency:
+              suggestedJobFrequency(quotedJobFrequency(service, quotedScope)) ?? values.frequency,
             weekly_slots: service.weekly_slots?.length
               ? service.weekly_slots
               : (service.frequency === 'weekly' || service.frequency === 'fortnightly') &&
@@ -133,6 +144,7 @@ export function CleaningServicesPanel({
             frequency: suggestedJobFrequency(quotedJobFrequency(service, quotedScope)),
             title: service.title,
             tasks: service.tasks,
+            service_type: service.service_type ?? initial.service_type,
             instructions: service.instructions ?? '',
             assigned_user_id: service.assigned_user_id,
             assigned_user_ids: service.assigned_user_ids,
@@ -143,8 +155,15 @@ export function CleaningServicesPanel({
     setOpen(true)
   }
   async function save() {
-    if (busy || error || related.pending) return
-    const service = normalizeContractJob(form)
+    if (
+      busy ||
+      error ||
+      agreedDaysError ||
+      !targets.isSuccess ||
+      !targets.data.locations.some((l) => l.id === contractLocationId)
+    )
+      return
+    const service = normalizeContractJob(effectiveForm)
     const key = JSON.stringify([editingId, service])
     const id = operation.current.get(key) ?? crypto.randomUUID()
     operation.current.set(key, id)
@@ -212,16 +231,6 @@ export function CleaningServicesPanel({
         {services.data?.map((service) => {
           const location = targets.data?.locations.find((item) => item.id === service.location_id)
           const quotedFrequency = quotedJobFrequency(service, quotedScope)
-          const responsible = service.work_team_id
-            ? (teams.data?.find((team) => team.id === service.work_team_id)?.name ??
-              'Equipo no disponible')
-            : service.assigned_user_ids
-                .map(
-                  (id) =>
-                    people.data?.find((person) => person.id === id)?.label ??
-                    'Persona no disponible',
-                )
-                .join(', ') || 'Sin asignar'
           return (
             <article
               key={service.id}
@@ -279,13 +288,6 @@ export function CleaningServicesPanel({
                     </div>
                     <div className="bg-muted/50 mt-4 grid gap-4 rounded-lg p-4 sm:grid-cols-2">
                       <div className="flex min-w-0 gap-2 text-sm">
-                        <span className="text-muted-foreground mt-0.5">{fieldIcons.user}</span>
-                        <div className="min-w-0">
-                          <p className="text-muted-foreground text-xs">Responsables</p>
-                          <p className="mt-1 font-medium break-words">{responsible}</p>
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 gap-2 text-sm">
                         <span className="text-muted-foreground mt-0.5">{fieldIcons.calendar}</span>
                         <div>
                           <p className="text-muted-foreground text-xs">Planificación del trabajo</p>
@@ -339,7 +341,10 @@ export function CleaningServicesPanel({
                       </p>
                       <p className="mt-1 text-sm whitespace-pre-wrap">{service.tasks}</p>
                     </div>
-                    {service.weekdays.map((day) => (
+                    {(service.frequency === 'weekly' || service.frequency === 'fortnightly'
+                      ? service.weekdays
+                      : []
+                    ).map((day) => (
                       <p key={day} className="mt-1 text-sm">
                         <strong>{days[day - 1]}: </strong>
                         {service.weekly_tasks[String(day)] || service.tasks}
@@ -416,17 +421,11 @@ export function CleaningServicesPanel({
         isDirty={Boolean(form.title)}
         submitDisabled={
           Boolean(error) ||
-          related.pending ||
+          Boolean(agreedDaysError) ||
           !targets.isSuccess ||
-          !targets.data.locations.some((l) => l.id === form.location_id)
+          !targets.data.locations.some((l) => l.id === contractLocationId)
         }
       >
-        <div className="border-border border-b pb-2 sm:col-span-2">
-          <h3 className="font-semibold">Datos del trabajo</h3>
-          <p className="text-muted-foreground text-sm">
-            Identifica el trabajo y el centro donde se realiza.
-          </p>
-        </div>
         <TextField
           label="Nombre · obligatorio"
           value={form.title}
@@ -434,22 +433,6 @@ export function CleaningServicesPanel({
           maxLength={200}
           placeholder="Cristales"
         />
-        <SelectField
-          label="Centro · obligatorio"
-          value={form.location_id ?? ''}
-          options={[
-            { value: '', label: 'Selecciona un centro' },
-            ...(targets.data?.locations ?? []).map((l) => ({ value: l.id, label: l.name })),
-          ]}
-          onChange={(v) => set('location_id', v)}
-        />
-        {related.allowed ? (
-          <RelatedCreateButton
-            label="Crear centro"
-            disabled={busy || related.pending}
-            onPress={() => related.start('location')}
-          />
-        ) : null}
         {targets.isError ? (
           <p role="alert">
             No se pudieron cargar los centros.{' '}
@@ -458,65 +441,64 @@ export function CleaningServicesPanel({
             </Button>
           </p>
         ) : null}
-        {related.status}
-        <SelectField
-          label="Tipo"
-          value={form.service_type}
-          options={[
-            { value: 'ordinary', label: 'Limpieza ordinaria' },
-            { value: 'windows', label: 'Cristales' },
-            { value: 'garage', label: 'Garaje' },
-            { value: 'other', label: 'Otro' },
-          ]}
-          onChange={(v) => set('service_type', v as CleaningService['service_type'])}
-        />
-        <SelectField
-          label="Modalidad"
-          value={form.modality}
-          options={[
-            { value: 'fixed', label: 'Hoja fija de centro' },
-            { value: 'mobile', label: 'Visitas de equipo móvil' },
-          ]}
-          isDisabled={form.frequency === 'once'}
-          onChange={(v) => set('modality', v as CleaningService['modality'])}
-        />
         {editingFrequency ? (
           <p className="text-muted-foreground text-sm sm:col-span-2">
             Frecuencia acordada en el presupuesto: <strong>{editingFrequency}</strong>. Completa la
             planificación indicando todos los días y horas acordados.
           </p>
         ) : null}
-        <SelectField
-          label="Frecuencia de planificación"
-          value={form.frequency ?? ''}
-          placeholder="Selecciona una frecuencia"
-          options={Object.entries(frequencyLabels).map(([value, label]) => ({ value, label }))}
-          onChange={(v) =>
-            setForm((current) => ({
-              ...current,
-              frequency: (v || null) as ContractJobDraft['frequency'],
-              modality: v === 'once' ? 'mobile' : current.modality,
-            }))
-          }
-        />
-        <TextField
-          label={
-            form.frequency === 'once'
-              ? 'Fecha prevista · obligatorio'
-              : 'Inicio y fecha de referencia · obligatorio'
-          }
-          type="date"
-          value={form.anchor_on ?? ''}
-          onChange={(v) => set('anchor_on', v)}
-          placeholder="Fecha"
-        />
-        {form.frequency && form.frequency !== 'once' ? (
-          <TextField
-            label="Fin del trabajo (por defecto, fin del contrato)"
-            type="date"
-            value={form.ends_on ?? ''}
-            onChange={(v) => set('ends_on', v || null)}
-            placeholder={endsOn ?? 'Guarda primero el fin del contrato'}
+        {!agreedFrequency ? (
+          <SelectField
+            label="Frecuencia de planificación"
+            value={form.frequency ?? ''}
+            placeholder="Selecciona una frecuencia"
+            options={Object.entries(frequencyLabels).map(([value, label]) => ({ value, label }))}
+            onChange={(v) =>
+              setForm((current) => ({
+                ...current,
+                frequency: (v || null) as ContractJobDraft['frequency'],
+                modality: v === 'once' ? 'mobile' : current.modality,
+                weekdays: [],
+                weekly_slots: [],
+              }))
+            }
+          />
+        ) : null}
+        {form.frequency === 'monthly' ? (
+          <SelectField
+            label="Día de la semana favorito · obligatorio"
+            value={form.weekdays[0] ? String(form.weekdays[0]) : ''}
+            placeholder="Selecciona un día"
+            options={days.map((label, index) => ({ value: String(index + 1), label }))}
+            onChange={(value) => set('weekdays', value ? [Number(value)] : [])}
+          />
+        ) : null}
+        {weekly && !multipleWeeklyDays ? (
+          <SelectField
+            label="Día de la semana favorito · obligatorio"
+            value={form.weekdays[0] ? String(form.weekdays[0]) : ''}
+            placeholder="Selecciona un día"
+            options={days.map((label, index) => ({ value: String(index + 1), label }))}
+            onChange={(value) => {
+              if (!value) return
+              const weekday = Number(value)
+              setForm((current) => ({
+                ...current,
+                weekdays: [weekday],
+                weekly_slots: current.weekly_slots.map((slot) => ({ ...slot, weekday })),
+              }))
+            }}
+          />
+        ) : null}
+        {form.frequency === 'once' && !daily ? (
+          <SelectField
+            label="Día de la semana favorito · obligatorio"
+            value={String(((calendarDate(form.anchor_on ?? startsOn).getDay() + 6) % 7) + 1)}
+            options={days.map((label, index) => ({ value: String(index + 1), label }))}
+            onChange={(value) => {
+              const startWeekday = ((calendarDate(startsOn).getDay() + 6) % 7) + 1
+              set('anchor_on', moveDays(startsOn, (Number(value) - startWeekday + 7) % 7))
+            }}
           />
         ) : null}
         {form.frequency === 'once' ? (
@@ -539,44 +521,6 @@ export function CleaningServicesPanel({
             />
           </>
         ) : null}
-        <ContractResponsiblePicker
-          people={people.data ?? []}
-          teams={teams.data ?? []}
-          selected={{ people: form.assigned_user_ids, team: form.work_team_id }}
-          disabled={busy || !people.isSuccess || !teams.isSuccess}
-          onChange={({ people: ids, team }) =>
-            setForm((current) => ({
-              ...current,
-              assigned_user_ids: ids,
-              assigned_user_id: [...ids].sort()[0] ?? null,
-              work_team_id: team,
-            }))
-          }
-        />
-        {people.isError ? (
-          <p role="alert">
-            No se pudieron cargar las personas.{' '}
-            <Button variant="outline" onPress={() => void people.refetch()}>
-              Reintentar
-            </Button>
-          </p>
-        ) : null}
-        {form.assigned_user_ids.length > 1 && form.modality === 'mobile' ? (
-          <p className="text-muted-foreground text-sm sm:col-span-2">
-            El trabajo conserva todas las personas. Las visitas generadas solo asignan a{' '}
-            {people.data?.find((person) => person.id === form.assigned_user_id)?.label ??
-              'una persona'}
-            ; las demás no reciben acceso ni reserva de agenda automáticamente.
-          </p>
-        ) : null}
-        {teams.isError ? (
-          <p role="alert">
-            No se pudieron cargar los equipos.{' '}
-            <Button variant="outline" onPress={() => void teams.refetch()}>
-              Reintentar
-            </Button>
-          </p>
-        ) : null}
         {form.frequency && form.frequency !== 'once' ? (
           <div className="border-border border-b pb-2 sm:col-span-2">
             <h3 className="font-semibold">Horario de trabajo</h3>
@@ -587,8 +531,9 @@ export function CleaningServicesPanel({
           <WeeklyScheduleEditor
             value={form.weekly_slots}
             startsOn={form.anchor_on ?? startsOn}
-            endsOn={form.ends_on ?? endsOn ?? ''}
+            endsOn={endsOn ?? ''}
             alternate={form.frequency === 'fortnightly'}
+            initialWeekday={form.weekdays[0] ?? 1}
             onChange={(slots) =>
               setForm((current) => ({
                 ...current,
@@ -598,7 +543,31 @@ export function CleaningServicesPanel({
             }
           />
         ) : null}
-        {form.frequency && !weekly && form.frequency !== 'once' ? (
+        {form.frequency === 'monthly' ? (
+          <>
+            <TextField
+              label="Hora prevista · obligatorio"
+              type="time"
+              value={form.local_start}
+              onChange={(v) => set('local_start', v)}
+              placeholder="09:00"
+            />
+            <TextField
+              label="Duración estimada (min)"
+              type="number"
+              min={15}
+              max={720}
+              value={String(form.duration_minutes)}
+              onChange={(v) => set('duration_minutes', Number(v))}
+              placeholder="60"
+            />
+            <p className="text-muted-foreground text-sm sm:col-span-2">
+              Se generará una visita el primer día elegido de cada mes dentro de la vigencia del
+              contrato. Podrás moverla desde planificación.
+            </p>
+          </>
+        ) : null}
+        {form.frequency === 'days15' ? (
           <WeeklyScheduleEditor
             value={
               form.local_start
@@ -615,11 +584,9 @@ export function CleaningServicesPanel({
                 : []
             }
             startsOn={form.anchor_on ?? startsOn}
-            endsOn={form.ends_on ?? endsOn ?? ''}
+            endsOn={endsOn ?? ''}
             referenceDate={form.anchor_on ?? startsOn}
-            recurrenceLabel={
-              form.frequency === 'monthly' ? 'cada mes en el día de referencia' : 'cada 15 días'
-            }
+            recurrenceLabel={'cada 15 días'}
             onChange={(slots) => {
               const slot = slots[0]
               if (!slot) {
@@ -636,12 +603,7 @@ export function CleaningServicesPanel({
             }}
           />
         ) : null}
-        <div className="border-border border-b pb-2 sm:col-span-2">
-          <h3 className="font-semibold">Tareas e instrucciones</h3>
-          <p className="text-muted-foreground text-sm">
-            Describe el alcance y los materiales necesarios.
-          </p>
-        </div>
+
         <TextareaField
           label="Tareas y alcance"
           value={form.tasks}
@@ -649,30 +611,7 @@ export function CleaningServicesPanel({
           maxLength={10000}
           placeholder="Qué hay que limpiar"
         />
-        {form.frequency === 'weekly' || form.frequency === 'fortnightly' ? (
-          <fieldset className="space-y-2 sm:col-span-2">
-            <legend>Tareas específicas de cada día (opcional)</legend>
-            {days.map((label, index) => {
-              const day = index + 1
-              if (!form.weekly_slots.some((slot) => slot.weekday === day)) return null
-              return (
-                <div key={day} className="flex items-center gap-3">
-                  <span>{label}</span>
-                  {form.weekly_slots.some((slot) => slot.weekday === day) ? (
-                    <input
-                      aria-label={`Tareas del ${label}`}
-                      className="bg-background min-w-0 flex-1 rounded border p-2"
-                      value={form.weekly_tasks[String(day)] ?? ''}
-                      onChange={(e) =>
-                        set('weekly_tasks', { ...form.weekly_tasks, [day]: e.target.value })
-                      }
-                    />
-                  ) : null}
-                </div>
-              )
-            })}
-          </fieldset>
-        ) : null}
+
         <TextareaField
           label="Material y maquinaria"
           value={form.materials}
@@ -688,15 +627,10 @@ export function CleaningServicesPanel({
           />{' '}
           Requiere conformidad del cliente
         </label>
-        {error ? <p className="text-muted-foreground text-sm">{error}</p> : null}
-        <p className="text-muted-foreground text-sm sm:col-span-2">
-          {form.modality === 'fixed'
-            ? 'Genera una hoja permanente para dejar en el centro y facilitar sustituciones.'
-            : 'Genera una orden por fecha prevista. Cada cambio de fecha conserva la referencia original, el motivo y el historial.'}{' '}
-          La frecuencia del trabajo es independiente del periodo de facturación.
-        </p>
+        {error || agreedDaysError ? (
+          <p className="text-muted-foreground text-sm">{error || agreedDaysError}</p>
+        ) : null}
       </FormDialog>
-      {related.dialogs}
     </section>
   )
 }

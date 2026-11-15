@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   locations: {} as Record<string, Array<{ id: string; name: string }>>,
   services: [] as CleaningService[],
   scope: [] as ServiceContract['included_scope'],
+  contractLocationId: 'centre' as string | null,
+  workTeamId: null as string | null,
   targetState: 'ready' as 'ready' | 'loading' | 'error',
   allowed: true,
   createLocation: vi.fn(),
@@ -202,6 +204,9 @@ function render({ draft = true, editable = true }: { draft?: boolean; editable?:
       contractId="contract-1"
       clientId="client-1"
       clientName="Alborán"
+      contractLocationId={mocks.contractLocationId}
+      assignedUserIds={[]}
+      workTeamId={mocks.workTeamId}
       quotedScope={mocks.scope}
       startsOn="2026-12-01"
       endsOn="2027-11-30"
@@ -223,32 +228,20 @@ function change(label: string, value: string) {
   field?.onChange(value)
   return render()
 }
-function openLocationForm() {
+function openJobForm() {
   render()
   press('Añadir trabajo')
   change('Nombre · obligatorio', 'Limpieza ordinaria')
   change('Tareas y alcance', 'Suelos y aseos')
-  press('Crear centro')
-  change('Nombre', 'Portal A')
-  change('Dirección del centro', 'Calle de prueba 1')
-  change('Horario del centro', 'Lunes a viernes, 8:00–18:00')
-}
-async function saveLocation() {
-  expect(mocks.dialog?.submitDisabled).toBe(false)
-  mocks.dialog?.onSubmit()
-  await vi.waitFor(() => expect(mocks.createLocation).toHaveBeenCalledOnce())
-  await vi.waitFor(() => {
-    render()
-    expect(mocks.dialog).toBeNull()
-    expect(mocks.jobDialog?.submitDisabled).toBe(false)
-  })
 }
 
-describe('contract job and inline centre creation', () => {
+describe('contract jobs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.states = []
-    mocks.locations = {}
+    mocks.locations = { 'client-1': [{ id: 'centre', name: 'Centro' }] }
+    mocks.contractLocationId = 'centre'
+    mocks.workTeamId = null
     mocks.services = []
     mocks.scope = []
     mocks.targetState = 'ready'
@@ -261,12 +254,43 @@ describe('contract job and inline centre creation', () => {
     })
   })
 
-  it('requires a centre and tasks, with no pool/asset selector', () => {
+  it('never asks for a centre in the job form', () => {
     render()
     const html = press('Añadir trabajo')
-    expect(mocks.actions.get('Crear centro')?.disabled).toBe(false)
+    expect(mocks.actions.has('Crear centro')).toBe(false)
+    expect(mocks.fields.has('Centro · obligatorio')).toBe(false)
+    expect(mocks.fields.has('Modalidad')).toBe(false)
+    expect(mocks.fields.has('Tipo')).toBe(false)
     expect(html).not.toContain('Piscina o activo')
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
+  })
+
+  it('does not ask for a job end date and saves the contract end instead', async () => {
+    mocks.workTeamId = 'team'
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: true,
+        title: 'Cristales',
+        tasks: 'Limpiar',
+        frequency: 'monthly',
+        weekdays: [1],
+        local_start: '09:00',
+        time_known: true,
+        ends_on: '2027-03-31',
+      } as CleaningService,
+    ]
+    render()
+    press('Editar trabajo')
+    expect(mocks.fields.has('Fin del trabajo (por defecto, fin del contrato)')).toBe(false)
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() =>
+      expect(mocks.createContract).toHaveBeenCalledWith(
+        expect.objectContaining({ service: expect.objectContaining({ ends_on: null }) }),
+      ),
+    )
   })
 
   it('shows job details and allows editing in a draft', () => {
@@ -301,6 +325,10 @@ describe('contract job and inline centre creation', () => {
     expect(html).toContain('Suelos y aseos')
     press('Editar trabajo')
     expect(mocks.fields.get('Nombre · obligatorio')?.value).toBe('Limpieza')
+    expect(mocks.fields.has('Centro · obligatorio')).toBe(false)
+    expect(mocks.fields.has('Modalidad')).toBe(false)
+    expect(mocks.fields.has('Tipo')).toBe(false)
+    expect(mocks.actions.has('Crear centro')).toBe(false)
   })
 
   it('shows the quoted frequency and flags an existing one-off schedule without changing it', () => {
@@ -359,8 +387,15 @@ describe('contract job and inline centre creation', () => {
     render()
     const html = press('Configurar trabajo')
     expect(html).toContain(`Frecuencia acordada en el presupuesto:`)
+    expect(mocks.fields.has('Modalidad')).toBe(false)
+    expect(mocks.fields.has('Tipo')).toBe(false)
     expect(html).toContain(frequency)
-    expect(mocks.fields.get('Frecuencia de planificación')?.value).toBe(expected)
+    if (expected) expect(mocks.fields.has('Frecuencia de planificación')).toBe(false)
+    else expect(mocks.fields.get('Frecuencia de planificación')?.value).toBe('')
+    expect(mocks.fields.has('Día de la semana favorito · obligatorio')).toBe(
+      frequency === 'Semanal' || frequency === 'Mensual',
+    )
+    expect(mocks.fields.has('Fecha prevista · obligatorio')).toBe(false)
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
   })
 
@@ -403,6 +438,7 @@ describe('contract job and inline centre creation', () => {
           title: 'Limpieza',
           tasks: 'Suelos',
           location_id: 'centre',
+          service_type: 'windows',
           instructions: 'Notas acordadas',
         },
       ]
@@ -410,7 +446,6 @@ describe('contract job and inline centre creation', () => {
       press(configured ? 'Editar trabajo' : 'Configurar trabajo')
       expect(mocks.fields.has('Instrucciones de acceso y observaciones')).toBe(false)
       if (!configured) {
-        change('Centro · obligatorio', 'centre')
         change('Frecuencia de planificación', 'once')
       }
       expect(mocks.jobDialog?.submitDisabled).toBe(false)
@@ -418,38 +453,19 @@ describe('contract job and inline centre creation', () => {
       await vi.waitFor(() =>
         expect(mocks.createContract).toHaveBeenCalledWith(
           expect.objectContaining({
-            service: expect.objectContaining({ instructions: 'Notas acordadas' }),
+            service: expect.objectContaining({
+              instructions: 'Notas acordadas',
+              service_type: 'windows',
+            }),
           }),
         ),
       )
     },
   )
 
-  it('saves and selects a centre, then persists a punctual job for that contract', async () => {
-    openLocationForm()
-    expect(mocks.fields.has('Uso')).toBe(false)
-    change('Coordenadas del centro', '91, 0')
-    expect(mocks.dialog?.submitDisabled).toBe(true)
-    change('Coordenadas del centro', '35.2923, -2.9381')
-    await saveLocation()
-    expect(mocks.createLocation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenantId: 'tenant-1',
-        clientId: 'client-1',
-        name: 'Portal A',
-        address: 'Calle de prueba 1',
-        coordinates: '35.2923, -2.9381',
-        openingHours: 'Lunes a viernes, 8:00–18:00',
-        kind: 'service',
-      }),
-    )
-    expect(mocks.fields.get('Centro · obligatorio')?.value).toBe('location-new')
-    for (const key of ['work-target-options', 'client-passport']) {
-      expect(mocks.invalidate).toHaveBeenCalledWith(
-        { queryKey: [key, 'tenant-1', 'client-1'] },
-        { throwOnError: true },
-      )
-    }
+  it('saves a new job with the centre of its contract', async () => {
+    openJobForm()
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
     mocks.jobDialog?.onSubmit()
     await vi.waitFor(() =>
       expect(mocks.createContract).toHaveBeenCalledWith(
@@ -459,8 +475,10 @@ describe('contract job and inline centre creation', () => {
           jobId: null,
           expectedUpdatedAt: 'version-1',
           service: expect.objectContaining({
-            location_id: 'location-new',
+            location_id: 'centre',
             frequency: 'once',
+            modality: 'mobile',
+            service_type: 'other',
             tasks: 'Suelos y aseos',
           }),
         }),
@@ -468,92 +486,99 @@ describe('contract job and inline centre creation', () => {
     )
   })
 
-  it('keeps the entered centre data and the dialog open when saving fails', async () => {
-    mocks.createLocation.mockRejectedValue(new Error('No se pudo guardar'))
-    openLocationForm()
-    mocks.dialog?.onSubmit()
-    await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled())
-    for (const key of ['work-target-options', 'client-passport']) {
-      expect(mocks.invalidate).toHaveBeenCalledWith(
-        { queryKey: [key, 'tenant-1', 'client-1'] },
-        { throwOnError: true },
-      )
-    }
+  it('keeps the modality of an existing fixed job when editing it', async () => {
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: true,
+        source_line_id: null,
+        time_known: true,
+        title: 'Limpieza',
+        tasks: 'Suelos',
+        location_id: 'centre',
+        modality: 'fixed',
+        frequency: 'monthly',
+        weekdays: [1],
+        local_start: '08:00',
+      },
+    ]
     render()
-    expect(mocks.dialog).not.toBeNull()
-    expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
-    expect(mocks.fields.get('Dirección del centro')?.value).toBe('Calle de prueba 1')
-    expect(mocks.jobDialog?.submitDisabled).toBe(true)
-    expect(mocks.createContract).not.toHaveBeenCalled()
+    press('Editar trabajo')
+    expect(mocks.fields.has('Modalidad')).toBe(false)
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() =>
+      expect(mocks.createContract).toHaveBeenCalledWith(
+        expect.objectContaining({ service: expect.objectContaining({ modality: 'fixed' }) }),
+      ),
+    )
   })
 
-  it('allows retrying a failed refresh after centre creation fails', async () => {
-    mocks.createLocation.mockRejectedValue(new Error('No se pudo guardar'))
-    mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
-    openLocationForm()
-    mocks.dialog?.onSubmit()
-    let html = ''
-    await vi.waitFor(() => {
-      html = render()
-      expect(html).toContain('No se pudieron actualizar los centros')
-    })
-    const centreDialog = html.match(
-      /<dialog open="" aria-label="Añadir centro">(.*?)<\/dialog>/,
-    )?.[1]
-    const jobDialog = html.match(/<dialog open="" aria-label="Añadir trabajo">(.*?)<\/dialog>/)?.[1]
-    expect(centreDialog).toContain('Reintentar actualización')
-    expect(jobDialog).not.toContain('Reintentar actualización')
-    expect(mocks.dialog).not.toBeNull()
-    expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
-    expect(mocks.fields.get('Dirección del centro')?.value).toBe('Calle de prueba 1')
-    expect(mocks.dialog?.submitDisabled).toBe(true)
-    expect(mocks.jobDialog?.submitDisabled).toBe(true)
-    press('Reintentar actualización')
-    await vi.waitFor(() => {
-      expect(render()).not.toContain('No se pudieron actualizar los centros')
-      expect(mocks.dialog?.submitDisabled).toBe(false)
-    })
-    expect(mocks.dialog).not.toBeNull()
-    expect(mocks.fields.get('Nombre')?.value).toBe('Portal A')
-    expect(mocks.fields.get('Dirección del centro')?.value).toBe('Calle de prueba 1')
-    expect(mocks.dialog?.submitDisabled).toBe(false)
-    expect(mocks.createLocation).toHaveBeenCalledOnce()
+  it('saves the quoted monthly frequency and selected weekday', async () => {
+    mocks.workTeamId = 'team'
+    mocks.scope = [{ description: 'Cristales', source_service_id: 'row', frequency: 'Mensual' }]
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: false,
+        source_line_id: null,
+        source_service_id: 'row',
+        time_known: false,
+        title: 'Cristales',
+        tasks: 'Limpiar',
+      },
+    ]
+    render()
+    press('Configurar trabajo')
+    change('Día de la semana favorito · obligatorio', '1')
+    change('Hora prevista · obligatorio', '09:00')
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() =>
+      expect(mocks.createContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: expect.objectContaining({
+            frequency: 'monthly',
+            weekdays: [1],
+            anchor_on: '2026-12-01',
+          }),
+        }),
+      ),
+    )
   })
 
-  it('keeps the refresh retry available in the parent when the centre dialog is closed', async () => {
-    mocks.createLocation.mockRejectedValue(new Error('No se pudo guardar'))
-    mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
-    openLocationForm()
-    mocks.dialog?.onSubmit()
-    await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
-    mocks.dialog?.onOpenChange(false)
-    const html = render()
-    expect(html).not.toContain('aria-label="Añadir centro"')
-    expect(
-      html.match(/<dialog open="" aria-label="Añadir trabajo">(.*?)<\/dialog>/)?.[1],
-    ).toContain('Reintentar actualización')
-    press('Reintentar actualización')
-    await vi.waitFor(() => expect(render()).not.toContain('No se pudieron actualizar los centros'))
-    expect(mocks.createLocation).toHaveBeenCalledOnce()
-  })
-
-  it('retries refreshing centres without inserting the saved centre again', async () => {
-    mocks.invalidate.mockRejectedValueOnce(new Error('Sin conexión'))
-    openLocationForm()
-    mocks.dialog?.onSubmit()
-    await vi.waitFor(() => expect(render()).toContain('No se pudieron actualizar los centros'))
-    expect(mocks.jobDialog?.submitDisabled).toBe(true)
-    press('Reintentar actualización')
-    await vi.waitFor(() => {
-      render()
-      expect(mocks.jobDialog?.submitDisabled).toBe(false)
-    })
-    expect(mocks.createLocation).toHaveBeenCalledOnce()
+  it('uses the contract centre when editing a job with an old centre', async () => {
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: true,
+        source_line_id: null,
+        time_known: false,
+        title: 'Limpieza',
+        tasks: 'Suelos',
+        location_id: 'old-centre',
+      },
+    ]
+    render()
+    press('Editar trabajo')
+    expect(mocks.fields.has('Centro · obligatorio')).toBe(false)
+    expect(mocks.jobDialog?.submitDisabled).toBe(false)
+    mocks.jobDialog?.onSubmit()
+    await vi.waitFor(() =>
+      expect(mocks.createContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobId: 'job-1',
+          service: expect.objectContaining({ location_id: 'centre' }),
+        }),
+      ),
+    )
   })
 
   it('keeps job data and reuses the operation id when retrying a failed save', async () => {
-    openLocationForm()
-    await saveLocation()
+    openJobForm()
     mocks.createContract.mockRejectedValueOnce(new Error('Sin conexión'))
     mocks.jobDialog?.onSubmit()
     await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled())
@@ -577,8 +602,7 @@ describe('contract job and inline centre creation', () => {
   })
 
   it('uses a new operation for a deliberate second job after a successful save', async () => {
-    openLocationForm()
-    await saveLocation()
+    openJobForm()
     mocks.jobDialog?.onSubmit()
     await vi.waitFor(() => {
       render()
@@ -586,7 +610,6 @@ describe('contract job and inline centre creation', () => {
     })
     press('Añadir trabajo')
     change('Nombre · obligatorio', 'Limpieza ordinaria')
-    change('Centro · obligatorio', 'location-new')
     change('Tareas y alcance', 'Suelos y aseos')
     expect(mocks.jobDialog?.submitDisabled).toBe(false)
     mocks.jobDialog?.onSubmit()
@@ -596,10 +619,12 @@ describe('contract job and inline centre creation', () => {
     )
   })
 
-  it('does not offer centre creation without client write permission', () => {
-    mocks.allowed = false
-    render()
-    press('Añadir trabajo')
-    expect(mocks.actions.has('Crear centro')).toBe(false)
+  it('blocks saving when the contract has no centre', () => {
+    mocks.contractLocationId = null
+    openJobForm()
+    expect(render()).not.toContain('Selecciona el centro en los datos del contrato.')
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
+    mocks.jobDialog?.onSubmit()
+    expect(mocks.createContract).not.toHaveBeenCalled()
   })
 })

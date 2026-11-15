@@ -12,6 +12,7 @@ export function MultiSelectField({
   value,
   onChange,
   isDisabled = false,
+  maxSelections,
   className,
 }: {
   label: string
@@ -19,6 +20,7 @@ export function MultiSelectField({
   value: string[]
   onChange: (value: string[]) => void
   isDisabled?: boolean
+  maxSelections?: number
   className?: string
 }) {
   const [query, setQuery] = useState('')
@@ -69,7 +71,12 @@ export function MultiSelectField({
             {visible.map((option) => (
               <Checkbox
                 key={option.value}
-                isDisabled={isDisabled}
+                isDisabled={
+                  isDisabled ||
+                  (!selected.has(option.value) &&
+                    maxSelections !== undefined &&
+                    value.length >= maxSelections)
+                }
                 isSelected={selected.has(option.value)}
                 onChange={(checked) =>
                   onChange(
@@ -87,6 +94,11 @@ export function MultiSelectField({
               <p className="text-muted-foreground p-4 text-center text-sm">No hay coincidencias.</p>
             ) : null}
           </fieldset>
+          {maxSelections !== undefined && value.length >= maxSelections ? (
+            <p className="text-muted-foreground px-2 pt-2 text-xs">
+              Máximo: {maxSelections} seleccionados.
+            </p>
+          ) : null}
           <div className="mt-2 flex items-center justify-between border-t pt-2">
             <output aria-live="polite" className="text-muted-foreground px-2 text-xs">
               {value.length} seleccionados

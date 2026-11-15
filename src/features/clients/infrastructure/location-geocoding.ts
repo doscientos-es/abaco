@@ -16,7 +16,7 @@ export function googleMapsSearchUrl(query: string): string {
 /** Photon is a free public demo service; requests are made only on explicit user action. */
 export async function searchLocationAddress(query: string): Promise<LocationMatch[]> {
   const url = new URL('https://photon.komoot.io/api/')
-  url.search = new URLSearchParams({ q: query, limit: '5', lang: 'es' }).toString()
+  url.search = new URLSearchParams({ q: query, limit: '5' }).toString()
   const response = await fetch(url, { credentials: 'omit', signal: AbortSignal.timeout(10000) })
   if (!response.ok) throw new Error('No se pudo buscar la dirección.')
   const data: unknown = await response.json()
