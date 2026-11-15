@@ -1,4 +1,4 @@
-import { Button } from '@doscientos/ui'
+import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -89,16 +89,23 @@ function PeopleForm({
     setBusy(true)
     try {
       const failed = await saveFunctionPeople(tenantId, staffFunction.id, snapshot, selected)
-      await client.invalidateQueries({ queryKey: staffSchedulesQuery(tenantId).queryKey })
-      if (failed.length) {
-        setFailure(
-          `No se pudieron actualizar: ${failed.map((person) => person.name).join(', ')}. Los demás cambios sí se han guardado. Cierra y vuelve a abrir para revisar y reintentar.`,
-        )
-      } else onClose()
-    } catch {
-      setFailure(
-        'No se pudo comprobar el resultado. Cierra y vuelve a abrir para revisar las asignaciones.',
+      await client.invalidateQueries(
+        { queryKey: staffSchedulesQuery(tenantId).queryKey },
+        { throwOnError: true },
       )
+      if (failed.length) {
+        const message = `No se pudieron actualizar: ${failed.map((person) => person.name).join(', ')}. Los demás cambios sí se han guardado. Cierra y vuelve a abrir para revisar y reintentar.`
+        setFailure(message)
+        toast.error('No se guardaron todas las asignaciones', { description: message })
+      } else {
+        toast.success('Asignaciones guardadas')
+        onClose()
+      }
+    } catch {
+      const message =
+        'No se pudo comprobar el resultado. Cierra y vuelve a abrir para revisar las asignaciones.'
+      setFailure(message)
+      toast.error('No se pudieron confirmar las asignaciones', { description: message })
     } finally {
       setBusy(false)
     }

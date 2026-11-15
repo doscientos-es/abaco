@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   invalidate: vi.fn(),
   close: vi.fn(),
+  success: vi.fn(),
+  error: vi.fn(),
 }))
 
 vi.mock('react', async (load) => ({
@@ -84,6 +86,7 @@ vi.mock('@/shared/ui/multi-select-field', () => ({
   },
 }))
 vi.mock('@doscientos/ui', () => ({
+  toast: { success: mocks.success, error: mocks.error },
   Button: ({ children, onPress }: { children: string; onPress: () => void }) => {
     mocks.buttons[children] = onPress
     return <button>{children}</button>
@@ -124,7 +127,11 @@ describe('function people dialog', () => {
       'ana',
       'bea',
     ])
-    expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['staff-schedules', 'company'] })
+    expect(mocks.invalidate).toHaveBeenCalledWith(
+      { queryKey: ['staff-schedules', 'company'] },
+      { throwOnError: true },
+    )
+    expect(mocks.success).toHaveBeenCalledWith('Asignaciones guardadas')
   })
 
   it('reports partial failures and prevents retrying against stale versions', async () => {
@@ -137,5 +144,23 @@ describe('function people dialog', () => {
     expect(mocks.disabled).toBe(true)
     expect(mocks.close).not.toHaveBeenCalled()
     expect(mocks.invalidate).toHaveBeenCalledOnce()
+    expect(mocks.error).toHaveBeenCalledWith('No se guardaron todas las asignaciones', {
+      description: expect.stringContaining('No se pudieron actualizar: Ana'),
+    })
+    expect(mocks.success).not.toHaveBeenCalled()
+  })
+
+  it('reports an unconfirmed result when refreshing assignments fails', async () => {
+    mocks.invalidate.mockRejectedValue(new Error('Sin conexión'))
+    render()
+    mocks.buttons['Quitar todos']?.()
+    render()
+    mocks.submit?.()
+    await vi.waitFor(() => expect(render()).toContain('No se pudo comprobar el resultado'))
+    expect(mocks.error).toHaveBeenCalledWith('No se pudieron confirmar las asignaciones', {
+      description: expect.stringContaining('Cierra y vuelve a abrir'),
+    })
+    expect(mocks.success).not.toHaveBeenCalled()
+    expect(mocks.close).not.toHaveBeenCalled()
   })
 })

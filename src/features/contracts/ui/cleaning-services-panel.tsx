@@ -12,6 +12,7 @@ import { workTeamsQuery } from '@/features/work-teams/application/work-team-acti
 import { calendarDate, dateValue, moveDays } from '@/shared/lib/date-range'
 import { calendarDays } from '@/shared/lib/event-calendar'
 import { printDocument } from '@/shared/lib/print-document'
+import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextareaField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
@@ -166,13 +167,26 @@ export function CleaningServicesPanel({
     }
   }
   return (
-    <section className="space-y-4 rounded-lg border p-4" aria-label="Trabajos del contrato">
-      <h2 className="text-lg font-semibold">2. Trabajos contratados</h2>
-      <p className="text-muted-foreground text-sm">
-        Cada partida aceptada es un trabajo. Configura qué hacer, dónde y si se realiza una vez o
-        periódicamente. La hoja permanente del centro no genera partes diarios; las visitas móviles
-        generan órdenes individuales.
-      </p>
+    <section className="space-y-5" aria-label="Trabajos del contrato">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Trabajos contratados</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Consulta y configura los trabajos incluidos en este contrato.
+          </p>
+        </div>
+        {editable ? (
+          <Button
+            onPress={() => {
+              setForm(emptyContractJob(startsOn))
+              setEditingId(null)
+              setOpen(true)
+            }}
+          >
+            Añadir trabajo
+          </Button>
+        ) : null}
+      </div>
       {services.isPending ? <output>Cargando servicios…</output> : null}
       {services.isError ? (
         <p role="alert">
@@ -182,124 +196,206 @@ export function CleaningServicesPanel({
           </Button>
         </p>
       ) : null}
-      {services.data?.length === 0 ? <p>Aún no hay trabajos configurados.</p> : null}
-      {services.data?.map((service) => (
-        <article key={service.id} id={service.id} className="space-y-2 border-b pb-4">
-          {!service.configured ? (
-            <div>
-              <h3 className="font-semibold">{service.title}</h3>
-              <p>Pendiente de configurar · alcance aceptado: {service.tasks}</p>
-            </div>
-          ) : (
-            <div
-              ref={(node) => {
-                if (node) sheets.current.set(service.id, node)
-                else sheets.current.delete(service.id)
-              }}
-              className="paper-sheet space-y-3"
-            >
-              <h3 className="font-semibold">
-                {service.modality === 'fixed'
-                  ? 'Hoja permanente del centro'
-                  : service.frequency === 'once'
-                    ? 'Trabajo puntual'
-                    : 'Trabajo periódico móvil'}{' '}
-                · {service.title}
-              </h3>
-              <p>
-                {clientName} ·{' '}
-                {service.location?.name ??
-                  targets.data?.locations.find((l) => l.id === service.location_id)?.name}{' '}
-                ·{' '}
-                {service.location?.address ??
-                  targets.data?.locations.find((l) => l.id === service.location_id)?.address}
-              </p>
-              <p className="whitespace-pre-wrap">{service.location?.operational_contact}</p>
-              <p className="whitespace-pre-wrap">{service.location?.access_notes}</p>
-              <p className="whitespace-pre-wrap">{service.location?.notes}</p>
-              <p>
-                {service.time_known
-                  ? `Hora prevista: ${service.local_start.slice(0, 5)}`
-                  : 'Sin horario fijo'}{' '}
-                ·{' '}
-                {teams.data?.find((t) => t.id === service.work_team_id)?.name ||
-                  service.assigned_user_ids
-                    .map(
-                      (id) =>
-                        people.data?.find((p) => p.id === id)?.label ?? 'Persona no disponible',
-                    )
-                    .join(', ') ||
-                  'Sin asignar'}
-              </p>
-              <p>
-                {service.frequency
-                  ? frequencyLabels[service.frequency]
-                  : 'Pauta por temporada existente'}{' '}
-                · Desde {service.anchor_on ?? startsOn}
-                {service.ends_on ? ` hasta ${service.ends_on}` : ''} · {service.duration_minutes}{' '}
-                min
-              </p>
-              {service.weekly_slots?.length ? (
-                <ul className="text-sm">
-                  {service.weekly_slots.map((slot) => (
-                    <li key={slot.id}>
-                      {days[slot.weekday - 1]} · {minuteLabel(slot.start_minute)}–
-                      {minuteLabel(slot.start_minute + slot.duration_minutes)}
-                      {slot.start_minute + slot.duration_minutes >= 1440 ? ' (+1 día)' : ''}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <p className="whitespace-pre-wrap">{service.tasks}</p>
-              {service.weekdays.map((day) => (
-                <p key={day}>
-                  <strong>{days[day - 1]}: </strong>
-                  {service.weekly_tasks[String(day)] || service.tasks}
-                </p>
-              ))}
-              <p className="whitespace-pre-wrap">{service.instructions}</p>
-              <p className="whitespace-pre-wrap">
-                Material: {service.materials || 'Sin especificar'}
-              </p>
-              <p>
-                Conformidad del cliente:{' '}
-                {service.requires_acceptance ? 'Sí, al finalizar' : 'No requerida'}
-              </p>
-            </div>
-          )}
-          {service.configured && service.modality === 'fixed' ? (
-            <Button
-              variant="outline"
-              onPress={() => {
-                const sheet = sheets.current.get(service.id)
-                if (sheet)
-                  void printDocument(sheet, service.title).catch(() =>
-                    toast.error('No se pudo preparar la impresión'),
-                  )
-              }}
-            >
-              Imprimir hoja fija
-            </Button>
+      {services.data?.length === 0 ? (
+        <div className="border-border bg-card rounded-xl border border-dashed p-8 text-center">
+          <p className="font-medium">Todavía no hay trabajos</p>
+          {editable ? (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Añade el primer trabajo de este contrato.
+            </p>
           ) : null}
-          {editable && (draft || !service.configured) ? (
-            <Button variant="outline" onPress={() => edit(service)}>
-              {service.configured ? 'Editar trabajo' : 'Configurar trabajo'}
-            </Button>
-          ) : null}
-        </article>
-      ))}
-      {editable ? (
-        <Button
-          variant="outline"
-          onPress={() => {
-            setForm(emptyContractJob(startsOn))
-            setEditingId(null)
-            setOpen(true)
-          }}
-        >
-          Añadir trabajo
-        </Button>
+        </div>
       ) : null}
+      <div className="grid gap-4 xl:grid-cols-2">
+        {services.data?.map((service) => {
+          const location = targets.data?.locations.find((item) => item.id === service.location_id)
+          const responsible = service.work_team_id
+            ? (teams.data?.find((team) => team.id === service.work_team_id)?.name ??
+              'Equipo no disponible')
+            : service.assigned_user_ids
+                .map(
+                  (id) =>
+                    people.data?.find((person) => person.id === id)?.label ??
+                    'Persona no disponible',
+                )
+                .join(', ') || 'Sin asignar'
+          return (
+            <article
+              key={service.id}
+              id={service.id}
+              className="border-border bg-card flex min-w-0 flex-col overflow-hidden rounded-xl border"
+            >
+              <div
+                ref={(node) => {
+                  if (node) sheets.current.set(service.id, node)
+                  else sheets.current.delete(service.id)
+                }}
+                className="min-w-0 flex-1 p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                      Trabajo contratado
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold break-words">{service.title}</h3>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${service.configured ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'}`}
+                  >
+                    {service.configured ? 'Configurado' : 'Pendiente de configurar'}
+                  </span>
+                </div>
+                {!service.configured ? (
+                  <div className="bg-muted/50 mt-4 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs font-medium">Alcance aceptado</p>
+                    <p className="mt-1 text-sm whitespace-pre-wrap">
+                      {service.tasks || 'Sin especificar'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {service.modality === 'fixed'
+                        ? 'Hoja permanente del centro'
+                        : service.frequency === 'once'
+                          ? 'Trabajo puntual'
+                          : 'Trabajo periódico móvil'}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">{clientName}</p>
+                    <div className="bg-muted/50 mt-4 grid gap-4 rounded-lg p-4 sm:grid-cols-2">
+                      <div className="flex min-w-0 gap-2 text-sm">
+                        <span className="text-muted-foreground mt-0.5">{fieldIcons.pin}</span>
+                        <div className="min-w-0">
+                          <p className="text-muted-foreground text-xs">Centro</p>
+                          <p className="mt-1 font-medium break-words">
+                            {service.location?.name ?? location?.name ?? 'Sin centro'}
+                          </p>
+                          <p className="text-muted-foreground text-xs break-words">
+                            {service.location?.address ?? location?.address}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 gap-2 text-sm">
+                        <span className="text-muted-foreground mt-0.5">{fieldIcons.user}</span>
+                        <div className="min-w-0">
+                          <p className="text-muted-foreground text-xs">Responsables</p>
+                          <p className="mt-1 font-medium break-words">{responsible}</p>
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 gap-2 text-sm">
+                        <span className="text-muted-foreground mt-0.5">{fieldIcons.calendar}</span>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Frecuencia</p>
+                          <p className="mt-1 font-medium">
+                            {service.frequency
+                              ? frequencyLabels[service.frequency]
+                              : 'Pauta por temporada existente'}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Desde {service.anchor_on ?? startsOn}
+                            {service.ends_on ? ` hasta ${service.ends_on}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 gap-2 text-sm">
+                        <span className="text-muted-foreground mt-0.5">{fieldIcons.file}</span>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Horario y duración</p>
+                          <p className="mt-1 font-medium">
+                            {service.time_known
+                              ? service.local_start.slice(0, 5)
+                              : 'Sin horario fijo'}{' '}
+                            · {service.duration_minutes} min
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {service.weekly_slots?.length ? (
+                      <ul
+                        className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs"
+                        aria-label="Franjas de trabajo"
+                      >
+                        {service.weekly_slots.map((slot) => (
+                          <li key={slot.id} className="bg-muted rounded-md px-2 py-1">
+                            {days[slot.weekday - 1]} · {minuteLabel(slot.start_minute)}–
+                            {minuteLabel(slot.start_minute + slot.duration_minutes)}
+                            {slot.start_minute + slot.duration_minutes >= 1440 ? ' (+1 día)' : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="mt-4">
+                      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                        Tareas y alcance
+                      </p>
+                      <p className="mt-1 text-sm whitespace-pre-wrap">{service.tasks}</p>
+                    </div>
+                    {service.weekdays.map((day) => (
+                      <p key={day} className="mt-1 text-sm">
+                        <strong>{days[day - 1]}: </strong>
+                        {service.weekly_tasks[String(day)] || service.tasks}
+                      </p>
+                    ))}
+                    {service.location?.operational_contact ? (
+                      <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+                        {service.location.operational_contact}
+                      </p>
+                    ) : null}
+                    {service.location?.access_notes ? (
+                      <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+                        {service.location.access_notes}
+                      </p>
+                    ) : null}
+                    {service.location?.notes ? (
+                      <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+                        {service.location.notes}
+                      </p>
+                    ) : null}
+                    {service.instructions ? (
+                      <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+                        {service.instructions}
+                      </p>
+                    ) : null}
+                    <div className="text-muted-foreground mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs">
+                      <span>Material: {service.materials || 'Sin especificar'}</span>
+                      <span>
+                        Conformidad: {service.requires_acceptance ? 'Requerida' : 'No requerida'}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {editable || (service.configured && service.modality === 'fixed') ? (
+                <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3">
+                  {editable && (draft || !service.configured) ? (
+                    <Button variant="outline" onPress={() => edit(service)}>
+                      {service.configured ? 'Editar trabajo' : 'Configurar trabajo'}
+                    </Button>
+                  ) : editable && service.configured ? (
+                    <p className="text-muted-foreground text-xs">
+                      No editable mientras el contrato esté activo.
+                    </p>
+                  ) : null}
+                  {service.configured && service.modality === 'fixed' ? (
+                    <Button
+                      variant="outline"
+                      onPress={() => {
+                        const sheet = sheets.current.get(service.id)
+                        if (sheet)
+                          void printDocument(sheet, service.title).catch(() =>
+                            toast.error('No se pudo preparar la impresión'),
+                          )
+                      }}
+                    >
+                      Imprimir hoja fija
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </article>
+          )
+        })}
+      </div>
       <FormDialog
         open={open}
         wide

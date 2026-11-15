@@ -3,12 +3,14 @@ import { PencilSimple, Trash } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { teamQuery } from '@/features/settings/application/team-actions'
 import { TextField } from '@/shared/ui/form'
 
 import {
   deleteStaffFunction,
   saveStaffFunction,
   staffFunctionsQuery,
+  staffSchedulesQuery,
 } from '../application/staff-schedule-actions'
 import type { StaffFunction } from '../domain/staff-schedule'
 import { StaffFunctionPeopleDialog } from './staff-function-people-dialog'
@@ -21,6 +23,8 @@ export function StaffFunctionsSection({
   embedded?: boolean
 }) {
   const query = useQuery(staffFunctionsQuery(tenantId))
+  const team = useQuery(teamQuery(tenantId))
+  const schedules = useQuery(staffSchedulesQuery(tenantId))
   const client = useQueryClient()
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<StaffFunction | null>(null)
@@ -28,6 +32,14 @@ export function StaffFunctionsSection({
   const [assigning, setAssigning] = useState<StaffFunction | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const counts = new Map<string, number>()
+  if (team.isSuccess && schedules.isSuccess && !team.isError && !schedules.isError) {
+    const members = new Set(team.data.map((person) => person.userId))
+    for (const schedule of schedules.data) {
+      if (!members.has(schedule.userId)) continue
+      for (const id of new Set(schedule.functionIds)) counts.set(id, (counts.get(id) ?? 0) + 1)
+    }
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -61,14 +73,23 @@ export function StaffFunctionsSection({
           <ul className="divide-border divide-y">
             {query.data.map((item) => (
               <li className="flex flex-wrap items-center gap-2 py-2" key={item.id}>
-                <span className="flex-1">{item.name}</span>
+                <div className="min-w-0 flex-1">
+                  <span>{item.name}</span>
+                  <p className="text-muted-foreground text-xs">
+                    {team.isError || schedules.isError
+                      ? 'Recuento no disponible'
+                      : team.isSuccess && schedules.isSuccess
+                        ? `${counts.get(item.id) ?? 0} ${(counts.get(item.id) ?? 0) === 1 ? 'trabajador asignado' : 'trabajadores asignados'}`
+                        : 'Cargando asignaciones…'}
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   isDisabled={busy}
                   aria-label={`Asignar trabajadores a ${item.name}`}
                   onPress={() => setAssigning(item)}
                 >
-                  Trabajadores
+                  Asignar
                 </Button>
                 <IconButton
                   label={`Renombrar ${item.name}`}

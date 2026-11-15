@@ -188,7 +188,7 @@ vi.mock('../application/cleaning-service-actions', () => ({
   saveContractJob: mocks.createContract,
 }))
 
-function render() {
+function render({ draft = true, editable = true }: { draft?: boolean; editable?: boolean } = {}) {
   mocks.cursor = 0
   mocks.fields.clear()
   mocks.actions.clear()
@@ -203,8 +203,8 @@ function render() {
       startsOn="2026-12-01"
       endsOn="2027-11-30"
       updatedAt="version-1"
-      draft
-      editable
+      draft={draft}
+      editable={editable}
     />,
   )
 }
@@ -263,6 +263,54 @@ describe('contract job and inline centre creation', () => {
     expect(mocks.actions.get('Crear centro')?.disabled).toBe(false)
     expect(html).not.toContain('Piscina o activo')
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
+  })
+
+  it('shows job details and allows editing in a draft', () => {
+    mocks.locations['client-1'] = [{ id: 'centre', name: 'Portal A' }]
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: true,
+        source_line_id: null,
+        time_known: false,
+        title: 'Limpieza',
+        tasks: 'Suelos y aseos',
+        location_id: 'centre',
+      },
+    ]
+    const html = render()
+    expect(html).toContain('Trabajos contratados')
+    expect(html).not.toContain('2. Trabajos contratados')
+    expect(html).toContain('Portal A')
+    expect(html).toContain('Suelos y aseos')
+    press('Editar trabajo')
+    expect(mocks.fields.get('Nombre · obligatorio')?.value).toBe('Limpieza')
+  })
+
+  it('explains why an active configured job cannot be edited, but allows pending jobs', () => {
+    const job = {
+      ...emptyContractJob('2026-12-01'),
+      id: 'job-1',
+      configured: true,
+      source_line_id: null,
+      time_known: false,
+      title: 'Limpieza',
+      tasks: 'Suelos',
+    }
+    mocks.services = [job]
+    const html = render({ draft: false })
+    expect(html).toContain('No editable mientras el contrato esté activo.')
+    expect(mocks.actions.has('Editar trabajo')).toBe(false)
+    mocks.services = [{ ...job, configured: false }]
+    render({ draft: false })
+    expect(mocks.actions.has('Configurar trabajo')).toBe(true)
+  })
+
+  it('does not suggest adding work or show editing actions to read-only users', () => {
+    const html = render({ editable: false })
+    expect(html).not.toContain('Añade el primer trabajo')
+    expect(mocks.actions.has('Añadir trabajo')).toBe(false)
   })
 
   it.each([false, true])(
