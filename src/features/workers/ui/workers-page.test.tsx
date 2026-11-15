@@ -71,7 +71,7 @@ describe('workers module navigation', () => {
   it('provides a company directory and dedicated navigable sections', () => {
     const html = renderToStaticMarkup(<WorkersPage />)
     expect(html).toMatch(/<h1[^>]*>Trabajadores<\/h1>/)
-    expect(html).toContain('Invitar personas')
+    expect(html).not.toContain('Invitar personas')
     expect(html).toMatch(/aria-current="page"[^>]*>Personas<\/a>/)
     expect(html).not.toContain('Las personas de tu empresa, sus equipos y su disponibilidad')
     expect(html).not.toContain('Equipos activos')
@@ -80,6 +80,7 @@ describe('workers module navigation', () => {
     for (const view of ['equipos', 'horarios', 'vacaciones', 'organigrama', 'funciones'])
       expect(html).toContain(`vista=${view}`)
     expect(mocks.directory.mock.calls[0]?.[0].memberIds).toBeUndefined()
+    expect(mocks.directory.mock.calls[0]?.[0].showInviteLink).toBe(true)
   })
 
   it('opens a team through real router navigation', () => {
@@ -117,6 +118,7 @@ describe('workers module navigation', () => {
     expect(mocks.directory.mock.calls[0]?.[0]).toMatchObject({
       personId: 'ana',
       memberIds: ['ana'],
+      showInviteLink: false,
     })
     expect(html).toContain('vista=horarios')
     expect(html).toContain('vista=vacaciones')

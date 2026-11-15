@@ -1,4 +1,4 @@
-import { Badge, Button, ConfirmDialog, IconButton } from '@doscientos/ui'
+import { Badge, Button, ConfirmDialog, IconButton, buttonVariants } from '@doscientos/ui'
 import { UploadSimple, UserPlusIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -40,11 +40,13 @@ export function TeamSection({
   mode = 'manage',
   memberIds,
   personId,
+  showInviteLink = false,
 }: {
   tenantId: string
   mode?: 'manage' | 'invite'
   memberIds?: string[] | undefined
   personId?: string | undefined
+  showInviteLink?: boolean
 }) {
   const inviting = mode === 'invite'
   const session = useSession()
@@ -180,6 +182,15 @@ export function TeamSection({
             <Badge variant="neutral">
               {matching.length} {matching.length === 1 ? 'persona' : 'personas'}
             </Badge>
+            {showInviteLink ? (
+              <Link
+                to="/ajustes"
+                search={{ tab: 'equipo' }}
+                className={buttonVariants({ size: 'sm' })}
+              >
+                Invitar personas
+              </Link>
+            ) : null}
           </div>
         ) : null}
         {!inviting && (functions.isError || schedules.isError) ? (

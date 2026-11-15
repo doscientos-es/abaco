@@ -95,14 +95,6 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             <Button variant="outline" onPress={() => setEditingTeam(true)}>
               Editar equipo
             </Button>
-          ) : !person ? (
-            <Link
-              to="/ajustes"
-              search={{ tab: 'equipo' }}
-              className="border-border bg-card hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium"
-            >
-              Invitar personas
-            </Link>
           ) : null
         }
       />
@@ -146,6 +138,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           tenantId={tenantId}
           memberIds={memberIds}
           personId={person?.userId}
+          showInviteLink={!scoped}
         />
       ) : null}
       {view === 'equipos' ? (

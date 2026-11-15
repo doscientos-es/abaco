@@ -31,6 +31,13 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   remove: vi.fn(),
   error: vi.fn(),
+  clientId: '',
+  format: 'sections' as 'sections' | 'table',
+  picker: null as {
+    value: 'sections' | 'table'
+    onChange: (value: 'sections' | 'table') => void
+  } | null,
+  form: null as { onSubmit: () => void; submitLabel: string } | null,
   invoices: [] as Array<{ tenantId: string; estimateId: string; milestoneId: string }>,
   actions: new Map<string, (() => void)[]>(),
   dialog: null as {
@@ -44,6 +51,14 @@ vi.mock('react', async (original) => ({
   ...(await original<typeof React>()),
   useState: (initial: unknown) => {
     const index = mocks.stateIndex++
+    if (index === 3) return [mocks.clientId, vi.fn()]
+    if (index === 7)
+      return [
+        mocks.format,
+        (value: 'sections' | 'table') => {
+          mocks.format = value
+        },
+      ]
     return [index === 6 ? mocks.target : initial, index === 6 ? mocks.setTarget : vi.fn()]
   },
 }))
@@ -85,14 +100,24 @@ vi.mock('@/shared/store/store', () => ({
 vi.mock('../application/estimate-actions', () => ({ deleteEstimate: mocks.remove }))
 vi.mock('@/features/clients/ui/client-form-dialog', () => ({ ClientFormDialog: () => null }))
 vi.mock('@/shared/ui/form', () => ({ SelectField: () => null, TextField: () => null }))
-vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: () => null }))
+vi.mock('@/shared/ui/form-dialog', () => ({
+  FormDialog: (props: NonNullable<typeof mocks.form> & { children: ReactNode }) => {
+    mocks.form = props
+    return <div>{props.children}</div>
+  },
+}))
 vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
 vi.mock('@/shared/ui/use-pagination', () => ({
   usePagination: (items: unknown[]) => ({ pageItems: items }),
   TablePagination: () => null,
 }))
 vi.mock('@/shared/ui/workspace-page-chrome', () => ({ WorkspacePageHeading: () => null }))
-vi.mock('./estimate-format-picker', () => ({ EstimateFormatPicker: () => null }))
+vi.mock('./estimate-format-picker', () => ({
+  EstimateFormatPicker: (props: NonNullable<typeof mocks.picker>) => {
+    mocks.picker = props
+    return null
+  },
+}))
 
 import { EstimateListPage } from './estimate-list-page'
 
@@ -103,10 +128,29 @@ beforeEach(() => {
   mocks.stateIndex = 0
   mocks.actions.clear()
   mocks.dialog = null
+  mocks.clientId = ''
+  mocks.format = 'sections'
+  mocks.picker = null
+  mocks.form = null
   mocks.invoices = []
 })
 
 describe('estimate list actions', () => {
+  it.each(['sections', 'table'] as const)('passes the selected %s format to creation', (format) => {
+    mocks.clientId = 'client'
+    renderToStaticMarkup(<EstimateListPage />)
+    expect(mocks.picker?.value).toBe('sections')
+    mocks.picker?.onChange(format)
+    mocks.stateIndex = 0
+    renderToStaticMarkup(<EstimateListPage />)
+    expect(mocks.picker?.value).toBe(format)
+    mocks.form?.onSubmit()
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/presupuestos/nuevo',
+      search: { clientId: 'client', title: '', format },
+    })
+  })
+
   it('offers opening and deleting drafts on mobile and desktop, but never deletes a published estimate', () => {
     const html = renderToStaticMarkup(<EstimateListPage />)
     expect(html).toContain('Acciones')

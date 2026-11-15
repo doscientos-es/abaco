@@ -11,11 +11,17 @@ vi.mock('@tanstack/react-router', () => ({
     children,
     to,
     search,
+    className,
   }: {
     children: React.ReactNode
     to: string
     search?: Record<string, string>
-  }) => <a href={`${to}${search ? `?${new URLSearchParams(search)}` : ''}`}>{children}</a>,
+    className?: string
+  }) => (
+    <a className={className} href={`${to}${search ? `?${new URLSearchParams(search)}` : ''}`}>
+      {children}
+    </a>
+  ),
 }))
 
 const { query, functionQuery, scheduleQuery } = vi.hoisted(() => ({
@@ -93,6 +99,20 @@ describe('TeamSection', () => {
     expect(html).toContain('Ir a Trabajadores')
     expect(html).not.toContain('ana@example.com')
     expect(html).not.toContain('Editar funciones')
+  })
+
+  it('places the invitation link beside the directory count when requested', () => {
+    query.mockReturnValue({
+      isSuccess: true,
+      data: [{ userId: 'ana', fullName: 'Ana', email: 'ana@example.com', role: 'user' }],
+    })
+    const html = renderToStaticMarkup(<TeamSection tenantId="company" showInviteLink />)
+    expect(html).toMatch(/1 persona<\/span>.*href="\/ajustes\?tab=equipo">Invitar personas<\/a>/)
+    expect(html).toMatch(/class="[^"]*bg-primary[^"]*" href="\/ajustes\?tab=equipo"/)
+    const profile = renderToStaticMarkup(
+      <TeamSection tenantId="company" personId="ana" showInviteLink />,
+    )
+    expect(profile).not.toContain('Invitar personas')
   })
 
   it('limits personnel management to the requested team or person', () => {
