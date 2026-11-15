@@ -19,6 +19,7 @@ describe('StaffFunctionsSection', () => {
     expect(embedded).toContain('class="sr-only">Funciones del equipo</h2>')
     expect(embedded).toContain('Electricidad')
     expect(embedded).toContain('Nueva función')
+    expect(embedded).toContain('Asignar trabajadores a Electricidad')
 
     const standalone = renderToStaticMarkup(<StaffFunctionsSection tenantId="company" />)
     expect(standalone).toContain('border-border bg-card space-y-4 rounded-lg border p-5')

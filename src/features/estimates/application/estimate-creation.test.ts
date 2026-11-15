@@ -77,6 +77,21 @@ describe('explicit estimate creation', () => {
     expect(currentTenantData()?.tenant.nextEstimateNumber).toBe(1)
   })
 
+  it('saves a traditional table estimate with its chosen format and prices', async () => {
+    const draft = {
+      ...buildEstimateDraft(data.tenant, 'client', 'Servicio', 'table', newId),
+      lines: completeDraft().lines,
+    }
+    expect(newEstimateError(draft)).toBeNull()
+    submitEstimateDraft(draft)
+    await saved()
+    expect(currentTenantData()?.estimates[0]).toMatchObject({
+      documentFormat: 'table',
+      sections: [],
+      lines: draft.lines,
+    })
+  })
+
   it('saves the entire proposal only on final submit and ignores duplicate submissions', async () => {
     const draft = completeDraft()
     expect(submitEstimateDraft(draft)).toBe(draft.id)

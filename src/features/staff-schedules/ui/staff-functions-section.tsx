@@ -11,6 +11,7 @@ import {
   staffFunctionsQuery,
 } from '../application/staff-schedule-actions'
 import type { StaffFunction } from '../domain/staff-schedule'
+import { StaffFunctionPeopleDialog } from './staff-function-people-dialog'
 
 export function StaffFunctionsSection({
   tenantId,
@@ -24,6 +25,7 @@ export function StaffFunctionsSection({
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<StaffFunction | null>(null)
   const [removing, setRemoving] = useState<StaffFunction | null>(null)
+  const [assigning, setAssigning] = useState<StaffFunction | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -60,6 +62,14 @@ export function StaffFunctionsSection({
             {query.data.map((item) => (
               <li className="flex flex-wrap items-center gap-2 py-2" key={item.id}>
                 <span className="flex-1">{item.name}</span>
+                <Button
+                  variant="outline"
+                  isDisabled={busy}
+                  aria-label={`Asignar trabajadores a ${item.name}`}
+                  onPress={() => setAssigning(item)}
+                >
+                  Trabajadores
+                </Button>
                 <IconButton
                   label={`Renombrar ${item.name}`}
                   variant="outline"
@@ -127,6 +137,14 @@ export function StaffFunctionsSection({
         <p role="alert" className="text-destructive text-sm">
           {message}
         </p>
+      ) : null}
+      {assigning ? (
+        <StaffFunctionPeopleDialog
+          key={assigning.id}
+          tenantId={tenantId}
+          staffFunction={assigning}
+          onClose={() => setAssigning(null)}
+        />
       ) : null}
       <ConfirmDialog
         open={!!removing}

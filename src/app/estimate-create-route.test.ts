@@ -14,8 +14,8 @@ describe('estimate creation route', () => {
       title: 'Oferta',
       format: 'table',
     })
-    expect(validate({ format: 'sections' }).format).toBe('sections')
-    expect(validate({ format: 'invalid' }).format).toBe('sections')
-    expect(validate({}).format).toBe('sections')
+    expect(validate({ format: 'sections' })).toMatchObject({ format: 'sections' })
+    expect(validate({ format: 'invalid' })).toMatchObject({ format: 'sections' })
+    expect(validate({})).toMatchObject({ format: 'sections' })
   })
 })
