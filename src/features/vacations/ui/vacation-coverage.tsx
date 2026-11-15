@@ -96,8 +96,7 @@ export function VacationCoverage({
               <p className="text-muted-foreground">
                 {timeLabel(visit.scheduledStartAt, visit.timezone)}–
                 {timeLabel(visit.scheduledEndAt, visit.timezone)}
-                {' · '}
-                {visit.assignedUserName}
+                {visit.assignedUserName ? ` · ${visit.assignedUserName}` : ''}
                 {visit.locationName ? ` · ${visit.locationName}` : ''}
                 {visit.workTeamName ? ` · Equipo ${visit.workTeamName}` : ''}
               </p>
@@ -105,6 +104,11 @@ export function VacationCoverage({
                 <p className="text-muted-foreground mt-2 text-sm">
                   La visita ya está en curso. Coordina la cobertura manualmente; no se puede
                   reasignar desde aquí.
+                </p>
+              ) : !visit.assignedUserId && visit.workTeamName ? (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Esta visita está asignada a un equipo. Revisa su cobertura en la agenda antes de
+                  aprobar las vacaciones.
                 </p>
               ) : visit.candidates.length ? (
                 <div className="mt-3 space-y-2">

@@ -44,7 +44,7 @@ export type VacationAffectedVisit = {
   locationName: string
   address: string
   timezone: string
-  assignedUserId: string
+  assignedUserId: string | null
   assignedUserName: string
   scheduledStartAt: string
   scheduledEndAt: string
@@ -61,7 +61,7 @@ type VacationCoverageRow = {
   location_name: string
   address: string
   timezone: string
-  assigned_user_id: string
+  assigned_user_id: string | null
   assigned_user_name: string
   scheduled_start_at: string
   scheduled_end_at: string
