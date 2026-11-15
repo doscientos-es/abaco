@@ -71,11 +71,12 @@ describe('team import dialog', () => {
 
   it('previews valid rows and stops when an invitation fails', async () => {
     readSpreadsheet.mockResolvedValue([
-      ['Correo', 'Nombre', 'Rol'],
-      ['existing@example.com', 'Existing', 'Usuario'],
-      ['ana@example.com', 'Ana', 'Administrador'],
-      ['bad', '', ''],
-      ['luis@example.com', 'Luis', 'Usuario'],
+      ['Correo', 'Nombre', 'Rol', 'DNI'],
+      ['existing@example.com', 'Existing', 'Usuario', '1'],
+      ['ana@example.com', 'Ana', 'Administrador', '2'],
+      ['bad', '', '', '3'],
+      ['luis@example.com', 'Luis', 'Usuario', '4'],
+      ['missing@example.com', 'Eva', 'Usuario', ''],
     ])
     invite
       .mockResolvedValueOnce({ ok: true })
@@ -89,6 +90,7 @@ describe('team import dialog', () => {
     await vi.waitFor(() => expect(render()).toContain('ana@example.com'))
     expect(render()).toContain('1 duplicadas')
     expect(render()).toContain('Fila 4: Correo no válido.')
+    expect(render()).toContain('Fila 6: El DNI es obligatorio')
     expect(props().submitLabel).toBe('Enviar 2 invitaciones')
     props().onSubmit()
     await vi.waitFor(() => expect(onResult).toHaveBeenCalledOnce())
@@ -98,6 +100,8 @@ describe('team import dialog', () => {
       email: 'ana@example.com',
       fullName: 'Ana',
       role: 'admin',
+      dni: '2',
+      phone: '',
     })
     expect(onResult.mock.calls[0]?.[0]).toContain(
       'Se detuvo en luis@example.com: Límite alcanzado.',

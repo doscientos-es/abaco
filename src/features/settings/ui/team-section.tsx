@@ -31,8 +31,14 @@ import {
   type TeamMember,
   type TeamResult,
 } from '../application/team-actions'
+import {
+  MAX_WORKER_FIELD_LENGTH,
+  validWorkerDni,
+  validWorkerPhone,
+} from '../domain/worker-personal-data'
 import { TeamImportDialog } from './team-import-dialog'
 import { TeamPersonCard, TeamPersonDetails } from './team-person'
+import { WorkerPersonalDataSection } from './worker-personal-data'
 
 /** Members of the company. Only rendered for people allowed to manage the team. */
 export function TeamSection({
@@ -65,6 +71,8 @@ export function TeamSection({
   const [removing, setRemoving] = useState<TeamMember | null>(null)
   const [search, setSearch] = useState('')
   const [editingFunctions, setEditingFunctions] = useState<TeamMember | null>(null)
+  const [dni, setDni] = useState('')
+  const [phone, setPhone] = useState('')
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
@@ -101,12 +109,22 @@ export function TeamSection({
 
   const invite = async () => {
     const succeeded = await run(
-      () => inviteMember({ tenantId, email: email.trim(), fullName: fullName.trim(), role }),
+      () =>
+        inviteMember({
+          tenantId,
+          email: email.trim(),
+          fullName: fullName.trim(),
+          role,
+          dni: dni.trim(),
+          phone: phone.trim(),
+        }),
       'Invitación enviada por correo.',
     )
     if (succeeded) {
       setEmail('')
       setFullName('')
+      setDni('')
+      setPhone('')
       setRole('user')
       setInviteOpen(false)
     }
@@ -228,6 +246,9 @@ export function TeamSection({
                     }
                     onRemove={() => setRemoving(member)}
                   />
+                  <div className="mt-5">
+                    <WorkerPersonalDataSection tenantId={tenantId} workerId={member.userId} />
+                  </div>
                 </li>
               ) : (
                 <TeamPersonCard
@@ -307,6 +328,8 @@ export function TeamSection({
           if (!open) {
             setEmail('')
             setFullName('')
+            setDni('')
+            setPhone('')
             setRole('user')
             setMessage(null)
           }
@@ -317,10 +340,12 @@ export function TeamSection({
         submitDisabled={
           email.trim().length > 254 ||
           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+          !validWorkerDni(dni) ||
+          !validWorkerPhone(phone) ||
           (fullName.trim() !== '' && (fullName.trim().length < 2 || fullName.trim().length > 120))
         }
         isSubmitting={busy}
-        isDirty={Boolean(email || fullName || role !== 'user')}
+        isDirty={Boolean(email || fullName || dni || phone || role !== 'user')}
         onSubmit={() => void invite()}
       >
         <TextField
@@ -340,6 +365,22 @@ export function TeamSection({
           icon={fieldIcons.mail}
           value={email}
           onChange={setEmail}
+        />
+        <TextField
+          label="DNI"
+          placeholder="12345678Z"
+          value={dni}
+          onChange={setDni}
+          maxLength={MAX_WORKER_FIELD_LENGTH}
+          required
+        />
+        <TextField
+          label="Teléfono (opcional)"
+          type="tel"
+          placeholder="600 123 456"
+          value={phone}
+          onChange={setPhone}
+          maxLength={MAX_WORKER_FIELD_LENGTH}
         />
         <SelectField
           label="Rol"

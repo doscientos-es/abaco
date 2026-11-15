@@ -7,15 +7,35 @@ import { sendTeamInvitations, teamImportSchema } from './team-import'
 describe('importación de personas', () => {
   it('valida roles y correos y omite duplicados sin elevar permisos por defecto', () => {
     const csv =
-      'Correo;Nombre;Rol\nANA@example.com;Ana;\nana@example.com;Ana;Administrador\nbad;X;Usuario\nluis@example.com;Luis;Administrador\nother@example.com;Eva;owner'
+      'Correo;Nombre;Rol;DNI;Teléfono\nANA@example.com;Ana;;12345678Z;\nana@example.com;Ana;Administrador;12345678Z;\nbad;X;Usuario;1;\nluis@example.com;Luis;Administrador;2;\nother@example.com;Eva;owner;3;'
     const plan = planImport(parseDelimited(csv), teamImportSchema, new Set(['luis@example.com']))
     expect(plan).toEqual({
-      valid: [{ email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
+      valid: [
+        { email: 'ana@example.com', fullName: 'Ana', role: 'user', dni: '12345678Z', phone: '' },
+      ],
       duplicates: 2,
       errors: [
         { line: 4, message: 'Correo no válido.' },
         { line: 6, message: 'El rol debe ser Usuario o Administrador.' },
       ],
+    })
+  })
+
+  it('requires a DNI column and rejects rows without a DNI while accepting an empty phone', () => {
+    expect(
+      planImport(parseDelimited('Correo\na@example.com'), teamImportSchema, new Set()),
+    ).toEqual({
+      fatal: 'Faltan columnas obligatorias: DNI. La primera fila debe tener las cabeceras.',
+    })
+    const plan = planImport(
+      parseDelimited('Correo;DNI;Teléfono\na@example.com; ;\nb@example.com; B123 ;'),
+      teamImportSchema,
+      new Set(),
+    )
+    expect(plan).toEqual({
+      valid: [{ email: 'b@example.com', fullName: '', role: 'user', dni: 'B123', phone: '' }],
+      duplicates: 0,
+      errors: [{ line: 2, message: 'El DNI es obligatorio (máximo 40 caracteres).' }],
     })
   })
 
@@ -28,6 +48,8 @@ describe('importación de personas', () => {
       email,
       fullName: '',
       role: 'user' as const,
+      dni: '12345678Z',
+      phone: '',
     }))
     const result = await sendTeamInvitations(invitations, send)
     expect(send).toHaveBeenCalledTimes(2)

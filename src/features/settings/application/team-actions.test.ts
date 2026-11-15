@@ -18,6 +18,8 @@ const input = {
   email: 'ana@example.com',
   role: 'user' as const,
   fullName: 'Ana',
+  dni: '12345678Z',
+  phone: '',
 }
 
 it('includes legacy technicians when loading the team', async () => {
@@ -54,7 +56,7 @@ describe('inviteMember', () => {
   })
 
   it.each([
-    [400, 'Revisa el correo y el rol de la persona.'],
+    [400, 'Revisa el correo, DNI, teléfono y rol de la persona.'],
     [401, 'Tu sesión ha caducado. Inicia sesión de nuevo.'],
     [403, 'No tienes permiso para invitar a esta persona.'],
   ])('explains HTTP %i', async (status, message) => {

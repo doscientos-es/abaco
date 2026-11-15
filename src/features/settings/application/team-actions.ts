@@ -38,7 +38,7 @@ async function inviteErrorMessage(context: unknown): Promise<string> {
   if (!(context instanceof Response)) return fallback
   if (context.status === 401) return 'Tu sesión ha caducado. Inicia sesión de nuevo.'
   if (context.status === 403) return 'No tienes permiso para invitar a esta persona.'
-  if (context.status === 400) return 'Revisa el correo y el rol de la persona.'
+  if (context.status === 400) return 'Revisa el correo, DNI, teléfono y rol de la persona.'
   if (context.status === 409) {
     const body: unknown = await context.json().catch(() => null)
     if (body && typeof body === 'object' && 'error' in body && body.error === 'plan_limit') {
@@ -53,6 +53,8 @@ export async function inviteMember(input: {
   email: string
   role: Role
   fullName: string
+  dni: string
+  phone: string
 }): Promise<TeamResult> {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
     status?: 'invited' | 'added'

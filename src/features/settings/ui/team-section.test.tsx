@@ -45,6 +45,7 @@ vi.mock('@/features/auth', async (importOriginal) => ({
   useSession: () => ({ userId: 'me', role: 'admin' }),
 }))
 vi.mock('@/features/work-teams', () => ({ WorkTeamsSection: () => null }))
+vi.mock('./worker-personal-data', () => ({ WorkerPersonalDataSection: () => null }))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
   inviteMember: vi.fn(),

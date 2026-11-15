@@ -64,6 +64,7 @@ vi.mock('@/shared/ui/field-icons', () => ({ fieldIcons: {} }))
 vi.mock('@/shared/ui/form', () => ({ TextField: field, SelectField: field }))
 vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: dialog }))
 vi.mock('./team-import-dialog', () => ({ TeamImportDialog: () => null }))
+vi.mock('./worker-personal-data', () => ({ WorkerPersonalDataSection: () => null }))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
   inviteMember: invite,
@@ -127,12 +128,28 @@ describe('team invitation dialog', () => {
     expect(html).toContain('Nombre (opcional)')
     field.mock.calls.find(([props]) => props.label === 'Correo')?.[0].onChange('ana@example.com')
     render()
+    expect(dialogProps().submitDisabled).toBe(true)
+    field.mock.calls.find(([props]) => props.label === 'DNI')?.[0].onChange('12345678Z')
+    render()
     expect(dialogProps().submitDisabled).toBe(false)
     expect(dialogProps().isDirty).toBe(true)
   })
 
   it('keeps errors in the dialog and closes with a visible message after success', async () => {
-    values = ['ana@example.com', 'Ana', 'user', null, false, true]
+    values = [
+      'ana@example.com',
+      'Ana',
+      'user',
+      null,
+      false,
+      true,
+      false,
+      null,
+      '',
+      null,
+      '12345678Z',
+      '',
+    ]
     invite.mockResolvedValueOnce({ ok: false, message: 'No se pudo invitar.' })
     render()
     dialogProps().onSubmit()
@@ -149,6 +166,8 @@ describe('team invitation dialog', () => {
       email: 'ana@example.com',
       fullName: 'Ana',
       role: 'user',
+      dni: '12345678Z',
+      phone: '',
     })
   })
 

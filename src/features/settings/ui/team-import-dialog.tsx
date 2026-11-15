@@ -121,7 +121,8 @@ export function TeamImportDialog({
           </Button>
         </div>
         <p className="text-muted-foreground text-sm">
-          El rol vacío será Usuario. Máximo 50 personas por archivo; el plan puede permitir menos.
+          El DNI es obligatorio; las filas sin DNI no se importarán. El teléfono es opcional. El rol
+          vacío será Usuario. Máximo 50 personas por archivo; el plan puede permitir menos.
         </p>
         {reading ? <p>Cargando archivo…</p> : null}
         {plan && 'fatal' in plan ? <p role="alert">{plan.fatal}</p> : null}
