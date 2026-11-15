@@ -58,6 +58,19 @@ describe('contract signature assignments', () => {
     expect(contractAssignmentError(setup, drafts)).toBeNull()
   })
 
+  it('restores multiple people configured on a job and inherits them for tasks', () => {
+    const job = setup.jobs[0]
+    if (!job) throw new Error('Expected job')
+    const configured = {
+      ...setup,
+      jobs: [{ ...job, assigned_user_ids: ['p1', 'p2'] }],
+    }
+    const drafts = initialContractAssignments(configured)
+    expect(drafts[0]?.user_ids).toEqual(['p1', 'p2'])
+    expect(resolveContractAssignments(drafts)[1]?.assigned_user_ids).toEqual(['p1', 'p2'])
+    expect(contractAssignmentError(configured, drafts)).toBeNull()
+  })
+
   it('requires an explicit job choice when multiple jobs exist', () => {
     const multiple = {
       ...setup,
@@ -89,7 +102,7 @@ describe('contract signature assignments', () => {
     expect(contractAssignmentError(setup, [first, first])).toContain('Revisa todas')
   })
 
-  it.each(['missing-person', 'missing-team', 'missing-owner', 'multiple-job-people', 'wrong-job'])(
+  it.each(['missing-person', 'missing-team', 'missing-owner', 'wrong-job'])(
     'rejects %s',
     (kind) => {
       const drafts = initialContractAssignments(setup)
@@ -101,7 +114,6 @@ describe('contract signature assignments', () => {
         job.team_id = 'archived'
       }
       if (kind === 'missing-owner') job.user_ids = []
-      if (kind === 'multiple-job-people') job.user_ids = ['p1', 'p2']
       if (kind === 'wrong-job') job.job_id = 'foreign'
       expect(contractAssignmentError(setup, drafts)).not.toBeNull()
     },

@@ -87,10 +87,10 @@ describe('contracted job configuration', () => {
     expect(contractJobError({ ...previous, ends_on: '2026-11-01' }, '2026-12-01', null)).toBeNull()
   })
 
-  it('requires an end date and a chosen team for recurring mobile work', () => {
+  it('requires an end date and people or a team for recurring mobile work', () => {
     const job = { ...validJob(), frequency: 'monthly' as const }
     expect(contractJobError(job, '2026-12-01', null)).toContain('fin obligatoria')
-    expect(contractJobError(job, '2026-12-01', '2026-12-31')).toContain('equipo')
+    expect(contractJobError(job, '2026-12-01', '2026-12-31')).toContain('personas o un equipo')
     expect(
       contractJobError(
         { ...job, work_team_id: 'team', local_start: '09:00' },
@@ -98,6 +98,36 @@ describe('contracted job configuration', () => {
         '2026-12-31',
       ),
     ).toBeNull()
+    expect(
+      contractJobError(
+        { ...job, assigned_user_ids: ['person-a', 'person-b'], local_start: '09:00' },
+        '2026-12-01',
+        '2026-12-31',
+      ),
+    ).toBeNull()
+  })
+
+  it('normalizes multiple people and keeps a compatible primary assignee', () => {
+    expect(
+      normalizeContractJob({ ...validJob(), assigned_user_ids: ['b', 'a', 'b'] }),
+    ).toMatchObject({
+      assigned_user_ids: ['a', 'b'],
+      assigned_user_id: 'a',
+    })
+    expect(
+      contractJobError(
+        { ...validJob(), assigned_user_ids: ['a'], work_team_id: 'team' },
+        '2026-12-01',
+        null,
+      ),
+    ).toContain('no ambos')
+    expect(
+      contractJobError(
+        { ...validJob(), assigned_user_ids: Array.from({ length: 31 }, (_, i) => String(i)) },
+        '2026-12-01',
+        null,
+      ),
+    ).toContain('30')
   })
 
   it('accepts an optional time but rejects invalid durations and conflicting assignments', () => {

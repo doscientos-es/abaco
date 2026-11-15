@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { can, useSession } from '@/features/auth'
 import { contractBillingLabels } from '@/shared/domain/contract-billing'
 import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
@@ -30,6 +31,7 @@ import { ContractActions } from './contract-actions'
 import { ContractJobsPage } from './contract-jobs-page'
 import { ContractNextCollectionCell } from './contract-next-collection'
 import { ContractStatusBadge } from './contract-status-badge'
+import { ContractTemplateEditor } from './contract-template-editor'
 
 export function ContractsPage() {
   const { tab } = useSearch({ from: '/contratos/' })
@@ -71,6 +73,7 @@ export function ContractsPage() {
 
 function ContractsList() {
   const { tenant, clients } = useTenantData()
+  const session = useSession()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<ContractStatusFilter>('all')
   const query = useQuery({
@@ -82,6 +85,14 @@ function ContractsList() {
       <Link to="/presupuestos" className="text-primary text-sm underline">
         Crear o revisar presupuesto
       </Link>
+      {can(session?.role, 'contracts:write') ? (
+        <details className="rounded-lg border p-4">
+          <summary className="cursor-pointer font-medium">
+            Personalizar plantilla de contrato
+          </summary>
+          <ContractTemplateEditor tenantId={tenant.id} />
+        </details>
+      ) : null}
       <SelectField
         label="Estado del contrato"
         value={status}

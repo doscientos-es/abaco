@@ -13,6 +13,7 @@ export type ContractAssignmentSetup = {
     id: string
     title: string
     assigned_user_id: string | null
+    assigned_user_ids?: string[]
     work_team_id: string | null
   }>
   tasks: Array<{
@@ -28,7 +29,7 @@ export type ContractAssignmentSetup = {
 
 export type ContractSignatureSetup = ContractAssignmentSetup & {
   people: Array<{ id: string; label: string }>
-  teams: Array<{ id: string; name: string }>
+  teams: Array<{ id: string; name: string; memberIds?: string[] }>
 }
 
 export type ContractAssignmentDraft = {
@@ -47,7 +48,8 @@ export function initialContractAssignments(
     ...setup.jobs.map((job): ContractTaskAssignment => ({
       task_key: `job:${job.id}`,
       job_id: job.id,
-      assigned_user_ids: job.assigned_user_id ? [job.assigned_user_id] : [],
+      assigned_user_ids:
+        job.assigned_user_ids ?? (job.assigned_user_id ? [job.assigned_user_id] : []),
       work_team_id: job.work_team_id,
     })),
     ...setup.tasks.map((task): ContractTaskAssignment => ({
@@ -110,10 +112,9 @@ export function contractAssignmentError(
     if (!jobs.has(assignment.job_id)) return 'Asocia cada tarea a un trabajo del contrato.'
     if (
       assignment.task_key.startsWith('job:') &&
-      (assignment.task_key !== `job:${assignment.job_id}` ||
-        assignment.assigned_user_ids.length > 1)
+      assignment.task_key !== `job:${assignment.job_id}`
     )
-      return 'Elige una persona o un equipo como responsable de cada trabajo.'
+      return 'Asocia cada trabajo a su propia asignación.'
     if (
       assignment.work_team_id
         ? !teams.has(assignment.work_team_id) || assignment.assigned_user_ids.length > 0

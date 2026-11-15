@@ -78,8 +78,12 @@ describe('client contacts and centres', () => {
   })
 
   it('persists opening hours when updating a centre', async () => {
-    const result = { data: [{ id: 'centre-1' }], error: null }
-    const query = { eq: vi.fn().mockReturnThis(), select: vi.fn().mockResolvedValue(result) }
+    const result = { data: { id: 'centre-1' }, error: null }
+    const query = {
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue(result),
+    }
     const update = vi.fn().mockReturnValue(query)
     mocks.from.mockReturnValue({ update })
     const location = {

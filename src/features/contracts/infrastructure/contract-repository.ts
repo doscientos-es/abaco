@@ -2,6 +2,7 @@ import type { ContractBillingFrequency } from '@/shared/domain/contract-billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { ContractNextCollection } from '../domain/contract-collection'
+import type { ContractDocumentSections } from '../domain/contract-document-template'
 import type { ContractStatus, ContractStatusFilter } from '../domain/contract-status'
 
 export type { ContractStatus } from '../domain/contract-status'
@@ -23,6 +24,7 @@ export type ServiceContract = {
   billing_frequency: BillingFrequency
   renewal_mode: 'pending' | 'manual' | 'automatic'
   notes: string
+  document_sections: ContractDocumentSections | null
   default_assigned_user_id: string | null
   included_scope: Array<{ description: string }>
   schedule_version: number
@@ -83,7 +85,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,default_assigned_user_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()

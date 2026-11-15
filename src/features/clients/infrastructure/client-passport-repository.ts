@@ -1,26 +1,16 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
+import { locationInput, type ServiceLocation } from '../domain/client-location'
+import { insertClientLocation, updateClientLocation } from './client-location-repository'
+
+export type { ServiceLocation } from '../domain/client-location'
+
 export type ClientContact = {
   id: string
   name: string
   role: 'primary' | 'administrative' | 'technical' | 'other'
   email: string
   phone: string
-  active: boolean
-  updated_at: string
-}
-
-export type ServiceLocation = {
-  id: string
-  name: string
-  kind: 'service' | 'billing' | 'both'
-  address: string
-  city: string
-  postal_code: string
-  opening_hours: string
-  operational_contact: string
-  access_notes: string
-  notes: string
   active: boolean
   updated_at: string
 }
@@ -89,32 +79,27 @@ export async function createLocation(input: {
   kind: ServiceLocation['kind']
   address: string
   city: string
+  postalCode?: string
   openingHours?: string
   operationalContact?: string
   accessNotes?: string
   notes?: string
   active?: boolean
 }): Promise<string> {
-  const { data, error } = await createBrowserSupabaseClient()
-    .from('service_locations')
-    .insert({
-      tenant_id: input.tenantId,
-      client_id: input.clientId,
-      name: input.name.trim(),
-      kind: input.kind,
-      address: input.address.trim(),
-      city: input.city.trim(),
-      opening_hours: input.openingHours?.trim() ?? '',
-      operational_contact: input.operationalContact?.trim() ?? '',
-      access_notes: input.accessNotes?.trim() ?? '',
-      notes: input.notes?.trim() ?? '',
-      active: input.active ?? true,
-    })
-    .select('id')
-    .single()
-  if (error || typeof data?.id !== 'string')
-    throw new Error(error?.message ?? 'No se pudo obtener la ubicación creada.')
-  return data.id
+  const location = await insertClientLocation(input.tenantId, input.clientId, crypto.randomUUID(), {
+    ...locationInput(),
+    name: input.name,
+    kind: input.kind,
+    address: input.address,
+    city: input.city,
+    postal_code: input.postalCode ?? '',
+    opening_hours: input.openingHours ?? '',
+    operational_contact: input.operationalContact ?? '',
+    access_notes: input.accessNotes ?? '',
+    notes: input.notes ?? '',
+    active: input.active ?? true,
+  })
+  return location.id
 }
 
 export async function updateContact(
@@ -152,27 +137,12 @@ export async function updateLocation(
     | 'access_notes'
     | 'notes'
     | 'active'
-  >,
+  > & { postal_code?: string },
 ): Promise<void> {
-  assertOne(
-    await createBrowserSupabaseClient()
-      .from('service_locations')
-      .update({
-        name: input.name.trim(),
-        kind: input.kind,
-        address: input.address.trim(),
-        city: input.city.trim(),
-        opening_hours: input.opening_hours.trim(),
-        operational_contact: input.operational_contact.trim(),
-        access_notes: input.access_notes.trim(),
-        notes: input.notes.trim(),
-        active: input.active,
-      })
-      .eq('tenant_id', tenantId)
-      .eq('id', location.id)
-      .eq('updated_at', location.updated_at)
-      .select('id'),
-  )
+  await updateClientLocation(tenantId, location, {
+    ...input,
+    postal_code: input.postal_code ?? location.postal_code,
+  })
 }
 
 function assertOne(result: { data: { id: string }[] | null; error: { message: string } | null }) {

@@ -1,6 +1,6 @@
 import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   RelatedCreateButton,
@@ -28,6 +28,7 @@ import {
   type ContractJobDraft,
 } from '../domain/contract-job'
 import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
+import { ContractPeoplePicker } from './contract-people-picker'
 import { WeeklyScheduleEditor } from './weekly-schedule-editor'
 
 const days = scheduleDays
@@ -36,6 +37,7 @@ export const frequencyLabels = jobFrequencyLabels
 export function CleaningServicesPanel({
   tenantId,
   contractId,
+  targetJobId,
   clientId,
   clientName,
   startsOn,
@@ -46,6 +48,7 @@ export function CleaningServicesPanel({
 }: {
   tenantId: string
   contractId: string
+  targetJobId?: string
   clientId: string
   clientName: string
   startsOn: string
@@ -59,6 +62,13 @@ export function CleaningServicesPanel({
     queryKey: ['cleaning-services', tenantId, contractId],
     queryFn: () => listCleaningServices(tenantId, contractId),
   })
+  useEffect(() => {
+    if (!targetJobId || !services.data?.some((service) => service.id === targetJobId)) return
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(targetJobId)?.scrollIntoView({ block: 'start' }),
+    )
+    return () => cancelAnimationFrame(frame)
+  }, [targetJobId, services.data])
   const targets = useQuery({
     queryKey: ['work-target-options', tenantId, clientId],
     queryFn: () => loadWorkTargetOptions(tenantId, clientId),
@@ -108,7 +118,14 @@ export function CleaningServicesPanel({
                 : [],
             local_start: service.time_known ? values.local_start.slice(0, 5) : '',
           }
-        : { ...initial, title: service.title, tasks: service.tasks },
+        : {
+            ...initial,
+            title: service.title,
+            tasks: service.tasks,
+            assigned_user_id: service.assigned_user_id,
+            assigned_user_ids: service.assigned_user_ids,
+            work_team_id: service.work_team_id,
+          },
     )
     setEditingId(service.id)
     setOpen(true)
@@ -149,7 +166,7 @@ export function CleaningServicesPanel({
   }
   return (
     <section className="space-y-4 rounded-lg border p-4" aria-label="Trabajos del contrato">
-      <h2 className="text-lg font-semibold">Trabajos contratados</h2>
+      <h2 className="text-lg font-semibold">2. Trabajos contratados</h2>
       <p className="text-muted-foreground text-sm">
         Cada partida aceptada es un trabajo. Configura qué hacer, dónde y si se realiza una vez o
         periódicamente. La hoja permanente del centro no genera partes diarios; las visitas móviles
@@ -205,7 +222,12 @@ export function CleaningServicesPanel({
                   : 'Sin horario fijo'}{' '}
                 ·{' '}
                 {teams.data?.find((t) => t.id === service.work_team_id)?.name ||
-                  people.data?.find((p) => p.id === service.assigned_user_id)?.label ||
+                  service.assigned_user_ids
+                    .map(
+                      (id) =>
+                        people.data?.find((p) => p.id === id)?.label ?? 'Persona no disponible',
+                    )
+                    .join(', ') ||
                   'Sin asignar'}
               </p>
               <p>
@@ -398,29 +420,29 @@ export function CleaningServicesPanel({
             />
           </>
         ) : null}
-        {form.frequency === 'once' || form.modality === 'fixed' ? (
-          <SelectField
-            label="Persona habitual"
-            value={form.assigned_user_id ?? ''}
-            options={[
-              { value: '', label: 'Sin asignar' },
-              ...(people.data ?? []).map((p) => ({ value: p.id, label: p.label })),
-            ]}
-            onChange={(v) =>
-              setForm((current) => ({
-                ...current,
-                assigned_user_id: v || null,
-                work_team_id: v ? null : current.work_team_id,
-              }))
-            }
-          />
+        <ContractPeoplePicker
+          people={people.data ?? []}
+          selected={form.assigned_user_ids}
+          disabled={busy || !people.isSuccess}
+          onChange={(ids) =>
+            setForm((current) => ({
+              ...current,
+              assigned_user_ids: ids,
+              assigned_user_id: [...ids].sort()[0] ?? null,
+              work_team_id: ids.length ? null : current.work_team_id,
+            }))
+          }
+        />
+        {people.isError ? (
+          <p role="alert">
+            No se pudieron cargar las personas.{' '}
+            <Button variant="outline" onPress={() => void people.refetch()}>
+              Reintentar
+            </Button>
+          </p>
         ) : null}
         <SelectField
-          label={
-            form.frequency !== 'once' && form.modality === 'mobile'
-              ? 'Equipo asignado · obligatorio'
-              : 'Equipo habitual'
-          }
+          label="Equipo habitual (alternativa a las personas)"
           value={form.work_team_id ?? ''}
           options={[
             { value: '', label: 'Sin asignar' },
@@ -433,9 +455,18 @@ export function CleaningServicesPanel({
               ...current,
               work_team_id: v || null,
               assigned_user_id: v ? null : current.assigned_user_id,
+              assigned_user_ids: v ? [] : current.assigned_user_ids,
             }))
           }
         />
+        {form.assigned_user_ids.length > 1 && form.modality === 'mobile' ? (
+          <p className="text-muted-foreground text-sm sm:col-span-2">
+            El trabajo conserva todas las personas. Las visitas generadas solo asignan a{' '}
+            {people.data?.find((person) => person.id === form.assigned_user_id)?.label ??
+              'una persona'}
+            ; las demás no reciben acceso ni reserva de agenda automáticamente.
+          </p>
+        ) : null}
         {teams.isError ? (
           <p role="alert">
             No se pudieron cargar los equipos.{' '}

@@ -44,7 +44,7 @@ vi.mock('react', async (original) => ({
   ...(await original<typeof React>()),
   useState: (initial: unknown) => {
     const index = mocks.stateIndex++
-    return [index === 7 ? mocks.target : initial, index === 7 ? mocks.setTarget : vi.fn()]
+    return [index === 6 ? mocks.target : initial, index === 6 ? mocks.setTarget : vi.fn()]
   },
 }))
 vi.mock('@doscientos/ui', () => {

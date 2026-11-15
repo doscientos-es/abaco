@@ -22,6 +22,7 @@ const state = vi.hoisted(() => ({
   } | null)[],
   loadContracts: vi.fn(),
   queryFn: undefined as (() => Promise<unknown>) | undefined,
+  canWriteContracts: false,
 }))
 
 vi.mock('react', async (importOriginal) => ({
@@ -88,6 +89,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQuery: ({ queryKey, queryFn }: { queryKey: unknown[]; queryFn: () => Promise<unknown> }) => {
     state.queries.push(queryKey)
     if (queryKey[0] === 'service-contracts') {
@@ -130,6 +132,13 @@ vi.mock('@tanstack/react-query', () => ({
     }
   },
 }))
+vi.mock('@/features/auth', () => ({
+  can: () => state.canWriteContracts,
+  useSession: () => ({ role: 'admin' }),
+}))
+vi.mock('./contract-template-editor', () => ({
+  ContractTemplateEditor: () => <span>Editor de plantilla</span>,
+}))
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'tenant' }, clients: [{ id: 'client-1', name: 'Ana' }] }),
 }))
@@ -169,6 +178,7 @@ describe('contracts navigation', () => {
     state.statuses = []
     state.collections = []
     state.loadContracts.mockClear()
+    state.canWriteContracts = false
   })
 
   it('opens the contract list first and switches to contracted jobs', () => {
@@ -178,6 +188,15 @@ describe('contracts navigation', () => {
     expect(state.queries.map((key) => key[0])).toEqual(['service-contracts'])
     state.selectTab?.('trabajos')
     expect(state.navigate).toHaveBeenCalledWith({ to: '/contratos', search: { tab: 'trabajos' } })
+  })
+
+  it('only shows template customization to users allowed to edit contracts', () => {
+    expect(renderToStaticMarkup(<ContractsPage />)).not.toContain('Personalizar plantilla')
+    state.canWriteContracts = true
+    state.cursor = 0
+    const html = renderToStaticMarkup(<ContractsPage />)
+    expect(html).toContain('Personalizar plantilla de contrato')
+    expect(html).toContain('Editor de plantilla')
   })
 
   it('lists contracted jobs with links to their contract and job', () => {

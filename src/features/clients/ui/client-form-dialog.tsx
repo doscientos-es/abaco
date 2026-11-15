@@ -5,7 +5,7 @@ import { useRef, useState, type RefObject } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Client } from '@/shared/domain/types'
-import { useTenantData } from '@/shared/store/store'
+import { synchronizeStoreSaves, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -13,6 +13,8 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { createClient, updateClient, type ClientInput } from '../application/client-actions'
 import { findPotentialClientDuplicates } from '../application/client-duplicates'
 import { clientTypesQuery } from '../application/client-types'
+import { ClientLocationsEditor } from './client-locations-editor'
+import { useClientLocations } from './use-client-locations'
 
 const empty: ClientInput = {
   name: '',
@@ -47,6 +49,7 @@ export function ClientForm({
 }: Omit<Props, 'open'> & { variant: 'dialog' | 'page' }) {
   const { clients, tenant } = useTenantData()
   const types = useQuery(clientTypesQuery(tenant.id))
+  const locations = useClientLocations(tenant.id, client?.id)
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
@@ -63,32 +66,49 @@ export function ClientForm({
   )
   const [initialForm] = useState(() => JSON.stringify(form))
   const saved = useRef(false)
+  const savedClientId = useRef(client?.id)
+  const saving = useRef(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const set = (key: keyof ClientInput) => (value: string) => {
     saved.current = false
     setForm((previous) => ({ ...previous, [key]: value }))
   }
   const duplicates = findPotentialClientDuplicates(form, clients, client?.id)
-  const isDirty = JSON.stringify(form) !== initialForm
+  const isDirty =
+    JSON.stringify(form) !== initialForm ||
+    locations.isDirty ||
+    Boolean(!client && savedClientId.current)
   const selectedKind = form.kind || types.data?.[0]?.value || ''
   const validKind = types.isSuccess && types.data.some((item) => item.value === selectedKind)
 
-  function save() {
-    if (saved.current) return
+  async function save() {
+    if (saved.current || saving.current || locations.invalid) return
     const clean = Object.fromEntries(
       Object.entries(form).map(([key, value]) => [key, value.trim()]),
     ) as ClientInput
     if (!clean.name || clean.name.length > formLimits.clientName || !validKind) return
     clean.kind = selectedKind
-    let id: string
-    if (client) {
-      updateClient(client.id, clean)
-      id = client.id
-    } else {
-      id = createClient(clean)
+    saving.current = true
+    setIsSaving(true)
+    setSaveError('')
+    try {
+      if (savedClientId.current) updateClient(savedClientId.current, clean)
+      else savedClientId.current = createClient(clean)
+      // A centre cannot be inserted until its client really exists in Postgres.
+      await synchronizeStoreSaves()
+      await locations.save(savedClientId.current)
+      saved.current = true
+      onSaved?.(savedClientId.current)
+      if (variant === 'dialog' || !onSaved) onClose()
+    } catch (error) {
+      setSaveError(
+        `No se han guardado todos los cambios. ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'} Puedes reintentar sin duplicar el cliente ni los centros guardados.`,
+      )
+    } finally {
+      saving.current = false
+      setIsSaving(false)
     }
-    saved.current = true
-    onSaved?.(id)
-    if (variant === 'dialog' || !onSaved) onClose()
   }
 
   const fields = (
@@ -241,9 +261,24 @@ export function ClientForm({
           />
         </div>
       </section>
+      {client && locations.query.isPending ? <output>Cargando centros del cliente…</output> : null}
+      {client && locations.query.isError ? (
+        <div role="alert" className="border-destructive rounded-lg border p-4 text-sm">
+          No se pudieron cargar los centros del cliente.
+          <Button type="button" variant="outline" onPress={() => void locations.query.refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      ) : !client || locations.query.isSuccess ? (
+        <ClientLocationsEditor locations={locations.locations} onChange={locations.setLocations} />
+      ) : null}
     </div>
   )
-  const invalid = !form.name.trim() || form.name.trim().length > formLimits.clientName || !validKind
+  const invalid =
+    !form.name.trim() ||
+    form.name.trim().length > formLimits.clientName ||
+    !validKind ||
+    locations.invalid
 
   if (variant === 'page') {
     return (
@@ -251,17 +286,24 @@ export function ClientForm({
         className="mx-auto grid w-full max-w-4xl gap-5"
         onSubmit={(event) => {
           event.preventDefault()
-          save()
+          void save()
         }}
       >
-        <ClientPageNavigationGuard isDirty={isDirty} saved={saved} />
-        {fields}
+        <ClientPageNavigationGuard isDirty={isDirty} saved={saved} saving={saving} />
+        <fieldset disabled={isSaving} className="min-w-0">
+          {fields}
+        </fieldset>
+        {saveError ? (
+          <p role="alert" className="text-destructive text-sm">
+            {saveError}
+          </p>
+        ) : null}
         <div className="flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="outline" onPress={onClose}>
+          <Button type="button" variant="outline" onPress={onClose} isDisabled={isSaving}>
             Cancelar
           </Button>
-          <Button type="submit" isDisabled={invalid}>
-            {client ? 'Guardar cambios' : 'Crear cliente'}
+          <Button type="submit" isDisabled={invalid || isSaving}>
+            {isSaving ? 'Guardando…' : client ? 'Guardar cambios' : 'Crear cliente'}
           </Button>
         </div>
       </form>
@@ -278,10 +320,16 @@ export function ClientForm({
       description="Estos datos aparecen en tus presupuestos."
       submitLabel={client ? 'Guardar cambios' : 'Crear cliente'}
       submitDisabled={invalid}
+      isSubmitting={isSaving}
       isDirty={isDirty}
-      onSubmit={save}
+      onSubmit={() => void save()}
     >
       <div className="sm:col-span-2">{fields}</div>
+      {saveError ? (
+        <p role="alert" className="text-destructive text-sm sm:col-span-2">
+          {saveError}
+        </p>
+      ) : null}
     </FormDialog>
   )
 }
@@ -289,16 +337,18 @@ export function ClientForm({
 function ClientPageNavigationGuard({
   isDirty,
   saved,
+  saving,
 }: {
   isDirty: boolean
   saved: RefObject<boolean>
+  saving: RefObject<boolean>
 }) {
   useBlocker({
     shouldBlockFn: () =>
-      isDirty &&
       !saved.current &&
-      !window.confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'),
-    enableBeforeUnload: () => isDirty && !saved.current,
+      (saving.current ||
+        (isDirty && !window.confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'))),
+    enableBeforeUnload: () => !saved.current && (saving.current || isDirty),
   })
   return null
 }

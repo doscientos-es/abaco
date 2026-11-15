@@ -10,15 +10,19 @@ import type { Client, Tenant } from '@/shared/domain/types'
 import { printDocument } from '@/shared/lib/print-document'
 
 import type { ServiceContract } from '../application/contract-actions'
+import type { ContractDocumentSection } from '../application/contract-document-template-actions'
+import { ApplyContractTemplateButton } from './apply-contract-template-button'
 
 export function ContractDocument({
   contract,
   tenant,
   client,
+  canEdit = false,
 }: {
   contract: ServiceContract
   tenant: Tenant
   client: Client | undefined
+  canEdit?: boolean
 }) {
   const document = useRef<HTMLElement>(null)
   const publication = useQuery({
@@ -38,6 +42,9 @@ export function ContractDocument({
         Revisa los datos y las condiciones antes de guardar o firmar el documento. El presupuesto
         aceptado se incluye como anexo.
       </p>
+      {canEdit && contract.status === 'draft' && !contract.signed_at ? (
+        <ApplyContractTemplateButton contract={contract} />
+      ) : null}
       {waiting ? <output>Cargando presupuesto aceptado…</output> : null}
       {unavailable ? (
         <p role="alert">
@@ -136,10 +143,8 @@ export function ContractDocument({
                   <p className="whitespace-pre-wrap">{contract.notes}</p>
                 </section>
               ) : null}
-              <section className="grid grid-cols-2 gap-8 pt-12">
-                <p className="border-t pt-2">Firma del prestador</p>
-                <p className="border-t pt-2">Firma del cliente</p>
-              </section>
+              <TemplateSections sections={contract.document_sections?.before ?? []} />
+              {!contract.document_sections ? <Signatures /> : null}
               {publication.data ? (
                 <section className="contract-annex pt-8">
                   <h2 className="mb-3 text-lg font-semibold">Anexo · Presupuesto aceptado</h2>
@@ -150,10 +155,35 @@ export function ContractDocument({
                   />
                 </section>
               ) : null}
+              <TemplateSections sections={contract.document_sections?.after ?? []} />
+              {contract.document_sections ? <Signatures /> : null}
             </article>
           </details>
         </>
       ) : null}
+    </section>
+  )
+}
+
+/** Render the contract's saved copy, never the current company template. */
+function TemplateSections({ sections }: { sections: ContractDocumentSection[] }) {
+  return sections.map((section) => (
+    <section
+      key={section.id}
+      className="contract-template-section"
+      data-page-break={section.pageBreakBefore || undefined}
+    >
+      {section.title ? <h2 className="font-semibold">{section.title}</h2> : null}
+      <p className="whitespace-pre-wrap">{section.content}</p>
+    </section>
+  ))
+}
+
+function Signatures() {
+  return (
+    <section className="grid grid-cols-2 gap-8 pt-12">
+      <p className="border-t pt-2">Firma del prestador</p>
+      <p className="border-t pt-2">Firma del cliente</p>
     </section>
   )
 }

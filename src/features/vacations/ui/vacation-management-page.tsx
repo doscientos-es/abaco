@@ -18,6 +18,7 @@ import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import {
   decideVacationRequest,
   listVacationRequests,
+  listVacationCoverage,
   requestAbsenceInformation,
 } from '../application/vacation-actions'
 import { calendarDate } from '../domain/absence-calendar'
@@ -92,11 +93,7 @@ export function VacationManagementPage({
         setFilter('approved')
         await queryClient.invalidateQueries({ queryKey: ['vacation-coverage', tenantId] })
       }
-      toast.success(
-        input.decision === 'approved'
-          ? 'Ausencia aprobada · revisa los servicios afectados'
-          : 'Solicitud rechazada',
-      )
+      toast.success(input.decision === 'approved' ? 'Ausencia aprobada' : 'Solicitud rechazada')
     },
     onError: (error: Error) =>
       toast.error('No se pudo guardar la decisión', { description: error.message }),
@@ -340,6 +337,9 @@ export function VacationManagementPage({
                 ) : null}
                 {request.status === 'pending' || request.status === 'needs_info' ? (
                   <DecisionForm
+                    tenantId={tenantId}
+                    requestId={request.id}
+                    checkCoverage={request.absenceType === 'vacation'}
                     awaitingWorkerInformation={request.status === 'needs_info'}
                     disabled={decide.isPending || requestInfo.isPending}
                     onDecide={(decision, comment) =>
@@ -371,11 +371,17 @@ export function VacationManagementPage({
 }
 
 function DecisionForm({
+  tenantId,
+  requestId,
+  checkCoverage,
   awaitingWorkerInformation,
   disabled,
   onDecide,
   onRequestInfo,
 }: {
+  tenantId: string | null | undefined
+  requestId: string
+  checkCoverage: boolean
   awaitingWorkerInformation: boolean
   disabled: boolean
   onDecide: (decision: 'approved' | 'rejected', comment: string) => void
@@ -383,6 +389,16 @@ function DecisionForm({
 }) {
   const [comment, setComment] = useState('')
   const commentId = useId()
+  const coverage = useQuery({
+    queryKey: ['vacation-coverage', tenantId, requestId],
+    enabled: Boolean(tenantId) && checkCoverage,
+    queryFn: () => {
+      if (!tenantId) throw new Error('Falta la empresa.')
+      return listVacationCoverage(tenantId, requestId)
+    },
+  })
+  const coverageBlocked =
+    checkCoverage && (!coverage.isSuccess || coverage.isFetching || coverage.data.length > 0)
   return (
     <div className="border-border space-y-3 border-t pt-3">
       <label htmlFor={commentId} className="grid gap-1.5 text-sm font-medium">
@@ -405,10 +421,22 @@ function DecisionForm({
           responda.
         </p>
       ) : null}
+      {coverageBlocked ? (
+        <p className="text-muted-foreground text-sm" role="status">
+          {coverage.isError
+            ? 'No se pudo comprobar la cobertura. Reinténtalo antes de aprobar.'
+            : coverage.isSuccess && coverage.data.length
+              ? 'Reasigna las visitas afectadas antes de aprobar las vacaciones.'
+              : 'Comprobando visitas afectadas…'}
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {!awaitingWorkerInformation ? (
           <>
-            <Button isDisabled={disabled} onPress={() => onDecide('approved', comment)}>
+            <Button
+              isDisabled={disabled || coverageBlocked}
+              onPress={() => onDecide('approved', comment)}
+            >
               Aprobar
             </Button>
             <Button

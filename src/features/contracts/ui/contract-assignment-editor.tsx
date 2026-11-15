@@ -26,8 +26,8 @@ export function ContractAssignmentEditor({
       <section className="space-y-3" aria-label="Responsables de los trabajos">
         <h3 className="font-semibold">1. ¿Quién realizará cada trabajo?</h3>
         <p className="text-muted-foreground text-sm">
-          Elige una persona o un equipo como responsable habitual. La programación se configura
-          después.
+          Elige personas o un equipo para cada trabajo. La programación se configura después. Las
+          visitas solo asignan una persona o un equipo, no a todas las personas del trabajo.
         </p>
         {setup.jobs.map((job) => {
           const draft = byKey.get(`job:${job.id}`)
@@ -37,7 +37,7 @@ export function ContractAssignmentEditor({
               <ResponsiblePicker
                 draft={draft}
                 setup={setup}
-                single
+                job
                 disabled={disabled}
                 onChange={(changes) => update(draft.task_key, changes)}
               />
@@ -106,13 +106,13 @@ export function ContractAssignmentEditor({
 function ResponsiblePicker({
   draft,
   setup,
-  single = false,
+  job = false,
   disabled,
   onChange,
 }: {
   draft: ContractAssignmentDraft
   setup: ContractSignatureSetup
-  single?: boolean
+  job?: boolean
   disabled: boolean
   onChange: (changes: Partial<ContractAssignmentDraft>) => void
 }) {
@@ -123,8 +123,8 @@ function ResponsiblePicker({
         isDisabled={disabled}
         value={draft.mode}
         options={[
-          ...(!single ? [{ value: 'inherit', label: 'Responsable del trabajo' }] : []),
-          { value: 'people', label: single ? 'Una persona' : 'Personas' },
+          ...(!job ? [{ value: 'inherit', label: 'Responsables del trabajo' }] : []),
+          { value: 'people', label: 'Personas' },
           { value: 'team', label: 'Un equipo' },
         ]}
         onChange={(mode) =>
@@ -143,44 +143,91 @@ function ResponsiblePicker({
           onChange={(value) => onChange({ team_id: value || null })}
         />
       ) : null}
-      {draft.mode === 'people' && single ? (
-        <SelectField
-          label="Persona"
-          isDisabled={disabled}
-          value={draft.user_ids[0] ?? ''}
-          options={[
-            { value: '', label: 'Selecciona una persona' },
-            ...setup.people.map((person) => ({ value: person.id, label: person.label })),
-          ]}
-          onChange={(value) => onChange({ user_ids: value ? [value] : [] })}
-        />
+      {draft.mode === 'team' && draft.team_id ? (
+        <div className="flex flex-wrap gap-2" aria-label="Miembros del equipo">
+          {setup.people
+            .filter((person) =>
+              setup.teams.find((team) => team.id === draft.team_id)?.memberIds?.includes(person.id),
+            )
+            .map((person) => (
+              <span
+                key={person.id}
+                className="bg-muted inline-flex items-center gap-2 rounded-full pr-3 text-sm"
+              >
+                <span
+                  aria-hidden="true"
+                  className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold"
+                >
+                  {person.label
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join('')
+                    .toLocaleUpperCase()}
+                </span>
+                {person.label}
+              </span>
+            ))}
+        </div>
       ) : null}
-      {draft.mode === 'people' && !single ? (
-        <fieldset className="space-y-2">
-          <legend className="mb-2 text-sm font-medium">Personas asignadas</legend>
-          {setup.people.map((person) => (
-            <label key={person.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                disabled={disabled}
-                checked={draft.user_ids.includes(person.id)}
-                onChange={(event) =>
-                  onChange({
-                    user_ids: event.target.checked
-                      ? [...draft.user_ids, person.id]
-                      : draft.user_ids.filter((id) => id !== person.id),
-                  })
-                }
-              />
-              {person.label}
-            </label>
-          ))}
-          {!setup.people.length ? (
-            <p className="text-muted-foreground text-sm">
-              No hay personas disponibles. Añádelas en Equipo o elige un equipo de trabajo.
-            </p>
-          ) : null}
-        </fieldset>
+      {draft.mode === 'people' ? (
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-medium">
+            Personas asignadas · {draft.user_ids.length || 'Seleccionar'}
+          </summary>
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="Personas seleccionadas">
+            {setup.people
+              .filter((person) => draft.user_ids.includes(person.id))
+              .map((person) => (
+                <span
+                  key={person.id}
+                  className="bg-muted inline-flex items-center gap-2 rounded-full pr-3 text-sm"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold"
+                  >
+                    {person.label
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join('')
+                      .toLocaleUpperCase()}
+                  </span>
+                  {person.label}
+                </span>
+              ))}
+          </div>
+          <div className="mt-3 max-h-48 space-y-1 overflow-y-auto">
+            {setup.people.map((person) => (
+              <label
+                key={person.id}
+                className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  disabled={
+                    disabled || (!draft.user_ids.includes(person.id) && draft.user_ids.length >= 30)
+                  }
+                  checked={draft.user_ids.includes(person.id)}
+                  onChange={(event) =>
+                    onChange({
+                      user_ids: event.target.checked
+                        ? [...draft.user_ids, person.id]
+                        : draft.user_ids.filter((id) => id !== person.id),
+                    })
+                  }
+                />
+                {person.label}
+              </label>
+            ))}
+            {!setup.people.length ? (
+              <p className="text-muted-foreground text-sm">No hay personas disponibles.</p>
+            ) : null}
+          </div>
+        </details>
       ) : null}
     </div>
   )

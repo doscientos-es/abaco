@@ -7,6 +7,7 @@ import { VacationManagementPage } from './vacation-management-page'
 
 const mocks = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
+  coverage: [] as Array<Record<string, unknown>>,
   filterNeedsInfo: false,
   stateIndex: 0,
   tab: 'pending' as 'calendar' | 'pending',
@@ -106,7 +107,10 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useQuery: () => ({ data: mocks.data, isSuccess: true }),
+  useQuery: ({ queryKey }: { queryKey: unknown[] }) => ({
+    data: queryKey[0] === 'vacation-coverage' ? mocks.coverage : mocks.data,
+    isSuccess: true,
+  }),
   useMutation: () => ({ isPending: false, mutate: vi.fn() }),
 }))
 vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'tenant-1' }) }))
@@ -146,6 +150,7 @@ vi.mock('./vacation-request-card', () => ({
 describe('VacationManagementPage', () => {
   beforeEach(() => {
     mocks.data = []
+    mocks.coverage = []
     mocks.filterNeedsInfo = false
     mocks.stateIndex = 0
     mocks.tab = 'pending'
@@ -156,6 +161,27 @@ describe('VacationManagementPage', () => {
     mocks.picker = null
     mocks.buttons.clear()
     vi.clearAllMocks()
+  })
+
+  it('blocks approval while affected visits remain and enables it after coverage', () => {
+    mocks.data = [
+      {
+        id: '1',
+        requesterName: 'Ana',
+        status: 'pending',
+        absenceType: 'vacation',
+        startDate: '2026-11-10',
+        endDate: '2026-11-12',
+      },
+    ]
+    mocks.coverage = [{ visitId: 'visit-1' }]
+    let html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('Reasigna las visitas afectadas antes de aprobar')
+    expect(html).toContain('<button disabled="">Aprobar</button>')
+    mocks.stateIndex = 0
+    mocks.coverage = []
+    html = renderToStaticMarkup(<VacationManagementPage />)
+    expect(html).toContain('<button>Aprobar</button>')
   })
 
   it('provides status, worker, type and date filters for the absence inbox', () => {

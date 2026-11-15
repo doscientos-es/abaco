@@ -75,7 +75,7 @@ export function ContractAgreementForm({ contract }: { contract: ServiceContract 
         ]}
       />
       <TextareaField
-        label="Observaciones generales"
+        label="Notas (opcional)"
         value={notes}
         onChange={setNotes}
         maxLength={5000}

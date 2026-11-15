@@ -10,6 +10,7 @@
     "format": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --write .",
     "format:check": "oxfmt -c node_modules/@doscientos/configs/oxfmt.json --check .",
     "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "structure:check": "doscientos-structure --root src --tanstack-router",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

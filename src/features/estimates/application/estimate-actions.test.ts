@@ -38,13 +38,17 @@ beforeEach(() => {
 })
 
 describe('estimate formats', () => {
-  it('preserves the traditional format for existing callers', () => {
+  it('creates a document with required sections by default', () => {
     createEstimate('client', 'Oferta sencilla')
     expect(state.data?.estimates[0]).toMatchObject({
-      documentFormat: 'table',
-      sections: [],
+      documentFormat: 'sections',
       title: 'Oferta sencilla',
     })
+    expect(state.data?.estimates[0]?.sections?.map((section) => section.type)).toEqual([
+      'description',
+      'work_table',
+      'prices',
+    ])
   })
 
   it('creates the chosen modular format with editable description and prices', () => {

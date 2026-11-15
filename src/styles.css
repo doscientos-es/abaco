@@ -622,4 +622,7 @@ body.invoice-print .paper-sheet section {
   body.invoice-print .contract-document section {
     break-inside: auto;
   }
+  body.invoice-print .contract-document .contract-template-section[data-page-break] {
+    break-before: page;
+  }
 }

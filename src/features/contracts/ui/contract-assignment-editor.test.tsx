@@ -81,6 +81,22 @@ describe('contract assignment controls', () => {
     expect(drafts[1]).toMatchObject({ mode: 'team', team_id: 't1', user_ids: [] })
   })
 
+  it('allows several people on the job itself', () => {
+    const html = renderToStaticMarkup(
+      <ContractAssignmentEditor
+        setup={setup}
+        drafts={initialContractAssignments(setup)}
+        disabled={false}
+        onChange={vi.fn()}
+      />,
+    )
+    const mode = mocks.controls.find((control) => control.label === 'Asignar a')
+    expect(mode?.options.map((option) => option.value)).toEqual(['people', 'team'])
+    expect(html).toContain('Personas asignadas')
+    expect(html).toContain('Ana')
+    expect(html).toContain('Pol')
+  })
+
   it('disables all selects while saving, including controls rendered in portals', () => {
     renderToStaticMarkup(
       <ContractAssignmentEditor

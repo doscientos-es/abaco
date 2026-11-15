@@ -26,6 +26,7 @@ export type ContractJobDraft = {
   duration_minutes: number
   local_start: string
   assigned_user_id: string | null
+  assigned_user_ids: string[]
   work_team_id: string | null
 }
 
@@ -48,6 +49,7 @@ export function emptyContractJob(startsOn: string): ContractJobDraft {
     duration_minutes: 60,
     local_start: '',
     assigned_user_id: null,
+    assigned_user_ids: [],
     work_team_id: null,
   }
 }
@@ -75,8 +77,13 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
     const error = weeklyScheduleError(job.weekly_slots)
     if (error) return error
   }
-  if (job.frequency !== 'once' && job.modality === 'mobile' && !job.work_team_id)
-    return 'Selecciona el equipo que realizará los trabajos.'
+  if (
+    job.frequency !== 'once' &&
+    job.modality === 'mobile' &&
+    !job.work_team_id &&
+    !job.assigned_user_ids.length
+  )
+    return 'Selecciona personas o un equipo para realizar los trabajos.'
   if (
     job.frequency !== 'once' &&
     job.frequency !== 'weekly' &&
@@ -92,7 +99,9 @@ export function contractJobError(job: ContractJobDraft, startsOn: string, endsOn
     job.duration_minutes > 720
   )
     return 'La duración debe estar entre 15 y 720 minutos.'
-  if (job.assigned_user_id && job.work_team_id) return 'Asigna una persona o un equipo, no ambos.'
+  if (job.assigned_user_ids.length > 30) return 'Selecciona como máximo 30 personas.'
+  if ((job.assigned_user_id || job.assigned_user_ids.length) && job.work_team_id)
+    return 'Asigna personas o un equipo, no ambos.'
   if (job.local_start && !/^([01][0-9]|2[0-3]):[0-5][0-9](:00)?$/.test(job.local_start))
     return 'La hora prevista no es válida.'
   return null
@@ -104,8 +113,11 @@ export function normalizeContractJob(job: ContractJobDraft): ContractJobDraft {
     ? [...new Set(job.weekly_slots.map((slot) => slot.weekday))].sort((a, b) => a - b)
     : []
   const first = job.weekly_slots[0]
+  const people = [...new Set(job.assigned_user_ids)].sort()
   return {
     ...job,
+    assigned_user_ids: people,
+    assigned_user_id: people[0] ?? null,
     title: job.title.trim(),
     ends_on: job.frequency === 'once' ? null : job.ends_on,
     weekdays,

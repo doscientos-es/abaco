@@ -37,7 +37,7 @@ select throws_ok($$select public.update_draft_contract_details('79000000-0000-40
 select public.update_draft_contract_details('79000000-0000-4000-8000-000000000001',current_setting('test.weekly_contract')::uuid,
   (select updated_at from public.service_contracts where id=current_setting('test.weekly_contract')::uuid),'2027-01-04','2028-01-09','manual','','79000000-0000-4000-8000-000000000008');
 select throws_ok($$select pg_temp.save_weekly(null,current_setting('test.weekly_payload')::jsonb || '{"work_team_id":null}','79000000-0000-4000-8000-000000000009')$$,
-  '22023','Selecciona el equipo que realizará los trabajos','Recurring mobile jobs require a team on the server');
+  '22023','Selecciona personas o un equipo para realizar los trabajos','Recurring mobile jobs require people or a team on the server');
 select throws_ok($$select pg_temp.save_weekly(null,current_setting('test.weekly_payload')::jsonb || '{"weekdays":[1]}','79000000-0000-4000-8000-000000000009')$$,
   '22023','Los días no coinciden con el calendario','Calendar days and stored recurrence cannot diverge');
 select is(pg_temp.save_weekly(null,current_setting('test.weekly_payload')::jsonb,'79000000-0000-4000-8000-000000000010'),

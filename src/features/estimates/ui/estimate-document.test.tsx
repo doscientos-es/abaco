@@ -52,6 +52,8 @@ describe('customer-facing estimate', () => {
       <EstimateDocument estimate={estimate} tenant={tenant} client={undefined} />,
     )
     expect(html).toContain('Limpieza ordinaria')
+    expect(html).toContain('3. Forma de pago')
+    expect(html).toContain('4. Descripción y condiciones')
     expect(html).toContain('Condiciones originales')
     expect(html).toContain('Base imponible')
     expect(html).toContain('IVA 21%')

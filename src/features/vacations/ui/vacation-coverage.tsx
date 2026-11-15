@@ -41,7 +41,7 @@ export function VacationCoverage({
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({})
   const coverage = useQuery({
     queryKey: ['vacation-coverage', tenantId, requestId],
-    enabled: approved,
+    enabled: true,
     queryFn: () => listVacationCoverage(tenantId, requestId),
   })
   const replan = useMutation({
@@ -55,7 +55,7 @@ export function VacationCoverage({
       replanServiceVisit({
         tenantId,
         ...input,
-        reason: 'Cobertura de vacaciones aprobadas',
+        reason: 'Cobertura de ausencia',
         operationId: crypto.randomUUID(),
       }),
     onSuccess: async () => {
@@ -66,17 +66,14 @@ export function VacationCoverage({
     },
   })
 
-  if (!approved) {
-    return (
-      <p className="text-muted-foreground border-t pt-3 text-sm">
-        Al aprobar, la agenda marcará los servicios afectados. No se reasignarán automáticamente.
-      </p>
-    )
-  }
-
   return (
     <section className="border-t pt-3" aria-label="Servicios afectados y cobertura">
       <h3 className="font-medium">Servicios afectados</h3>
+      {!approved ? (
+        <p className="text-muted-foreground mt-1 text-sm">
+          Revisa y reasigna las visitas antes de decidir sobre la solicitud.
+        </p>
+      ) : null}
       {coverage.isPending ? <p className="text-muted-foreground mt-2">Revisando agenda…</p> : null}
       {coverage.isError ? (
         <p role="alert" className="text-destructive mt-2">
