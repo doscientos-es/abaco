@@ -19,7 +19,7 @@ export type NavTo =
   | '/mis-vacaciones'
   | '/horarios'
 
-export type NavItem = { to: NavTo; label: string; icon: ReactNode }
+export type NavItem = { to: NavTo; label: string; icon: ReactNode; mobileLabel?: string }
 
 export function initials(name: string) {
   return (

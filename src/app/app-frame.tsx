@@ -38,6 +38,7 @@ import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/st
 import { WorkspaceChromeContext } from '@/shared/ui/workspace-page-chrome'
 
 import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
+import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
@@ -51,7 +52,12 @@ const navGroups: NavGroup[] = [
   {
     label: 'Ventas',
     items: [
-      { to: '/presupuestos', label: 'Presupuestos', icon: navIcons.estimates },
+      {
+        to: '/presupuestos',
+        label: 'Presupuestos',
+        mobileLabel: 'Presup.',
+        icon: navIcons.estimates,
+      },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
       { to: '/clientes', label: 'Clientes', icon: navIcons.clients },
       { to: '/catalogo', label: 'Catálogo', icon: navIcons.catalog },
@@ -60,7 +66,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Operaciones',
     items: [
-      { to: '/trabajos', label: 'Planificación', icon: navIcons.work },
+      { to: '/trabajos', label: 'Planificación', mobileLabel: 'Trabajos', icon: navIcons.work },
       { to: '/trabajadores', label: 'Trabajadores', icon: navIcons.clients },
     ],
   },
@@ -87,8 +93,8 @@ const bottomOrder: NavTo[] = [
   '/',
   '/presupuestos',
   '/clientes',
-  '/contratos',
   '/trabajos',
+  '/contratos',
   '/trabajadores',
   '/facturas',
   '/catalogo',
@@ -148,14 +154,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
     .map((group) => ({ ...group, items: group.items.filter(allowed) }))
     .filter((group) => group.items.length > 0)
   const bottomItems = flatItems.filter(allowed)
-  // Up to 5 sections fit as tabs; with more, the least used go under "Más".
-  const tabs = bottomItems.length > MAX_TABS ? bottomItems.slice(0, MAX_TABS - 1) : bottomItems
-  const moreItems = bottomItems.slice(tabs.length)
+  // Reserve a slot for every permitted section not shown directly in the bar.
+  const allItems = groups.flatMap((group) => group.items)
+  const tabs = allItems.length > MAX_TABS ? bottomItems.slice(0, MAX_TABS - 1) : bottomItems
+  const tabPaths = new Set(tabs.map((item) => item.to))
+  const moreItems = allItems.filter((item) => !tabPaths.has(item.to))
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isInternalPage = pathname.split('/').filter(Boolean).length > 1
-  const moreActive = moreItems.some((item) => pathname.startsWith(item.to))
-  const tabClass =
-    'text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none'
   const canSeeSettings = can(session?.role, 'settings:write')
   const shortcuts: Record<string, string> = {
     '/': 'g r',
@@ -407,45 +412,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </AppShellContent>
         </AppShellMain>
 
-        <nav
-          aria-label="Principal"
-          style={{
-            gridTemplateColumns: `repeat(${tabs.length + (moreItems.length > 0 ? 1 : 0)}, minmax(0, 1fr))`,
-          }}
-          className="bg-sidebar border-border hidden shrink-0 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
-        >
-          {tabs.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              activeOptions={{ exact: item.to === '/' }}
-              activeProps={{ className: 'text-primary font-medium' }}
-              className={tabClass}
-            >
-              {item.icon}
-              <span className="max-w-full truncate">{item.label}</span>
-            </Link>
-          ))}
-          {moreItems.length > 0 ? (
-            <DropdownMenuTrigger>
-              <Button
-                variant="ghost"
-                aria-label="Más secciones"
-                className={`${tabClass} h-auto rounded-none ${moreActive ? 'text-primary font-medium' : ''}`}
-              >
-                {navIcons.more}
-                <span>Más</span>
-              </Button>
-              <DropdownMenuContent placement="top end">
-                {moreItems.map((item) => (
-                  <DropdownMenuItem key={item.to} onAction={() => void navigate({ to: item.to })}>
-                    {item.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenuTrigger>
-          ) : null}
-        </nav>
+        <MobileNavigation items={tabs} moreItems={moreItems} pathname={pathname} />
         <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
       </AppShell>
     </WorkspaceChromeContext.Provider>

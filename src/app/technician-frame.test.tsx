@@ -107,7 +107,8 @@ describe('worker navigation', () => {
     expect(html).toContain('Empresa Uno')
     expect(html).toContain('Ana Pérez')
     expect(html).toContain('md:flex')
-    expect(html).toContain('max-md:grid')
+    expect(html).toContain('aria-label="Navegación móvil"')
+    expect(html).toContain('class="mobile-bottom-nav"')
     expect(html).toContain('Contenido')
     for (const path of ['/mi-jornada', '/mis-vacaciones', '/ajustes']) {
       expect(html).toContain(`href="${path}"`)

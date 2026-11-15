@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   canManageVacations: true,
   canReadInvoices: true,
   canEditSettings: true,
+  canReadWork: true,
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
@@ -22,7 +23,9 @@ vi.mock('@/features/auth', () => ({
         ? state.canReadInvoices
         : permission === 'settings:write'
           ? state.canEditSettings
-          : true,
+          : permission === 'work:read'
+            ? state.canReadWork
+            : true,
   CompanyDialog: () => null,
   roleLabels: { admin: 'Administrador' },
   useCompanyActions: () => ({ switchTo: vi.fn() }),
@@ -102,6 +105,23 @@ describe('estado de guardado en la aplicación', () => {
     expect(sales).toContain('href="/contratos"')
     expect(html).not.toContain('href="/horarios"')
     expect(html).not.toContain('href="/vacaciones"')
+  })
+
+  it('offers the main modules in a mobile bar and honors work permissions', () => {
+    const html = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
+    const mobile = html.slice(html.indexOf('aria-label="Navegación móvil"'))
+    expect(mobile).toContain('class="mobile-bottom-nav"')
+    for (const path of ['/presupuestos', '/clientes', '/trabajos']) {
+      expect(mobile).toContain(`href="${path}"`)
+    }
+    expect(mobile).toContain('Más secciones')
+    state.canReadWork = false
+    try {
+      const restricted = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
+      expect(restricted).not.toContain('href="/trabajos"')
+    } finally {
+      state.canReadWork = true
+    }
   })
 
   it('places settings in the sidebar footer instead of the main navigation', () => {

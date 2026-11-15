@@ -22,6 +22,7 @@ import { GlobalSearch } from '@/features/global-search'
 import { brand } from '@/shared/lib/brand'
 
 import { initials, SidebarLink, type NavItem } from './frame-navigation'
+import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 
 import './technician-frame.css'
@@ -29,7 +30,12 @@ import './technician-frame.css'
 const navigation: NavItem[] = [
   { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.home },
   { to: '/horarios', label: 'Mi horario', icon: navIcons.visits },
-  { to: '/mis-vacaciones', label: 'Mis vacaciones', icon: navIcons.visits },
+  {
+    to: '/mis-vacaciones',
+    label: 'Mis vacaciones',
+    mobileLabel: 'Vacaciones',
+    icon: navIcons.visits,
+  },
   { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
 ]
 
@@ -156,22 +162,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
           <div className="user-frame__page">{children}</div>
         </AppShellContent>
       </AppShellMain>
-      <nav
-        aria-label="Navegación de usuario"
-        className="bg-sidebar border-border hidden shrink-0 grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] max-md:grid"
-      >
-        {navigation.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            activeProps={{ className: 'text-primary font-medium' }}
-            className="text-muted-foreground flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none"
-          >
-            {item.icon}
-            <span className="max-w-full truncate">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+      <MobileNavigation items={navigation} />
       <Toaster />
     </AppShell>
   )
