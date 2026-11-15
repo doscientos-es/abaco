@@ -47,6 +47,8 @@ describe('cleaning service center data', () => {
       expect(services[0]?.location).toEqual(center)
       expect(mocks.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
       expect(mocks.eq).toHaveBeenCalledWith('contract_id', 'contract-1')
+      expect(mocks.select.mock.calls[0]?.[0]).toContain('source_service_id')
+      expect(mocks.select.mock.calls[0]?.[0]).toContain('source_section_id')
     },
   )
 

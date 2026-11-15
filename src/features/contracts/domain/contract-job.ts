@@ -1,4 +1,33 @@
+import { serviceFrequencySelection } from '@/shared/domain/service-periodicity'
+
 import { contractDatesError, weeklyScheduleError, type WeeklyTimeSlot } from './weekly-schedule'
+
+type QuotedService = {
+  source_service_id?: string | null
+  source_section_id?: string | null
+  frequency?: string | null
+}
+
+/** Match by immutable source identifiers, never by a potentially duplicated task title. */
+export function quotedJobFrequency(job: QuotedService, scope: readonly QuotedService[]): string {
+  if (!job.source_service_id) return ''
+  const quoted = scope.find(
+    (item) =>
+      item.source_service_id === job.source_service_id &&
+      (!job.source_section_id || item.source_section_id === job.source_section_id),
+  )
+  return typeof quoted?.frequency === 'string' ? quoted.frequency.trim() : ''
+}
+
+/** A quote is not a complete schedule; suggest only unambiguous supported intervals. */
+export function suggestedJobFrequency(frequency: string): ContractJobDraft['frequency'] {
+  const selection = serviceFrequencySelection({ frequency })
+  if (selection.other || selection.periodicities.length !== 1) return null
+  const [periodicity] = selection.periodicities
+  if (periodicity === 'daily' || periodicity === 'twice_weekly' || periodicity === 'weekly')
+    return 'weekly'
+  return periodicity === 'monthly' ? 'monthly' : null
+}
 
 export const jobFrequencyLabels = {
   once: 'Una sola vez',

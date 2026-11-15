@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   update: vi.fn(),
   actions: new Map<string, (() => void)[]>(),
+  rows: [] as Array<() => void>,
   confirm: null as (() => void) | null,
 }))
 
@@ -82,6 +83,12 @@ vi.mock('@/shared/store/store', () => ({
 }))
 vi.mock('@/shared/ui/import-dialog', () => ({ ImportDialog: () => null }))
 vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
+vi.mock('@/shared/ui/navigable-table-row', () => ({
+  NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
+    mocks.rows.push(onOpen)
+    return <div>{children}</div>
+  },
+}))
 vi.mock('@/shared/ui/use-pagination', () => ({
   usePagination: (items: unknown[]) => ({ pageItems: items }),
   TablePagination: () => null,
@@ -95,6 +102,7 @@ beforeEach(() => {
   mocks.hasClientTypes = true
   mocks.target = null
   mocks.actions.clear()
+  mocks.rows = []
   mocks.confirm = null
 })
 
@@ -114,6 +122,14 @@ describe('client Excel import action', () => {
 })
 
 describe('client row actions', () => {
+  it('opens the client from its row', () => {
+    renderToStaticMarkup(<ClientsPage />)
+    mocks.rows[0]?.()
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/clientes/$clientId',
+      params: { clientId: 'active' },
+    })
+  })
   it('offers labeled edit and archive actions for mobile and desktop', () => {
     const html = renderToStaticMarkup(<ClientsPage />)
     expect(html.match(/aria-label="Editar Ana"/g)).toHaveLength(2)

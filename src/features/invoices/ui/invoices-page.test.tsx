@@ -4,14 +4,21 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { InvoicesPage } from './invoices-page'
 
+const mocks = vi.hoisted(() => ({ navigate: vi.fn(), rows: [] as Array<() => void> }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, className }: { children: ReactNode; className?: string }) => (
     <a href="/facturas" className={className}>
       {children}
     </a>
   ),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mocks.navigate,
   useSearch: () => ({ q: 'F-2026-003' }),
+}))
+vi.mock('@/shared/ui/navigable-table-row', () => ({
+  NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
+    mocks.rows.push(onOpen)
+    return <tr>{children}</tr>
+  },
 }))
 vi.mock('@/features/auth', () => ({ useSession: () => ({ role: 'admin', tenantId: 'tenant' }) }))
 vi.mock('@/shared/store/store', () => ({
@@ -49,6 +56,16 @@ vi.mock('@/shared/store/store', () => ({
 }))
 
 describe('lista de facturas emitidas', () => {
+  it('abre la factura correspondiente desde la fila', () => {
+    mocks.rows = []
+    mocks.navigate.mockClear()
+    renderToStaticMarkup(<InvoicesPage />)
+    mocks.rows[0]?.()
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/facturas/$invoiceId',
+      params: { invoiceId: 'invoice-3' },
+    })
+  })
   it('muestra la factura filtrada tanto en tarjetas como en la tabla de escritorio', () => {
     const html = renderToStaticMarkup(<InvoicesPage />)
     expect(html).toContain('1 factura')

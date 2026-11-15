@@ -1,4 +1,4 @@
-import type { Ref } from 'react'
+import { useState, type ReactNode, type Ref } from 'react'
 
 import { estimateTotals, milestoneAmounts } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
@@ -38,6 +38,23 @@ export function EstimateDocument({
   const paymentNumber = mainSectionCount + 1
   const conditionsNumber = mainSectionCount + (showPayment ? 2 : 1)
   const Page = paginated ? EstimatePageFlow : Unpaginated
+  const [pageCounts, setPageCounts] = useState<[number, number, number]>([1, 1, 1])
+  const totalPages = pageCounts.reduce((total, count) => total + count, 0)
+  const pageProps = (group: 0 | 1 | 2) => ({
+    pageCount: pageCounts[group],
+    firstPage: 1 + pageCounts.slice(0, group).reduce((total, count) => total + count, 0),
+    totalPages,
+    tenantName: tenant.name,
+    estimateNumber: estimate.number,
+    onPageCountChange: (count: number) => {
+      setPageCounts((current) => {
+        if (current[group] === count) return current
+        const next: [number, number, number] = [...current]
+        next[group] = count
+        return next
+      })
+    },
+  })
 
   return (
     <article
@@ -48,7 +65,7 @@ export function EstimateDocument({
           : 'estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none'
       }
     >
-      <Page>
+      <Page {...pageProps(0)}>
         <header className="estimate-document__cover space-y-8">
           <div>
             {tenant.logoUrl ? (
@@ -65,7 +82,7 @@ export function EstimateDocument({
               {tenant.name}
             </h2>
             <p className="text-muted-foreground">
-              {tenant.taxId} · {tenant.phone} · {tenant.email}
+              {[tenant.taxId, tenant.phone, tenant.email].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="space-y-2">
@@ -82,7 +99,7 @@ export function EstimateDocument({
         </header>
       </Page>
 
-      <Page>
+      <Page {...pageProps(1)}>
         <nav className="estimate-document__index" aria-label="Índice">
           <h2 className="mb-5 text-xl font-semibold">Índice</h2>
           <ul className="space-y-2">
@@ -111,7 +128,7 @@ export function EstimateDocument({
         </nav>
       </Page>
 
-      <Page>
+      <Page {...pageProps(2)}>
         <div className="estimate-document__content space-y-8">
           {estimate.documentFormat !== 'sections' ? (
             <section>
@@ -179,6 +196,6 @@ export function EstimateDocument({
   )
 }
 
-function Unpaginated({ children }: { children: React.ReactNode }) {
+function Unpaginated({ children }: { children: ReactNode }) {
   return children
 }

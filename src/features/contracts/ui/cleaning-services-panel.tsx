@@ -21,11 +21,14 @@ import {
   listCleaningServices,
   type CleaningService,
 } from '../application/cleaning-service-actions'
+import type { ServiceContract } from '../application/contract-actions'
 import {
   contractJobError,
   emptyContractJob,
   jobFrequencyLabels,
   normalizeContractJob,
+  quotedJobFrequency,
+  suggestedJobFrequency,
   type ContractJobDraft,
 } from '../domain/contract-job'
 import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
@@ -41,6 +44,7 @@ export function CleaningServicesPanel({
   targetJobId,
   clientId,
   clientName,
+  quotedScope = [],
   startsOn,
   endsOn,
   updatedAt,
@@ -53,6 +57,7 @@ export function CleaningServicesPanel({
   targetJobId?: string
   clientId: string
   clientName: string
+  quotedScope?: ServiceContract['included_scope']
   startsOn: string
   endsOn: string | null
   updatedAt: string
@@ -97,6 +102,8 @@ export function CleaningServicesPanel({
   }
   const error = contractJobError(form, startsOn, endsOn)
   const weekly = form.frequency === 'weekly' || form.frequency === 'fortnightly'
+  const editingService = services.data?.find((service) => service.id === editingId)
+  const editingFrequency = editingService ? quotedJobFrequency(editingService, quotedScope) : ''
   function edit(service: CleaningService) {
     const initial = emptyContractJob(startsOn)
     const values = Object.fromEntries(
@@ -123,6 +130,7 @@ export function CleaningServicesPanel({
           }
         : {
             ...initial,
+            frequency: suggestedJobFrequency(quotedJobFrequency(service, quotedScope)),
             title: service.title,
             tasks: service.tasks,
             instructions: service.instructions ?? '',
@@ -203,6 +211,7 @@ export function CleaningServicesPanel({
       <div className="grid gap-4 xl:grid-cols-2">
         {services.data?.map((service) => {
           const location = targets.data?.locations.find((item) => item.id === service.location_id)
+          const quotedFrequency = quotedJobFrequency(service, quotedScope)
           const responsible = service.work_team_id
             ? (teams.data?.find((team) => team.id === service.work_team_id)?.name ??
               'Equipo no disponible')
@@ -239,6 +248,11 @@ export function CleaningServicesPanel({
                     {service.configured ? 'Configurado' : 'Pendiente de configurar'}
                   </span>
                 </div>
+                {quotedFrequency ? (
+                  <p className="text-muted-foreground mt-3 text-sm">
+                    Frecuencia acordada: <strong>{quotedFrequency}</strong>
+                  </p>
+                ) : null}
                 {!service.configured ? (
                   <div className="bg-muted/50 mt-4 rounded-lg p-3">
                     <p className="text-muted-foreground text-xs font-medium">Alcance aceptado</p>
@@ -256,19 +270,14 @@ export function CleaningServicesPanel({
                           : 'Trabajo periódico móvil'}
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs">{clientName}</p>
+                    <div className="mt-4 hidden print:block">
+                      <p className="text-xs font-medium">Centro</p>
+                      <p className="text-sm">
+                        {service.location?.name ?? location?.name ?? 'Sin centro'}
+                      </p>
+                      <p className="text-xs">{service.location?.address ?? location?.address}</p>
+                    </div>
                     <div className="bg-muted/50 mt-4 grid gap-4 rounded-lg p-4 sm:grid-cols-2">
-                      <div className="flex min-w-0 gap-2 text-sm">
-                        <span className="text-muted-foreground mt-0.5">{fieldIcons.pin}</span>
-                        <div className="min-w-0">
-                          <p className="text-muted-foreground text-xs">Centro</p>
-                          <p className="mt-1 font-medium break-words">
-                            {service.location?.name ?? location?.name ?? 'Sin centro'}
-                          </p>
-                          <p className="text-muted-foreground text-xs break-words">
-                            {service.location?.address ?? location?.address}
-                          </p>
-                        </div>
-                      </div>
                       <div className="flex min-w-0 gap-2 text-sm">
                         <span className="text-muted-foreground mt-0.5">{fieldIcons.user}</span>
                         <div className="min-w-0">
@@ -279,7 +288,7 @@ export function CleaningServicesPanel({
                       <div className="flex min-w-0 gap-2 text-sm">
                         <span className="text-muted-foreground mt-0.5">{fieldIcons.calendar}</span>
                         <div>
-                          <p className="text-muted-foreground text-xs">Frecuencia</p>
+                          <p className="text-muted-foreground text-xs">Planificación del trabajo</p>
                           <p className="mt-1 font-medium">
                             {service.frequency
                               ? frequencyLabels[service.frequency]
@@ -304,6 +313,12 @@ export function CleaningServicesPanel({
                         </div>
                       </div>
                     </div>
+                    {quotedFrequency && service.frequency === 'once' ? (
+                      <p className="text-warning-foreground mt-3 text-xs">
+                        La planificación guardada es puntual. Revisa si coincide con la frecuencia
+                        acordada.
+                      </p>
+                    ) : null}
                     {service.weekly_slots?.length ? (
                       <ul
                         className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs"
@@ -465,14 +480,21 @@ export function CleaningServicesPanel({
           isDisabled={form.frequency === 'once'}
           onChange={(v) => set('modality', v as CleaningService['modality'])}
         />
+        {editingFrequency ? (
+          <p className="text-muted-foreground text-sm sm:col-span-2">
+            Frecuencia acordada en el presupuesto: <strong>{editingFrequency}</strong>. Completa la
+            planificación indicando todos los días y horas acordados.
+          </p>
+        ) : null}
         <SelectField
-          label="Frecuencia"
-          value={form.frequency ?? 'weekly'}
+          label="Frecuencia de planificación"
+          value={form.frequency ?? ''}
+          placeholder="Selecciona una frecuencia"
           options={Object.entries(frequencyLabels).map(([value, label]) => ({ value, label }))}
           onChange={(v) =>
             setForm((current) => ({
               ...current,
-              frequency: v as ContractJobDraft['frequency'],
+              frequency: (v || null) as ContractJobDraft['frequency'],
               modality: v === 'once' ? 'mobile' : current.modality,
             }))
           }
@@ -488,7 +510,7 @@ export function CleaningServicesPanel({
           onChange={(v) => set('anchor_on', v)}
           placeholder="Fecha"
         />
-        {form.frequency !== 'once' ? (
+        {form.frequency && form.frequency !== 'once' ? (
           <TextField
             label="Fin del trabajo (por defecto, fin del contrato)"
             type="date"
@@ -555,7 +577,7 @@ export function CleaningServicesPanel({
             </Button>
           </p>
         ) : null}
-        {form.frequency !== 'once' ? (
+        {form.frequency && form.frequency !== 'once' ? (
           <div className="border-border border-b pb-2 sm:col-span-2">
             <h3 className="font-semibold">Horario de trabajo</h3>
             <p className="text-muted-foreground text-sm">Marca las franjas en el calendario.</p>
@@ -576,7 +598,7 @@ export function CleaningServicesPanel({
             }
           />
         ) : null}
-        {!weekly && form.frequency !== 'once' ? (
+        {form.frequency && !weekly && form.frequency !== 'once' ? (
           <WeeklyScheduleEditor
             value={
               form.local_start

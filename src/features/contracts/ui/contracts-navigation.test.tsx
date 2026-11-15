@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   cursor: 0,
   filter: undefined as ((value: string) => void) | undefined,
   actions: new Map<string, () => void>(),
+  rows: [] as Array<() => void>,
   statuses: [] as string[],
   collections: [] as ({
     due_on: string
@@ -143,6 +144,12 @@ vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'tenant' }, clients: [{ id: 'client-1', name: 'Ana' }] }),
 }))
 vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
+vi.mock('@/shared/ui/navigable-table-row', () => ({
+  NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
+    state.rows.push(onOpen)
+    return <tr>{children}</tr>
+  },
+}))
 vi.mock('@/shared/ui/form', () => ({
   SelectField: ({
     label,
@@ -175,6 +182,7 @@ describe('contracts navigation', () => {
     state.cursor = 0
     state.filter = undefined
     state.actions.clear()
+    state.rows = []
     state.statuses = []
     state.collections = []
     state.loadContracts.mockClear()
@@ -246,6 +254,11 @@ describe('contracts navigation', () => {
     expect(html).toContain('href="/contratos/contract-0"')
     expect(html).toContain('aria-label="Acciones de Contrato 0"')
     expect(html).toContain('aria-label="Acciones de Contrato 1"')
+    state.rows[1]?.()
+    expect(state.navigate).toHaveBeenCalledWith({
+      to: '/contratos/$contractId',
+      params: { contractId: 'contract-1' },
+    })
   })
 
   it('resets pagination and uses a distinct server query when filtering by status', async () => {

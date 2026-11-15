@@ -21,6 +21,7 @@ import type { Client } from '@/shared/domain/types'
 import { newId, updateTenantData, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
+import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
@@ -233,7 +234,12 @@ export function ClientsPage() {
             </TableHeader>
             <TableBody>
               {pager.pageItems.map((client) => (
-                <TableRow key={client.id}>
+                <NavigableTableRow
+                  key={client.id}
+                  onOpen={() =>
+                    void navigate({ to: '/clientes/$clientId', params: { clientId: client.id } })
+                  }
+                >
                   <TableCell className="font-medium break-words">
                     <Link
                       to="/clientes/$clientId"
@@ -259,7 +265,7 @@ export function ClientsPage() {
                       />
                     </div>
                   </TableCell>
-                </TableRow>
+                </NavigableTableRow>
               ))}
             </TableBody>
           </Table>

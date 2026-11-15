@@ -73,6 +73,7 @@ describe('contract locations', () => {
     expect(contractLocationIds(contract, jobs)).toEqual(['one', 'two'])
     const html = renderToStaticMarkup(<ContractLocations contract={contract} />)
     expect(html).toContain('Oficina')
+    expect(html).toContain('Calle Uno')
     expect(html).toContain('Almacén')
     expect(html).toContain('openstreetmap.org/export/embed.html')
     expect(html).toContain('40.4%2C-3.7')

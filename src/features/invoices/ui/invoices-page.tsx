@@ -30,6 +30,7 @@ import { refreshStore, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField } from '@/shared/ui/form'
+import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
@@ -354,7 +355,7 @@ export function InvoicesPage() {
                   {pager.pageItems.map((invoice) => {
                     const { label, variant } = statusConfig[invoice.status]
                     return (
-                      <TableRow key={invoice.id}>
+                      <NavigableTableRow key={invoice.id} onOpen={() => openInvoice(invoice.id)}>
                         <TableCell className="whitespace-nowrap">
                           <Link
                             to="/facturas/$invoiceId"
@@ -401,7 +402,7 @@ export function InvoicesPage() {
                           {formatEuros(invoice.totalCents)}
                         </TableCell>
                         <TableCell>{actions(invoice)}</TableCell>
-                      </TableRow>
+                      </NavigableTableRow>
                     )
                   })}
                 </TableBody>

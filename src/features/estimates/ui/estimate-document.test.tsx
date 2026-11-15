@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import type { Estimate, Tenant } from '@/shared/domain/types'
 
 import { EstimateDocument } from './estimate-document'
-import { estimatePageCount } from './estimate-page-flow'
+import { EstimatePageFlow, estimatePageCount } from './estimate-page-flow'
 
 const id = (value: number) => `82000000-0000-4000-8000-${String(value).padStart(12, '0')}`
 const estimate: Estimate = {
@@ -224,6 +224,46 @@ describe('customer-facing estimate', () => {
     expect(pages[0]).toContain('estimate-document__cover')
     expect(pages[1]).toContain('estimate-document__index')
     expect(pages[2]).toContain('estimate-document__content')
+    pages.forEach((page, index) => {
+      expect(page).toContain('Empresa · Presupuesto P-1')
+      expect(page).toContain(`Página ${index + 1} de 3`)
+    })
+  })
+
+  it('numbers overflow pages continuously and keeps repeated content hidden from assistive technology', () => {
+    const html = renderToStaticMarkup(
+      <EstimatePageFlow
+        pageCount={3}
+        firstPage={3}
+        totalPages={5}
+        tenantName="Empresa"
+        estimateNumber="P-1"
+        onPageCountChange={() => {}}
+      >
+        <p>Contenido extenso</p>
+      </EstimatePageFlow>,
+    )
+    const pages = html.split('class="estimate-document__page"').slice(1)
+    expect(pages).toHaveLength(3)
+    pages.forEach((page, index) => expect(page).toContain(`Página ${index + 3} de 5`))
+    expect(pages[0]).not.toContain('aria-hidden="true"')
+    expect(pages[1]).toContain('class="estimate-document__viewport" aria-hidden="true"')
+    expect(pages[2]).toContain('class="estimate-document__viewport" aria-hidden="true"')
+  })
+
+  it('retains the custom legal footer at the end of the document', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={estimate}
+        tenant={{ ...tenant, documentFooter: 'Condiciones legales\nSegunda línea' }}
+        client={undefined}
+      />,
+    )
+    expect(html.match(/Condiciones legales/g)).toHaveLength(1)
+    expect(html).toContain('Segunda línea')
+    expect(html.indexOf('Condiciones legales')).toBeGreaterThan(
+      html.indexOf('Conforme del cliente'),
+    )
   })
 
   it('counts overflow and explicit column breaks without losing long content', () => {
@@ -237,6 +277,8 @@ describe('customer-facing estimate', () => {
     const css = readFileSync(new URL('./estimate-document.css', import.meta.url), 'utf8')
     expect(css).toContain('width: 210mm')
     expect(css).toContain('height: 297mm')
+    expect(css).toContain('height: 253mm')
+    expect(css).toContain('height: 16mm')
     expect(css).toContain('column-fill: auto')
     expect(css).toContain('break-before: column')
     expect(css).toContain('@page estimate')
@@ -250,6 +292,7 @@ describe('customer-facing estimate', () => {
       <EstimateDocument estimate={estimate} tenant={tenant} client={undefined} paginated={false} />,
     )
     expect(html).not.toContain('estimate-document__page')
+    expect(html).not.toContain('Página 1 de')
     expect(html).toContain('Condiciones originales')
   })
 })

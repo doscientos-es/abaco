@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as RelatedCreation from '@/features/clients/ui/related-record-creation'
 
 import type { CleaningService } from '../application/cleaning-service-actions'
+import type { ServiceContract } from '../application/contract-actions'
 import { emptyContractJob } from '../domain/contract-job'
 import { CleaningServicesPanel } from './cleaning-services-panel'
 
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   jobDialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
   locations: {} as Record<string, Array<{ id: string; name: string }>>,
   services: [] as CleaningService[],
+  scope: [] as ServiceContract['included_scope'],
   targetState: 'ready' as 'ready' | 'loading' | 'error',
   allowed: true,
   createLocation: vi.fn(),
@@ -200,6 +202,7 @@ function render({ draft = true, editable = true }: { draft?: boolean; editable?:
       contractId="contract-1"
       clientId="client-1"
       clientName="Alborán"
+      quotedScope={mocks.scope}
       startsOn="2026-12-01"
       endsOn="2027-11-30"
       updatedAt="version-1"
@@ -247,6 +250,7 @@ describe('contract job and inline centre creation', () => {
     mocks.states = []
     mocks.locations = {}
     mocks.services = []
+    mocks.scope = []
     mocks.targetState = 'ready'
     mocks.allowed = true
     mocks.invalidate.mockResolvedValue(undefined)
@@ -277,15 +281,87 @@ describe('contract job and inline centre creation', () => {
         title: 'Limpieza',
         tasks: 'Suelos y aseos',
         location_id: 'centre',
+        location: {
+          name: 'Portal A',
+          address: 'Calle Uno',
+          operational_contact: '',
+          access_notes: '',
+          notes: '',
+        },
       },
     ]
     const html = render()
     expect(html).toContain('Trabajos contratados')
     expect(html).not.toContain('2. Trabajos contratados')
-    expect(html).toContain('Portal A')
+    expect(html).toContain('hidden print:block')
+    const printedCentre = html.match(/class="mt-4 hidden print:block">(.*?)<\/div>/)?.[1]
+    expect(printedCentre).toContain('Portal A')
+    expect(printedCentre).toContain('Calle Uno')
+    expect(html.replace(printedCentre ?? '', '')).not.toContain('Portal A')
     expect(html).toContain('Suelos y aseos')
     press('Editar trabajo')
     expect(mocks.fields.get('Nombre · obligatorio')?.value).toBe('Limpieza')
+  })
+
+  it('shows the quoted frequency and flags an existing one-off schedule without changing it', () => {
+    mocks.scope = [
+      {
+        description: 'Suelos',
+        source_section_id: 'section',
+        source_service_id: 'row',
+        frequency: 'Diario; Mensual',
+      },
+    ]
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: true,
+        source_line_id: null,
+        source_section_id: 'section',
+        source_service_id: 'row',
+        time_known: false,
+        title: 'Suelos',
+        tasks: 'Suelos',
+      },
+    ]
+    const html = render()
+    expect(html).toContain('Frecuencia acordada:')
+    expect(html).toContain('Diario; Mensual')
+    expect(html).toContain('Una sola vez')
+    expect(html).toContain('La planificación guardada es puntual')
+    expect(mocks.createContract).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['Semanal', 'weekly'],
+    ['Mensual', 'monthly'],
+    ['Diario', 'weekly'],
+    ['Dos veces a la semana', 'weekly'],
+    ['Diario; Mensual', ''],
+  ])('uses the agreed frequency %s when configuring a quoted job', (frequency, expected) => {
+    mocks.scope = [
+      { description: 'Suelos', source_section_id: 'section', source_service_id: 'row', frequency },
+    ]
+    mocks.services = [
+      {
+        ...emptyContractJob('2026-12-01'),
+        id: 'job-1',
+        configured: false,
+        source_line_id: null,
+        source_section_id: 'section',
+        source_service_id: 'row',
+        time_known: false,
+        title: 'Suelos',
+        tasks: 'Suelos',
+      },
+    ]
+    render()
+    const html = press('Configurar trabajo')
+    expect(html).toContain(`Frecuencia acordada en el presupuesto:`)
+    expect(html).toContain(frequency)
+    expect(mocks.fields.get('Frecuencia de planificación')?.value).toBe(expected)
+    expect(mocks.jobDialog?.submitDisabled).toBe(true)
   })
 
   it('explains why an active configured job cannot be edited, but allows pending jobs', () => {
@@ -333,7 +409,10 @@ describe('contract job and inline centre creation', () => {
       render()
       press(configured ? 'Editar trabajo' : 'Configurar trabajo')
       expect(mocks.fields.has('Instrucciones de acceso y observaciones')).toBe(false)
-      if (!configured) change('Centro · obligatorio', 'centre')
+      if (!configured) {
+        change('Centro · obligatorio', 'centre')
+        change('Frecuencia de planificación', 'once')
+      }
       expect(mocks.jobDialog?.submitDisabled).toBe(false)
       mocks.jobDialog?.onSubmit()
       await vi.waitFor(() =>

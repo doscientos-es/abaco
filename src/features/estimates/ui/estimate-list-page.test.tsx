@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   form: null as { onSubmit: () => void; submitLabel: string } | null,
   invoices: [] as Array<{ tenantId: string; estimateId: string; milestoneId: string }>,
   actions: new Map<string, (() => void)[]>(),
+  rows: [] as Array<() => void>,
   dialog: null as {
     open: boolean
     onConfirm: () => void
@@ -107,6 +108,12 @@ vi.mock('@/shared/ui/form-dialog', () => ({
   },
 }))
 vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
+vi.mock('@/shared/ui/navigable-table-row', () => ({
+  NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
+    mocks.rows.push(onOpen)
+    return <div>{children}</div>
+  },
+}))
 vi.mock('@/shared/ui/use-pagination', () => ({
   usePagination: (items: unknown[]) => ({ pageItems: items }),
   TablePagination: () => null,
@@ -127,6 +134,7 @@ beforeEach(() => {
   mocks.target = null
   mocks.stateIndex = 0
   mocks.actions.clear()
+  mocks.rows = []
   mocks.dialog = null
   mocks.clientId = ''
   mocks.format = 'sections'
@@ -136,6 +144,14 @@ beforeEach(() => {
 })
 
 describe('estimate list actions', () => {
+  it('opens the corresponding estimate from its row', () => {
+    renderToStaticMarkup(<EstimateListPage />)
+    mocks.rows[1]?.()
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/presupuestos/$estimateId',
+      params: { estimateId: 'sent' },
+    })
+  })
   it.each(['sections', 'table'] as const)('passes the selected %s format to creation', (format) => {
     mocks.clientId = 'client'
     renderToStaticMarkup(<EstimateListPage />)

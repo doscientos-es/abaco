@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { contractJobError, emptyContractJob, normalizeContractJob } from './contract-job'
+import {
+  contractJobError,
+  emptyContractJob,
+  normalizeContractJob,
+  quotedJobFrequency,
+  suggestedJobFrequency,
+} from './contract-job'
 
 function validJob() {
   return {
@@ -12,6 +18,31 @@ function validJob() {
 }
 
 describe('contracted job configuration', () => {
+  it('matches the quoted frequency by service and section, never by a duplicate title', () => {
+    const scope = [
+      { source_service_id: 'a', source_section_id: 's1', frequency: 'Diario; Mensual' },
+      { source_service_id: 'b', source_section_id: 's2', frequency: 'Semanal' },
+    ]
+    expect(quotedJobFrequency({ source_service_id: 'a', source_section_id: 's1' }, scope)).toBe(
+      'Diario; Mensual',
+    )
+    expect(quotedJobFrequency({ source_service_id: 'a', source_section_id: 's2' }, scope)).toBe('')
+    expect(quotedJobFrequency({}, scope)).toBe('')
+  })
+
+  it.each([
+    ['Semanal', 'weekly'],
+    ['Mensual', 'monthly'],
+    ['Diario', 'weekly'],
+    ['Dos veces a la semana', 'weekly'],
+    ['Semestral', null],
+    ['Diario; Mensual', null],
+    ['Según necesidad', null],
+    ['', null],
+  ])('only suggests a supported, unambiguous interval for %s', (frequency, expected) => {
+    expect(suggestedJobFrequency(frequency)).toBe(expected)
+  })
+
   it('requires a centre and scope rather than silently scheduling quoted placeholders', () => {
     expect(contractJobError(emptyContractJob('2026-12-01'), '2026-12-01', null)).toBeTruthy()
     expect(contractJobError({ ...validJob(), location_id: null }, '2026-12-01', null)).toBe(

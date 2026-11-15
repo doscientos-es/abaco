@@ -28,6 +28,7 @@ import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
+import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
@@ -237,7 +238,15 @@ export function EstimateListPage() {
             </TableHeader>
             <TableBody>
               {pager.pageItems.map((estimate) => (
-                <TableRow key={estimate.id}>
+                <NavigableTableRow
+                  key={estimate.id}
+                  onOpen={() =>
+                    void navigate({
+                      to: '/presupuestos/$estimateId',
+                      params: { estimateId: estimate.id },
+                    })
+                  }
+                >
                   <TableCell className="text-muted-foreground">{estimate.number}</TableCell>
                   <TableCell className="font-medium">
                     <Link
@@ -270,7 +279,7 @@ export function EstimateListPage() {
                       onDelete={() => setToDelete(estimate)}
                     />
                   </TableCell>
-                </TableRow>
+                </NavigableTableRow>
               ))}
             </TableBody>
           </Table>

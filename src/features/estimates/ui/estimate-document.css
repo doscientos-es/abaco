@@ -21,16 +21,43 @@
 
 .estimate-document__viewport {
   width: 182mm;
-  height: 269mm;
+  height: 253mm;
   overflow: hidden;
 }
 
 .estimate-document__flow {
   width: 182mm;
-  height: 269mm;
+  height: 253mm;
   column-width: 182mm;
   column-gap: 0;
   column-fill: auto;
+}
+
+.estimate-document__page-footer {
+  box-sizing: border-box;
+  height: 16mm;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 5mm;
+  border-top: 1px solid #d4d4d4;
+  padding-top: 3mm;
+  color: #666;
+  font-size: 8pt;
+  line-height: 1.35;
+}
+
+.estimate-document__page-footer-identity {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estimate-document__page-number {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .estimate-document--paged .estimate-document__section[data-page-break] {

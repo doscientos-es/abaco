@@ -28,7 +28,12 @@ export type ServiceContract = {
   document_template_id: string | null
   document_template_name: string | null
   default_assigned_user_id: string | null
-  included_scope: Array<{ description: string }>
+  included_scope: Array<{
+    description: string
+    source_section_id?: string | null
+    source_service_id?: string | null
+    frequency?: string | null
+  }>
   schedule_version: number
   signed_at?: string | null
   signed_by?: string | null

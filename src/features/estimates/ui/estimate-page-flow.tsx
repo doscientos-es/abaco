@@ -1,19 +1,34 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 
 /** CSS columns fragment the same content that is clipped into each A4 sheet. */
 export function estimatePageCount(scrollWidth: number, columnWidth: number) {
   return columnWidth > 0 ? Math.max(1, Math.ceil((scrollWidth - 1) / columnWidth)) : 1
 }
 
-export function EstimatePageFlow({ children }: { children: ReactNode }) {
+export function EstimatePageFlow({
+  children,
+  pageCount,
+  firstPage,
+  totalPages,
+  onPageCountChange,
+  tenantName,
+  estimateNumber,
+}: {
+  children: ReactNode
+  pageCount: number
+  firstPage: number
+  totalPages: number
+  onPageCountChange: (count: number) => void
+  tenantName: string
+  estimateNumber: string
+}) {
   const flow = useRef<HTMLDivElement>(null)
-  const [pages, setPages] = useState(1)
 
   function measure() {
     const element = flow.current
     if (element) {
       const width = Number.parseFloat(getComputedStyle(element).width)
-      setPages(estimatePageCount(element.scrollWidth, width))
+      onPageCountChange(estimatePageCount(element.scrollWidth, width))
     }
   }
 
@@ -35,9 +50,9 @@ export function EstimatePageFlow({ children }: { children: ReactNode }) {
     }
   })
 
-  return Array.from({ length: pages }, (_, index) => (
-    <div className="estimate-document__page" key={index} aria-hidden={index ? true : undefined}>
-      <div className="estimate-document__viewport">
+  return Array.from({ length: pageCount }, (_, index) => (
+    <div className="estimate-document__page" key={index}>
+      <div className="estimate-document__viewport" aria-hidden={index ? true : undefined}>
         <div
           className="estimate-document__flow"
           ref={index === 0 ? flow : undefined}
@@ -46,6 +61,14 @@ export function EstimatePageFlow({ children }: { children: ReactNode }) {
         >
           {children}
         </div>
+      </div>
+      <div className="estimate-document__page-footer">
+        <span className="estimate-document__page-footer-identity">
+          {tenantName} · Presupuesto {estimateNumber}
+        </span>
+        <span className="estimate-document__page-number">
+          Página {firstPage + index} de {totalPages}
+        </span>
       </div>
     </div>
   ))

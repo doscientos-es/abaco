@@ -85,6 +85,8 @@ describe('contract summary', () => {
   it('guides through basic data, real jobs and activation in order', () => {
     const html = render()
     expect(html.indexOf('Datos básicos')).toBeLessThan(html.indexOf('Configurar trabajos'))
+    expect(html.indexOf('Centros')).toBeGreaterThan(html.indexOf('Datos básicos'))
+    expect(html.indexOf('Centros')).toBeLessThan(html.indexOf('Configurar trabajos'))
     expect(html.indexOf('Listado de trabajos')).toBeLessThan(html.indexOf('Activación'))
     expect(html.indexOf('Control de estado')).toBeLessThan(html.indexOf('Acciones rápidas'))
     expect(html).not.toContain('order-1')

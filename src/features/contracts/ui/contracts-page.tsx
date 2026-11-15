@@ -22,6 +22,7 @@ import { formatEuros } from '@/shared/domain/money'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField } from '@/shared/ui/form'
+import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
@@ -88,6 +89,7 @@ function ContractTemplates() {
 
 function ContractsList() {
   const { tenant, clients } = useTenantData()
+  const navigate = useNavigate()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<ContractStatusFilter>('all')
   const query = useQuery({
@@ -160,7 +162,15 @@ function ContractsList() {
           </TableHeader>
           <TableBody>
             {query.data.items.map((contract) => (
-              <TableRow key={contract.id}>
+              <NavigableTableRow
+                key={contract.id}
+                onOpen={() =>
+                  void navigate({
+                    to: '/contratos/$contractId',
+                    params: { contractId: contract.id },
+                  })
+                }
+              >
                 <TableCell className="min-w-48 font-medium">
                   <Link
                     to="/contratos/$contractId"
@@ -193,7 +203,7 @@ function ContractsList() {
                 <TableCell className="text-right">
                   <ContractActions contract={contract} />
                 </TableCell>
-              </TableRow>
+              </NavigableTableRow>
             ))}
           </TableBody>
         </Table>

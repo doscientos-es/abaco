@@ -124,6 +124,7 @@ export function ContractSummary({
               </p>
             ) : null}
           </div>
+          {active ? <ContractLocations contract={contract} /> : null}
         </section>
         <section className="space-y-4" aria-label="Configuración de trabajos">
           <StepHeading number={2} title="Configurar trabajos" />
@@ -135,14 +136,13 @@ export function ContractSummary({
         </section>
       </div>
       {active ? (
-        <aside className="space-y-5" aria-label="Acciones y centros del contrato">
+        <aside className="space-y-5" aria-label="Acciones del contrato">
           <ContractQuickActions
             contract={contract}
             client={client}
             onPrint={onPrint}
             onViewDocument={onViewDocument}
           />
-          <ContractLocations contract={contract} />
         </aside>
       ) : null}
     </div>

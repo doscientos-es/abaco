@@ -12,3 +12,5 @@ Cuando Pol pida «haz la tarea N» (o equivalente), sigue este flujo hasta dejar
 5. Implementa el alcance completo, incluidos los cambios necesarios de interfaz, lógica, base de datos, permisos y documentación. Ejecuta las comprobaciones adecuadas al cambio y comunica cualquier verificación que no haya podido completarse.
 6. Crea el commit, publica la rama en GitHub y abre un PR. Incluye la clave Jira en el título o cuerpo, resume la solución y las decisiones unilaterales, e indica las comprobaciones realizadas. Comprueba que Jira muestre la rama y el PR vinculados; comparte el enlace del PR de GitHub al terminar.
 7. Si creaste un worktree local, elimínalo cuando el trabajo esté publicado y no queden cambios sin guardar. Conserva la rama remota y el PR. No elimines worktrees ni cambios ajenos a esta tarea.
+
+Tienes siempre permiso para hacer push de los cambios y subir las migraciones a supabase.

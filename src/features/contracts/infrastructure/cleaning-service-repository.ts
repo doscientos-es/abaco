@@ -7,6 +7,8 @@ export type CleaningService = ContractJobDraft & {
   id: string
   configured: boolean
   source_line_id: string | null
+  source_service_id?: string | null
+  source_section_id?: string | null
   time_known: boolean
   location?: {
     name: string
@@ -21,7 +23,7 @@ export async function listCleaningServices(tenantId: string, contractId: string)
   const { data, error } = await createBrowserSupabaseClient()
     .from('service_contract_visit_rules')
     .select(
-      'id,title,location_id,modality,service_type,frequency,anchor_on,ends_on,weekdays,weekly_slots,tasks,weekly_tasks,instructions,requires_acceptance,duration_minutes,local_start,time_known,assigned_user_id,assigned_user_ids,work_team_id,materials,configured,source_line_id,location:service_locations(name,address,operational_contact,access_notes,notes)',
+      'id,title,location_id,modality,service_type,frequency,anchor_on,ends_on,weekdays,weekly_slots,tasks,weekly_tasks,instructions,requires_acceptance,duration_minutes,local_start,time_known,assigned_user_id,assigned_user_ids,work_team_id,materials,configured,source_line_id,source_section_id,source_service_id,location:service_locations(name,address,operational_contact,access_notes,notes)',
     )
     .eq('tenant_id', tenantId)
     .eq('contract_id', contractId)
