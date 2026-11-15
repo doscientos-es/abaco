@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as RelatedCreation from '@/features/clients/ui/related-record-creation'
 
+import type { CleaningService } from '../application/cleaning-service-actions'
+import { emptyContractJob } from '../domain/contract-job'
 import { CleaningServicesPanel } from './cleaning-services-panel'
 
 type Field = { value: string; onChange: (value: string) => void; isDisabled?: boolean }
@@ -21,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   },
   jobDialog: null as null | { onSubmit: () => void; submitDisabled: boolean },
   locations: {} as Record<string, Array<{ id: string; name: string }>>,
+  services: [] as CleaningService[],
   targetState: 'ready' as 'ready' | 'loading' | 'error',
   allowed: true,
   createLocation: vi.fn(),
@@ -95,7 +98,14 @@ vi.mock('@tanstack/react-query', () => ({
         refetch: mocks.refetch,
       }
     }
-    return { data: queryKey[0] === 'service-contracts' ? { items: [], count: 0 } : [] }
+    return {
+      data:
+        queryKey[0] === 'service-contracts'
+          ? { items: [], count: 0 }
+          : queryKey[0] === 'cleaning-services'
+            ? mocks.services
+            : [],
+    }
   },
 }))
 vi.mock('@tanstack/react-router', () => ({
@@ -236,6 +246,7 @@ describe('contract job and inline centre creation', () => {
     vi.clearAllMocks()
     mocks.states = []
     mocks.locations = {}
+    mocks.services = []
     mocks.targetState = 'ready'
     mocks.allowed = true
     mocks.invalidate.mockResolvedValue(undefined)
@@ -253,6 +264,39 @@ describe('contract job and inline centre creation', () => {
     expect(html).not.toContain('Piscina o activo')
     expect(mocks.jobDialog?.submitDisabled).toBe(true)
   })
+
+  it.each([false, true])(
+    'preserves existing instructions when editing a job (configured: %s)',
+    async (configured) => {
+      mocks.locations['client-1'] = [{ id: 'centre', name: 'Centro' }]
+      mocks.services = [
+        {
+          ...emptyContractJob('2026-12-01'),
+          id: 'job-1',
+          configured,
+          source_line_id: null,
+          time_known: false,
+          title: 'Limpieza',
+          tasks: 'Suelos',
+          location_id: 'centre',
+          instructions: 'Notas acordadas',
+        },
+      ]
+      render()
+      press(configured ? 'Editar trabajo' : 'Configurar trabajo')
+      expect(mocks.fields.has('Instrucciones de acceso y observaciones')).toBe(false)
+      if (!configured) change('Centro · obligatorio', 'centre')
+      expect(mocks.jobDialog?.submitDisabled).toBe(false)
+      mocks.jobDialog?.onSubmit()
+      await vi.waitFor(() =>
+        expect(mocks.createContract).toHaveBeenCalledWith(
+          expect.objectContaining({
+            service: expect.objectContaining({ instructions: 'Notas acordadas' }),
+          }),
+        ),
+      )
+    },
+  )
 
   it('saves and selects a centre, then persists a punctual job for that contract', async () => {
     openLocationForm()

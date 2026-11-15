@@ -28,7 +28,7 @@ import {
   type ContractJobDraft,
 } from '../domain/contract-job'
 import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
-import { ContractPeoplePicker } from './contract-people-picker'
+import { ContractResponsiblePicker } from './contract-responsible-picker'
 import { WeeklyScheduleEditor } from './weekly-schedule-editor'
 
 const days = scheduleDays
@@ -122,6 +122,7 @@ export function CleaningServicesPanel({
             ...initial,
             title: service.title,
             tasks: service.tasks,
+            instructions: service.instructions ?? '',
             assigned_user_id: service.assigned_user_id,
             assigned_user_ids: service.assigned_user_ids,
             work_team_id: service.work_team_id,
@@ -301,7 +302,7 @@ export function CleaningServicesPanel({
       ) : null}
       <FormDialog
         open={open}
-        wide={form.frequency !== 'once'}
+        wide
         onOpenChange={setOpen}
         title={editingId ? 'Configurar trabajo contratado' : 'Añadir trabajo'}
         submitLabel="Guardar trabajo"
@@ -315,6 +316,12 @@ export function CleaningServicesPanel({
           !targets.data.locations.some((l) => l.id === form.location_id)
         }
       >
+        <div className="border-border border-b pb-2 sm:col-span-2">
+          <h3 className="font-semibold">Datos del trabajo</h3>
+          <p className="text-muted-foreground text-sm">
+            Identifica el trabajo y el centro donde se realiza.
+          </p>
+        </div>
         <TextField
           label="Nombre · obligatorio"
           value={form.title}
@@ -420,16 +427,17 @@ export function CleaningServicesPanel({
             />
           </>
         ) : null}
-        <ContractPeoplePicker
+        <ContractResponsiblePicker
           people={people.data ?? []}
-          selected={form.assigned_user_ids}
-          disabled={busy || !people.isSuccess}
-          onChange={(ids) =>
+          teams={teams.data ?? []}
+          selected={{ people: form.assigned_user_ids, team: form.work_team_id }}
+          disabled={busy || !people.isSuccess || !teams.isSuccess}
+          onChange={({ people: ids, team }) =>
             setForm((current) => ({
               ...current,
               assigned_user_ids: ids,
               assigned_user_id: [...ids].sort()[0] ?? null,
-              work_team_id: ids.length ? null : current.work_team_id,
+              work_team_id: team,
             }))
           }
         />
@@ -441,24 +449,6 @@ export function CleaningServicesPanel({
             </Button>
           </p>
         ) : null}
-        <SelectField
-          label="Equipo habitual (alternativa a las personas)"
-          value={form.work_team_id ?? ''}
-          options={[
-            { value: '', label: 'Sin asignar' },
-            ...(teams.data ?? [])
-              .filter((t) => !t.archived)
-              .map((t) => ({ value: t.id, label: t.name })),
-          ]}
-          onChange={(v) =>
-            setForm((current) => ({
-              ...current,
-              work_team_id: v || null,
-              assigned_user_id: v ? null : current.assigned_user_id,
-              assigned_user_ids: v ? [] : current.assigned_user_ids,
-            }))
-          }
-        />
         {form.assigned_user_ids.length > 1 && form.modality === 'mobile' ? (
           <p className="text-muted-foreground text-sm sm:col-span-2">
             El trabajo conserva todas las personas. Las visitas generadas solo asignan a{' '}
@@ -474,6 +464,12 @@ export function CleaningServicesPanel({
               Reintentar
             </Button>
           </p>
+        ) : null}
+        {form.frequency !== 'once' ? (
+          <div className="border-border border-b pb-2 sm:col-span-2">
+            <h3 className="font-semibold">Horario de trabajo</h3>
+            <p className="text-muted-foreground text-sm">Marca las franjas en el calendario.</p>
+          </div>
         ) : null}
         {weekly ? (
           <WeeklyScheduleEditor
@@ -528,6 +524,12 @@ export function CleaningServicesPanel({
             }}
           />
         ) : null}
+        <div className="border-border border-b pb-2 sm:col-span-2">
+          <h3 className="font-semibold">Tareas e instrucciones</h3>
+          <p className="text-muted-foreground text-sm">
+            Describe el alcance y los materiales necesarios.
+          </p>
+        </div>
         <TextareaField
           label="Tareas y alcance"
           value={form.tasks}
@@ -565,13 +567,6 @@ export function CleaningServicesPanel({
           onChange={(v) => set('materials', v)}
           maxLength={2000}
           placeholder="Quién aporta los productos, útiles y maquinaria"
-        />
-        <TextareaField
-          label="Instrucciones de acceso y observaciones"
-          value={form.instructions}
-          onChange={(v) => set('instructions', v)}
-          maxLength={5000}
-          placeholder="Incluye si es necesario colocar carteles en el garaje"
         />
         <label>
           <input
