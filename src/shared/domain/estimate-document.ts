@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { servicePeriodicitiesSchema } from './service-periodicity'
 
 export const estimateFormatLabels = {
-  table: 'Tabla de precios',
-  sections: 'Por secciones',
+  table: 'Instalación',
+  sections: 'Mantenimiento',
 } as const
 
 export type EstimateFormat = keyof typeof estimateFormatLabels
