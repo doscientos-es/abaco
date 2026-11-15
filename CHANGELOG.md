@@ -2,10 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-15 — Sin publicar
+## 2026-11-16 — Sin publicar
 
 ### Nuevas funciones
 
+- Add mobile navigation component and update navigation items with mobile labels
+- Implement worker paper report functionality with PDF download and signed document management
+- Add contract general details update functionality and related UI adjustments
 - Actualizar datos y horarios de contratos
 - Update estimate format labels for clarity and consistency
 - Add tests for worker personal data management and user role validation

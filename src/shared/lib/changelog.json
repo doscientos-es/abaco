@@ -2,12 +2,15 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add mobile navigation component and update navigation items with mobile labels",
+            "Implement worker paper report functionality with PDF download and signed document management",
+            "Add contract general details update functionality and related UI adjustments",
             "Actualizar datos y horarios de contratos",
             "Update estimate format labels for clarity and consistency",
             "Add tests for worker personal data management and user role validation",
@@ -67,6 +70,27 @@
         }
       ],
       "changes": [
+        {
+          "sha": "c182ddef674984fc514e590d2afc0057b0dc33a3",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add mobile navigation component and update navigation items with mobile labels"
+        },
+        {
+          "sha": "007efffcc3640e4cb50562b3232d670ce5a38289",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Implement worker paper report functionality with PDF download and signed document management"
+        },
+        {
+          "sha": "50b104083060e276e855145bd96da244f03e1af4",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add contract general details update functionality and related UI adjustments"
+        },
         {
           "sha": "4b431978e2c68036da4341756020aa223ab394b5",
           "type": "feat",
