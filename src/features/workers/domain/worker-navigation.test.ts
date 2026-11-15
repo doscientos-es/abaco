@@ -4,6 +4,7 @@ import { validateWorkersSearch } from './worker-navigation'
 
 describe('worker navigation', () => {
   it('retains the selected view and the team or person on refresh', () => {
+    expect(validateWorkersSearch({ vista: 'equipos' })).toEqual({ vista: 'equipos' })
     expect(validateWorkersSearch({ vista: 'vacaciones', equipo: 'north' })).toEqual({
       vista: 'vacaciones',
       equipo: 'north',
@@ -19,6 +20,13 @@ describe('worker navigation', () => {
       persona: 'ana',
     })
     expect(validateWorkersSearch({ equipo: [], persona: null })).toEqual({})
+  })
+
+  it('falls back to people for old organization links without losing their context', () => {
+    expect(validateWorkersSearch({ vista: 'organigrama' })).toEqual({})
+    expect(validateWorkersSearch({ vista: 'organigrama', equipo: 'north' })).toEqual({
+      equipo: 'north',
+    })
   })
 
   it('preserves stale or malformed string IDs so the page shows not-found, not company-wide data', () => {

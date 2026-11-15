@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { estimateSectionsSchema } from './estimate-document'
-import { changeServicePeriodicity, serviceFrequencySelection } from './service-periodicity'
+import { selectServicePeriodicity, serviceFrequencySelection } from './service-periodicity'
 
 const row = {
   id: '86000000-0000-4000-8000-000000000001',
@@ -17,13 +17,13 @@ const section = {
 }
 
 describe('quoted service periodicities', () => {
-  it('supports multiple checks, unchecking and stable ordering without changing task details', () => {
-    const monthly = changeServicePeriodicity(row, 'monthly', true)
-    const both = changeServicePeriodicity(monthly, 'daily', true)
-    expect(both).toEqual({ ...row, periodicities: ['daily', 'monthly'] })
-    expect(changeServicePeriodicity(both, 'daily', true)).toEqual(both)
-    expect(changeServicePeriodicity(both, 'daily', false)).toEqual(monthly)
-    expect(changeServicePeriodicity(monthly, 'monthly', false).periodicities).toEqual([])
+  it('selects exactly one periodicity without changing task details', () => {
+    const monthly = selectServicePeriodicity(row, 'monthly')
+    expect(monthly).toEqual({ ...row, periodicities: ['monthly'] })
+    expect(selectServicePeriodicity(monthly, 'daily')).toEqual({ ...row, periodicities: ['daily'] })
+    expect(
+      selectServicePeriodicity({ ...row, periodicities: ['daily', 'monthly'] }, 'annual'),
+    ).toEqual({ ...row, periodicities: ['annual'] })
     expect(row).not.toHaveProperty('periodicities')
   })
 
@@ -43,7 +43,7 @@ describe('quoted service periodicities', () => {
   it.each(['Semanal en verano; mensual en invierno', '__proto__', 'Según necesidad'])(
     'keeps nonstandard historical text %s when checking a new column',
     (frequency) => {
-      expect(changeServicePeriodicity({ ...row, frequency }, 'annual', true)).toEqual({
+      expect(selectServicePeriodicity({ ...row, frequency }, 'annual')).toEqual({
         ...row,
         frequency,
         periodicities: ['annual'],

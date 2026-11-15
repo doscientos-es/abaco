@@ -1,14 +1,15 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import {
-  cleanLocationInput,
+  locationInput,
+  locationPersistenceInput,
   sameLocationInput,
   type LocationInput,
   type ServiceLocation,
 } from '../domain/client-location'
 
 const columns =
-  'id,name,kind,address,city,postal_code,opening_hours,operational_contact,access_notes,notes,active,updated_at'
+  'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,operational_contact,access_notes,notes,active,updated_at'
 
 export async function insertClientLocation(
   tenantId: string,
@@ -19,7 +20,7 @@ export async function insertClientLocation(
   const db = createBrowserSupabaseClient()
   const { data, error } = await db
     .from('service_locations')
-    .insert({ id, tenant_id: tenantId, client_id: clientId, ...cleanLocationInput(input) })
+    .insert({ id, tenant_id: tenantId, client_id: clientId, ...locationPersistenceInput(input) })
     .select(columns)
     .single()
   if (!error && data) return data as ServiceLocation
@@ -33,7 +34,7 @@ export async function insertClientLocation(
     .eq('client_id', clientId)
     .eq('id', id)
     .maybeSingle()
-  if (existing.error || !existing.data || !sameLocationInput(existing.data, input))
+  if (existing.error || !existing.data || !sameLocationInput(locationInput(existing.data), input))
     throw new Error('No se pudo comprobar el centro guardado. Recarga la ficha.')
   return existing.data as ServiceLocation
 }
@@ -46,7 +47,7 @@ export async function updateClientLocation(
   const db = createBrowserSupabaseClient()
   const { data, error } = await db
     .from('service_locations')
-    .update(cleanLocationInput(input))
+    .update(locationPersistenceInput(input))
     .eq('tenant_id', tenantId)
     .eq('id', location.id)
     .eq('updated_at', location.updated_at)
@@ -61,7 +62,7 @@ export async function updateClientLocation(
     .eq('tenant_id', tenantId)
     .eq('id', location.id)
     .maybeSingle()
-  if (existing.error || !existing.data || !sameLocationInput(existing.data, input))
+  if (existing.error || !existing.data || !sameLocationInput(locationInput(existing.data), input))
     throw new Error('El centro cambió en otra sesión. Recarga la ficha antes de modificarlo.')
   return existing.data as ServiceLocation
 }

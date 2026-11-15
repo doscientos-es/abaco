@@ -39,6 +39,8 @@ describe('client incident targets', () => {
               address: '',
               city: '',
               postal_code: '',
+              latitude: null,
+              longitude: null,
               opening_hours: '',
               operational_contact: '',
               access_notes: '',

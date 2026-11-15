@@ -51,6 +51,7 @@ export function ClientLocationsEditor({
             </legend>
             <LocationFields
               value={draft.input}
+              showUsage={Boolean(draft.original)}
               onChange={(input) =>
                 onChange(
                   locations.map((item) => (item.id === draft.id ? { ...item, input } : item)),

@@ -3,14 +3,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { useSession } from '@/features/auth'
+import { can, useSession } from '@/features/auth'
 import { TeamSection } from '@/features/settings/ui/team-section'
 import { StaffFunctionsSection, StaffSchedulesPage } from '@/features/staff-schedules'
 import { WorkTeamForm, WorkTeamsSection, workTeamsQuery } from '@/features/work-teams'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { useWorkersData } from '../application/use-workers-data'
-import { WorkerOrganization } from './worker-organization'
+import { WorkerDocuments } from './worker-documents'
 import { WorkerVacations } from './worker-vacations'
 import { WorkersNavigation } from './workers-navigation'
 
@@ -21,6 +21,7 @@ export function WorkersPage() {
 }
 
 function WorkersContent({ tenantId }: { tenantId: string }) {
+  const session = useSession()
   const search = useSearch({ from: '/trabajadores' })
   const navigate = useNavigate({ from: '/trabajadores' })
   const data = useWorkersData(tenantId)
@@ -141,6 +142,9 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           showInviteLink={!scoped}
         />
       ) : null}
+      {person && view === 'personas' && can(session?.role, 'team:manage') ? (
+        <WorkerDocuments key={person.userId} tenantId={tenantId} workerId={person.userId} />
+      ) : null}
       {view === 'equipos' ? (
         <WorkTeamsSection
           tenantId={tenantId}
@@ -167,9 +171,6 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           people={data.people}
           teams={data.teams}
         />
-      ) : null}
-      {view === 'organigrama' ? (
-        <WorkerOrganization people={data.people} teams={data.teams} />
       ) : null}
       {view === 'funciones' ? <StaffFunctionsSection tenantId={tenantId} embedded /> : null}
       {editingTeam && team ? (

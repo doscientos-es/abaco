@@ -5,6 +5,8 @@ export type ServiceLocation = {
   address: string
   city: string
   postal_code: string
+  latitude: number | null
+  longitude: number | null
   opening_hours: string
   operational_contact: string
   access_notes: string
@@ -13,7 +15,12 @@ export type ServiceLocation = {
   updated_at: string
 }
 
-export type LocationInput = Omit<ServiceLocation, 'id' | 'updated_at'>
+export type LocationInput = Omit<
+  ServiceLocation,
+  'id' | 'updated_at' | 'latitude' | 'longitude'
+> & {
+  coordinates: string
+}
 export type LocationDraft = {
   id: string
   original: ServiceLocation | null
@@ -33,6 +40,10 @@ export function locationInput(location?: ServiceLocation): LocationInput {
     address: location?.address ?? '',
     city: location?.city ?? '',
     postal_code: location?.postal_code ?? '',
+    coordinates:
+      location?.latitude != null || location?.longitude != null
+        ? `${location.latitude ?? ''}, ${location.longitude ?? ''}`
+        : '',
     opening_hours: location?.opening_hours ?? '',
     operational_contact: location?.operational_contact ?? '',
     access_notes: location?.access_notes ?? '',
@@ -48,6 +59,7 @@ export function cleanLocationInput(input: LocationInput): LocationInput {
     address: input.address.trim(),
     city: input.city.trim(),
     postal_code: input.postal_code.trim(),
+    coordinates: input.coordinates.trim(),
     opening_hours: input.opening_hours.trim(),
     operational_contact: input.operational_contact.trim(),
     access_notes: input.access_notes.trim(),
@@ -55,10 +67,37 @@ export function cleanLocationInput(input: LocationInput): LocationInput {
   }
 }
 
+export function parseLocationCoordinates(value: string): {
+  latitude: number | null
+  longitude: number | null
+} | null {
+  if (!value.trim()) return { latitude: null, longitude: null }
+  const match = value.match(
+    /^\s*([+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*,\s*([+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*$/,
+  )
+  if (!match) return null
+  const latitude = Number(match[1])
+  const longitude = Number(match[2])
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+  return { latitude: Number(latitude.toFixed(7)), longitude: Number(longitude.toFixed(7)) }
+}
+
+export function locationPersistenceInput(input: LocationInput) {
+  const { coordinates, ...rest } = cleanLocationInput(input)
+  const parsed = parseLocationCoordinates(coordinates)
+  if (!parsed) throw new Error('Introduce coordenadas válidas: latitud, longitud.')
+  return { ...rest, ...parsed }
+}
+
 export function sameLocationInput(left: LocationInput, right: LocationInput): boolean {
   const clean = cleanLocationInput(right)
-  return Object.entries(cleanLocationInput(left)).every(
-    ([key, value]) => value === clean[key as keyof LocationInput],
+  const leftCoordinates = parseLocationCoordinates(left.coordinates)
+  const rightCoordinates = parseLocationCoordinates(right.coordinates)
+  return Object.entries(cleanLocationInput(left)).every(([key, value]) =>
+    key === 'coordinates' && leftCoordinates && rightCoordinates
+      ? leftCoordinates.latitude === rightCoordinates.latitude &&
+        leftCoordinates.longitude === rightCoordinates.longitude
+      : value === clean[key as keyof LocationInput],
   )
 }
 
@@ -73,6 +112,7 @@ export function validLocationInput(input: LocationInput): boolean {
     clean.operational_contact.length <= 1000 &&
     clean.access_notes.length <= 2000 &&
     clean.notes.length <= 2000 &&
+    parseLocationCoordinates(clean.coordinates) !== null &&
     locationKinds.some(({ value }) => value === clean.kind)
   )
 }

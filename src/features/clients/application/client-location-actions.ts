@@ -30,7 +30,7 @@ export async function saveClientLocations(
   onPersisted: (location: ServiceLocation) => void,
 ) {
   if (drafts.some(({ input }) => !validLocationInput(input)))
-    throw new Error('Revisa el nombre y la dirección de todos los centros.')
+    throw new Error('Revisa el nombre, la dirección y las coordenadas de todos los centros.')
   for (const draft of drafts.filter(changedLocation)) {
     const location = draft.original
       ? await updateClientLocation(tenantId, draft.original, draft.input)

@@ -4,7 +4,7 @@ import { createLocation, loadClientPassport, updateLocation } from './client-pas
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
-  queries: new Map<string, { eq: ReturnType<typeof vi.fn> }>(),
+  queries: new Map<string, { eq: ReturnType<typeof vi.fn>; select: ReturnType<typeof vi.fn> }>(),
   fail: '',
 }))
 vi.mock('@/shared/lib/supabase/client', () => ({
@@ -47,6 +47,9 @@ describe('client contacts and centres', () => {
       expect(query.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
       expect(query.eq).toHaveBeenCalledWith('client_id', 'client-1')
     }
+    expect(mocks.queries.get('service_locations')?.select).toHaveBeenCalledWith(
+      expect.stringContaining('latitude,longitude'),
+    )
   })
 
   it.each(['client_contacts', 'service_locations'])(
@@ -69,12 +72,18 @@ describe('client contacts and centres', () => {
       kind: 'service',
       address: 'Address',
       city: '',
+      coordinates: '35.292345678, -2.9381',
       openingHours: '  Lunes a viernes, 8:00–18:00  ',
     })
 
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ opening_hours: 'Lunes a viernes, 8:00–18:00' }),
+      expect.objectContaining({
+        opening_hours: 'Lunes a viernes, 8:00–18:00',
+        latitude: 35.2923457,
+        longitude: -2.9381,
+      }),
     )
+    expect(insert.mock.calls[0]?.[0]).not.toHaveProperty('coordinates')
   })
 
   it('persists opening hours when updating a centre', async () => {
@@ -93,6 +102,8 @@ describe('client contacts and centres', () => {
       address: 'Address',
       city: '',
       postal_code: '',
+      latitude: 35.2923,
+      longitude: -2.9381,
       opening_hours: 'Antes',
       operational_contact: '',
       access_notes: '',
@@ -103,7 +114,17 @@ describe('client contacts and centres', () => {
 
     await updateLocation('tenant-1', location, { ...location, opening_hours: '  Nuevo horario  ' })
 
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ opening_hours: 'Nuevo horario' }))
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opening_hours: 'Nuevo horario',
+        latitude: 35.2923,
+        longitude: -2.9381,
+      }),
+    )
     expect(query.eq).toHaveBeenCalledWith('updated_at', 'version-1')
+    await updateLocation('tenant-1', location, { ...location, coordinates: '' })
+    expect(update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: null, longitude: null }),
+    )
   })
 })

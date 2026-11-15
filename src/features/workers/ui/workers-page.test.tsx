@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   directory: vi.fn(),
   teams: vi.fn(),
   data: vi.fn(),
+  role: 'admin' as 'admin' | 'user',
+  documents: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({
   useSearch: () => mocks.search,
@@ -35,7 +37,11 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
-vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'company' }) }))
+vi.mock('@/features/auth', () => ({
+  useSession: () => ({ tenantId: 'company', role: mocks.role }),
+  can: (role: string) => role === 'admin',
+}))
+vi.mock('./worker-documents', () => ({ WorkerDocuments: mocks.documents }))
 vi.mock('../application/use-workers-data', () => ({ useWorkersData: mocks.data }))
 vi.mock('@/features/settings/ui/team-section', () => ({ TeamSection: mocks.directory }))
 vi.mock('@/features/staff-schedules', () => ({
@@ -53,6 +59,7 @@ describe('workers module navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.search = {}
+    mocks.role = 'admin'
     mocks.data.mockReturnValue({
       pending: false,
       failed: false,
@@ -64,7 +71,13 @@ describe('workers module navigation', () => {
         { id: 'north', name: 'Equipo Norte', description: '', memberIds: ['ana'], archived: false },
       ],
     })
-    for (const component of [mocks.directory, mocks.schedule, mocks.vacations, mocks.teams])
+    for (const component of [
+      mocks.directory,
+      mocks.schedule,
+      mocks.vacations,
+      mocks.teams,
+      mocks.documents,
+    ])
       component.mockReturnValue(null)
   })
 
@@ -77,15 +90,20 @@ describe('workers module navigation', () => {
     expect(html).not.toContain('Equipos activos')
     expect(html).not.toContain('Sin equipo')
     expect(html).not.toContain('<strong')
-    for (const view of ['equipos', 'horarios', 'vacaciones', 'organigrama', 'funciones'])
+    for (const view of ['horarios', 'vacaciones', 'funciones'])
       expect(html).toContain(`vista=${view}`)
+    expect(html).not.toContain('vista=equipos')
+    expect(html).not.toContain('Organigrama')
+    expect(html).not.toContain('vista=organigrama')
     expect(mocks.directory.mock.calls[0]?.[0].memberIds).toBeUndefined()
     expect(mocks.directory.mock.calls[0]?.[0].showInviteLink).toBe(true)
   })
 
   it('opens a team through real router navigation', () => {
     mocks.search = { vista: 'equipos' }
-    renderToStaticMarkup(<WorkersPage />)
+    const html = renderToStaticMarkup(<WorkersPage />)
+    expect(html).not.toContain('vista=equipos')
+    expect(mocks.teams).toHaveBeenCalledOnce()
     mocks.teams.mock.calls[0]?.[0].onOpenTeam('north')
     expect(mocks.navigate).toHaveBeenCalledWith({ search: { equipo: 'north' } })
   })
@@ -123,6 +141,21 @@ describe('workers module navigation', () => {
     expect(html).toContain('vista=horarios')
     expect(html).toContain('vista=vacaciones')
     expect(html).not.toContain('Invitar personas')
+    expect(mocks.documents.mock.calls[0]?.[0]).toMatchObject({
+      tenantId: 'company',
+      workerId: 'ana',
+    })
+  })
+
+  it('does not expose documents to non-administrators or on another view', () => {
+    mocks.search = { persona: 'ana' }
+    mocks.role = 'user'
+    renderToStaticMarkup(<WorkersPage />)
+    expect(mocks.documents).not.toHaveBeenCalled()
+    mocks.role = 'admin'
+    mocks.search = { persona: 'ana', vista: 'horarios' }
+    renderToStaticMarkup(<WorkersPage />)
+    expect(mocks.documents).not.toHaveBeenCalled()
   })
 
   it.each(['', 'Personal de la zona norte'])(

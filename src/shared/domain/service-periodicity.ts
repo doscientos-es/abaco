@@ -60,14 +60,10 @@ export function serviceFrequencySelection(row: QuotedFrequency): {
   return known ? { periodicities: [known], other: '' } : { periodicities: [], other: row.frequency }
 }
 
-export function changeServicePeriodicity<T extends QuotedFrequency>(
+export function selectServicePeriodicity<T extends QuotedFrequency>(
   row: T,
   periodicity: ServicePeriodicity,
-  checked: boolean,
 ): T & { periodicities: ServicePeriodicity[] } {
   const selected = serviceFrequencySelection(row)
-  const periodicities = servicePeriodicityValues.filter((value) =>
-    value === periodicity ? checked : selected.periodicities.includes(value),
-  )
-  return { ...row, frequency: selected.other, periodicities }
+  return { ...row, frequency: selected.other, periodicities: [periodicity] }
 }

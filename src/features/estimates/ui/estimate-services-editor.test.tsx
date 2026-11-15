@@ -1,26 +1,24 @@
 import type * as UI from '@doscientos/ui'
-import type { ComponentProps, ReactNode } from 'react'
+import type * as React from 'react'
+import { isValidElement, type ComponentProps, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { EstimateSection } from '@/shared/domain/estimate-document'
 
 const controls = vi.hoisted(() => ({
-  checks: new Map<string, ComponentProps<typeof UI.Checkbox>>(),
   inputs: new Map<string, ComponentProps<typeof UI.Input>>(),
   buttons: new Map<
     string,
     ComponentProps<typeof UI.Button> | ComponentProps<typeof UI.IconButton>
   >(),
 }))
+vi.mock('react', async (original) => ({
+  ...(await original<typeof React>()),
+  useId: () => 'services-table',
+}))
 vi.mock('@doscientos/ui', async (original) => ({
   ...(await original<typeof UI>()),
-  Checkbox: (props: ComponentProps<typeof UI.Checkbox>) => {
-    controls.checks.set(props['aria-label'] ?? '', props)
-    return (
-      <input type="checkbox" aria-label={props['aria-label']} checked={props.isSelected} readOnly />
-    )
-  },
   Input: (props: ComponentProps<typeof UI.Input>) => {
     controls.inputs.set(props['aria-label'] ?? '', props)
     return <input aria-label={props['aria-label']} value={props.value} readOnly />
@@ -59,41 +57,78 @@ const change = vi.fn((value: EstimateSection) => {
 })
 const render = () =>
   renderToStaticMarkup(<EstimateSectionContentEditor section={section} onChange={change} />)
-function check(label: string) {
-  const control = controls.checks.get(`${label} · Tarea 1: Puerta principal`)
-  if (!control?.onChange) throw new Error(`Missing checkbox: ${label}`)
+function radios() {
+  const found: ComponentProps<'input'>[] = []
+  function visit(node: ReactNode) {
+    if (Array.isArray(node)) return node.forEach(visit)
+    if (!isValidElement(node)) return
+    const element = node as ReactElement<ComponentProps<'input'> & { children?: ReactNode }>
+    if (element.type === 'input' && element.props.type === 'radio') found.push(element.props)
+    visit(element.props.children)
+  }
+  visit(
+    EstimateServicesTable({
+      rows: section.rows,
+      onChange: (rows) => {
+        section = { ...section, rows }
+      },
+    }),
+  )
+  return found
+}
+function radio(label: string) {
+  const control = radios().find(
+    (item) => item['aria-label'] === `${label} · Tarea 1: Puerta principal`,
+  )
+  if (!control?.onChange) throw new Error(`Missing radio: ${label}`)
   return control
 }
 beforeEach(() => {
   section = initial
   vi.clearAllMocks()
-  controls.checks.clear()
   controls.inputs.clear()
   controls.buttons.clear()
 })
 
 describe('service periodicity matrix', () => {
-  it('renders task names and six accessible checkbox columns in the real section editor', () => {
+  it('renders six visible accessible radio columns in the real section editor', () => {
     const html = render()
     expect(html).toContain('<table')
     expect(html).toContain('Prescripciones técnicas')
     expect(html).toContain('Dos veces a la semana')
     expect(html).toContain('Anual')
-    expect(controls.checks.size).toBe(6)
+    expect(html.match(/type="radio"/g)).toHaveLength(6)
+    expect(html).not.toContain('type="checkbox"')
+    expect(radios()).toHaveLength(6)
     expect(html).not.toContain('Frecuencia del trabajo')
   })
 
-  it('selects multiple periodicities, persists the state across renders and unchecks one', () => {
-    render()
-    check('Diario').onChange?.(true)
-    render()
-    check('Mensual').onChange?.(true)
-    render()
-    expect(check('Diario').isSelected).toBe(true)
-    expect(check('Mensual').isSelected).toBe(true)
-    expect(section.rows).toEqual([{ ...row, periodicities: ['daily', 'monthly'] }])
-    check('Diario').onChange?.(false)
+  it('selects one periodicity per task and replaces the previous selection', () => {
+    radio('Diario').onChange?.({} as never)
+    expect(radio('Diario').checked).toBe(true)
+    radio('Mensual').onChange?.({} as never)
+    expect(radio('Diario').checked).toBe(false)
+    expect(radio('Mensual').checked).toBe(true)
     expect(section.rows).toEqual([{ ...row, periodicities: ['monthly'] }])
+  })
+
+  it('uses independent groups for each task and preserves legacy multiple selections until changed', () => {
+    section = {
+      ...initial,
+      rows: [
+        { ...row, periodicities: ['daily', 'monthly'] },
+        { ...row, id: 'second', periodicities: ['annual'] },
+      ],
+    }
+    const html = render()
+    const options = radios()
+    expect(new Set(options.slice(0, 6).map((item) => item.name)).size).toBe(1)
+    expect(options[0]?.name).not.toBe(options[6]?.name)
+    expect(options.slice(0, 6).some((item) => item.checked)).toBe(false)
+    expect(html).toContain('Periodicidades guardadas: Diario, Mensual')
+    expect(section.rows[0]?.periodicities).toEqual(['daily', 'monthly'])
+    radio('Semanal').onChange?.({} as never)
+    expect(section.rows.map((item) => item.periodicities)).toEqual([['weekly'], ['annual']])
   })
 
   it('edits only the task name without losing checked columns, notes or neighboring tasks', () => {

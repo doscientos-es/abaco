@@ -143,6 +143,8 @@ const centre = {
   address: 'Calle Uno',
   city: 'Melilla',
   postal_code: '52001',
+  latitude: 35.2923,
+  longitude: -2.9381,
   opening_hours: 'L–V 8–18',
   operational_contact: 'Recepción',
   access_notes: 'Puerta lateral',
@@ -284,11 +286,14 @@ describe('client form', () => {
     mocks.fields.get('Nombre')?.('Nuevo cliente')
     mocks.buttons.get('Añadir centro')?.()
     render('dialog')
+    expect(mocks.fields.has('Uso')).toBe(false)
     mocks.fields.get('Nombre del centro')?.('Oficina')
     render('dialog')
     mocks.fields.get('Dirección del centro')?.('Calle Nueva 2')
     render('dialog')
     mocks.fields.get('Horario del centro')?.('Lunes a viernes, 8–18')
+    render('dialog')
+    mocks.fields.get('Coordenadas del centro')?.('35.2923, -2.9381')
     render('dialog')
     mocks.submit?.()
     mocks.submit?.()
@@ -303,8 +308,10 @@ describe('client form', () => {
       expect.any(String),
       expect.objectContaining({
         name: 'Oficina',
+        kind: 'service',
         address: 'Calle Nueva 2',
         opening_hours: 'Lunes a viernes, 8–18',
+        coordinates: '35.2923, -2.9381',
       }),
     )
   })
@@ -312,6 +319,7 @@ describe('client form', () => {
   it('loads and edits existing centres without losing other centre details', async () => {
     mocks.locations = [centre]
     expect(render('dialog', client)).toContain('Centros de trabajo')
+    expect(mocks.fields.has('Uso')).toBe(true)
     mocks.fields.get('Dirección del centro')?.('Nueva ubicación')
     render('dialog', client)
     mocks.fields.get('Horario del centro')?.('Sábados 9–14')
@@ -326,6 +334,7 @@ describe('client form', () => {
         opening_hours: 'Sábados 9–14',
         postal_code: '52001',
         access_notes: 'Puerta lateral',
+        coordinates: '35.2923, -2.9381',
       }),
     )
     expect(mocks.insertLocation).not.toHaveBeenCalled()

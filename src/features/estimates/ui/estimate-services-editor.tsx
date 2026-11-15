@@ -15,8 +15,8 @@ export function EstimateServicesEditor({
   return (
     <div className="space-y-3">
       <p className="text-muted-foreground text-xs">
-        Escribe cada tarea y marca una o varias periodicidades. Esta tabla describe el plan
-        acordado; no programa visitas ni cambia la facturación.
+        Escribe cada tarea y selecciona una periodicidad. Esta tabla describe el plan acordado; no
+        programa visitas ni cambia la facturación.
       </p>
       <EstimateServicesTable
         rows={section.rows}

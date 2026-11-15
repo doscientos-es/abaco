@@ -256,6 +256,10 @@ describe('contract job and inline centre creation', () => {
 
   it('saves and selects a centre, then persists a punctual job for that contract', async () => {
     openLocationForm()
+    expect(mocks.fields.has('Uso')).toBe(false)
+    change('Coordenadas del centro', '91, 0')
+    expect(mocks.dialog?.submitDisabled).toBe(true)
+    change('Coordenadas del centro', '35.2923, -2.9381')
     await saveLocation()
     expect(mocks.createLocation).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -263,6 +267,7 @@ describe('contract job and inline centre creation', () => {
         clientId: 'client-1',
         name: 'Portal A',
         address: 'Calle de prueba 1',
+        coordinates: '35.2923, -2.9381',
         openingHours: 'Lunes a viernes, 8:00–18:00',
         kind: 'service',
       }),

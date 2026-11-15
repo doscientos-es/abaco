@@ -1,6 +1,6 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-import { locationInput, type ServiceLocation } from '../domain/client-location'
+import { locationInput, type LocationInput, type ServiceLocation } from '../domain/client-location'
 import { insertClientLocation, updateClientLocation } from './client-location-repository'
 
 export type { ServiceLocation } from '../domain/client-location'
@@ -41,7 +41,7 @@ export async function loadClientPassport(
     db
       .from('service_locations')
       .select(
-        'id,name,kind,address,city,postal_code,opening_hours,operational_contact,access_notes,notes,active,updated_at',
+        'id,name,kind,address,city,postal_code,latitude,longitude,opening_hours,operational_contact,access_notes,notes,active,updated_at',
       )
       .eq('tenant_id', tenantId)
       .eq('client_id', clientId)
@@ -80,6 +80,7 @@ export async function createLocation(input: {
   address: string
   city: string
   postalCode?: string
+  coordinates?: string
   openingHours?: string
   operationalContact?: string
   accessNotes?: string
@@ -93,6 +94,7 @@ export async function createLocation(input: {
     address: input.address,
     city: input.city,
     postal_code: input.postalCode ?? '',
+    coordinates: input.coordinates ?? '',
     opening_hours: input.openingHours ?? '',
     operational_contact: input.operationalContact ?? '',
     access_notes: input.accessNotes ?? '',
@@ -126,22 +128,15 @@ export async function updateContact(
 export async function updateLocation(
   tenantId: string,
   location: ServiceLocation,
-  input: Pick<
-    ServiceLocation,
-    | 'name'
-    | 'kind'
-    | 'address'
-    | 'city'
-    | 'opening_hours'
-    | 'operational_contact'
-    | 'access_notes'
-    | 'notes'
-    | 'active'
-  > & { postal_code?: string },
+  input: Omit<LocationInput, 'postal_code' | 'coordinates'> & {
+    postal_code?: string
+    coordinates?: string
+  },
 ): Promise<void> {
   await updateClientLocation(tenantId, location, {
     ...input,
     postal_code: input.postal_code ?? location.postal_code,
+    coordinates: input.coordinates ?? locationInput(location).coordinates,
   })
 }
 

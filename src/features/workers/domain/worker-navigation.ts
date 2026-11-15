@@ -1,11 +1,4 @@
-export const workerViews = [
-  'personas',
-  'equipos',
-  'horarios',
-  'vacaciones',
-  'organigrama',
-  'funciones',
-] as const
+export const workerViews = ['personas', 'equipos', 'horarios', 'vacaciones', 'funciones'] as const
 export type WorkerView = (typeof workerViews)[number]
 export type WorkersSearch = { vista?: WorkerView; equipo?: string; persona?: string }
 

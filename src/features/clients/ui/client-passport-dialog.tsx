@@ -99,6 +99,7 @@ export function CreatePassportItem({
           address: locationForm.address,
           city: locationForm.city,
           postalCode: locationForm.postal_code,
+          coordinates: locationForm.coordinates,
           openingHours: locationForm.opening_hours,
           operationalContact: locationForm.operational_contact,
           accessNotes: locationForm.access_notes,
@@ -171,6 +172,7 @@ export function CreatePassportItem({
           onChange={setLocationForm}
           includeName={false}
           serviceLocationOnly={serviceLocationOnly}
+          showUsage={editing}
         />
       ) : null}
     </FormDialog>

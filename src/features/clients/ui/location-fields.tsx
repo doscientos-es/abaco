@@ -1,18 +1,25 @@
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 
-import { locationKinds, type LocationInput } from '../domain/client-location'
+import {
+  locationKinds,
+  parseLocationCoordinates,
+  type LocationInput,
+} from '../domain/client-location'
+import { LocationCoordinateSearch } from './location-coordinate-search'
 
 export function LocationFields({
   value,
   onChange,
   serviceLocationOnly = false,
   includeName = true,
+  showUsage = true,
 }: {
   value: LocationInput
   onChange: (value: LocationInput) => void
   serviceLocationOnly?: boolean
   includeName?: boolean
+  showUsage?: boolean
 }) {
   const set = (key: keyof LocationInput) => (next: string) => onChange({ ...value, [key]: next })
   return (
@@ -29,16 +36,18 @@ export function LocationFields({
           icon={fieldIcons.building}
         />
       ) : null}
-      <SelectField
-        label="Uso"
-        value={value.kind}
-        options={
-          serviceLocationOnly
-            ? locationKinds.filter(({ value }) => value !== 'billing')
-            : locationKinds
-        }
-        onChange={set('kind')}
-      />
+      {showUsage ? (
+        <SelectField
+          label="Uso"
+          value={value.kind}
+          options={
+            serviceLocationOnly
+              ? locationKinds.filter(({ value }) => value !== 'billing')
+              : locationKinds
+          }
+          onChange={set('kind')}
+        />
+      ) : null}
       <TextField label="Ciudad" value={value.city} onChange={set('city')} placeholder="Melilla" />
       <TextField
         label="Dirección del centro"
@@ -56,6 +65,19 @@ export function LocationFields({
         onChange={set('postal_code')}
         placeholder="52001"
       />
+      <TextField
+        label="Coordenadas del centro"
+        value={value.coordinates}
+        onChange={set('coordinates')}
+        placeholder="35.2923, -2.9381"
+        helper={
+          parseLocationCoordinates(value.coordinates)
+            ? 'Opcional. Introduce latitud y longitud separadas por una coma.'
+            : 'Coordenadas no válidas. Introduce latitud y longitud separadas por una coma.'
+        }
+        className="sm:col-span-2"
+      />
+      <LocationCoordinateSearch address={value} onSelect={set('coordinates')} />
       <TextField
         label="Contacto operativo del centro"
         value={value.operational_contact}

@@ -1,9 +1,10 @@
-import { Checkbox, IconButton, Input } from '@doscientos/ui'
+import { IconButton, Input } from '@doscientos/ui'
 import { Trash } from '@phosphor-icons/react'
+import { useId } from 'react'
 
 import { estimateSectionLimits, type EstimateSection } from '@/shared/domain/estimate-document'
 import {
-  changeServicePeriodicity,
+  selectServicePeriodicity,
   serviceFrequencySelection,
   servicePeriodicityLabels,
   servicePeriodicityValues,
@@ -21,6 +22,7 @@ export function EstimateServicesTable({
   rows: ServiceRow[]
   onChange?: (rows: ServiceRow[]) => void
 }) {
+  const tableId = useId()
   const otherFrequencies = rows.some((row) => serviceFrequencySelection(row).other.trim())
   const update = (row: ServiceRow) =>
     onChange?.(rows.map((item) => (item.id === row.id ? row : item)))
@@ -67,6 +69,15 @@ export function EstimateServicesTable({
                         value={row.task}
                         onChange={(event) => update({ ...row, task: event.target.value })}
                       />
+                      {selection.periodicities.length > 1 ? (
+                        <p className="text-muted-foreground text-xs">
+                          Periodicidades guardadas:{' '}
+                          {selection.periodicities
+                            .map((value) => servicePeriodicityLabels[value])
+                            .join(', ')}
+                          . Elige una para sustituirlas.
+                        </p>
+                      ) : null}
                       <details className="text-muted-foreground text-xs">
                         <summary className="cursor-pointer">
                           Notas{row.notes ? ' (con contenido)' : ' (opcional)'}
@@ -95,14 +106,20 @@ export function EstimateServicesTable({
                 {servicePeriodicityValues.map((value) => (
                   <td key={value} className="p-1 text-center align-middle">
                     {onChange ? (
-                      <Checkbox
-                        aria-label={`${servicePeriodicityLabels[value]} · Tarea ${index + 1}${row.task ? `: ${row.task}` : ''}`}
-                        className="inline-flex min-h-10 min-w-10 items-center justify-center"
-                        isSelected={selection.periodicities.includes(value)}
-                        onChange={(checked) =>
-                          update(changeServicePeriodicity(row, value, checked))
-                        }
-                      />
+                      <label className="inline-flex min-h-10 min-w-10 items-center justify-center">
+                        <input
+                          type="radio"
+                          name={`${tableId}-${row.id}`}
+                          value={value}
+                          aria-label={`${servicePeriodicityLabels[value]} · Tarea ${index + 1}${row.task ? `: ${row.task}` : ''}`}
+                          className="accent-primary size-4 cursor-pointer"
+                          checked={
+                            selection.periodicities.length === 1 &&
+                            selection.periodicities[0] === value
+                          }
+                          onChange={() => update(selectServicePeriodicity(row, value))}
+                        />
+                      </label>
                     ) : selection.periodicities.includes(value) ? (
                       <span aria-label={servicePeriodicityLabels[value]} className="font-semibold">
                         X

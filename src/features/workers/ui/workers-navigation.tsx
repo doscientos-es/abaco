@@ -7,7 +7,6 @@ const labels: Record<WorkerView, string> = {
   equipos: 'Equipos',
   horarios: 'Horarios',
   vacaciones: 'Vacaciones',
-  organigrama: 'Organigrama',
   funciones: 'Funciones',
 }
 
@@ -22,7 +21,7 @@ export function WorkersNavigation({
 }) {
   const views: WorkerView[] = scoped
     ? ['personas', 'horarios', 'vacaciones']
-    : ['personas', 'equipos', 'horarios', 'vacaciones', 'organigrama', 'funciones']
+    : ['personas', 'horarios', 'vacaciones', 'funciones']
   return (
     <nav
       aria-label={scoped ? 'Secciones de la ficha' : 'Secciones de trabajadores'}
