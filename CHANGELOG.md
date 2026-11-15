@@ -2,10 +2,15 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-13 — Sin publicar
+## 2026-11-15 — Sin publicar
 
 ### Nuevas funciones
 
+- Add tests for vacation coverage component to validate team visit display
+- Update estimate creation tests to reflect new default document structure and section requirements
+- Configure multiple workers for contract jobs
+- Add opening hours functionality for locations and update related tests
+- Implement estimate sections and pricing editor
 - Implement estimate sections and pricing editor
 - Update changelog with new PWA features and improvements
 - Restructure PWA files and implement service worker functionality

@@ -2,12 +2,17 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-13",
+      "date": "2026-11-15",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add tests for vacation coverage component to validate team visit display",
+            "Update estimate creation tests to reflect new default document structure and section requirements",
+            "Configure multiple workers for contract jobs",
+            "Add opening hours functionality for locations and update related tests",
+            "Implement estimate sections and pricing editor",
             "Implement estimate sections and pricing editor",
             "Update changelog with new PWA features and improvements",
             "Restructure PWA files and implement service worker functionality",
@@ -51,6 +56,41 @@
         }
       ],
       "changes": [
+        {
+          "sha": "c8bb190a28102e6b873e3f234187562f2bf1cb84",
+          "type": "feat",
+          "scope": "vacation-coverage",
+          "breaking": false,
+          "description": "Add tests for vacation coverage component to validate team visit display"
+        },
+        {
+          "sha": "9949ac022c21262a70e04f327f3fcf344808f13f",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Update estimate creation tests to reflect new default document structure and section requirements"
+        },
+        {
+          "sha": "946cf15e45a8fab5dfb278785950e1300d5f88a6",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Configure multiple workers for contract jobs"
+        },
+        {
+          "sha": "dd52292637d7fb1d2a7a338351990ebae4be1faa",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Add opening hours functionality for locations and update related tests"
+        },
+        {
+          "sha": "dbf2c4a6768a5d2f280df1db907f3fe55377d6dc",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Implement estimate sections and pricing editor"
+        },
         {
           "sha": "aad3bb7033180105e67a84ef6e960b0187da9f1d",
           "type": "feat",
