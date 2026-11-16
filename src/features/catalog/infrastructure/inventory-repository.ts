@@ -24,6 +24,7 @@ export type MaterialShortage = {
   sku: string
   unit: string
   missing_quantity: number
+  reason: 'insufficient' | 'unit_mismatch'
   resolved_at: string | null
 }
 
@@ -74,7 +75,9 @@ export async function listShortages(
 ): Promise<MaterialShortage[]> {
   let query = createBrowserSupabaseClient()
     .from('inventory_shortages')
-    .select('id,estimate_id,catalog_item_id,supplier_id,name,sku,unit,missing_quantity,resolved_at')
+    .select(
+      'id,estimate_id,catalog_item_id,supplier_id,name,sku,unit,missing_quantity,reason,resolved_at',
+    )
     .eq('tenant_id', tenantId)
     .is('resolved_at', null)
     .order('created_at', { ascending: false })

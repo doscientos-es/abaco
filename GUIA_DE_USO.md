@@ -8,7 +8,7 @@
 2. Si perteneces a varias empresas, elige la empresa activa desde el menú de usuario. Los datos y permisos cambian con esa selección.
 3. En el mismo menú puedes abrir **Ajustes y equipo**, cambiar la contraseña o cerrar sesión.
 
-La navegación principal se agrupa en **Resumen**, **Presupuestos**, **Clientes**, **Catálogo**, **Trabajos**, **Contratos**, **Agenda**, **Facturas**, **Contabilidad** y **Ajustes**. En móvil, las secciones adicionales aparecen en **Más**.
+La navegación principal se agrupa en **Resumen**, **Presupuestos**, **Clientes**, **Inventario**, **Proveedores**, **Trabajos**, **Contratos**, **Agenda**, **Facturas**, **Contabilidad** y **Ajustes**. En móvil, las secciones adicionales aparecen en **Más**.
 
 ### Instalar Ábaco y trabajar sin conexión
 
@@ -40,11 +40,18 @@ Los clientes se **archivan** para conservar sus referencias en presupuestos, tra
 
 ## 3. Crear y aceptar un presupuesto
 
-1. En **Catálogo**, prepara los conceptos que uses con frecuencia.
+1. En **Inventario**, prepara los conceptos que uses con frecuencia.
 2. En **Presupuestos**, pulsa **Crear presupuesto**, elige al cliente y añade partidas, importes, IVA y condiciones.
 3. Configura los hitos de cobro si corresponde. Antes de publicar, selecciona si la aceptación dará lugar a un **trabajo** o a un **contrato recurrente**.
 4. Revisa el documento y publica la propuesta. Puedes copiar el enlace o compartir la versión publicada por email o WhatsApp.
 5. El cliente abre el enlace para aceptar o rechazar. La oficina también puede registrar una aceptación manual cuando conserve una referencia a la evidencia externa.
+
+### Controlar materiales y proveedores
+
+1. En **Proveedores**, guarda el nombre y, para preparar solicitudes, el correo electrónico.
+2. En **Inventario**, abre el stock de cada material e indica la cantidad disponible y su proveedor. Los materiales «Sin controlar» no se descuentan ni generan avisos.
+3. Añade materiales del inventario como partidas al presupuesto. Al aceptarlo, se descuenta el stock disponible una sola vez y se registran los faltantes. Si las unidades no coinciden, revisa el material antes de solicitarlo; no se descuenta automáticamente.
+4. Consulta los faltantes en el presupuesto aceptado o en Inventario. **Preparar correo** abre un borrador en tu aplicación de correo: Ábaco no lo envía. Marca cada faltante como gestionado cuando corresponda y actualiza el stock manualmente cuando recibas material.
 
 Una aceptación manual queda identificada como tal. No debe presentarse como una firma realizada directamente por el cliente dentro de Ábaco. La versión publicada y aceptada queda vinculada al resultado; si cambian las condiciones, prepara una nueva versión para revisión.
 
@@ -142,4 +149,4 @@ La aplicación muestra el estado de guardado. Si aparece **Guardando**, espera a
 
 Esta guía corresponde al **estado del repositorio**, no acredita que todas las migraciones o servicios estén desplegados. Antes de operar en producción, el responsable técnico debe aplicar las migraciones pendientes en un entorno de pruebas, ejecutar las pruebas de base de datos, verificar permisos y saldos, y configurar los trabajadores de PDF y correo. Las migraciones recientes de facturación, imputaciones, reembolsos y equipos de trabajo aún no tienen validación de base de datos confirmada en esta copia.
 
-Todavía no están completos, entre otros, el portal del cliente, inventario y compras, documentos rectificativos, facturación con líneas y anticipos generales, conectores bancarios/fiscales, pagos del cliente final, API pública, automatizaciones amplias y todos los paquetes verticales previstos en el [plan de desarrollo integral](../10-plan-desarrollo-integral.md). No se deben ofrecer como funciones disponibles.
+Todavía no están completos, entre otros, el portal del cliente, compras y recepción automatizadas, documentos rectificativos, facturación con líneas y anticipos generales, conectores bancarios/fiscales, pagos del cliente final, API pública, automatizaciones amplias y todos los paquetes verticales previstos en el [plan de desarrollo integral](../10-plan-desarrollo-integral.md). No se deben ofrecer como funciones disponibles.

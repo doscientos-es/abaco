@@ -74,7 +74,7 @@ export function MaterialShortages({ estimateId }: { estimateId?: string }) {
             const supplier = suppliers.data?.find((item) => item.id === supplierId)
             const estimate = estimates.find((item) => item.id === shortage.estimate_id)
             const mailto =
-              supplier && estimate
+              shortage.reason === 'insufficient' && supplier && estimate
                 ? supplierOrderMailto({
                     email: supplier.email,
                     supplierName: supplier.name,
@@ -103,7 +103,11 @@ export function MaterialShortages({ estimateId }: { estimateId?: string }) {
                   <p className="text-muted-foreground text-sm">
                     {estimate?.number ?? 'Presupuesto'} ·{' '}
                     {supplier ? supplier.name : 'Sin proveedor asignado'}
-                    {supplier && !mailto ? ' · Sin correo válido' : ''}
+                    {shortage.reason === 'unit_mismatch'
+                      ? ' · La unidad del presupuesto no coincide con la del inventario; revisa el material antes de pedirlo.'
+                      : supplier && !mailto && estimate
+                        ? ' · Sin correo válido'
+                        : ''}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

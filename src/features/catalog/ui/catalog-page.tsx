@@ -162,6 +162,10 @@ export function CatalogPage() {
         }
       />
 
+      <p className="text-muted-foreground text-sm">
+        Configura el stock de cada material para descontarlo al aceptar presupuestos. Los artículos
+        marcados como «Sin controlar» no generan avisos de faltantes.
+      </p>
       <MaterialShortages />
       {inventory.isError ? (
         <p role="alert">No se pudo cargar el stock. Reintenta recargando la página.</p>
