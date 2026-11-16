@@ -82,6 +82,7 @@ export function MyDayPage() {
       return listMyDayTasks(tenantId, visits.data)
     },
   })
+  const tasksByVisit = new Map(tasks.data?.map((entry) => [entry.visitId, entry.tasks]) ?? [])
 
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
     if (!tenantId || busyId) return
@@ -335,33 +336,31 @@ export function MyDayPage() {
                       No se pudieron cargar las tareas: {tasks.error.message}
                     </p>
                   ) : null}
-                  {tasks.isSuccess && !tasks.data.some((entry) => entry.visitId === visit.id && entry.tasks.length > 0) ? (
+                  {tasks.isSuccess && !tasksByVisit.get(visit.id)?.length ? (
                     <p className="text-muted-foreground">Este servicio no tiene tareas añadidas.</p>
                   ) : null}
-                  {tasks.data
-                    ?.find((entry) => entry.visitId === visit.id)
-                    ?.tasks.map((task) => (
-                      <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                          <p className="font-medium">{task.title}</p>
-                          <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
-                            {taskStatusLabels[task.status]}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground">{task.phaseTitle}</p>
-                        {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
-                        {task.checklist.length ? (
-                          <ul className="mt-1 space-y-1 pl-4">
-                            {task.checklist.map((item) => (
-                              <li key={item.id} className="flex gap-2">
-                                <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
-                                <span>{item.label}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
+                  {tasksByVisit.get(visit.id)?.map((task) => (
+                    <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <p className="font-medium">{task.title}</p>
+                        <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
+                          {taskStatusLabels[task.status]}
+                        </span>
                       </div>
-                    ))}
+                      <p className="text-muted-foreground">{task.phaseTitle}</p>
+                      {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
+                      {task.checklist.length ? (
+                        <ul className="mt-1 space-y-1 pl-4">
+                          {task.checklist.map((item) => (
+                            <li key={item.id} className="flex gap-2">
+                              <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
+                              <span>{item.label}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
                 </section>
               ) : null}
               <div className="flex flex-wrap gap-2">
