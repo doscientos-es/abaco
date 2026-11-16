@@ -53,8 +53,10 @@ export type ContractAssignmentDraft = {
 export function initialContractAssignments(
   setup: ContractAssignmentSetup,
   startsOn?: string,
+  preferredStart = '09:00',
 ): ContractAssignmentDraft[] {
   const saved = new Map(setup.assignments.map((item) => [item.task_key, item]))
+  const [hour = 9, minute = 0] = preferredStart.split(':').map(Number)
   return [
     ...setup.jobs.map((job): ContractTaskAssignment => ({
       task_key: `job:${job.id}`,
@@ -78,17 +80,17 @@ export function initialContractAssignments(
       job_id: item.job_id,
       user_ids: item.assigned_user_ids,
       team_id: item.work_team_id,
-      schedule:
-        item.schedule ??
-        (startsOn && !item.task_key.startsWith('job:')
+      schedule: item.schedule
+        ? { ...item.schedule, start_minute: hour * 60 + minute }
+        : startsOn && !item.task_key.startsWith('job:')
           ? {
               frequency: 'weekly',
               anchor_on: startsOn,
               weekdays: [((new Date(`${startsOn}T00:00:00Z`).getUTCDay() + 6) % 7) + 1],
-              start_minute: 540,
+              start_minute: hour * 60 + minute,
               duration_minutes: 60,
             }
-          : null),
+          : null,
       mode: item.work_team_id
         ? 'team'
         : item.assigned_user_ids.length || item.task_key.startsWith('job:')

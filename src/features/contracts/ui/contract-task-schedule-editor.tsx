@@ -1,7 +1,7 @@
 import { SelectField, TextField } from '@/shared/ui/form'
 
 import type { ContractTaskSchedule } from '../domain/contract-task-assignment'
-import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
+import { scheduleDays } from '../domain/weekly-schedule'
 
 const frequencies = [
   { value: 'once', label: 'Una vez' },
@@ -35,25 +35,13 @@ export function ContractTaskScheduleEditor({
         options={frequencies}
         onChange={(value) => update({ frequency: value as ContractTaskSchedule['frequency'] })}
       />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <TextField
           label="Fecha de referencia"
           type="date"
           value={schedule.anchor_on}
           onChange={(anchor_on) => update({ anchor_on })}
           placeholder="Fecha"
-        />
-        <TextField
-          label="Hora preferente"
-          type="time"
-          value={minuteLabel(schedule.start_minute)}
-          onChange={(value) => {
-            const [hour, minute] = value.split(':').map(Number)
-            update({
-              start_minute: hour === undefined || minute === undefined ? -1 : hour * 60 + minute,
-            })
-          }}
-          placeholder="09:00"
         />
         <TextField
           label="Duración (minutos)"

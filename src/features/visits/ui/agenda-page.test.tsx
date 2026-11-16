@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
     onDone: () => Promise<void>
   },
   change: undefined as undefined | ((change: CalendarEventChange) => void),
+  click: undefined as undefined | ((item: CalendarEvent) => void),
   events: [] as CalendarEvent[],
   queryKeys: [] as unknown[][],
   calendarIds: [] as string[],
@@ -105,12 +106,14 @@ vi.mock('@/shared/ui/event-calendar', () => ({
     view,
     value,
     items,
+    onItemClick,
     onItemChange,
     showInstructions,
   }: {
     view: string
     value: Date
     items: CalendarEvent[]
+    onItemClick: (item: CalendarEvent) => void
     onItemChange?: (change: CalendarEventChange) => void
     showInstructions?: boolean
   }) => {
@@ -120,6 +123,7 @@ vi.mock('@/shared/ui/event-calendar', () => ({
     mocks.calendarIds = items.map((item) => item.id)
     mocks.events = items
     mocks.change = onItemChange
+    mocks.click = onItemClick
     return <div>Calendario de trabajos</div>
   },
 }))
@@ -219,6 +223,7 @@ describe('AgendaPage: nueva visita', () => {
     mocks.proposal = null
     mocks.replanProps = null
     mocks.change = undefined
+    mocks.click = undefined
     mocks.events = []
     mocks.queryKeys = []
     mocks.calendarIds = []
@@ -517,5 +522,49 @@ describe('AgendaPage: nueva visita', () => {
     mocks.visits = [{ ...visit, status: 'completed' }]
     render()
     expect(mocks.events[0]?.editable).toBe(false)
+  })
+
+  it('groups a contract’s jobs into one event and shows the individual actions on opening it', () => {
+    const visit: VisitSummary = {
+      id: 'one',
+      title: 'Fregar',
+      client_name: 'Cliente',
+      location_name: '',
+      address: '',
+      timezone: 'Europe/Madrid',
+      scheduled_start_at: '2026-11-13T08:00:00Z',
+      scheduled_end_at: '2026-11-13T09:00:00Z',
+      status: 'scheduled',
+      priority: 'normal',
+      notes: '',
+      updated_at: 'version',
+      contract_id: 'contract',
+      contract_title: 'Oficina',
+    }
+    mocks.visits = [
+      visit,
+      {
+        ...visit,
+        id: 'two',
+        title: 'Cristales',
+        scheduled_start_at: '2026-11-13T09:00:00Z',
+        scheduled_end_at: '2026-11-13T10:00:00Z',
+      },
+    ]
+    mocks.search = { view: 'calendar', date: '2026-11-13', period: 'week' }
+    render()
+    expect(mocks.events).toHaveLength(1)
+    const event = mocks.events[0]
+    if (!event) throw new Error('Missing grouped event')
+    expect(event.title).toBe('Oficina')
+    expect(event.editable).toBe(false)
+    mocks.click?.(event)
+    expect(mocks.setSelected).toHaveBeenCalledWith(event.id)
+    mocks.selectedVisitId = event.id
+    const html = render()
+    expect(html).toContain('Fregar')
+    expect(html).toContain('Cristales')
+    expect(html.match(/Reprogramar/g)).toHaveLength(2)
+    expect(html.match(/Ver parte/g)).toHaveLength(2)
   })
 })

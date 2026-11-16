@@ -161,6 +161,7 @@ describe('contract summary form', () => {
     } as unknown as ServiceContract
     renderToStaticMarkup(ContractAgreementForm({ contract, onSaved }))
     mocks.fields.get('Fecha de fin · obligatoria')?.('2027-01-31')
+    mocks.fields.get('Hora preferente · obligatoria')?.('10:30')
     mocks.fields.get('Notas (opcional)')?.('Después')
     mocks.fields.get('Centro · obligatorio')?.('other')
     mocks.cursor = 0
@@ -170,6 +171,7 @@ describe('contract summary form', () => {
     expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
         endsOn: '2027-01-31',
+        preferredStart: '10:30',
         notes: 'Después',
         locationId: 'other',
         renewal: 'manual',

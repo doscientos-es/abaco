@@ -22,9 +22,25 @@ export type VisitSummary = {
   work_order_id?: string | null
   work_team_name?: string
   route_order?: number
+  requires_acceptance?: boolean
+  contract_id?: string
+  contract_title?: string
 }
 
 export type TechnicianOption = { id: string; label: string }
+
+async function contractLabels(tenantId: string, visits: VisitSummary[]) {
+  const { data, error } = await createBrowserSupabaseClient().rpc('list_visit_contract_labels', {
+    p_tenant_id: tenantId,
+    p_visit_ids: visits.map((visit) => visit.id),
+  })
+  if (error) throw new Error(error.message)
+  return new Map(
+    ((data ?? []) as { visit_id: string; contract_id: string; contract_title: string }[]).map(
+      (label) => [label.visit_id, label],
+    ),
+  )
+}
 
 export async function listTechnicians(tenantId: string): Promise<TechnicianOption[]> {
   const { data, error } = await createBrowserSupabaseClient()
@@ -60,20 +76,25 @@ export async function listOfficeVisits(
   if (error) throw new Error(error.message)
   const rows = (data ?? []) as VisitSummary[]
   if (!rows.length) return rows
-  const extra = await createBrowserSupabaseClient()
-    .from('service_visits')
-    .select('id,work_team_id,route_order,work_teams(name)')
-    .eq('tenant_id', tenantId)
-    .in(
-      'id',
-      rows.map((row) => row.id),
-    )
+  const [extra, labels] = await Promise.all([
+    createBrowserSupabaseClient()
+      .from('service_visits')
+      .select('id,work_team_id,route_order,work_teams(name)')
+      .eq('tenant_id', tenantId)
+      .in(
+        'id',
+        rows.map((row) => row.id),
+      ),
+    contractLabels(tenantId, rows),
+  ])
   if (extra.error) throw new Error(extra.error.message)
   return rows.map((row) => {
     const detail = extra.data?.find((item) => item.id === row.id)
     const team = Array.isArray(detail?.work_teams) ? detail.work_teams[0] : detail?.work_teams
+    const label = labels.get(row.id)
     return {
       ...row,
+      ...(label ? { contract_id: label.contract_id, contract_title: label.contract_title } : {}),
       work_team_id: detail?.work_team_id,
       route_order: detail?.route_order,
       work_team_name: team?.name ?? '',
@@ -94,19 +115,32 @@ export async function listMyVisits(
   if (error) throw new Error(error.message)
   const rows = (data ?? []) as VisitSummary[]
   if (rows.length === 0) return rows
-  const extra = await createBrowserSupabaseClient()
-    .from('service_visits')
-    .select('id,work_order_id')
-    .eq('tenant_id', tenantId)
-    .in(
-      'id',
-      rows.map((row) => row.id),
-    )
+  const [extra, labels] = await Promise.all([
+    createBrowserSupabaseClient()
+      .from('service_visits')
+      .select('id,work_order_id,paper_snapshot')
+      .eq('tenant_id', tenantId)
+      .in(
+        'id',
+        rows.map((row) => row.id),
+      ),
+    contractLabels(tenantId, rows),
+  ])
   if (extra.error) throw new Error(extra.error.message)
-  return rows.map((row) => ({
-    ...row,
-    work_order_id: extra.data?.find((visit) => visit.id === row.id)?.work_order_id ?? null,
-  }))
+  const details = new Map((extra.data ?? []).map((visit) => [visit.id, visit]))
+  return rows.map((row) => {
+    const detail = details.get(row.id)
+    const snapshot = detail?.paper_snapshot as { requiresAcceptance?: boolean } | null
+    const label = labels.get(row.id)
+    return {
+      ...row,
+      ...(label ? { contract_id: label.contract_id, contract_title: label.contract_title } : {}),
+      work_order_id: detail?.work_order_id ?? null,
+      ...(typeof snapshot?.requiresAcceptance === 'boolean'
+        ? { requires_acceptance: snapshot.requiresAcceptance }
+        : {}),
+    }
+  })
 }
 
 export async function createServiceVisit(input: {

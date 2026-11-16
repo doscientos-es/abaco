@@ -1,6 +1,9 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(28);
+
+select ok(not has_function_privilege('anon', 'public.list_visit_contract_labels(uuid,uuid[])', 'execute'),
+  'Anonymous users cannot call the contract label function');
 
 insert into public.tenants (id, name) values
   ('50000000-0000-4000-8000-000000000001', 'Empresa contratos');
@@ -137,6 +140,10 @@ select is((select count(*) from public.service_visits
 select is((select count(*) from public.service_visit_events
   where actor_id is null), 2::bigint,
   'Generated visits have system-authored events');
+select set_config('test.assigned_visit', (select id::text from public.service_visits
+  where contract_id = current_setting('test.contract_id')::uuid and assigned_user_id is not null), true);
+select set_config('test.unassigned_visit', (select id::text from public.service_visits
+  where contract_id = current_setting('test.contract_id')::uuid and assigned_user_id is null), true);
 
 set local request.jwt.claim.sub = '50000000-0000-4000-8000-000000000005';
 select is((select count(*) from public.service_contracts), 0::bigint,
@@ -144,6 +151,15 @@ select is((select count(*) from public.service_contracts), 0::bigint,
 select is((select count(*) from public.service_visits
   where contract_id = current_setting('test.contract_id')::uuid), 1::bigint,
   'Technician sees only the assigned generated visit');
+select is((select contract_title from public.list_visit_contract_labels(
+  '50000000-0000-4000-8000-000000000001', array[current_setting('test.assigned_visit')::uuid])),
+  'Mantenimiento de piscina', 'Technician can see the label for their assigned visit');
+select is((select count(*) from public.list_visit_contract_labels(
+  '50000000-0000-4000-8000-000000000001', array[current_setting('test.unassigned_visit')::uuid])),
+  0::bigint, 'Technician cannot see a label for an unassigned visit');
+select is((select count(*) from public.list_visit_contract_labels(
+  '50000000-0000-4000-8000-000000000002', array[current_setting('test.assigned_visit')::uuid])),
+  0::bigint, 'Contract labels are scoped to the requested tenant');
 select throws_ok(
   $$select public.generate_contract_visits(
     '50000000-0000-4000-8000-000000000001',
@@ -152,6 +168,9 @@ select throws_ok(
   'Technician cannot run the office generator');
 
 set local request.jwt.claim.sub = '50000000-0000-4000-8000-000000000004';
+select is((select count(*) from public.list_visit_contract_labels(
+  '50000000-0000-4000-8000-000000000001', array[current_setting('test.unassigned_visit')::uuid])),
+  1::bigint, 'Office can see the label of an unassigned visit');
 select is(public.transition_service_contract(
   '50000000-0000-4000-8000-000000000001',
   current_setting('test.contract_id')::uuid,

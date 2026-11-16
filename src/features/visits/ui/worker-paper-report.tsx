@@ -25,22 +25,30 @@ export function WorkerPaperReport({ tenantId, visit }: { tenantId: string; visit
     queryFn: () => listSignedDocuments(tenantId, visit.id),
   })
 
-  async function download() {
+  async function prepareReport(action: 'download' | 'print') {
     if (busy) return
     setBusy(true)
     try {
-      const [snapshots, work, pdfModule] = await Promise.all([
+      const [snapshots, work] = await Promise.all([
         loadPaperSnapshots(tenantId, [visit.id]),
         listMyDayTasks(tenantId, [visit]),
-        import('./worker-paper-report-pdf'),
       ])
       const snapshot = snapshots[visit.id]
       if (!snapshot) throw new Error('No se pudo consultar el contenido de esta visita.')
-      await pdfModule.downloadWorkerPaperReport(visit, snapshot, work[0]?.tasks ?? [])
+      if (action === 'download') {
+        const { downloadWorkerPaperReport } = await import('./worker-paper-report-pdf')
+        await downloadWorkerPaperReport(visit, snapshot, work[0]?.tasks ?? [])
+      } else {
+        const { printWorkerPaperReport } = await import('./worker-paper-report-print')
+        await printWorkerPaperReport(visit, snapshot, work[0]?.tasks ?? [])
+      }
     } catch (error) {
-      toast.error('No se pudo descargar el parte', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
-      })
+      toast.error(
+        action === 'download' ? 'No se pudo descargar el parte' : 'No se pudo imprimir el parte',
+        {
+          description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+        },
+      )
     } finally {
       setBusy(false)
     }
@@ -67,10 +75,19 @@ export function WorkerPaperReport({ tenantId, visit }: { tenantId: string; visit
 
   return (
     <section aria-label="Parte para firma manual" className="space-y-2 rounded-lg border p-3">
-      <p>Descarga el parte antes de la visita y pide al cliente que lo firme a mano.</p>
+      {visit.requires_acceptance === true ? (
+        <p className="font-semibold">Esta visita requiere la conformidad del cliente.</p>
+      ) : null}
+      <p>
+        Descarga o imprime el parte y pide al cliente que lo firme a mano. Puedes adjuntar una foto
+        o PDF firmado para que lo consulte administración; el adjunto es opcional.
+      </p>
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" isDisabled={busy} onPress={() => void download()}>
+        <Button variant="outline" isDisabled={busy} onPress={() => void prepareReport('download')}>
           Descargar parte PDF
+        </Button>
+        <Button variant="outline" isDisabled={busy} onPress={() => void prepareReport('print')}>
+          Imprimir parte
         </Button>
         <Button variant="outline" onPress={() => setOpen(!open)}>
           {open ? 'Ocultar parte firmado' : 'Adjuntar parte firmado (opcional)'}

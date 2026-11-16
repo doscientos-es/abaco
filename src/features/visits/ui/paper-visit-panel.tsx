@@ -109,7 +109,8 @@ export function PaperVisitPanel({ tenantId, visit }: { tenantId: string; visit: 
           : current.status === 'canceled'
             ? 'Cancelada · no prestada'
             : 'Pendiente'}{' '}
-        · {query.data.documents.length ? 'Conformidad adjunta' : 'Sin conformidad adjunta'}
+        · {current.paper_snapshot.requiresAcceptance === true ? 'Conformidad requerida · ' : ''}
+        {query.data.documents.length ? 'Parte firmado adjunto' : 'Sin parte firmado adjunto'}
       </p>
       {current.completion_notes ? (
         <p className="whitespace-pre-wrap">{current.completion_notes}</p>
@@ -188,7 +189,7 @@ export function PaperVisitPanel({ tenantId, visit }: { tenantId: string; visit: 
         </div>
       ) : null}
       <section className="space-y-2">
-        <h3 className="font-semibold">Justificantes privados</h3>
+        <h3 className="font-semibold">Partes firmados y justificantes privados</h3>
         <input
           aria-label="Parte firmado (PDF o foto)"
           type="file"

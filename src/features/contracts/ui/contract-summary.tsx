@@ -83,6 +83,15 @@ export function ContractSummary({
                 </div>
               </div>
               <div className="bg-muted/40 flex gap-3 rounded-lg p-4">
+                <CalendarBlank aria-hidden="true" className="text-primary mt-0.5 size-5 shrink-0" />
+                <div>
+                  <dt className="text-muted-foreground text-xs">Hora preferente</dt>
+                  <dd className="mt-1 text-sm font-medium">
+                    {contract.preferred_start?.slice(0, 5) ?? 'Sin definir'}
+                  </dd>
+                </div>
+              </div>
+              <div className="bg-muted/40 flex gap-3 rounded-lg p-4">
                 <CurrencyEur aria-hidden="true" className="text-primary mt-0.5 size-5 shrink-0" />
                 <div>
                   <dt className="text-muted-foreground text-xs">
@@ -122,7 +131,8 @@ export function ContractSummary({
             ) : null}
             {canEdit && contract.status !== 'draft' ? (
               <p className="text-muted-foreground text-xs">
-                La vigencia y las notas solo se pueden editar antes de activar el contrato.
+                La vigencia, la hora preferente y las notas solo se pueden editar antes de activar
+                el contrato.
               </p>
             ) : null}
           </div>

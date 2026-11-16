@@ -25,7 +25,7 @@ import {
   suggestedJobFrequency,
   type ContractJobDraft,
 } from '../domain/contract-job'
-import { minuteLabel, scheduleDays } from '../domain/weekly-schedule'
+import { scheduleDays } from '../domain/weekly-schedule'
 
 const days = scheduleDays
 export const frequencyLabels = jobFrequencyLabels
@@ -37,6 +37,7 @@ export function CleaningServicesPanel({
   clientId,
   clientName,
   contractLocationId,
+  preferredStart,
   assignedUserIds,
   workTeamId,
   quotedScope = [],
@@ -53,6 +54,7 @@ export function CleaningServicesPanel({
   clientId: string
   clientName: string
   contractLocationId: string | null
+  preferredStart: string
   assignedUserIds: string[]
   workTeamId: string | null
   quotedScope?: ServiceContract['included_scope']
@@ -91,6 +93,7 @@ export function CleaningServicesPanel({
   const effectiveForm = {
     ...form,
     location_id: contractLocationId,
+    local_start: (preferredStart ?? '09:00').slice(0, 5),
     ends_on: null,
     assigned_user_ids: assignedUserIds,
     assigned_user_id: [...assignedUserIds].sort()[0] ?? null,
@@ -308,11 +311,11 @@ export function CleaningServicesPanel({
                       <div className="flex min-w-0 gap-2 text-sm">
                         <span className="text-muted-foreground mt-0.5">{fieldIcons.file}</span>
                         <div>
-                          <p className="text-muted-foreground text-xs">Horario y duración</p>
+                          <p className="text-muted-foreground text-xs">Duración</p>
                           <p className="mt-1 font-medium">
                             {automaticDaily
                               ? 'Se calcula para cada visita'
-                              : `${service.time_known ? service.local_start.slice(0, 5) : 'Sin horario fijo'} · ${service.duration_minutes} min`}
+                              : `${service.duration_minutes} min`}
                           </p>
                         </div>
                       </div>
@@ -330,9 +333,7 @@ export function CleaningServicesPanel({
                       >
                         {service.weekly_slots.map((slot) => (
                           <li key={slot.id} className="bg-muted rounded-md px-2 py-1">
-                            {days[slot.weekday - 1]} · {minuteLabel(slot.start_minute)}–
-                            {minuteLabel(slot.start_minute + slot.duration_minutes)}
-                            {slot.start_minute + slot.duration_minutes >= 1440 ? ' (+1 día)' : ''}
+                            {days[slot.weekday - 1]} · {slot.duration_minutes} min
                           </li>
                         ))}
                       </ul>
@@ -516,13 +517,6 @@ export function CleaningServicesPanel({
               onChange={(v) => set('duration_minutes', Number(v))}
               placeholder="120"
             />
-            <TextField
-              label="Hora prevista opcional"
-              type="time"
-              value={form.local_start}
-              onChange={(v) => set('local_start', v)}
-              placeholder="Sin horario fijo"
-            />
           </>
         ) : null}
         {daily ? (
@@ -566,21 +560,6 @@ export function CleaningServicesPanel({
         {weekly && !daily && form.weekly_slots.length ? (
           <>
             <TextField
-              label="Hora prevista"
-              type="time"
-              value={minuteLabel(form.weekly_slots[0]?.start_minute ?? 540)}
-              onChange={(value) => {
-                const [hour, minute] = value.split(':').map(Number)
-                const start_minute =
-                  hour === undefined || minute === undefined ? -1 : hour * 60 + minute
-                setForm((current) => ({
-                  ...current,
-                  weekly_slots: current.weekly_slots.map((slot) => ({ ...slot, start_minute })),
-                }))
-              }}
-              placeholder="09:00"
-            />
-            <TextField
               label="Duración estimada (min)"
               type="number"
               min={15}
@@ -601,13 +580,6 @@ export function CleaningServicesPanel({
         ) : null}
         {form.frequency === 'monthly' ? (
           <>
-            <TextField
-              label="Hora prevista · obligatorio"
-              type="time"
-              value={form.local_start}
-              onChange={(v) => set('local_start', v)}
-              placeholder="09:00"
-            />
             <TextField
               label="Duración estimada (min)"
               type="number"
@@ -631,13 +603,6 @@ export function CleaningServicesPanel({
               value={form.anchor_on ?? startsOn}
               onChange={(value) => set('anchor_on', value)}
               placeholder="Fecha"
-            />
-            <TextField
-              label="Hora prevista"
-              type="time"
-              value={form.local_start}
-              onChange={(value) => set('local_start', value)}
-              placeholder="09:00"
             />
             <TextField
               label="Duración estimada (min)"
@@ -674,6 +639,10 @@ export function CleaningServicesPanel({
           />{' '}
           Requiere conformidad del cliente
         </label>
+        <p className="text-muted-foreground text-sm">
+          El trabajador deberá pedir la firma en el parte. Adjuntar una copia firmada es opcional.
+          Se aplicará a las visitas generadas con esta configuración.
+        </p>
         {error || agreedDaysError ? (
           <p className="text-muted-foreground text-sm">{error || agreedDaysError}</p>
         ) : null}

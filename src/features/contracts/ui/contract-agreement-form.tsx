@@ -38,6 +38,9 @@ export function ContractAgreementForm({
     team: contract.work_team_id,
   })
   const [busy, setBusy] = useState(false)
+  const [preferredStart, setPreferredStart] = useState(
+    (contract.preferred_start ?? '09:00').slice(0, 5),
+  )
   const operations = useRef(new Map<string, string>())
   const targets = useQuery({
     queryKey: ['work-target-options', contract.tenant_id, contract.client_id],
@@ -55,6 +58,7 @@ export function ContractAgreementForm({
     onLocationCreated: setLocationId,
   })
   const dateError = contractDatesError(startsOn, endsOn)
+  const timeError = !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(preferredStart)
   const validLocation =
     targets.isSuccess && targets.data.locations.some((item) => item.id === locationId)
   const functionPeople = functionId
@@ -68,10 +72,12 @@ export function ContractAgreementForm({
     (person) => !functionPeople || functionPeople.has(person.id),
   )
   async function save() {
-    if (busy || dateError || !validLocation || related.pending || !people.isSuccess) return
+    if (busy || dateError || timeError || !validLocation || related.pending || !people.isSuccess)
+      return
     const payload = {
       startsOn,
       endsOn,
+      preferredStart,
       renewal: contract.renewal_mode,
       notes,
       locationId,
@@ -214,6 +220,16 @@ export function ContractAgreementForm({
             onChange={setEndsOn}
             placeholder="Fin del contrato"
           />
+          <TextField
+            label="Hora preferente · obligatoria"
+            type="time"
+            value={preferredStart}
+            onChange={setPreferredStart}
+            placeholder="09:00"
+          />
+          <p className="text-muted-foreground text-xs sm:col-span-2">
+            Se comparte entre todos los trabajos. Las visitas ya generadas no cambian.
+          </p>
           <TextareaField
             label="Notas (opcional)"
             value={notes}
@@ -227,11 +243,21 @@ export function ContractAgreementForm({
             {dateError}
           </p>
         ) : null}
+        {timeError ? (
+          <p role="alert" className="text-destructive text-sm sm:col-span-2">
+            Indica la hora preferente del contrato.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2 sm:col-span-2">
           <Button
             type="submit"
             isDisabled={
-              busy || Boolean(dateError) || !validLocation || related.pending || !people.isSuccess
+              busy ||
+              Boolean(dateError) ||
+              timeError ||
+              !validLocation ||
+              related.pending ||
+              !people.isSuccess
             }
           >
             {busy ? 'Guardando…' : 'Guardar cambios'}

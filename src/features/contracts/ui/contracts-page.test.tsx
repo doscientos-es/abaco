@@ -205,6 +205,7 @@ function render({ draft = true, editable = true }: { draft?: boolean; editable?:
       clientId="client-1"
       clientName="Alborán"
       contractLocationId={mocks.contractLocationId}
+      preferredStart="10:30"
       assignedUserIds={[]}
       workTeamId={mocks.workTeamId}
       quotedScope={mocks.scope}
@@ -533,7 +534,7 @@ describe('contract jobs', () => {
     render()
     press('Configurar trabajo')
     change('Día de la semana favorito · obligatorio', '1')
-    change('Hora prevista · obligatorio', '09:00')
+    expect(mocks.fields.has('Hora prevista · obligatorio')).toBe(false)
     expect(mocks.jobDialog?.submitDisabled).toBe(false)
     mocks.jobDialog?.onSubmit()
     await vi.waitFor(() =>
@@ -543,6 +544,7 @@ describe('contract jobs', () => {
             frequency: 'monthly',
             weekdays: [1],
             anchor_on: '2026-12-01',
+            local_start: '10:30',
           }),
         }),
       ),

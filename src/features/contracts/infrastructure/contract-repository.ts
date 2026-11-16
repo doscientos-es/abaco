@@ -19,6 +19,7 @@ export type ServiceContract = {
   status: ContractStatus
   starts_on: string
   ends_on: string | null
+  preferred_start: string
   timezone: string
   price_cents: number
   billing_frequency: BillingFrequency
@@ -94,7 +95,7 @@ export type GenerationIssue = {
 }
 
 const columns =
-  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,document_template_id,document_template_name,default_assigned_user_id,assigned_user_ids,work_team_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
+  'id,tenant_id,client_id,origin_estimate_id,location_id,asset_id,title,status,starts_on,ends_on,preferred_start,timezone,price_cents,billing_frequency,renewal_mode,notes,document_sections,document_template_id,document_template_name,default_assigned_user_id,assigned_user_ids,work_team_id,included_scope,schedule_version,signed_at,signed_by,signed_document_path,signed_document_name,updated_at,created_at'
 
 export async function findContractForEstimate(tenantId: string, estimateId: string) {
   const { data, error } = await createBrowserSupabaseClient()
@@ -136,6 +137,7 @@ export async function updateContractGeneralDetails(input: {
   renewal: ServiceContract['renewal_mode']
   notes: string
   locationId: string
+  preferredStart: string
   people: string[]
   team: string | null
   operationId: string
@@ -153,6 +155,7 @@ export async function updateContractGeneralDetails(input: {
     p_assigned_user_ids: input.people,
     p_work_team_id: input.team,
     p_operation_id: input.operationId,
+    p_preferred_start: input.preferredStart,
   })
   if (error) throw new Error(error.message)
 }

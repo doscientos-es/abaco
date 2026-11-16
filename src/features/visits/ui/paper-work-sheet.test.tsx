@@ -55,4 +55,40 @@ describe('paper work sheet', () => {
     expect(html).not.toContain('Firma y sello')
     expect(html).toContain('Cliente actual')
   })
+
+  it('prints scheduled and work-order tasks and the signature for a worker report', () => {
+    const html = renderToStaticMarkup(
+      <PaperWorkSheet
+        visit={visit}
+        snapshot={{
+          requiresAcceptance: false,
+          tasks: 'Suelos',
+          scheduledTasks: [{ title: 'Cristales', startMinute: 480, durationMinutes: 60 }],
+        }}
+        tasks={[
+          {
+            id: 'task',
+            phase_id: 'phase',
+            position: 0,
+            title: 'Baños',
+            notes: 'Desinfectar',
+            status: 'pending',
+            updated_at: '',
+            phaseTitle: 'Limpieza',
+            checklist: [{ id: 'item', label: 'Lavabos', done: false }],
+          },
+        ]}
+      />,
+    )
+    for (const text of [
+      'Suelos',
+      'Cristales',
+      'Baños',
+      'Desinfectar',
+      'Lavabos',
+      'Firma y sello',
+    ]) {
+      expect(html).toContain(text)
+    }
+  })
 })

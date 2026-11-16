@@ -56,7 +56,9 @@ select is(public.transition_service_contract('79000000-0000-4000-8000-0000000000
 select is((select count(*) from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid),159::bigint,'All three weekly shifts are generated across 53 weeks');
 select ok((select bool_and(work_team_id='79000000-0000-4000-8000-000000000006') from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid),'Every occurrence retains the chosen team');
 select is((select scheduled_start_at from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid and contract_occurrence_on='2027-01-04' and contract_slot_key='morning'),
-  '2027-01-04 09:00+00'::timestamptz,'The edited Monday slot is generated using the centre timezone');
+  '2027-01-04 08:00+00'::timestamptz,'The first Monday slot uses the contract preference in the centre timezone');
+select is((select scheduled_start_at from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid and contract_occurrence_on='2027-01-04' and contract_slot_key='afternoon'),
+  '2027-01-04 13:00+00'::timestamptz,'Legacy split shifts retain their offset from the first slot');
 select is((select count(*) from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid and contract_occurrence_on='2027-01-04'),2::bigint,'Split shifts on one day keep independent occurrence identities');
 select ok((select max(contract_occurrence_on)>'2027-01-04'::date+180 from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid),'Full activation is not truncated to the old 180-day horizon');
 select ok((select bool_and(contract_occurrence_on between '2027-01-04'::date and '2028-01-09'::date) from public.service_visits where contract_id=current_setting('test.weekly_contract')::uuid),'No work is generated outside the agreed term');

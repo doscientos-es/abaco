@@ -28,6 +28,35 @@ const setup: ContractSignatureSetup = {
 }
 
 describe('contract signature assignments', () => {
+  it('uses the contract preference for new and previously saved task schedules', () => {
+    const schedule = {
+      frequency: 'weekly' as const,
+      anchor_on: '2026-01-01',
+      weekdays: [4],
+      start_minute: 480,
+      duration_minutes: 90,
+    }
+    const saved = {
+      ...setup,
+      assignments: [
+        {
+          task_key: 'service:s1:r1',
+          job_id: 'j1',
+          assigned_user_ids: [],
+          work_team_id: null,
+          schedule,
+        },
+      ],
+    }
+    expect(initialContractAssignments(saved, '2026-01-01', '10:30:00')[1]?.schedule).toEqual({
+      ...schedule,
+      start_minute: 630,
+    })
+    expect(
+      initialContractAssignments(setup, '2026-01-01', '10:30:00')[1]?.schedule?.start_minute,
+    ).toBe(630)
+  })
+
   it('defaults tasks to the sole job and inherits its person', () => {
     const drafts = initialContractAssignments(setup)
     expect(drafts[1]).toMatchObject({ job_id: 'j1', mode: 'inherit' })

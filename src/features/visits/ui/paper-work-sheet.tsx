@@ -1,3 +1,4 @@
+import type { MyDayTask } from '../application/my-day-tasks'
 import type { PaperSnapshot } from '../application/paper-visit-actions'
 import type { VisitSummary } from '../application/visit-actions'
 
@@ -5,9 +6,11 @@ import type { VisitSummary } from '../application/visit-actions'
 export function PaperWorkSheet({
   visit,
   snapshot,
+  tasks,
 }: {
   visit: VisitSummary
   snapshot: PaperSnapshot
+  tasks?: MyDayTask[]
 }) {
   return (
     <article className="paper-sheet space-y-4">
@@ -31,7 +34,23 @@ export function PaperWorkSheet({
       <p>Equipo/persona: {visit.work_team_name || visit.assigned_user_name || 'Sin asignar'}</p>
       <section className="whitespace-pre-wrap">
         <h3 className="font-semibold">Tareas y alcance</h3>
-        {snapshot.tasks || visit.title}
+        {tasks !== undefined ? (
+          <p>Los trabajos indicados se consideran realizados, salvo las incidencias anotadas.</p>
+        ) : null}
+        {snapshot.tasks ? <p>{snapshot.tasks}</p> : null}
+        {snapshot.scheduledTasks?.map((task, index) => (
+          <p key={`${index}:${task.title}`}>{task.title}</p>
+        ))}
+        {tasks?.map((task) => (
+          <div key={task.id}>
+            <p>{task.title}</p>
+            {task.notes ? <p>{task.notes}</p> : null}
+            {task.checklist.map((item) => (
+              <p key={item.id}>- {item.label}</p>
+            ))}
+          </div>
+        ))}
+        {!snapshot.tasks && !snapshot.scheduledTasks?.length && !tasks?.length ? visit.title : null}
       </section>
       <section className="whitespace-pre-wrap">
         <h3 className="font-semibold">Acceso, contacto e instrucciones</h3>
@@ -42,7 +61,7 @@ export function PaperWorkSheet({
         <div className="min-h-32 border-b" />
       </section>
       <p>Fecha de realización: __________________________</p>
-      {snapshot.requiresAcceptance !== false ? (
+      {tasks !== undefined || snapshot.requiresAcceptance !== false ? (
         <section className="space-y-4">
           <h3 className="font-semibold">Conformidad del cliente</h3>
           <p>Nombre: ____________________________________</p>

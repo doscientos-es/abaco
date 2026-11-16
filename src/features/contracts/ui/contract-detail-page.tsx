@@ -51,8 +51,8 @@ const monthNames = [
   'Diciembre',
 ]
 const weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-function describeRule(rule: ContractVisitRule) {
-  return `${weekdays[rule.weekday - 1]} a las ${rule.local_start.slice(0, 5)} · ${rule.duration_minutes} min · ${rule.every_n_weeks === 1 ? 'semanal' : `cada ${rule.every_n_weeks} semanas`}`
+function describeRule(rule: ContractVisitRule, preferredStart: string) {
+  return `${weekdays[rule.weekday - 1]} a las ${preferredStart.slice(0, 5)} · ${rule.duration_minutes} min · ${rule.every_n_weeks === 1 ? 'semanal' : `cada ${rule.every_n_weeks} semanas`}`
 }
 
 export function ContractDetailPage({ contractId }: { contractId: string }) {
@@ -69,7 +69,6 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
   const [months, setMonths] = useState<number[]>([6, 7, 8, 9])
   const [weekday, setWeekday] = useState('1')
   const [everyNWeeks, setEveryNWeeks] = useState('1')
-  const [localStart, setLocalStart] = useState('09:00')
   const [duration, setDuration] = useState('60')
   const [ruleTitle, setRuleTitle] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -88,15 +87,13 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     ruleTitle.trim().length <= 200 &&
     Number.isInteger(Number(duration)) &&
     Number(duration) >= 15 &&
-    Number(duration) <= 720 &&
-    /^\d{2}:\d{2}$/.test(localStart)
+    Number(duration) <= 720
   const ruleDirty =
     season !== 'high' ||
     months.length !== 4 ||
     [6, 7, 8, 9].some((month) => !months.includes(month)) ||
     weekday !== '1' ||
     everyNWeeks !== '1' ||
-    localStart !== '09:00' ||
     duration !== '60' ||
     Boolean(ruleTitle)
 
@@ -105,7 +102,6 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
     setMonths([6, 7, 8, 9])
     setWeekday('1')
     setEveryNWeeks('1')
-    setLocalStart('09:00')
     setDuration('60')
     setRuleTitle('')
   }
@@ -137,7 +133,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
       months: [...months].sort((a, b) => a - b),
       weekday: Number(weekday),
       everyNWeeks: Number(everyNWeeks),
-      localStart,
+      localStart: contract.preferred_start.slice(0, 5),
       durationMinutes: Number(duration),
       title: ruleTitle.trim(),
     }
@@ -198,6 +194,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
       clientId={contract.client_id}
       clientName={clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
       contractLocationId={contract.location_id}
+      preferredStart={contract.preferred_start}
       assignedUserIds={contract.assigned_user_ids}
       workTeamId={contract.work_team_id}
       quotedScope={contract.included_scope ?? []}
@@ -333,7 +330,7 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                           {rule.season === 'high' ? 'Temporada alta' : 'Temporada baja'}
                         </p>
                         <p className="text-muted-foreground">
-                          {describeRule(rule)} · meses{' '}
+                          {describeRule(rule, contract.preferred_start)} · meses{' '}
                           {rule.months.map((month) => monthNames[month - 1]).join(', ')}
                         </p>
                       </li>
@@ -399,13 +396,6 @@ export function ContractDetailPage({ contractId }: { contractId: string }) {
                           { value: '4', label: 'Cada 4 semanas' },
                         ]}
                         onChange={setEveryNWeeks}
-                      />
-                      <TextField
-                        label="Hora local"
-                        type="time"
-                        value={localStart}
-                        onChange={setLocalStart}
-                        placeholder="09:00"
                       />
                       <TextField
                         label="Duración, minutos"

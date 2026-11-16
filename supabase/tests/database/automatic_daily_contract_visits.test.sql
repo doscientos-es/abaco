@@ -27,12 +27,26 @@ select public.save_contract_job('ada00000-0000-4000-8000-000000000001','ada00000
     'weekly_slots',(select jsonb_agg(jsonb_build_object('id','auto-daily-'||d,'weekday',d,'start_minute',540,'duration_minutes',60) order by d) from generate_series(1,7) d)),
   'ada00000-0000-4000-8000-000000000007');
 select is(app_private.automatic_daily_contract_slot('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005','ada00000-0000-4000-8000-000000000007','2027-01-04','Europe/Madrid'),
-  '{"start_minute":600,"duration_minutes":60}'::jsonb,'Without a preferred time, choose the earliest shared availability');
+  '{"start_minute":600,"duration_minutes":60}'::jsonb,'Choose the available slot closest to the contract preference');
+select set_config('test.preference_version',(select updated_at::text from public.service_contracts where id='ada00000-0000-4000-8000-000000000005'),true);
+select is(public.update_contract_general_details('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005',
+  current_setting('test.preference_version')::timestamptz,'2027-01-04','2027-01-06','pending','',
+  'ada00000-0000-4000-8000-000000000003',array['ada00000-0000-4000-8000-000000000004'::uuid],null,
+  'ada00000-0000-4000-8000-000000000010','15:00'::time),
+  'ada00000-0000-4000-8000-000000000005'::uuid,'The contract preference is saved with the general details');
+select lives_ok($$select public.update_contract_general_details('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005',
+  current_setting('test.preference_version')::timestamptz,'2027-01-04','2027-01-06','pending','',
+  'ada00000-0000-4000-8000-000000000003',array['ada00000-0000-4000-8000-000000000004'::uuid],null,
+  'ada00000-0000-4000-8000-000000000010','15:00'::time)$$,'Preference update is idempotent');
+select throws_ok($$select public.update_contract_general_details('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005',
+  current_setting('test.preference_version')::timestamptz,'2027-01-04','2027-01-06','pending','',
+  'ada00000-0000-4000-8000-000000000003',array['ada00000-0000-4000-8000-000000000004'::uuid],null,
+  'ada00000-0000-4000-8000-000000000010','16:00'::time)$$,'23505','Operación utilizada','A retry cannot change the preferred time');
 insert into public.contract_task_assignments(tenant_id,contract_id,task_key,job_id,assigned_user_ids,schedule) values
   ('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005','service:test','ada00000-0000-4000-8000-000000000007',array['ada00000-0000-4000-8000-000000000004'::uuid],
-   '{"frequency":"weekly","anchor_on":"2027-01-04","weekdays":[1],"start_minute":900,"duration_minutes":60}');
+   '{"frequency":"weekly","anchor_on":"2027-01-04","weekdays":[1],"start_minute":660,"duration_minutes":60}');
 select is(app_private.automatic_daily_contract_slot('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005','ada00000-0000-4000-8000-000000000007','2027-01-04','Europe/Madrid'),
-  '{"start_minute":900,"duration_minutes":60}'::jsonb,'An available task preference is respected');
+  '{"start_minute":900,"duration_minutes":60}'::jsonb,'The contract preference overrides the old task time');
 select is(public.transition_service_contract('ada00000-0000-4000-8000-000000000001','ada00000-0000-4000-8000-000000000005',
   (select updated_at from public.service_contracts where id='ada00000-0000-4000-8000-000000000005'),'active','','ada00000-0000-4000-8000-000000000009'),
   'active','Activation generates daily visits');

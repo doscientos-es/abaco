@@ -1,4 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import { CaretLeftIcon, CaretRightIcon, MapPinIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
@@ -12,6 +13,7 @@ import {
   visitIncidentQueueKey,
 } from '@/features/incidents/application/incident-queue'
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
+import { moveDays } from '@/shared/lib/date-range'
 
 import {
   listMyVisits,
@@ -23,7 +25,10 @@ import {
   readVisitReportLocalDraft,
   visitReportDraftKey,
 } from '../application/visit-report-local-draft'
+import { MyVisitsCalendar } from './my-visits-calendar'
+import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
+import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerPaperReport } from './worker-paper-report'
 
 const todayInMadrid = () =>
@@ -56,6 +61,8 @@ export function MyDayPage() {
   const [date, setDate] = useState(todayInMadrid)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
   const operations = useRef(new Map<string, string>())
   const queryKey = ['my-visits', tenantId, date]
   const visits = useQuery({
@@ -181,18 +188,82 @@ export function MyDayPage() {
             continuo.
           </p>
         </div>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Día
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => {
-              if (event.target.value) setDate(event.target.value)
+        <div className="flex flex-wrap items-end gap-2">
+          <Button variant="outline" onPress={() => setCalendarOpen(!calendarOpen)}>
+            {calendarOpen ? 'Ocultar calendario' : 'Ver calendario'}
+          </Button>
+          <Button
+            variant="outline"
+            onPress={() => {
+              setSelectedContractId(null)
+              setDate(todayInMadrid())
             }}
-            className="border-input bg-background rounded-lg border px-3 py-2"
-          />
-        </label>
+          >
+            Hoy
+          </Button>
+          <div className="flex items-end gap-1">
+            <Button
+              variant="outline"
+              className="size-10 p-0"
+              aria-label="Día anterior"
+              onPress={() => {
+                setSelectedContractId(null)
+                setDate((current) => moveDays(current, -1))
+              }}
+            >
+              <CaretLeftIcon aria-hidden="true" />
+            </Button>
+            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
+              Día
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setSelectedContractId(null)
+                    setDate(event.target.value)
+                  }
+                }}
+                className="border-input bg-background rounded-lg border px-3 py-2"
+              />
+            </label>
+            <Button
+              variant="outline"
+              className="size-10 p-0"
+              aria-label="Día siguiente"
+              onPress={() => {
+                setSelectedContractId(null)
+                setDate((current) => moveDays(current, 1))
+              }}
+            >
+              <CaretRightIcon aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
       </div>
+      {calendarOpen && tenantId ? (
+        <MyVisitsCalendar
+          tenantId={tenantId}
+          date={date}
+          onDateChange={(nextDate) => {
+            setSelectedContractId(null)
+            setDate(nextDate)
+          }}
+          onOpenGroup={(nextDate, contractId) => {
+            setDate(nextDate)
+            setSelectedContractId(contractId)
+            setCalendarOpen(false)
+          }}
+        />
+      ) : null}
+      {tenantId ? (
+        <WorkerBatchPaperReports
+          key={`${tenantId}:${date}`}
+          tenantId={tenantId}
+          visits={visits.data ?? []}
+          disabled={!visits.isSuccess || visits.isFetching}
+        />
+      ) : null}
       {visits.isPending ? <output>Cargando visitas…</output> : null}
       {visits.isError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -200,125 +271,168 @@ export function MyDayPage() {
         </p>
       ) : null}
       {visits.data?.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border p-5 text-sm">
-          No tienes visitas asignadas para este día.
+        <p className="text-muted-foreground bg-muted/40 rounded-lg p-5 text-sm">
+          No tienes visitas asignadas para este día. Usa las flechas para consultar otra jornada.
         </p>
       ) : null}
-      {visits.data?.map((visit) => (
-        <Card key={visit.id}>
-          <CardHeader>
-            <CardTitle>{visit.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p className="font-medium">
-              {new Date(visit.scheduled_start_at).toLocaleTimeString('es-ES', {
-                timeZone: visit.timezone,
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              –{' '}
-              {new Date(visit.scheduled_end_at).toLocaleTimeString('es-ES', {
-                timeZone: visit.timezone,
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              · {statusLabels[visit.status]} · {visit.timezone}
-            </p>
-            <p>{visit.client_name}</p>
-            {visit.work_team_id ? (
-              <p className="text-muted-foreground">Visita de tu equipo</p>
-            ) : null}
-            {visit.location_name ? <p>{visit.location_name}</p> : null}
-            {visit.address ? (
-              <div className="space-y-1">
-                <p className="text-muted-foreground">{visit.address}</p>
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(visit.address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary inline-block font-medium underline"
-                >
-                  Cómo llegar
-                </a>
+      {groupVisitsByContractDay(visits.data ?? []).map((group) => {
+        const cards = group.visits.map((visit) => (
+          <Card key={visit.id}>
+            <CardHeader className="gap-2 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>{visit.title}</CardTitle>
+                <span className="bg-muted rounded-full px-2.5 py-1 text-xs font-medium">
+                  {statusLabels[visit.status]}
+                </span>
               </div>
-            ) : null}
-            {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
-            {visit.work_order_id ? (
-              <section aria-label="Tareas del servicio" className="space-y-2 rounded-lg border p-3">
-                <h3 className="font-medium">Tareas del servicio</h3>
-                {tasks.isPending ? <p className="text-muted-foreground">Cargando tareas…</p> : null}
-                {tasks.isError ? (
-                  <p role="alert" className="text-destructive">
-                    No se pudieron cargar las tareas: {tasks.error.message}
-                  </p>
-                ) : null}
-                {tasks.isSuccess &&
-                (tasks.data.find((entry) => entry.visitId === visit.id)?.tasks.length ?? 0) ===
-                  0 ? (
-                  <p className="text-muted-foreground">Este servicio no tiene tareas añadidas.</p>
-                ) : null}
-                {tasks.data
-                  ?.find((entry) => entry.visitId === visit.id)
-                  ?.tasks.map((task) => (
-                    <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                        <p className="font-medium">{task.title}</p>
-                        <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
-                          {taskStatusLabels[task.status]}
-                        </span>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p className="font-medium">
+                {new Date(visit.scheduled_start_at).toLocaleTimeString('es-ES', {
+                  timeZone: visit.timezone,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                –{' '}
+                {new Date(visit.scheduled_end_at).toLocaleTimeString('es-ES', {
+                  timeZone: visit.timezone,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                <span className="text-muted-foreground font-normal"> · {visit.timezone}</span>
+              </p>
+              <p>{visit.client_name}</p>
+              {visit.work_team_id ? (
+                <p className="text-muted-foreground">Visita de tu equipo</p>
+              ) : null}
+              {visit.location_name ? <p>{visit.location_name}</p> : null}
+              {visit.address ? (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">{visit.address}</p>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(visit.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary inline-flex min-h-10 items-center gap-1 font-medium underline"
+                  >
+                    <MapPinIcon aria-hidden="true" />
+                    Cómo llegar
+                  </a>
+                </div>
+              ) : null}
+              {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
+              {visit.work_order_id ? (
+                <section
+                  aria-label="Tareas del servicio"
+                  className="space-y-2 rounded-lg border p-3"
+                >
+                  <h3 className="font-medium">Tareas del servicio</h3>
+                  {tasks.isPending ? (
+                    <p className="text-muted-foreground">Cargando tareas…</p>
+                  ) : null}
+                  {tasks.isError ? (
+                    <p role="alert" className="text-destructive">
+                      No se pudieron cargar las tareas: {tasks.error.message}
+                    </p>
+                  ) : null}
+                  {tasks.isSuccess && !tasks.data.some((entry) => entry.visitId === visit.id && entry.tasks.length > 0) ? (
+                    <p className="text-muted-foreground">Este servicio no tiene tareas añadidas.</p>
+                  ) : null}
+                  {tasks.data
+                    ?.find((entry) => entry.visitId === visit.id)
+                    ?.tasks.map((task) => (
+                      <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                          <p className="font-medium">{task.title}</p>
+                          <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
+                            {taskStatusLabels[task.status]}
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground">{task.phaseTitle}</p>
+                        {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
+                        {task.checklist.length ? (
+                          <ul className="mt-1 space-y-1 pl-4">
+                            {task.checklist.map((item) => (
+                              <li key={item.id} className="flex gap-2">
+                                <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
+                                <span>{item.label}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
-                      <p className="text-muted-foreground">{task.phaseTitle}</p>
-                      {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
-                      {task.checklist.length ? (
-                        <ul className="mt-1 space-y-1 pl-4">
-                          {task.checklist.map((item) => (
-                            <li key={item.id} className="flex gap-2">
-                              <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
-                              <span>{item.label}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  ))}
-              </section>
-            ) : null}
-            {tenantId ? (
-              <WorkerPaperReport key={visit.id} tenantId={tenantId} visit={visit} />
-            ) : null}
-            {visit.status === 'scheduled' ? (
-              <Button
-                isDisabled={Boolean(busyId)}
-                onPress={() => void changeStatus(visit, 'in_progress')}
-              >
-                Iniciar visita
-              </Button>
-            ) : null}
-            {visit.status === 'in_progress' ? (
-              <Button
-                isDisabled={Boolean(busyId)}
-                onPress={() => void changeStatus(visit, 'completed')}
-              >
-                Completar visita
-              </Button>
-            ) : null}
-            <Button
-              variant="outline"
-              onPress={() => setOpenReportId(openReportId === visit.id ? null : visit.id)}
-            >
-              {openReportId === visit.id ? 'Ocultar parte' : 'Abrir parte'}
-            </Button>
-            {openReportId === visit.id && tenantId && session?.userId ? (
-              <VisitReportEditor
-                key={`${session.userId}:${tenantId}:${visit.id}`}
-                visit={visit}
-                tenantId={tenantId}
-                userId={session.userId}
-              />
-            ) : null}
-          </CardContent>
-        </Card>
-      ))}
+                    ))}
+                </section>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {visit.status === 'scheduled' ? (
+                  <Button
+                    isDisabled={Boolean(busyId)}
+                    onPress={() => void changeStatus(visit, 'in_progress')}
+                  >
+                    Iniciar visita
+                  </Button>
+                ) : null}
+                {visit.status === 'in_progress' ? (
+                  <Button
+                    isDisabled={Boolean(busyId)}
+                    onPress={() => void changeStatus(visit, 'completed')}
+                  >
+                    Completar visita
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onPress={() => setOpenReportId(openReportId === visit.id ? null : visit.id)}
+                >
+                  {openReportId === visit.id ? 'Ocultar parte' : 'Abrir parte'}
+                </Button>
+              </div>
+              {tenantId ? (
+                <WorkerPaperReport key={visit.id} tenantId={tenantId} visit={visit} />
+              ) : null}
+              {openReportId === visit.id && tenantId && session?.userId ? (
+                <VisitReportEditor
+                  key={`${session.userId}:${tenantId}:${visit.id}`}
+                  visit={visit}
+                  tenantId={tenantId}
+                  userId={session.userId}
+                />
+              ) : null}
+            </CardContent>
+          </Card>
+        ))
+        const contractId = group.visits[0]?.contract_id
+        return contractId ? (
+          <details
+            key={group.id}
+            open={selectedContractId === contractId || undefined}
+            onToggle={(event) => {
+              if (!event.currentTarget.open && selectedContractId === contractId) {
+                setSelectedContractId(null)
+              }
+            }}
+            className="rounded-lg border"
+          >
+            <summary className="cursor-pointer px-4 py-3 font-semibold">
+              <span>{group.title}</span>{' '}
+              <span className="text-muted-foreground text-sm font-normal">
+                · {group.visits.length} {group.visits.length === 1 ? 'trabajo' : 'trabajos'}
+              </span>
+              <span className="text-muted-foreground mt-1 block text-sm font-normal">
+                {group.visits[0].client_name}
+                {group.visits[0].location_name ? ` · ${group.visits[0].location_name}` : ''} ·{' '}
+                {group.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                {' – '}
+                {group.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </summary>
+            <div className="space-y-3 px-3 pb-3">{cards}</div>
+          </details>
+        ) : (
+          cards
+        )
+      })}
     </div>
   )
 }

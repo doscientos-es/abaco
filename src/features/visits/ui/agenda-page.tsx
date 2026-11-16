@@ -44,11 +44,11 @@ import {
   calendarWeekRange,
   calendarMonthRange,
   moveCalendarMonth,
-  toCalendarWallTime,
 } from './agenda-calendar'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
+import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -156,7 +156,7 @@ export function AgendaPage() {
             : visit.work_team_id === teamFilter)) &&
         (!statusFilter || visit.status === statusFilter) &&
         (filterTechnicianId !== 'unassigned' || (!visit.assigned_user_id && !visit.work_team_id)) &&
-        `${visit.client_name} ${visit.location_name} ${visit.address} ${visit.title}`
+        `${visit.client_name} ${visit.location_name} ${visit.address} ${visit.title} ${visit.contract_title ?? ''}`
           .toLocaleLowerCase('es')
           .includes(textFilter.trim().toLocaleLowerCase('es')),
     )
@@ -185,25 +185,33 @@ export function AgendaPage() {
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
-  const calendarItems: CalendarEvent[] = visibleVisits.map((visit) => ({
-    id: visit.id,
-    revision: visit.updated_at,
-    title: visit.title,
-    start: toCalendarWallTime(visit.scheduled_start_at, visit.timezone),
-    end: toCalendarWallTime(visit.scheduled_end_at, visit.timezone),
-    editable: session?.role === 'admin' && visit.status === 'scheduled',
-    tone:
-      visit.status === 'completed'
+  const calendarGroups = groupVisitsByContractDay(visibleVisits)
+  const calendarGroupById = new Map(calendarGroups.map((group) => [group.id, group]))
+  const calendarItems: CalendarEvent[] = calendarGroups.map((group) => {
+    const visit = group.visits[0]
+    return {
+      id: group.id,
+      revision: visit.updated_at,
+      title: group.title,
+      start: group.start,
+      end: group.end,
+      editable:
+        group.visits.length === 1 && session?.role === 'admin' && visit.status === 'scheduled',
+      tone: group.visits.every((item) => item.status === 'completed')
         ? 'success'
-        : visit.status === 'canceled'
+        : group.visits.every((item) => item.status === 'canceled')
           ? 'muted'
-          : visit.priority === 'urgent'
+          : group.visits.some((item) => item.priority === 'urgent')
             ? 'danger'
             : 'primary',
-    description: `${visit.client_name} · ${visit.timezone} · ${statusLabels[visit.status]}`,
-  }))
+      description: `${visit.client_name} · ${group.visits.length} ${group.visits.length === 1 ? 'trabajo' : 'trabajos'}`,
+    }
+  })
   const calendarVisitById = new Map((visits.data ?? []).map((visit) => [visit.id, visit]))
   const selectedCalendarVisit = visibleVisits.find((visit) => visit.id === selectedCalendarVisitId)
+  const selectedCalendarGroup = selectedCalendarVisitId
+    ? calendarGroupById.get(selectedCalendarVisitId)
+    : undefined
   const timezone = selectedLocation?.timezone ?? 'Europe/Madrid'
   const durationMinutes = Number(duration)
   const validForm =
@@ -731,13 +739,24 @@ export function AgendaPage() {
                   : undefined
               }
               renderItem={(item) => {
-                const visit = calendarVisitById.get(item.id)
+                const group = calendarGroupById.get(item.id)
+                const visit = group?.visits[0]
                 if (!visit) return typeof item.title === 'string' ? item.title : item.id
+                if (group.visits.length > 1) {
+                  return (
+                    <span className="border-primary grid gap-1 border-l-2 pl-2">
+                      <span className="truncate font-semibold">{group.title}</span>
+                      <span className="truncate text-xs opacity-80">
+                        {visit.client_name} · {group.visits.length} trabajos
+                      </span>
+                    </span>
+                  )
+                }
                 return (
                   <span
                     className={`grid gap-1 border-l-2 pl-2 ${statusStyles[visit.status].border}`}
                   >
-                    <span className="truncate font-semibold">{visit.title}</span>
+                    <span className="truncate font-semibold">{group.title}</span>
                     <span className="truncate text-xs opacity-80">
                       {visit.client_name} ·{' '}
                       {new Intl.DateTimeFormat('es-ES', {
@@ -758,6 +777,54 @@ export function AgendaPage() {
                 )
               }}
             />
+            {selectedCalendarGroup && selectedCalendarGroup.visits.length > 1 ? (
+              <CalendarDetailsDialog
+                title={selectedCalendarGroup.title}
+                description={`${selectedCalendarGroup.visits.length} trabajos del contrato`}
+                onClose={() => {
+                  setSelectedCalendarVisitId(null)
+                  setReplanning(null)
+                  setCalendarProposal(null)
+                  setOpenReportId(null)
+                }}
+              >
+                {selectedCalendarGroup.visits.map((visit) => (
+                  <section key={visit.id} className="space-y-3 border-b pb-4 last:border-0">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold">{visit.title}</h3>
+                        <p className="text-muted-foreground text-sm">
+                          {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
+                            timeZone: visit.timezone,
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}{' '}
+                          · {visit.client_name}
+                          {visit.location_name ? ` · ${visit.location_name}` : ''}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          {visit.work_team_name ||
+                            visit.assigned_user_name ||
+                            'Pendiente de asignar'}{' '}
+                          · {statusLabels[visit.status]}
+                          {visit.priority === 'urgent' ? ' · Urgente' : ''}
+                        </p>
+                        {hasApprovedVacationConflict(visit) ? (
+                          <p className="text-destructive text-sm font-medium">
+                            Vacaciones aprobadas · revisar cobertura en{' '}
+                            <Link to="/vacaciones" className="underline">
+                              Vacaciones
+                            </Link>
+                          </p>
+                        ) : null}
+                      </div>
+                      {renderVisitActions(visit)}
+                    </div>
+                    {renderVisitExpandedDetails(visit)}
+                  </section>
+                ))}
+              </CalendarDetailsDialog>
+            ) : null}
             {selectedCalendarVisit ? (
               <CalendarDetailsDialog
                 title={selectedCalendarVisit.title}
