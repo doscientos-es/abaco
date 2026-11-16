@@ -80,6 +80,12 @@ export function changeSectionPrice(
   ) {
     return { ok: true, patch: {} }
   }
+  if (estimate.lines.some((line) => section.lineIds.includes(line.id) && line.catalogItemId)) {
+    return {
+      ok: false,
+      error: 'Modifica las partidas detalladas para conservar los materiales del inventario.',
+    }
+  }
   const base = Math.round(amountCents / (1 + estimate.vatRate / 100))
   const patch = replaceSectionLines(estimate, section.id, [
     {

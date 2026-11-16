@@ -114,6 +114,20 @@ describe('simple price sections', () => {
     expect(value.lines).toHaveLength(3)
   })
 
+  it('does not discard catalog materials when changing the summarized price', () => {
+    const selected = { ...section, lineIds: [id(20)] }
+    const value = {
+      ...estimate,
+      sections: [selected],
+      lines: [{ ...line(20, 1000), kind: 'material' as const, catalogItemId: id(30) }],
+    }
+    expect(changeSectionPrice(value, selected, 2000, () => id(21))).toEqual({
+      ok: false,
+      error: 'Modifica las partidas detalladas para conservar los materiales del inventario.',
+    })
+    expect(changeSectionPrice(value, selected, 1210, () => id(21))).toEqual({ ok: true, patch: {} })
+  })
+
   it.each([1_000, 21_633])('preserves arbitrary tax-inclusive prices (%i cents)', (amount) => {
     const updated = setPrice(estimate, section, amount)
     const priceSection = updated.sections?.[0] as PriceSection

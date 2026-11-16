@@ -8,7 +8,7 @@ import {
   isRequiredEstimateSection,
   type EstimateSection,
 } from '@/shared/domain/estimate-document'
-import type { Estimate } from '@/shared/domain/types'
+import type { CatalogItem, Estimate } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
 import { TextField } from '@/shared/ui/form'
 
@@ -18,13 +18,21 @@ import {
   ensureRequiredEstimateSections,
   requiredEstimateSectionsError,
   moveEstimateSection,
+  replaceSectionLines,
   removeEstimateSection,
 } from '../domain/estimate-sections'
 import { usePatchEstimate } from './estimate-draft-context'
 import { EstimateSectionContentEditor } from './estimate-section-content-editor'
 import { EstimateSectionPriceEditor } from './estimate-section-price-editor'
+import { LinesEditor } from './lines-editor'
 
-export function EstimateSectionsEditor({ estimate }: { estimate: Estimate }) {
+export function EstimateSectionsEditor({
+  estimate,
+  catalog = [],
+}: {
+  estimate: Estimate
+  catalog?: CatalogItem[]
+}) {
   const patchEstimate = usePatchEstimate()
   const sections = estimate.sections ?? []
   const [removing, setRemoving] = useState<EstimateSection | null>(null)
@@ -122,7 +130,28 @@ export function EstimateSectionsEditor({ estimate }: { estimate: Estimate }) {
               />
             ) : null}
             {section.type === 'prices' ? (
-              <EstimateSectionPriceEditor estimate={estimate} section={section} />
+              <>
+                <EstimateSectionPriceEditor estimate={estimate} section={section} />
+                <details className="rounded-lg border p-3">
+                  <summary className="cursor-pointer font-medium">
+                    Partidas y materiales del inventario
+                  </summary>
+                  <p className="text-muted-foreground my-3 text-sm">
+                    Añade materiales del inventario para descontarlos al aceptar el presupuesto. Sus
+                    precios se suman al importe.
+                  </p>
+                  <LinesEditor
+                    estimate={{
+                      ...estimate,
+                      lines: estimate.lines.filter((line) => section.lineIds.includes(line.id)),
+                    }}
+                    catalog={catalog}
+                    onChange={(lines) =>
+                      patchEstimate(estimate.id, replaceSectionLines(estimate, section.id, lines))
+                    }
+                  />
+                </details>
+              </>
             ) : (
               <EstimateSectionContentEditor section={section} onChange={updateSection} />
             )}

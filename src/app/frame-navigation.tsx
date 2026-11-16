@@ -10,6 +10,7 @@ export type NavTo =
   | '/contratos'
   | '/vacaciones'
   | '/catalogo'
+  | '/proveedores'
   | '/facturas'
   | '/contabilidad'
   | '/ajustes'

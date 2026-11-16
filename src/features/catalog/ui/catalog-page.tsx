@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@doscientos/ui'
 import { UploadSimple } from '@phosphor-icons/react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -32,6 +33,9 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { catalogImportSchema, catalogKeys } from '../application/catalog-import'
+import { listInventory } from '../application/inventory-actions'
+import { InventoryDialog } from './inventory-dialog'
+import { MaterialShortages } from './material-shortages'
 
 const kindLabels: Record<CatalogKind, string> = {
   material: 'Material',
@@ -52,6 +56,10 @@ const empty = {
 
 export function CatalogPage() {
   const { catalog, tenant } = useTenantData()
+  const inventory = useQuery({
+    queryKey: ['inventory', tenant.id],
+    queryFn: () => listInventory(tenant.id),
+  })
   const navigate = useNavigate({ from: '/catalogo' })
   const query = useSearch({ from: '/catalogo' }).q ?? ''
   const setQuery = (q: string) => void navigate({ search: q ? { q } : {}, replace: true })
@@ -61,6 +69,7 @@ export function CatalogPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(empty)
   const [toDelete, setToDelete] = useState<CatalogItem | null>(null)
+  const [stockItem, setStockItem] = useState<CatalogItem | null>(null)
 
   const [categoryFilter, setCategoryFilter] = useState('all')
   const categories = [...new Set(catalog.map((item) => item.category).filter(Boolean))].sort()
@@ -138,7 +147,7 @@ export function CatalogPage() {
   return (
     <div className="space-y-8">
       <WorkspacePageHeading
-        title="Catálogo"
+        title="Inventario"
         actions={
           <>
             <IconButton
@@ -152,6 +161,11 @@ export function CatalogPage() {
           </>
         }
       />
+
+      <MaterialShortages />
+      {inventory.isError ? (
+        <p role="alert">No se pudo cargar el stock. Reintenta recargando la página.</p>
+      ) : null}
 
       <ImportDialog
         open={importOpen}
@@ -332,6 +346,17 @@ export function CatalogPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
+                  {item.kind === 'material' ? (
+                    <Button
+                      variant="outline"
+                      isDisabled={!inventory.isSuccess}
+                      onPress={() => setStockItem(item)}
+                    >
+                      Stock:{' '}
+                      {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
+                        ?.quantity ?? 'Sin controlar'}
+                    </Button>
+                  ) : null}
                   <span className="flex-1" />
                   <RowActions
                     name={item.name}
@@ -348,6 +373,7 @@ export function CatalogPage() {
                 <TableHead>Ref.</TableHead>
                 <TableHead>Artículo</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Stock</TableHead>
                 <TableHead className="text-right">Precio</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
@@ -365,6 +391,20 @@ export function CatalogPage() {
                   <TableCell>
                     <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
                   </TableCell>
+                  <TableCell>
+                    {item.kind === 'material' ? (
+                      <Button
+                        variant="outline"
+                        isDisabled={!inventory.isSuccess}
+                        onPress={() => setStockItem(item)}
+                      >
+                        {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
+                          ?.quantity ?? 'Sin controlar'}
+                      </Button>
+                    ) : (
+                      '—'
+                    )}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatEuros(item.unitPriceCents)} / {item.unit}
                   </TableCell>
@@ -380,6 +420,14 @@ export function CatalogPage() {
         </>
       )}
       <TablePagination controller={pager} noun="artículos" />
+
+      {stockItem ? (
+        <InventoryDialog
+          item={stockItem}
+          stock={inventory.data?.find((stock) => stock.catalog_item_id === stockItem.id)}
+          onClose={() => setStockItem(null)}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={toDelete !== null}

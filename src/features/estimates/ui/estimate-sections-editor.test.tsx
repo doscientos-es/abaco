@@ -46,6 +46,7 @@ vi.mock('../application/estimate-actions', () => ({ patchEstimate: mocks.patch }
 vi.mock('./estimate-section-price-editor', () => ({
   EstimateSectionPriceEditor: () => <p>Editor de precios</p>,
 }))
+vi.mock('./lines-editor', () => ({ LinesEditor: () => <p>Editor de partidas</p> }))
 vi.mock('./estimate-section-content-editor', () => ({
   EstimateSectionContentEditor: ({ section }: { section: { type: string } }) => (
     <p>Editor de {section.type}</p>

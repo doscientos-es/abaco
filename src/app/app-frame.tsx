@@ -60,7 +60,8 @@ const navGroups: NavGroup[] = [
       },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
       { to: '/clientes', label: 'Clientes', icon: navIcons.clients },
-      { to: '/catalogo', label: 'Catálogo', icon: navIcons.catalog },
+      { to: '/catalogo', label: 'Inventario', icon: navIcons.catalog },
+      { to: '/proveedores', label: 'Proveedores', icon: navIcons.clients },
     ],
   },
   {
@@ -113,6 +114,8 @@ const navPermission: Partial<Record<NavTo, Permission>> = {
   '/vacaciones': 'vacations:manage',
   '/facturas': 'invoices:read',
   '/contabilidad': 'ledger:read',
+  '/catalogo': 'catalog:read',
+  '/proveedores': 'catalog:read',
   '/ajustes': 'settings:write',
   '/personalizar': 'settings:write',
 }

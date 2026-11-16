@@ -22,6 +22,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { MaterialShortages } from '@/features/catalog'
 import { ClientFormDialog } from '@/features/clients/ui/client-form-dialog'
 import {
   RelatedCreateButton,
@@ -426,6 +427,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             </DropdownMenuTrigger>
           </PageHeaderActions>
         </PageHeader>
+        {estimate.status === 'accepted' && can(session?.role, 'catalog:read') ? (
+          <MaterialShortages estimateId={estimate.id} />
+        ) : null}
         {(estimate.status === 'accepted' && manualAcceptance.data) || estimate.emailSentAt ? (
           <details className="text-muted-foreground text-sm">
             <summary className="cursor-pointer font-medium">Detalles de aprobación y envío</summary>
@@ -754,7 +758,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
         </Card>
 
         {estimate.documentFormat === 'sections' ? (
-          <EstimateSectionsEditor estimate={estimate} />
+          <EstimateSectionsEditor estimate={estimate} catalog={catalog} />
         ) : (
           <Card className="@container">
             <CardHeader>

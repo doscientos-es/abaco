@@ -13,6 +13,7 @@ export type SearchTarget =
         | '/trabajos'
         | '/trabajadores'
         | '/catalogo'
+        | '/proveedores'
         | '/contabilidad'
         | '/ajustes'
         | '/personalizar'
