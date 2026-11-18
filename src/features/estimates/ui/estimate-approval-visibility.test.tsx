@@ -66,7 +66,8 @@ vi.mock('@tanstack/react-router', () => ({
   ),
   useNavigate: () => vi.fn(),
 }))
-vi.mock('@tanstack/react-query', () => ({
+vi.mock(import('@tanstack/react-query'), async (importOriginal) => ({
+  ...(await importOriginal()),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data:
       queryKey[0] === 'estimate-publication'

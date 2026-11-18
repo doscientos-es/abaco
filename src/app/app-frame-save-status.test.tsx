@@ -14,7 +14,10 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
   useRouterState: () => state.pathname,
 }))
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: false }) }))
+vi.mock(import('@tanstack/react-query'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useQuery: () => ({ data: false }),
+}))
 vi.mock('@/features/auth', () => ({
   can: (_role: string, permission: string) =>
     permission === 'vacations:manage'
