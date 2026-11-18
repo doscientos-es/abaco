@@ -1,6 +1,28 @@
 import { queryOptions } from '@tanstack/react-query'
 
+import type { BillingTerms } from '@/features/billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+
+export type BillingAgreement = Pick<BillingTerms, 'plan' | 'period' | 'seats'> & {
+  netCents: number | null
+}
+
+export async function scheduleBillingAgreement(tenantId: string, agreement: BillingAgreement) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_schedule_billing', {
+    p_tenant: tenantId,
+    p_plan: agreement.plan,
+    p_period: agreement.period,
+    p_seats: agreement.seats,
+    p_net: agreement.netCents,
+  })
+  if (error) {
+    throw new Error(
+      ['P0001', 'P0403'].includes(error.code)
+        ? error.message
+        : 'No se pudieron guardar las condiciones.',
+    )
+  }
+}
 
 export type PlatformCompany = {
   id: string

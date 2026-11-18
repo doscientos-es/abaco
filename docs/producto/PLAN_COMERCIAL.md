@@ -26,21 +26,33 @@ La aceptación registrada no se presenta como firma electrónica certificada. No
 
 ## 2. Oferta actual, no una nueva tarifa
 
-La fuente de verdad de la presentación es `src/features/billing/domain/plans.ts`. Los precios y límites también se aplican en la base de datos; un cambio de tarifa exige coordinar ambos lados y comprobar el cobro.
+Los precios por capacidad están en `billing_catalog`. Los precios de extras, por empresa, están en `billing_module_catalog`. Los extras no participan todavía en los cobros de Redsys.
 
 | Plan     | Personas, incluido el propietario | Mensual sin IVA | Anual sin IVA | Equivalente mensual anual |
 | -------- | --------------------------------: | --------------: | ------------: | ------------------------: |
 | Autónomo |                                 1 |            20 € |         200 € |                   16,67 € |
 | Equipo   |                           Hasta 5 |            34 € |         340 € |                   28,33 € |
 | Empresa  |                          Hasta 15 |            54 € |         540 € |                      45 € |
+| Escala   |            16–200, en seis tramos |        69–329 € |   690–3.290 € |               según tramo |
 
-Todos incluyen las mismas funciones. Recomendar el plan más pequeño que admita al equipo real; no restringir artificialmente la aceptación o el seguimiento de cobros para forzar una subida.
+Todos incluyen el mismo núcleo: clientes, centros, catálogo, presupuestos, trabajos, planificación, contratos, visitas, partes, equipo, horarios, vacaciones, facturas, cobros y contabilidad básica. Recomendar el plan más pequeño que admita al equipo real; elegir extras de forma independiente.
 
 - Prueba: 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
 - El pago anual se cobra de una vez; su equivalente mensual no es una cuota mensual.
-- Más de 15 personas o necesidades especiales: conversación y alcance evaluado, no una integración prometida.
+- Más de 200 personas o necesidades especiales: conversación y alcance evaluado, no una integración prometida.
 - Esencial, Pro, Equipo a 79 €, Empresa a 149 € y Operaciones a 249 € son propuestas del documento comercial, **no planes vigentes**. No anunciarlos ni utilizarlos para prever ingresos actuales.
 - No introducir una entrada a 9 € ni cinco niveles sin evidencia de autoservicio, costes de soporte y disposición a pagar.
+
+### Módulos opcionales
+
+| Módulo                   | Mensual sin IVA | Anual sin IVA | Estado                                                  |
+| ------------------------ | --------------: | ------------: | ------------------------------------------------------- |
+| Compras e inventario     |           +19 € |        +190 € | Piloto: proveedores, stock, faltantes y contacto manual |
+| Logística de proveedores |           +29 € |        +290 € | Hipótesis interna: no se ofrece ni se puede activar     |
+
+El suplemento es fijo por empresa, no por plaza. Equipo con Compras son 53 €/mes o 530 €/año, sin IVA. Superadmin y los administradores de la empresa pueden programar altas y bajas desde **Módulos opcionales**. El precio y el acceso cambian al confirmar el primer pago o la siguiente renovación, sin prorrateos ni borrado de datos. En empresas de cortesía, Superadmin cambia el acceso al momento y sin cobro. El módulo de Logística requiere validar quién pide el camión, cómo se confirma la entrega y qué canal usa cada proveedor.
+
+En **Superadmin → empresa → Condiciones de facturación** se puede cambiar el plan, la capacidad, el periodo y el precio base sin IVA. Los módulos contratados se suman automáticamente; no se deben volver a incluir en el precio base pactado. Guardar no cobra ni cambia el historial. La tarifa de catálogo restaura el precio base del tramo y periodo elegidos.
 
 ## 3. Mercado: contexto, no previsión de ventas
 

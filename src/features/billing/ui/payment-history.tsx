@@ -3,8 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 
 import { downloadTextFile } from '@/shared/domain/csv'
 
-import { paymentsQuery, type Payment, type Subscription } from '../application/billing-actions'
-import { formatEuros, planCatalog, planInfo } from '../domain/plans'
+import {
+  billingPreviewQuery,
+  paymentsQuery,
+  type Payment,
+  type Subscription,
+} from '../application/billing-actions'
+import { formatEuros, planInfo } from '../domain/plans'
 
 const VAT_PERCENT = 21
 const day = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -27,7 +32,7 @@ function concept(payment: Payment) {
 
 /** A printable receipt (open the file and print it to PDF). VAT is already inside the charged amount. */
 function downloadReceipt(payment: Payment, companyName: string) {
-  const base = Math.round((payment.amountCents * 100) / (100 + VAT_PERCENT))
+  const base = payment.netCents ?? Math.round((payment.amountCents * 100) / (100 + VAT_PERCENT))
   const date = day.format(payment.settledAt ?? payment.createdAt)
   const html = `<!doctype html><html lang="es"><meta charset="utf-8"><title>Justificante de pago ${escapeHtml(payment.order)}</title>
 <body style="font-family:Arial,sans-serif;max-width:560px;margin:40px auto;color:#1a1a1a">
@@ -57,22 +62,16 @@ export function PaymentHistory({
     fetchStatus,
     refetch,
   } = useQuery(paymentsQuery(tenantId))
+  const preview = useQuery(billingPreviewQuery(tenantId))
   const onTrial = !subscription?.isComplimentary && subscription?.status === 'trialing'
   const active =
     subscription &&
     !subscription.isComplimentary &&
     ['active', 'past_due'].includes(subscription.status)
-  const nextPlan = planInfo(subscription?.nextPlan ?? subscription?.plan ?? 'trial')
-  const nextInterval = subscription?.nextInterval ?? subscription?.interval
-  const nextCents =
-    nextPlan && nextInterval
-      ? Math.round((nextInterval === 'year' ? nextPlan.yearly : nextPlan.monthly) * 121)
-      : 0
+  const next = preview.data?.next
   const periodEnd = subscription?.currentPeriodEnd ?? null
-  const willRenew = Boolean(
-    active && !subscription.cancelAtPeriodEnd && periodEnd && nextPlan && nextInterval,
-  )
-  const current = planCatalog.find((p) => p.id === subscription?.plan)
+  const willRenew = Boolean(active && !subscription.cancelAtPeriodEnd && periodEnd && next)
+  const current = preview.data?.current
 
   return (
     <div className="space-y-4">
@@ -83,8 +82,10 @@ export function PaymentHistory({
             {subscription?.isComplimentary
               ? 'Cortesía'
               : active && current
-                ? `${current.name} · ${subscription.interval === 'year' ? 'anual' : 'mensual'}`
-                : 'Ninguno todavía'}
+                ? `${planInfo(current.plan)?.name} · hasta ${current.seats} · ${current.period === 'year' ? 'anual' : 'mensual'}`
+                : active
+                  ? 'Pendiente de verificar'
+                  : 'Ninguno todavía'}
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">
@@ -94,11 +95,19 @@ export function PaymentHistory({
           <dd className="font-medium">
             {onTrial && subscription
               ? day.format(subscription.trialEndsAt)
-              : willRenew && periodEnd
-                ? `${cents(nextCents)} el ${day.format(periodEnd)}`
-                : active
-                  ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
-                  : 'Ninguno'}
+              : active && preview.data?.pending
+                ? 'Pago en verificación'
+                : active && preview.isError
+                  ? 'No se pudo verificar'
+                  : active && !preview.data
+                    ? 'Consultando…'
+                    : subscription?.status === 'past_due' && next
+                      ? `Cuota pendiente: ${cents(next.amount_cents)} con IVA`
+                      : willRenew && periodEnd && next
+                        ? `${cents(next.amount_cents)} con IVA el ${day.format(periodEnd)}`
+                        : active && subscription.cancelAtPeriodEnd
+                          ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
+                          : 'Ninguno'}
           </dd>
           {onTrial ? (
             <p className="text-muted-foreground mt-1 text-xs">
@@ -107,9 +116,11 @@ export function PaymentHistory({
           ) : null}
         </div>
       </dl>
-      {subscription?.nextPlan && willRenew ? (
+      {subscription?.nextPlan && next ? (
         <p className="text-muted-foreground text-xs">
-          Cambio de plan pedido: a partir de la próxima renovación pasas a {nextPlan?.name}.
+          {active ? 'Cambio programado' : 'Oferta acordada'}: {planInfo(next.plan)?.name} · hasta{' '}
+          {next.seats} · {cents(next.amount_cents)} con IVA{' '}
+          {next.period === 'year' ? 'al año' : 'al mes'}.
         </p>
       ) : null}
 

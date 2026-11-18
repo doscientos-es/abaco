@@ -15,7 +15,7 @@ import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/st
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
 /** Screens reachable without being signed in. */
-const publicPaths = ['/entrar', '/registro', '/recuperar', '/confirmar']
+const publicPaths = ['/entrar', '/registro', '/recuperar', '/confirmar', '/precios']
 /** Signed-in users have no reason to see these. */
 const guestOnlyPaths = ['/entrar', '/registro', '/recuperar']
 /** Customer links need no account, even if someone is signed in. */

@@ -1,17 +1,14 @@
 /**
  * Pagos con Redsys. Solo los administradores de la empresa pueden usarla.
  *
- * Body: { action: 'checkout', tenantId, plan, interval }  -> { form } (el navegador lo envía a Redsys)
- *    o: { action: 'change', tenantId, plan, interval }    -> cambio de plan en la próxima renovación
- *    o: { action: 'cancel' | 'resume', tenantId }         -> cancelar / retomar al final del periodo
+ * checkout/change/retry send the amount confirmed by the customer; the database verifies it.
+ * cancel/resume/undo manage already scheduled subscription changes.
  * Secretos: REDSYS_*, APP_URL.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
 
-const plans = ['solo', 'team', 'business']
-const intervals = ['month', 'year']
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const corsHeaders = {
@@ -53,70 +50,29 @@ Deno.serve(async (request) => {
   if (!uuidPattern.test(tenantId)) return reply(400, { error: 'Datos no válidos' })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-  const { data: mine } = await admin
-    .from('memberships')
-    .select('role')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', caller.user.id)
-    .maybeSingle()
-  if (mine?.role !== 'admin')
-    return reply(403, { error: 'Solo un administrador puede gestionar el plan' })
-
-  const { data: tenant } = await admin
-    .from('tenants')
-    .select('subscription_status, is_complimentary')
-    .eq('id', tenantId)
-    .single()
-  if (!tenant) return reply(404, { error: 'Empresa no encontrada' })
-  if (tenant.is_complimentary) return reply(409, { error: 'Esta empresa tiene acceso de cortesía' })
-  const subscribed = ['active', 'past_due'].includes(tenant.subscription_status)
-
-  if (input?.action === 'cancel' || input?.action === 'resume') {
-    if (tenant.subscription_status !== 'active')
-      return reply(400, { error: 'No hay suscripción activa' })
-    await admin
-      .from('tenants')
-      .update({ cancel_at_period_end: input.action === 'cancel' })
-      .eq('id', tenantId)
-    return reply(200, { ok: true })
-  }
-
-  const plan = String(input?.plan)
-  const interval = String(input?.interval)
-  if (input?.action !== 'checkout' && input?.action !== 'change')
-    return reply(400, { error: 'Acción no válida' })
-  if (!plans.includes(plan) || !intervals.includes(interval))
-    return reply(400, { error: 'Plan no válido' })
-
-  if (input.action === 'change') {
-    if (tenant.subscription_status !== 'active')
-      return reply(400, { error: 'No hay suscripción activa' })
-    await admin
-      .from('tenants')
-      .update({ next_plan: plan, next_interval: interval })
-      .eq('id', tenantId)
-    return reply(200, { ok: true })
-  }
-  // Con suscripción activa se usa 'change': un primer pago nuevo cobraría dos veces.
-  if (tenant.subscription_status === 'active')
-    return reply(400, { error: 'Ya tienes un plan activo' })
-
-  const { data: amount } = await admin.rpc('plan_charge_cents', {
-    p_plan: plan,
-    p_interval: interval,
-  })
-  if (typeof amount !== 'number') return reply(500, { error: 'Precio sin configurar' })
-
   const order = newMerchantOrder()
-  const { error } = await admin.from('billing_payments').insert({
-    tenant_id: tenantId,
-    merchant_order: order,
-    kind: 'first',
-    plan,
-    period: interval,
-    amount_cents: amount,
+  const { data: amount, error } = await admin.rpc('billing_manage', {
+    p_tenant: tenantId,
+    p_actor: caller.user.id,
+    p_action: typeof input?.action === 'string' ? input.action : null,
+    p_plan: typeof input?.plan === 'string' ? input.plan : null,
+    p_period: typeof input?.interval === 'string' ? input.interval : null,
+    p_seats:
+      typeof input?.seats === 'number' && Number.isSafeInteger(input.seats) ? input.seats : null,
+    p_expected_total:
+      typeof input?.total === 'number' && Number.isSafeInteger(input.total) ? input.total : null,
+    p_order: order,
   })
-  if (error) return reply(500, { error: 'No se pudo preparar el pago' })
+  if (error) {
+    if (error.code === '42501')
+      return reply(403, { error: 'Solo un administrador puede gestionar el plan' })
+    if (['P0001', 'P0403', '22023'].includes(error.code))
+      return reply(409, { error: error.message })
+    return reply(500, { error: 'No se pudo gestionar la facturación' })
+  }
+  if (input?.action !== 'checkout' && input?.action !== 'retry') return reply(200, { ok: true })
+  if (typeof amount !== 'number' || amount <= 0)
+    return reply(500, { error: 'Precio no disponible' })
 
   const form = firstPaymentForm({
     config,
@@ -126,5 +82,5 @@ Deno.serve(async (request) => {
     okUrl: `${appUrl}/ajustes?pago=ok`,
     koUrl: `${appUrl}/ajustes?pago=cancelado`,
   })
-  return reply(200, { form, subscribed })
+  return reply(200, { form })
 })

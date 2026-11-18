@@ -135,13 +135,18 @@ export async function chargeReference(args: {
     signal: AbortSignal.timeout(50_000),
   })
   if (!response.ok) throw new Error(`redsys_http_${response.status}`)
-  const body = (await response.json()) as { Ds_MerchantParameters?: string }
-  if (!body.Ds_MerchantParameters) return { ok: false, code: 'sin_respuesta' }
-  const decoded = JSON.parse(
-    Buffer.from(body.Ds_MerchantParameters, 'base64').toString('utf8'),
-  ) as Record<string, unknown>
-  const code = typeof decoded.Ds_Response === 'string' ? decoded.Ds_Response : 'sin_codigo'
-  return { ok: isSuccess(code), code }
+  const body = (await response.json()) as { Ds_MerchantParameters?: string; Ds_Signature?: string }
+  const notice = readNotification(config, body.Ds_MerchantParameters ?? '', body.Ds_Signature ?? '')
+  if (
+    !notice ||
+    notice.order !== order ||
+    notice.amountCents !== args.amountCents ||
+    notice.merchantCode !== config.merchantCode ||
+    notice.terminal !== config.terminal ||
+    notice.currency !== config.currency
+  )
+    throw new Error('redsys_unconfirmed_response')
+  return { ok: isSuccess(notice.code), code: notice.code }
 }
 
 export const isSuccess = (code: string) => /^\d{1,4}$/.test(code) && Number(code) <= 99

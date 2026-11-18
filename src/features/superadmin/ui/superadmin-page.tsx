@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
+import { billingPreviewQuery } from '@/features/billing'
+import { ModuleSubscriptions } from '@/features/product-modules'
 
 import {
   platformAccessQuery,
@@ -11,6 +13,7 @@ import {
   platformPaymentSummaryQuery,
   type PlatformCompany,
 } from '../application/superadmin-queries'
+import { CompanyBillingAgreement } from './company-billing-agreement'
 
 const date = (value: string | null) =>
   value ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(value)) : '—'
@@ -88,6 +91,11 @@ function CompanyDetail({ company, onBack }: { company: PlatformCompany; onBack: 
   const [status, setStatus] = useState('')
   const payments = useQuery(platformPaymentsQuery(company.id, offset, status))
   const summary = useQuery(platformPaymentSummaryQuery(company.id))
+  const queryClient = useQueryClient()
+  const preview = useQuery({
+    ...billingPreviewQuery(company.id),
+    enabled: !company.is_complimentary,
+  })
   return (
     <section className="space-y-4">
       <button type="button" onClick={onBack} className="text-primary text-sm">
@@ -101,6 +109,28 @@ function CompanyDetail({ company, onBack }: { company: PlatformCompany; onBack: 
         {date(company.current_period_end)}
         {company.is_complimentary ? ' · Cortesía' : ''}
       </p>
+      {!company.is_complimentary ? (
+        <CompanyBillingAgreement
+          tenantId={company.id}
+          members={company.member_count}
+          subscriptionStatus={company.subscription_status}
+        />
+      ) : null}
+      <ModuleSubscriptions
+        tenantId={company.id}
+        active={company.subscription_status === 'active'}
+        courtesy={company.is_complimentary}
+        blocked={
+          !company.is_complimentary &&
+          (!preview.data ||
+            preview.data.pending ||
+            preview.data.cancel_at_period_end ||
+            company.subscription_status === 'past_due')
+        }
+        onChanged={() =>
+          queryClient.invalidateQueries({ queryKey: billingPreviewQuery(company.id).queryKey })
+        }
+      />
       <h3 className="font-semibold">Pagos</h3>
       {summary.isPending ? <p>Cargando resumen…</p> : null}
       {summary.isError ? <p role="alert">No se pudo cargar el resumen de pagos.</p> : null}

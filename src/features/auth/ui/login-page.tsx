@@ -53,6 +53,10 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
           <Link to="/registro" className="hover:text-foreground underline">
             Crea una cuenta
           </Link>
+          .{' '}
+          <Link to="/precios" className="hover:text-foreground underline">
+            Ver planes y precios
+          </Link>
           .
         </span>
       }

@@ -1,31 +1,28 @@
-import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
+import { Button } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
 import {
+  ModuleSubscriptions,
+  moduleSubscriptionsQuery,
+  tenantModulesQuery,
+} from '@/features/product-modules'
+
+import {
+  acceptBillingTerms,
+  billingPreviewQuery,
   cancelPlan,
-  changePlan,
   resumePlan,
   memberCountQuery,
-  startCheckout,
   submitToRedsys,
   subscriptionQuery,
+  undoPlanChange,
   type BillingResult,
   type Subscription,
 } from '../application/billing-actions'
-import {
-  includedInEveryPlan,
-  MAX_SCALE_PLAN_MEMBERS,
-  planCatalog,
-  planInfo,
-  smallestPlanFor,
-  TRIAL_DAYS,
-  type Interval,
-} from '../domain/plans'
-import { CustomPlanCard } from './custom-plan-card'
+import { formatEuros, planInfo, withModulePrice, type BillingTerms } from '../domain/plans'
 import { PaymentHistory } from './payment-history'
-import { PlanOptionCard } from './plan-option-card'
-import { ScalePlanCard } from './scale-plan-card'
+import { PricingCatalog } from './pricing-catalog'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', {
   day: 'numeric',
@@ -43,7 +40,7 @@ function currentLine(sub: Subscription): string {
     return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'canceled') return 'Sin plan activo. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'past_due')
-    return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Vuelve a elegir un plan para pagar con tarjeta.`
+    return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
   if (sub.cancelAtPeriodEnd)
     return `Plan ${plan?.name ?? ''}: se cancela el ${until}. Hasta entonces sigue todo igual.`
   return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
@@ -57,9 +54,14 @@ export function BillingSection({
   tenantId: string
   companyName: string
 }) {
-  const subscription = useQuery(subscriptionQuery(tenantId)).data
-  const [interval, setInterval] = useState<Interval>('year')
-  const [selectedMembers, setSelectedMembers] = useState<number | undefined>(undefined)
+  const subscriptionState = useQuery(subscriptionQuery(tenantId))
+  const subscription = subscriptionState.data
+  const preview = useQuery(billingPreviewQuery(tenantId))
+  const team = useQuery(memberCountQuery(tenantId))
+  const [selection, setSelection] = useState<{
+    terms: BillingTerms
+    action: 'checkout' | 'change' | 'retry'
+  } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -81,6 +83,9 @@ export function BillingSection({
       tries += 1
       void queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
       void queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: moduleSubscriptionsQuery(tenantId).queryKey })
+      void queryClient.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey })
       if (tries >= 15) window.clearInterval(timer)
     }, 3000)
     return () => window.clearInterval(timer)
@@ -93,6 +98,9 @@ export function BillingSection({
       setBusy(null)
       void queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
       void queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] })
+      void queryClient.invalidateQueries({ queryKey: moduleSubscriptionsQuery(tenantId).queryKey })
+      void queryClient.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey })
     }
     window.addEventListener('pageshow', onPageShow)
     return () => window.removeEventListener('pageshow', onPageShow)
@@ -104,8 +112,12 @@ export function BillingSection({
     try {
       const result = await action()
       if (result.ok && result.form) return submitToRedsys(result.form)
-      if (result.ok) await queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
+      if (result.ok) setSelection(null)
       else setError(result.message)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] }),
+      ])
     } catch {
       setError('No se pudo completar la operación. Inténtalo de nuevo.')
     } finally {
@@ -113,19 +125,15 @@ export function BillingSection({
     }
   }
 
-  const subscribed = subscription && ['active', 'past_due'].includes(subscription.status)
-  const members = Math.max(1, useQuery(memberCountQuery(tenantId)).data ?? 1)
-  const minimumMembers = Math.min(members, MAX_SCALE_PLAN_MEMBERS)
-  const selectedMemberCount = Math.min(
-    MAX_SCALE_PLAN_MEMBERS,
-    Math.max(minimumMembers, selectedMembers ?? members),
+  const pending = preview.data?.pending === true
+  const upcoming = preview.data?.next
+  const active = subscription?.status === 'active'
+  const pastDue = subscription?.status === 'past_due'
+  const scheduled = Boolean(subscription?.nextPlan && upcoming)
+  const members = Math.max(1, team.data ?? 1)
+  const ready = Boolean(
+    subscription && preview.data && team.data !== undefined && !pending && !busy,
   )
-  const selectedPlan =
-    members <= MAX_SCALE_PLAN_MEMBERS ? smallestPlanFor(selectedMemberCount) : null
-  const needed = smallestPlanFor(members)
-  const onTrial = subscription?.status === 'trialing'
-  const recommended = onTrial ? selectedPlan?.id : undefined
-  const recommendedScale = onTrial && selectedPlan === null
 
   if (subscription?.isComplimentary) {
     return (
@@ -164,150 +172,163 @@ export function BillingSection({
         ) : null}
         {returned === 'cancelado' ? (
           <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
-            El pago no se ha completado y no se ha cobrado nada. Puedes volver a intentarlo cuando
-            quieras.
+            No se ha confirmado el pago. Si sigue pendiente de verificación, no lo repitas.
           </output>
         ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
         <hr className="border-border" />
-        {onTrial ? (
-          <div className="bg-accent text-accent-foreground rounded-lg px-4 py-3 text-sm">
-            <p className="font-medium">
-              {subscription.canWrite
-                ? `Estás probando el plan Empresa completo durante ${TRIAL_DAYS} días, gratis.`
-                : 'Tu prueba gratuita ha terminado.'}
-            </p>
-            <p className="mt-1 text-xs">
-              {needed
-                ? `Ahora sois ${members} ${members === 1 ? 'persona' : 'personas'}: te encaja el plan ${needed.name}. `
-                : members <= MAX_SCALE_PLAN_MEMBERS
-                  ? `Ahora sois ${members} personas: os encaja Ábaco Escala. `
-                  : `Ahora sois más de 100 personas: podemos preparar un plan personalizado. `}
-              Si prefieres uno más pequeño, quita el acceso a las personas que sobren en Equipo.
-            </p>
+        {subscriptionState.isError || team.isError || preview.isError ? (
+          <div role="alert" className="space-y-2">
+            <p>No se pudo verificar tu suscripción o el número de personas con acceso.</p>
+            <Button
+              variant="outline"
+              onPress={() =>
+                void Promise.all([subscriptionState.refetch(), team.refetch(), preview.refetch()])
+              }
+            >
+              Reintentar
+            </Button>
           </div>
         ) : null}
-
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Elige según el tamaño y la forma de trabajar</h3>
-          <p className="text-muted-foreground text-sm">
-            Todos los planes incluyen las mismas funciones; cada tramo orienta sobre la capacidad
-            adecuada. El total cuenta a quien administra la empresa.
+        {pending ? (
+          <p role="status">
+            Hay un pago pendiente de verificar. No repitas el pago. Si el estado no cambia, contacta
+            con Ábaco.
           </p>
-        </div>
-
-        {members <= MAX_SCALE_PLAN_MEMBERS ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <label htmlFor="billing-member-count" className="text-sm font-medium">
-                  Personas con acceso
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="billing-member-count"
-                    type="number"
-                    min={minimumMembers}
-                    max={MAX_SCALE_PLAN_MEMBERS}
-                    step={1}
-                    value={selectedMemberCount}
-                    onChange={(event) => {
-                      const value = event.currentTarget.valueAsNumber
-                      if (Number.isFinite(value))
-                        setSelectedMembers(
-                          Math.max(
-                            minimumMembers,
-                            Math.min(MAX_SCALE_PLAN_MEMBERS, Math.round(value)),
-                          ),
-                        )
-                    }}
-                    className="border-border bg-background h-10 w-20 rounded-md border px-3 text-center text-sm"
-                  />
-                  <span className="text-muted-foreground text-sm">personas</span>
-                </div>
-              </div>
-              <input
-                type="range"
-                aria-label="Ajustar el número de personas"
-                aria-describedby="billing-member-count-help"
-                min={minimumMembers}
-                max={MAX_SCALE_PLAN_MEMBERS}
-                step={1}
-                value={selectedMemberCount}
-                onChange={(event) => setSelectedMembers(Number(event.currentTarget.value))}
-                className="accent-primary w-full cursor-pointer"
-              />
-              <div
-                className="text-muted-foreground flex justify-between text-xs"
-                aria-hidden="true"
+        ) : null}
+        {upcoming && !subscription?.cancelAtPeriodEnd && (active || scheduled || pastDue) ? (
+          <p>
+            {active ? 'Próxima renovación' : 'Importe a pagar'}:{' '}
+            <strong>{formatEuros(upcoming.amount_cents / 100)} con IVA</strong> por{' '}
+            {upcoming.period === 'year' ? 'año' : 'mes'}.
+            {upcoming.module_net_cents ? (
+              <> Incluye {formatEuros(upcoming.module_net_cents / 100)} en módulos, sin IVA.</>
+            ) : null}
+          </p>
+        ) : null}
+        {upcoming && (pastDue || (!active && scheduled)) ? (
+          <Button
+            isDisabled={!ready || members > upcoming.seats}
+            onPress={() =>
+              setSelection({ terms: upcoming, action: pastDue ? 'retry' : 'checkout' })
+            }
+          >
+            {pastDue ? 'Reintentar el pago con tarjeta' : 'Contratar mi oferta acordada'}
+          </Button>
+        ) : null}
+        {active && scheduled ? (
+          <Button
+            variant="outline"
+            isDisabled={!ready}
+            onPress={() => void go('undo', () => undoPlanChange(tenantId))}
+          >
+            Retirar el cambio programado
+          </Button>
+        ) : null}
+        {subscription && preview.data ? (
+          <ModuleSubscriptions
+            tenantId={tenantId}
+            active={active}
+            blocked={
+              pending ||
+              pastDue ||
+              subscription.cancelAtPeriodEnd ||
+              Boolean(busy) ||
+              Boolean(selection)
+            }
+            onChanged={() =>
+              queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] })
+            }
+          />
+        ) : null}
+        <PricingCatalog
+          actualMembers={members}
+          showModuleCatalog={false}
+          renderAction={(terms, plan) => {
+            const current = preview.data?.current
+            const same =
+              active &&
+              current?.plan === terms.plan &&
+              current.seats === terms.seats &&
+              current.period === terms.period
+            const fits = members <= terms.seats
+            return (
+              <Button
+                className="w-full"
+                variant={same ? 'outline' : 'default'}
+                isDisabled={
+                  !ready ||
+                  Boolean(selection) ||
+                  same ||
+                  !fits ||
+                  pastDue ||
+                  scheduled ||
+                  subscription?.cancelAtPeriodEnd === true
+                }
+                onPress={() => {
+                  const extras =
+                    terms.period === 'year'
+                      ? preview.data?.module_yearly_cents
+                      : preview.data?.module_monthly_cents
+                  setSelection({
+                    terms: withModulePrice(terms, extras ?? 0),
+                    action: active ? 'change' : 'checkout',
+                  })
+                }}
               >
-                <span>{minimumMembers} personas</span>
-                <span>{MAX_SCALE_PLAN_MEMBERS} personas</span>
-              </div>
-              <p id="billing-member-count-help" className="text-muted-foreground text-xs">
-                El mínimo corresponde a las personas que ya tienen acceso. Para reducirlo, primero
-                tendrás que quitar accesos del equipo.
+                {same ? 'Tu plan actual' : fits ? `Elegir ${plan.name}` : 'No cubre a tu equipo'}
+              </Button>
+            )
+          }}
+        />
+        {selection ? (
+          <section
+            aria-label="Confirmar importe de suscripción"
+            className="border-primary space-y-3 rounded-lg border p-4"
+            aria-live="polite"
+          >
+            <h3 className="font-semibold">
+              Confirmar {planInfo(selection.terms.plan)?.name} · hasta {selection.terms.seats}{' '}
+              personas
+            </h3>
+            <p>
+              {formatEuros(selection.terms.net_cents / 100)} sin IVA ·{' '}
+              <strong>{formatEuros(selection.terms.amount_cents / 100)} con IVA</strong> por{' '}
+              {selection.terms.period === 'year' ? 'año' : 'mes'}.
+            </p>
+            {selection.terms.module_net_cents ? (
+              <p className="text-sm">
+                Incluye {formatEuros(selection.terms.module_net_cents / 100)} en módulos, sin IVA.
               </p>
-            </div>
-
-            <div className="space-y-4">
-              <Tabs
-                selectedKey={interval}
-                onSelectionChange={(key) => setInterval(key as Interval)}
+            ) : null}
+            <p className="text-muted-foreground text-sm">
+              {selection.action === 'change'
+                ? 'El cambio se aplica en la próxima renovación, sin cobro inmediato.'
+                : 'Continuarás en Redsys para confirmar el pago con tarjeta.'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                isDisabled={!ready}
+                onPress={() =>
+                  void go('confirm', () =>
+                    acceptBillingTerms(tenantId, selection.action, selection.terms),
+                  )
+                }
               >
-                <TabsList aria-label="Periodo de pago" className="w-full sm:w-fit">
-                  <TabsTrigger id="year" className="flex-1 sm:flex-none">
-                    Anual
-                    <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[11px]">
-                      2 meses gratis
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger id="month" className="flex-1 sm:flex-none">
-                    Mensual
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {planCatalog.map((plan) => (
-                  <PlanOptionCard
-                    key={plan.id}
-                    plan={plan}
-                    interval={interval}
-                    members={selectedMemberCount}
-                    recommended={recommended === plan.id}
-                    current={subscribed === true && subscription?.plan === plan.id}
-                    busy={busy !== null}
-                    onChoose={() =>
-                      void go(plan.id, () =>
-                        subscription?.status === 'active'
-                          ? changePlan(tenantId, plan.id, interval)
-                          : startCheckout(tenantId, plan.id, interval),
-                      )
-                    }
-                  />
-                ))}
-                <ScalePlanCard
-                  members={selectedMemberCount}
-                  interval={interval}
-                  recommended={recommendedScale}
-                />
-                <CustomPlanCard />
-              </div>
+                {selection.action === 'change' ? 'Programar cambio' : 'Continuar a Redsys'}
+              </Button>
+              <Button
+                variant="outline"
+                isDisabled={busy !== null}
+                onPress={() => setSelection(null)}
+              >
+                Volver
+              </Button>
             </div>
-          </div>
-        ) : (
-          <CustomPlanCard />
-        )}
-
-        <ul className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2">
-          {includedInEveryPlan.map((item) => (
-            <li key={item}>✓ {item}</li>
-          ))}
-        </ul>
+          </section>
+        ) : null}
         <p className="text-muted-foreground text-xs">
-          Precios sin IVA (se añade el 21 %). Pago con tarjeta, renovación automática. Sin
-          permanencia: cancelas cuando quieras y sigues hasta el final del periodo pagado. Un cambio
-          de plan se aplica en la próxima renovación.
+          Pago con tarjeta y renovación automática. Puedes cancelar al final del periodo pagado.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -25,6 +25,7 @@ import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
 import { Route as MisVacacionesRouteImport } from './routes/mis-vacaciones'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as PersonalizarRouteImport } from './routes/personalizar'
+import { Route as PreciosRouteImport } from './routes/precios'
 import { Route as ProveedoresRouteImport } from './routes/proveedores'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as RegistroRouteImport } from './routes/registro'
@@ -126,6 +127,11 @@ const NuevaContrasenaRoute = NuevaContrasenaRouteImport.update({
 const PersonalizarRoute = PersonalizarRouteImport.update({
   id: '/personalizar',
   path: '/personalizar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreciosRoute = PreciosRouteImport.update({
+  id: '/precios',
+  path: '/precios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProveedoresRoute = ProveedoresRouteImport.update({
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
+  '/precios': typeof PreciosRoute
   '/proveedores': typeof ProveedoresRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
+  '/precios': typeof PreciosRoute
   '/proveedores': typeof ProveedoresRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -333,6 +341,7 @@ export interface FileRoutesById {
   '/mis-vacaciones': typeof MisVacacionesRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
+  '/precios': typeof PreciosRoute
   '/proveedores': typeof ProveedoresRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -375,6 +384,7 @@ export interface FileRouteTypes {
     | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/personalizar'
+    | '/precios'
     | '/proveedores'
     | '/recuperar'
     | '/registro'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/personalizar'
+    | '/precios'
     | '/proveedores'
     | '/recuperar'
     | '/registro'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/mis-vacaciones'
     | '/nueva-contrasena'
     | '/personalizar'
+    | '/precios'
     | '/proveedores'
     | '/recuperar'
     | '/registro'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   MisVacacionesRoute: typeof MisVacacionesRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   PersonalizarRoute: typeof PersonalizarRoute
+  PreciosRoute: typeof PreciosRoute
   ProveedoresRoute: typeof ProveedoresRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
@@ -618,6 +631,13 @@ declare module '@tanstack/react-router' {
       path: '/personalizar'
       fullPath: '/personalizar'
       preLoaderRoute: typeof PersonalizarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/precios': {
+      id: '/precios'
+      path: '/precios'
+      fullPath: '/precios'
+      preLoaderRoute: typeof PreciosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proveedores': {
@@ -854,6 +874,7 @@ const rootRouteChildren: RootRouteChildren = {
   MisVacacionesRoute: MisVacacionesRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   PersonalizarRoute: PersonalizarRoute,
+  PreciosRoute: PreciosRoute,
   ProveedoresRoute: ProveedoresRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,

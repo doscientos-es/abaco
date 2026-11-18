@@ -9,6 +9,11 @@ export function isSupplierEmail(email: string): boolean {
   return /^[^\s@?,;&\r\n]+@[^\s@?,;&\r\n]+\.[^\s@?,;&\r\n]+$/.test(email.trim())
 }
 
+export function supplierPhoneHref(phone: string): string | null {
+  const number = phone.replace(/[ ().-]/g, '')
+  return /^\+?[0-9]{7,15}$/.test(number) ? `tel:${number}` : null
+}
+
 /** Opens a draft in the user's email client; no order is sent by Ábaco. */
 export function supplierOrderMailto(input: {
   email: string

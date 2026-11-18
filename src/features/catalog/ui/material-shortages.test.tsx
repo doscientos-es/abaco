@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MaterialShortages } from './material-shortages'
 
-const mocks = vi.hoisted(() => ({ reason: 'insufficient' }))
+const mocks = vi.hoisted(() => ({ reason: 'insufficient', enabled: true, query: vi.fn() }))
+vi.mock('@/features/product-modules', () => ({ useModuleEnabled: () => mocks.enabled }))
 vi.mock('@doscientos/ui', () => ({
   Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
   buttonVariants: () => '',
@@ -15,7 +16,13 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useQuery: ({ queryKey }: { queryKey: string[] }) => ({
+  useQuery: (options: { queryKey: string[] }) => mocks.query(options),
+}))
+
+beforeEach(() => {
+  mocks.reason = 'insufficient'
+  mocks.enabled = true
+  mocks.query.mockClear().mockImplementation(({ queryKey }: { queryKey: string[] }) => ({
     isPending: false,
     isError: false,
     data:
@@ -34,10 +41,10 @@ vi.mock('@tanstack/react-query', () => ({
             },
           ]
         : queryKey[0] === 'suppliers'
-          ? [{ id: 'p', name: 'Proveedor', email: 'pedidos@example.com' }]
+          ? [{ id: 'p', name: 'Proveedor', email: 'pedidos@example.com', phone: '+34 612 345 678' }]
           : [],
-  }),
-}))
+  }))
+})
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({
     tenant: { id: 't', name: 'Empresa' },
@@ -51,15 +58,12 @@ vi.mock('../application/inventory-actions', () => ({
   resolveShortage: vi.fn(),
 }))
 
-beforeEach(() => {
-  mocks.reason = 'insufficient'
-})
-
 describe('material shortages', () => {
-  it('offers a supplier email draft for an ordinary shortage', () => {
+  it('offers manual contact by phone and email for an ordinary shortage', () => {
     const html = renderToStaticMarkup(<MaterialShortages />)
     expect(html).toContain('Preparar correo')
     expect(html).toContain('mailto:pedidos%40example.com')
+    expect(html).toContain('tel:+34612345678')
   })
 
   it('explains unit mismatches instead of suggesting a potentially wrong order', () => {
@@ -67,5 +71,12 @@ describe('material shortages', () => {
     const html = renderToStaticMarkup(<MaterialShortages />)
     expect(html).toContain('La unidad del presupuesto no coincide')
     expect(html).not.toContain('mailto:')
+    expect(html).not.toContain('tel:')
+  })
+
+  it('does not fetch or show shortages without the module', () => {
+    mocks.enabled = false
+    expect(renderToStaticMarkup(<MaterialShortages />)).toBe('')
+    expect(mocks.query).not.toHaveBeenCalled()
   })
 })

@@ -25,7 +25,7 @@ export function WelcomePage() {
     ? 'Continuar en modo lectura'
     : subscription && !trialing
       ? 'Ir a mi empresa'
-      : `Empezar ${daysLeft} días gratis`
+      : `Crear mi primer presupuesto · ${daysLeft} días gratis`
 
   async function choose(choice: 'trial' | 'plan') {
     if (busy) return
@@ -42,7 +42,10 @@ export function WelcomePage() {
       await navigate(
         choice === 'plan'
           ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
-          : { to: '/', replace: true },
+          : {
+              to: expired || (subscription && !trialing) ? '/' : '/presupuestos/nuevo',
+              replace: true,
+            },
       )
     } catch {
       setError('No se pudo continuar. Inténtalo de nuevo.')

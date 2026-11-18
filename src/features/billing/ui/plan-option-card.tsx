@@ -1,38 +1,28 @@
-import { Button } from '@doscientos/ui'
+import type { ReactNode } from 'react'
 
-import { formatEuros, perMonthWhenYearly, type Interval, type PlanInfo } from '../domain/plans'
+import { formatEuros, type BillingTerms, type PlanInfo } from '../domain/plans'
 
 export function PlanOptionCard({
   plan,
-  interval,
-  members,
+  terms,
   recommended,
-  current,
-  busy,
-  onChoose,
+  children,
 }: {
   plan: PlanInfo
-  interval: Interval
-  members: number
+  terms: BillingTerms
   recommended: boolean
-  current: boolean
-  busy: boolean
-  onChoose: () => void
+  children?: ReactNode
 }) {
-  const fits = members <= plan.members
-  const price = interval === 'year' ? perMonthWhenYearly(plan) : plan.monthly
+  const yearly = terms.period === 'year'
+  const price = terms.net_cents / (yearly ? 1200 : 100)
 
   return (
     <article
-      aria-label={`${plan.name}, hasta ${plan.members} ${plan.members === 1 ? 'persona' : 'personas'}`}
-      className={`bg-card flex flex-col gap-3 rounded-xl border p-4 ${recommended || current ? 'border-primary ring-primary/20 ring-2' : 'border-border'}`}
+      aria-label={`${plan.name}, hasta ${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`}
+      className={`bg-card flex flex-col gap-3 rounded-xl border p-4 ${recommended ? 'border-primary ring-primary/20 ring-2' : 'border-border'}`}
     >
       <div className="min-h-16">
-        {current ? (
-          <span className="bg-muted text-muted-foreground rounded-full px-2 py-1 text-[11px] font-medium">
-            Tu plan actual
-          </span>
-        ) : recommended ? (
+        {recommended ? (
           <span className="bg-primary text-primary-foreground rounded-full px-2 py-1 text-[11px] font-medium">
             Te encaja
           </span>
@@ -43,8 +33,7 @@ export function PlanOptionCard({
 
       <p className="text-sm leading-relaxed">{plan.benefit}</p>
       <p className="text-muted-foreground text-xs">
-        Hasta {plan.members} {plan.members === 1 ? 'persona' : 'personas'}, incluida quien
-        administra.
+        Hasta {terms.seats} {terms.seats === 1 ? 'persona' : 'personas'}, incluida quien administra.
       </p>
 
       <div className="mt-auto">
@@ -52,24 +41,16 @@ export function PlanOptionCard({
           <span className="text-2xl font-semibold">{formatEuros(price)}</span>
           <span className="text-muted-foreground text-xs">
             {' '}
-            /mes{interval === 'year' ? ' equivalente' : ''}
+            /mes{yearly ? ' equivalente' : ''} sin IVA
           </span>
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          {interval === 'year'
-            ? `Se cobran ${formatEuros(plan.yearly)} al año, sin IVA.`
-            : 'Pago mensual, sin IVA.'}
+          {formatEuros(terms.amount_cents / 100)} con IVA,{' '}
+          {yearly ? 'en un único pago anual' : 'al mes'}.
         </p>
       </div>
 
-      <Button
-        className="w-full"
-        variant={current ? 'outline' : 'default'}
-        isDisabled={current || busy || !fits}
-        onPress={onChoose}
-      >
-        {current ? 'Tu plan' : !fits ? 'No cubre a tu equipo' : `Elegir ${plan.name}`}
-      </Button>
+      {children}
     </article>
   )
 }

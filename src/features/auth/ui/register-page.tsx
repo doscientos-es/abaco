@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
-import { formatEuros, planCatalog, TRIAL_DAYS } from '@/features/billing/domain/plans'
+import { TRIAL_DAYS } from '@/features/billing/domain/plans'
 import { brand } from '@/shared/lib/brand'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { PasswordField, TextField } from '@/shared/ui/form'
@@ -75,9 +75,11 @@ export function RegisterPage() {
         <p className="font-medium">{TRIAL_DAYS} días gratis con el plan Empresa completo</p>
         <p className="mt-1 text-xs">
           Sin tarjeta. Todos los planes incluyen las mismas funciones; solo cambia el tamaño del
-          equipo: {planCatalog.map((p) => `${p.name} ${formatEuros(p.monthly)}/mes`).join(' · ')}{' '}
-          (sin IVA, y 2 meses gratis pagando al año). Si no eliges, tus datos siguen ahí en solo
-          lectura.
+          equipo.{' '}
+          <Link to="/precios" className="font-medium underline">
+            Ver planes y precios
+          </Link>
+          . Si no eliges un plan al terminar, conservas tus datos en modo lectura.
         </p>
       </div>
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>

@@ -7,10 +7,17 @@ import { PaymentHistory } from './payment-history'
 
 const { query, button } = vi.hoisted(() => ({ query: vi.fn(), button: vi.fn() }))
 
-vi.mock('@tanstack/react-query', () => ({ useQuery: query }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: (options: { queryKey: string[] }) => {
+    if (options.queryKey[0] !== 'billing-preview') return query(options)
+    const terms = { plan: 'solo', period: 'month', seats: 1, net_cents: 2000, amount_cents: 2420 }
+    return { data: { current: terms, next: terms, pending: false } }
+  },
+}))
 vi.mock('@doscientos/ui', () => ({ Button: button }))
 vi.mock('../application/billing-actions', () => ({
   paymentsQuery: (tenantId: string) => ({ queryKey: ['billing-payments', tenantId] }),
+  billingPreviewQuery: (tenantId: string) => ({ queryKey: ['billing-preview', tenantId] }),
 }))
 
 const subscription: Subscription = {

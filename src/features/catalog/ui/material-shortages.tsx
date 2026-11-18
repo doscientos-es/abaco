@@ -9,6 +9,7 @@ import {
 } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { useModuleEnabled } from '@/features/product-modules'
 import { useTenantData } from '@/shared/store/store'
 
 import {
@@ -17,10 +18,16 @@ import {
   listSuppliers,
   resolveShortage,
 } from '../application/inventory-actions'
-import { supplierOrderMailto } from '../domain/supplier-order'
+import { supplierOrderMailto, supplierPhoneHref } from '../domain/supplier-order'
 
 /** Pending shortages are durable: opening an email does not claim that it was sent. */
 export function MaterialShortages({ estimateId }: { estimateId?: string }) {
+  const { tenant } = useTenantData()
+  const procurement = useModuleEnabled(tenant.id, 'procurement')
+  return procurement ? <EnabledMaterialShortages estimateId={estimateId} /> : null
+}
+
+function EnabledMaterialShortages({ estimateId }: { estimateId: string | undefined }) {
   const { tenant, estimates } = useTenantData()
   const queryClient = useQueryClient()
   const shortages = useQuery({
@@ -62,8 +69,8 @@ export function MaterialShortages({ estimateId }: { estimateId?: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Se ha descontado el stock disponible al aceptar. Prepara un correo al proveedor; abrirlo
-          no envía ni confirma el pedido.
+          Se ha descontado el stock disponible al aceptar. Puedes contactar al proveedor; Ábaco no
+          envía ni confirma el pedido por ti.
         </p>
         <ul className="divide-y">
           {shortages.data.map((shortage) => {
@@ -73,6 +80,10 @@ export function MaterialShortages({ estimateId }: { estimateId?: string }) {
                 ?.supplier_id
             const supplier = suppliers.data?.find((item) => item.id === supplierId)
             const estimate = estimates.find((item) => item.id === shortage.estimate_id)
+            const phone =
+              shortage.reason === 'insufficient' && supplier
+                ? supplierPhoneHref(supplier.phone)
+                : null
             const mailto =
               shortage.reason === 'insufficient' && supplier && estimate
                 ? supplierOrderMailto({
@@ -111,6 +122,11 @@ export function MaterialShortages({ estimateId }: { estimateId?: string }) {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {phone ? (
+                    <a className={buttonVariants({ variant: 'outline' })} href={phone}>
+                      Llamar al proveedor
+                    </a>
+                  ) : null}
                   {mailto ? (
                     <a className={buttonVariants({ variant: 'outline' })} href={mailto}>
                       Preparar correo

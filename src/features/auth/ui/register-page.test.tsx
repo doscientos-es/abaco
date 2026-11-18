@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-import { formatEuros, planCatalog, TRIAL_DAYS } from '@/features/billing/domain/plans'
+import { TRIAL_DAYS } from '@/features/billing/domain/plans'
 import { brand } from '@/shared/lib/brand'
 
 import { RegisterPage } from './register-page'
@@ -67,15 +67,12 @@ describe('RegisterPage positioning', () => {
   it('keeps the current offer and clearly describes the card-free trial', () => {
     const html = render()
 
-    for (const plan of planCatalog)
-      expect(html).toContain(`${plan.name} ${formatEuros(plan.monthly)}/mes`)
+    expect(html).toContain('href="/precios"')
     expect(html).toContain(
       'Todos los planes incluyen las mismas funciones; solo cambia el tamaño del equipo',
     )
     expect(html).toContain('Sin tarjeta.')
-    expect(html).toContain('sin IVA')
-    expect(html).toContain('2 meses gratis pagando al año')
-    expect(html).toContain('tus datos siguen ahí en solo lectura')
+    expect(html).toContain('conservas tus datos en modo lectura')
     expect(html).toContain(`Crear cuenta y probar ${TRIAL_DAYS} días`)
     expect(html).toContain('autoComplete="new-password"')
   })

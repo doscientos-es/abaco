@@ -1,0 +1,127 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { billingCatalogQuery, billingPreviewQuery, type BillingTerms } from '@/features/billing'
+import {
+  ModuleSubscriptions,
+  moduleCatalogQuery,
+  moduleSubscriptionsQuery,
+} from '@/features/product-modules'
+
+import { scheduleBillingAgreement } from '../application/superadmin-queries'
+import { CompanyBillingAgreement } from './company-billing-agreement'
+
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }))
+
+vi.mock('@/shared/lib/supabase/client', () => ({ createBrowserSupabaseClient: () => ({ rpc }) }))
+vi.mock('@doscientos/ui', () => ({
+  Button: ({ children, isDisabled }: { children: string; isDisabled?: boolean }) => (
+    <button disabled={isDisabled}>{children}</button>
+  ),
+  Input: ({ value }: { value: string }) => <input value={value} readOnly />,
+}))
+
+const tenantId = 'company'
+const current: BillingTerms = {
+  plan: 'team',
+  seats: 5,
+  period: 'month',
+  net_cents: 3400,
+  amount_cents: 4114,
+}
+const next: BillingTerms = {
+  ...current,
+  period: 'year',
+  net_cents: 48750,
+  base_net_cents: 29750,
+  module_net_cents: 19000,
+  amount_cents: 58988,
+}
+const preview = {
+  current,
+  next,
+  pending: false,
+  cancel_at_period_end: false,
+  module_yearly_cents: 19000,
+}
+
+let client: QueryClient
+
+function render(children: ReactNode) {
+  return renderToStaticMarkup(<QueryClientProvider client={client}>{children}</QueryClientProvider>)
+}
+
+function renderBilling(members: number) {
+  return render(
+    <CompanyBillingAgreement tenantId={tenantId} members={members} subscriptionStatus="active" />,
+  )
+}
+
+beforeEach(() => {
+  rpc.mockReset().mockResolvedValue({ error: null })
+  client = new QueryClient()
+  client.setQueryData(billingCatalogQuery.queryKey, [
+    { plan: 'team', seats: 5, monthly_cents: 3400, yearly_cents: 34000, vat_percent: 21 },
+    { plan: 'business', seats: 15, monthly_cents: 5400, yearly_cents: 54000, vat_percent: 21 },
+  ])
+  client.setQueryData(billingPreviewQuery(tenantId).queryKey, preview)
+})
+
+describe('company billing controls', () => {
+  it('adds the modules to the preview without folding them into the negotiated base price', () => {
+    const html = renderBilling(3)
+    expect(html).toMatch(/41,14\s*€ con IVA \/ mes/)
+    expect(html).toMatch(/Total previsto: 589,88\s*€ con IVA \/ año/)
+    expect(html).toContain('<option value="agreed" selected="">Precio pactado</option>')
+    expect(html).toContain('value="297,50"')
+    expect(html).toContain('<button>Guardar condiciones</button>')
+  })
+
+  it('does not save a tier with insufficient seats or show an editor while a payment is pending', () => {
+    expect(renderBilling(6)).toContain('<button disabled="">Guardar condiciones</button>')
+    client.setQueryData(billingPreviewQuery(tenantId).queryKey, { ...preview, pending: true })
+    const html = renderBilling(3)
+    expect(html).toContain('Resuelve el pago pendiente')
+    expect(html).not.toContain('Guardar condiciones')
+  })
+
+  it('uses the company agreement RPC for an exact net amount or the catalogue rate', async () => {
+    const terms = { plan: 'team', seats: 5, period: 'year' } as const
+    await scheduleBillingAgreement(tenantId, { ...terms, netCents: 29750 })
+    await scheduleBillingAgreement(tenantId, { ...terms, netCents: null })
+    const params = { p_tenant: tenantId, p_plan: 'team', p_seats: 5, p_period: 'year' }
+    expect(rpc).toHaveBeenNthCalledWith(1, 'superadmin_schedule_billing', {
+      ...params,
+      p_net: 29750,
+    })
+    expect(rpc).toHaveBeenNthCalledWith(2, 'superadmin_schedule_billing', {
+      ...params,
+      p_net: null,
+    })
+    expect(rpc).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('company module controls', () => {
+  it('distinguishes a scheduled paid activation from access that is already enabled', () => {
+    client.setQueryData(moduleSubscriptionsQuery(tenantId).queryKey, [
+      {
+        module_code: 'procurement',
+        enabled: false,
+        next_enabled: true,
+        monthly_cents: 1900,
+        yearly_cents: 19000,
+      },
+    ])
+    client.setQueryData(moduleCatalogQuery.queryKey, [
+      { code: 'procurement', monthly_cents: 1900, yearly_cents: 19000 },
+    ])
+    const html = render(<ModuleSubscriptions tenantId={tenantId} active onChanged={vi.fn()} />)
+    expect(html).toContain('Compras e inventario · Inactivo')
+    expect(html).toContain('Alta programada')
+    expect(html).toContain('Deshacer cambio')
+    expect(html).toMatch(/19,00\s*€\/mes o \+190,00\s*€\/año/)
+  })
+})

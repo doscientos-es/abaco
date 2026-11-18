@@ -38,11 +38,12 @@ Deno.serve(async (request) => {
   }
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-  const { data: payment } = await admin
+  const { data: payment, error: paymentError } = await admin
     .from('billing_payments')
     .select('amount_cents')
     .eq('merchant_order', notice.order)
     .maybeSingle()
+  if (paymentError) return new Response('No se pudo verificar la operación', { status: 500 })
   if (!payment) return new Response('Operación desconocida', { status: 200 })
   if (payment.amount_cents !== notice.amountCents)
     return new Response('Importe no coincide', { status: 400 })

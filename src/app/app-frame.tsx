@@ -31,6 +31,7 @@ import {
 import { PlanBanner } from '@/features/billing'
 import { GlobalSearch, type SearchItem } from '@/features/global-search'
 import { ContractInvoiceNotifications } from '@/features/invoices'
+import { useModuleEnabled } from '@/features/product-modules'
 import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
@@ -60,7 +61,7 @@ const navGroups: NavGroup[] = [
       },
       { to: '/contratos', label: 'Contratos', icon: navIcons.contracts },
       { to: '/clientes', label: 'Clientes', icon: navIcons.clients },
-      { to: '/catalogo', label: 'Inventario', icon: navIcons.catalog },
+      { to: '/catalogo', label: 'Catálogo', icon: navIcons.catalog },
       { to: '/proveedores', label: 'Proveedores', icon: navIcons.clients },
     ],
   },
@@ -135,6 +136,7 @@ function readableTextColor(hex: string) {
 export function AppFrame({ children }: { children: ReactNode }) {
   const data = useTenantData()
   const { tenant } = data
+  const procurement = useModuleEnabled(tenant.id, 'procurement')
   const saveStatus = useSaveStatus()
   const session = useSession()
   const platformAccess = useQuery({
@@ -150,6 +152,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
     if (item.to === '/superadmin') return platformAccess.data === true
+    if (item.to === '/proveedores' && !procurement) return false
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
   }

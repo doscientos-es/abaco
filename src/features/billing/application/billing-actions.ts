@@ -2,7 +2,14 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-import type { Interval, PaidPlan, Plan } from '../domain/plans'
+import {
+  paidPlans,
+  type BillingTerms,
+  type CatalogRate,
+  type Interval,
+  type PaidPlan,
+  type Plan,
+} from '../domain/plans'
 
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 
@@ -24,7 +31,7 @@ export type Subscription = {
 }
 
 const statuses: readonly string[] = ['trialing', 'active', 'past_due', 'canceled']
-const plans: readonly string[] = ['trial', 'solo', 'team', 'business']
+const plans: readonly string[] = ['trial', ...paidPlans]
 const subscriptionFields =
   'plan, subscription_status, trial_ends_at, billing_interval, current_period_end, cancel_at_period_end, next_plan, next_interval'
 
@@ -55,10 +62,7 @@ export function describeSubscription(row: {
         : null,
     currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end) : null,
     cancelAtPeriodEnd: row.cancel_at_period_end,
-    nextPlan:
-      row.next_plan === 'solo' || row.next_plan === 'team' || row.next_plan === 'business'
-        ? row.next_plan
-        : null,
+    nextPlan: paidPlans.find((plan) => plan === row.next_plan) ?? null,
     nextInterval:
       row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
     canWrite: row.is_complimentary || trialActive || status === 'active' || status === 'past_due',
@@ -110,6 +114,40 @@ export const memberCountQuery = (tenantId: string) =>
     },
   })
 
+export const billingCatalogQuery = queryOptions({
+  queryKey: ['billing-catalog'],
+  staleTime: 60_000,
+  queryFn: async (): Promise<CatalogRate[]> => {
+    const { data, error } = await createBrowserSupabaseClient()
+      .from('billing_catalog')
+      .select('plan,seats,monthly_cents,yearly_cents,vat_percent')
+      .order('seats')
+    if (error || !data.length) throw new Error('No se pudieron cargar los precios.')
+    return data as CatalogRate[]
+  },
+})
+
+export type BillingPreview = {
+  current: BillingTerms | null
+  next: BillingTerms | null
+  pending: boolean
+  cancel_at_period_end: boolean
+  module_monthly_cents?: number
+  module_yearly_cents?: number
+}
+
+export const billingPreviewQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['billing-preview', tenantId],
+    queryFn: async (): Promise<BillingPreview> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc('billing_preview', {
+        p_tenant: tenantId,
+      })
+      if (error || !data) throw new Error('No se pudo cargar el próximo cobro.')
+      return data as BillingPreview
+    },
+  })
+
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed'
 
 export type Payment = {
@@ -121,6 +159,7 @@ export type Payment = {
   period: Interval
   /** Amount charged, VAT included. */
   amountCents: number
+  netCents: number | null
   status: PaymentStatus
   createdAt: Date
   settledAt: Date | null
@@ -141,7 +180,7 @@ export const paymentsQuery = (tenantId: string) =>
           createBrowserSupabaseClient()
             .from('billing_payments')
             .select(
-              'id, merchant_order, kind, plan, period, amount_cents, status, created_at, settled_at',
+              'id, merchant_order, kind, plan, period, amount_cents, net_cents, status, created_at, settled_at',
             )
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
@@ -161,6 +200,7 @@ export const paymentsQuery = (tenantId: string) =>
           plan: row.plan as PaidPlan,
           period: row.period as Interval,
           amountCents: row.amount_cents,
+          netCents: row.net_cents,
           status: row.status as PaymentStatus,
           createdAt: new Date(row.created_at),
           settledAt: row.settled_at ? new Date(row.settled_at) : null,
@@ -184,7 +224,18 @@ async function call(body: Record<string, unknown>): Promise<BillingResult> {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
     form?: RedsysForm
   }>('billing', { body })
-  if (error) return { ok: false, message: 'No se pudo completar la operación. Inténtalo de nuevo.' }
+  if (error) {
+    const body: unknown =
+      error.context instanceof Response ? await error.context.json().catch(() => null) : null
+    const message = body && typeof body === 'object' && 'error' in body ? body.error : null
+    return {
+      ok: false,
+      message:
+        typeof message === 'string'
+          ? message
+          : 'No se pudo completar la operación. Inténtalo de nuevo.',
+    }
+  }
   return data?.form ? { ok: true, form: data.form } : { ok: true }
 }
 
@@ -210,13 +261,21 @@ export function submitToRedsys(form: RedsysForm) {
 }
 
 /** First payment: Redsys asks for the card and keeps a reference for the next charges. */
-export const startCheckout = (tenantId: string, plan: PaidPlan, interval: Interval) =>
-  call({ action: 'checkout', tenantId, plan, interval })
-
-/** Plan change for an active subscription: applied on the next renewal. */
-export const changePlan = (tenantId: string, plan: PaidPlan, interval: Interval) =>
-  call({ action: 'change', tenantId, plan, interval })
+export const acceptBillingTerms = (
+  tenantId: string,
+  action: 'checkout' | 'change' | 'retry',
+  terms: BillingTerms,
+) =>
+  call({
+    action,
+    tenantId,
+    plan: terms.plan,
+    interval: terms.period,
+    seats: terms.seats,
+    total: terms.amount_cents,
+  })
 
 /** Cancel (or resume) at the end of the paid period. */
 export const cancelPlan = (tenantId: string) => call({ action: 'cancel', tenantId })
 export const resumePlan = (tenantId: string) => call({ action: 'resume', tenantId })
+export const undoPlanChange = (tenantId: string) => call({ action: 'undo', tenantId })

@@ -7,9 +7,9 @@ describe('CustomPlanCard', () => {
   it('presents a distinct custom plan without a fixed price', () => {
     const html = renderToStaticMarkup(<CustomPlanCard />)
 
-    expect(html).toContain('aria-label="Plan personalizado para más de 100 personas"')
+    expect(html).toContain('aria-label="Plan personalizado para más de 200 personas"')
     expect(html).toContain('<h3 class="text-sm font-semibold">Personalizado</h3>')
-    expect(html).toContain('Más de 100 personas')
+    expect(html).toContain('Más de 200 personas')
     expect(html).toContain('Hablemos')
     expect(html).not.toContain('€/mes')
     expect(html).not.toContain('Elegir Personalizado')

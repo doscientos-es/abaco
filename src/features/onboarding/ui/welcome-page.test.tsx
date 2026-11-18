@@ -101,7 +101,7 @@ describe('WelcomePage', () => {
   it('clearly offers a card-free trial, its end date, and a pay-now alternative', () => {
     const html = render()
 
-    expect(html).toContain('Empezar 14 días gratis')
+    expect(html).toContain('Crear mi primer presupuesto · 14 días gratis')
     expect(html).toContain('Elegir un plan ahora')
     expect(html).toContain('Tu prueba termina el')
     expect(html).toContain('1 de noviembre de 2026')
@@ -124,9 +124,11 @@ describe('WelcomePage', () => {
 
   it('saves the trial choice, refreshes the session, and opens the dashboard', async () => {
     render()
-    choose('Empezar 14 días gratis')
+    choose('Crear mi primer presupuesto · 14 días gratis')
 
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
+    await vi.waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ to: '/presupuestos/nuevo', replace: true }),
+    )
     expect(complete).toHaveBeenCalledOnce()
     expect(fetchQuery).toHaveBeenCalledWith({ queryKey: ['auth', 'session'], staleTime: 0 })
     expect(complete.mock.invocationCallOrder[0]).toBeLessThan(
@@ -161,7 +163,7 @@ describe('WelcomePage', () => {
       }),
     )
     render()
-    choose('Empezar 14 días gratis')
+    choose('Crear mi primer presupuesto · 14 días gratis')
     button.mockClear()
     render()
     expect(button.mock.calls.every(([props]) => props.isDisabled)).toBe(true)
@@ -196,7 +198,7 @@ describe('WelcomePage', () => {
       },
     })
 
-    expect(render()).toContain('Empezar 7 días gratis')
+    expect(render()).toContain('Crear mi primer presupuesto · 7 días gratis')
   })
 
   it('does not promise another free trial after the existing one has expired', () => {
@@ -212,6 +214,6 @@ describe('WelcomePage', () => {
     const html = render()
     expect(html).toContain('Continuar en modo lectura')
     expect(html).toContain('Tu prueba terminó el')
-    expect(html).not.toContain('Empezar 14 días gratis')
+    expect(html).not.toContain('Crear mi primer presupuesto · 14 días gratis')
   })
 })

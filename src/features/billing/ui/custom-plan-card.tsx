@@ -36,7 +36,7 @@ export function CustomPlanCard() {
           aria-label="Llámanos al 624 14 01 51 para un plan personalizado"
         >
           {fieldIcons.phone}
-          Llámanos
+          Solicitar propuesta por teléfono
         </LinkButton>
         <p className="text-background/70 text-center text-xs">624 14 01 51</p>
       </div>

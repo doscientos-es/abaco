@@ -22,33 +22,24 @@ Deno.serve(async (request) => {
   if (!isCronAuthorized(request, cronSecret)) return new Response('No autorizado', { status: 401 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-  await admin.rpc('expire_subscriptions')
-  const { data: due } = await admin.rpc('billing_due_renewals')
+  const { error: expiryError } = await admin.rpc('expire_subscriptions')
+  const { data: due, error: dueError } = await admin.rpc('billing_due_renewals')
+  if (expiryError || dueError)
+    return new Response('No se pudieron cargar las renovaciones', { status: 500 })
 
   let charged = 0
   let failed = 0
   for (const row of (due ?? []) as {
     tenant_id: string
-    plan: string
-    period: string
     redsys_reference: string
   }[]) {
     const order = newMerchantOrder()
-    const { data: amount } = await admin.rpc('plan_charge_cents', {
-      p_plan: row.plan,
-      p_interval: row.period,
+    const { data: amount, error } = await admin.rpc('billing_reserve_renewal', {
+      p_tenant: row.tenant_id,
+      p_order: order,
     })
-    if (typeof amount !== 'number') continue
-    // El intento se registra antes de cobrar: si algo falla a medias, no se repite en 20 h.
-    const { error } = await admin.from('billing_payments').insert({
-      tenant_id: row.tenant_id,
-      merchant_order: order,
-      kind: 'renewal',
-      plan: row.plan,
-      period: row.period,
-      amount_cents: amount,
-    })
-    if (error) continue
+    if (error) failed++
+    if (error || typeof amount !== 'number') continue
     try {
       const result = await chargeReference({
         config,
@@ -56,13 +47,13 @@ Deno.serve(async (request) => {
         amountCents: amount,
         reference: openReference(row.redsys_reference),
       })
-      await admin.rpc('apply_billing_payment', {
+      const { error: settlementError } = await admin.rpc('apply_billing_payment', {
         p_order: order,
         p_succeeded: result.ok,
         p_code: result.code,
         p_reference: null,
       })
-      if (result.ok) charged++
+      if (result.ok && !settlementError) charged++
       else failed++
     } catch {
       failed++

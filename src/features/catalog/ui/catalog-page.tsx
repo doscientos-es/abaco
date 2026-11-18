@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { useModuleEnabled } from '@/features/product-modules'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
@@ -56,9 +57,11 @@ const empty = {
 
 export function CatalogPage() {
   const { catalog, tenant } = useTenantData()
+  const procurement = useModuleEnabled(tenant.id, 'procurement')
   const inventory = useQuery({
     queryKey: ['inventory', tenant.id],
     queryFn: () => listInventory(tenant.id),
+    enabled: procurement,
   })
   const navigate = useNavigate({ from: '/catalogo' })
   const query = useSearch({ from: '/catalogo' }).q ?? ''
@@ -147,7 +150,7 @@ export function CatalogPage() {
   return (
     <div className="space-y-8">
       <WorkspacePageHeading
-        title="Inventario"
+        title={procurement ? 'Catálogo e inventario' : 'Catálogo'}
         actions={
           <>
             <IconButton
@@ -162,13 +165,17 @@ export function CatalogPage() {
         }
       />
 
-      <p className="text-muted-foreground text-sm">
-        Configura el stock de cada material para descontarlo al aceptar presupuestos. Los artículos
-        marcados como «Sin controlar» no generan avisos de faltantes.
-      </p>
-      <MaterialShortages />
-      {inventory.isError ? (
-        <p role="alert">No se pudo cargar el stock. Reintenta recargando la página.</p>
+      {procurement ? (
+        <>
+          <p className="text-muted-foreground text-sm">
+            Configura el stock de cada material para descontarlo al aceptar presupuestos. Los
+            artículos marcados como «Sin controlar» no generan avisos de faltantes.
+          </p>
+          <MaterialShortages />
+          {inventory.isError ? (
+            <p role="alert">No se pudo cargar el stock. Reintenta recargando la página.</p>
+          ) : null}
+        </>
       ) : null}
 
       <ImportDialog
@@ -350,7 +357,7 @@ export function CatalogPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
-                  {item.kind === 'material' ? (
+                  {procurement && item.kind === 'material' ? (
                     <Button
                       variant="outline"
                       isDisabled={!inventory.isSuccess}
@@ -377,7 +384,7 @@ export function CatalogPage() {
                 <TableHead>Ref.</TableHead>
                 <TableHead>Artículo</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Stock</TableHead>
+                {procurement ? <TableHead>Stock</TableHead> : null}
                 <TableHead className="text-right">Precio</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
@@ -395,20 +402,22 @@ export function CatalogPage() {
                   <TableCell>
                     <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
                   </TableCell>
-                  <TableCell>
-                    {item.kind === 'material' ? (
-                      <Button
-                        variant="outline"
-                        isDisabled={!inventory.isSuccess}
-                        onPress={() => setStockItem(item)}
-                      >
-                        {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
-                          ?.quantity ?? 'Sin controlar'}
-                      </Button>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
+                  {procurement ? (
+                    <TableCell>
+                      {item.kind === 'material' ? (
+                        <Button
+                          variant="outline"
+                          isDisabled={!inventory.isSuccess}
+                          onPress={() => setStockItem(item)}
+                        >
+                          {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
+                            ?.quantity ?? 'Sin controlar'}
+                        </Button>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                  ) : null}
                   <TableCell className="text-right tabular-nums">
                     {formatEuros(item.unitPriceCents)} / {item.unit}
                   </TableCell>
@@ -425,7 +434,7 @@ export function CatalogPage() {
       )}
       <TablePagination controller={pager} noun="artículos" />
 
-      {stockItem ? (
+      {procurement && stockItem ? (
         <InventoryDialog
           item={stockItem}
           stock={inventory.data?.find((stock) => stock.catalog_item_id === stockItem.id)}
