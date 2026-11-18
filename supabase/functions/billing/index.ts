@@ -8,6 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
+import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -51,10 +52,22 @@ Deno.serve(async (request) => {
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const order = newMerchantOrder()
-  const { data: amount, error } = await admin.rpc('billing_manage', {
+  const action = typeof input?.action === 'string' ? input.action : null
+  const isCharge = action === 'checkout' || action === 'retry'
+  let profile = null
+  if (isCharge) {
+    if (config.environment !== 'prod' || config.currency !== '978') {
+      return reply(409, { error: 'El cobro de suscripciones no está habilitado.' })
+    }
+    // RLS restricts the preflight (which can create a CRM client) to this company's admins.
+    const prepared = await prepareCharge(asCaller, tenantId)
+    if (!prepared.profile) return reply(409, { error: prepared.message })
+    profile = prepared.profile
+  }
+  const args = {
     p_tenant: tenantId,
     p_actor: caller.user.id,
-    p_action: typeof input?.action === 'string' ? input.action : null,
+    p_action: action,
     p_plan: typeof input?.plan === 'string' ? input.plan : null,
     p_period: typeof input?.interval === 'string' ? input.interval : null,
     p_seats:
@@ -62,7 +75,10 @@ Deno.serve(async (request) => {
     p_expected_total:
       typeof input?.total === 'number' && Number.isSafeInteger(input.total) ? input.total : null,
     p_order: order,
-  })
+  }
+  const { data: amount, error } = profile
+    ? await admin.rpc('reserve_subscription_invoice_payment', { ...args, p_recipient: profile })
+    : await admin.rpc('billing_manage', args)
   if (error) {
     if (error.code === '42501')
       return reply(403, { error: 'Solo un administrador puede gestionar el plan' })
@@ -70,7 +86,7 @@ Deno.serve(async (request) => {
       return reply(409, { error: error.message })
     return reply(500, { error: 'No se pudo gestionar la facturación' })
   }
-  if (input?.action !== 'checkout' && input?.action !== 'retry') return reply(200, { ok: true })
+  if (!isCharge) return reply(200, { ok: true })
   if (typeof amount !== 'number' || amount <= 0)
     return reply(500, { error: 'Precio no disponible' })
 

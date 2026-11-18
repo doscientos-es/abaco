@@ -155,6 +155,19 @@ export function PaymentHistory({
                   <p className="text-muted-foreground text-xs">
                     {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
                   </p>
+                  {p.status === 'succeeded' &&
+                    (p.invoicePortalUrl && p.invoiceNumber ? (
+                      <a
+                        className="text-primary text-xs underline"
+                        href={p.invoicePortalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Factura {p.invoiceNumber}
+                      </a>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">Factura aún no disponible</p>
+                    ))}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`rounded-full px-2 py-0.5 text-[11px] ${statusStyle[p.status]}`}>

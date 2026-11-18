@@ -14,16 +14,19 @@ import {
   DropdownMenuTrigger,
   Toaster,
 } from '@doscientos/ui'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { roleLabels, useSession, useSignOut } from '@/features/auth'
 import { GlobalSearch } from '@/features/global-search'
+import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 
 import { initials, SidebarLink, type NavItem } from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
+import { PlatformMenuSection } from './platform-menu-section'
 
 import './technician-frame.css'
 
@@ -42,6 +45,7 @@ const navigation: NavItem[] = [
 /** User pages never hydrate the office store or expose its financial data. */
 export function UserFrame({ children }: { children: ReactNode }) {
   const session = useSession()
+  const { data: hasPlatformAccess } = useQuery(platformAccessQuery(session?.userId ?? ''))
   const signOut = useSignOut()
   const navigate = useNavigate()
   const company = session?.companies.find((item) => item.id === session.tenantId)
@@ -53,6 +57,13 @@ export function UserFrame({ children }: { children: ReactNode }) {
       <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
         Ajustes y empresas
       </DropdownMenuItem>
+      {hasPlatformAccess === true ? (
+        <>
+          <DropdownMenuSeparator />
+          <PlatformMenuSection onOpen={() => void navigate({ to: '/superadmin' })} />
+          <DropdownMenuSeparator />
+        </>
+      ) : null}
       <DropdownMenuItem onAction={() => void navigate({ to: '/nueva-contrasena' })}>
         Cambiar contraseña
       </DropdownMenuItem>

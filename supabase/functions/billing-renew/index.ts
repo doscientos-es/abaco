@@ -11,6 +11,7 @@ import {
   openReference,
   readRedsysConfig,
 } from '../_shared/redsys.ts'
+import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
 Deno.serve(async (request) => {
   const url = Deno.env.get('SUPABASE_URL')
@@ -20,6 +21,9 @@ Deno.serve(async (request) => {
   if (!url || !serviceKey || !cronSecret || !config)
     return new Response('Sin configurar', { status: 500 })
   if (!isCronAuthorized(request, cronSecret)) return new Response('No autorizado', { status: 401 })
+  if (config.environment !== 'prod' || config.currency !== '978') {
+    return Response.json({ charged: 0, disabled: true })
+  }
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { error: expiryError } = await admin.rpc('expire_subscriptions')
@@ -29,14 +33,27 @@ Deno.serve(async (request) => {
 
   let charged = 0
   let failed = 0
+  let fiscalBlocked = 0
   for (const row of (due ?? []) as {
     tenant_id: string
     redsys_reference: string
   }[]) {
+    const prepared = await prepareCharge(admin, row.tenant_id)
+    if (!prepared.profile) {
+      fiscalBlocked++
+      continue
+    }
     const order = newMerchantOrder()
-    const { data: amount, error } = await admin.rpc('billing_reserve_renewal', {
+    const { data: amount, error } = await admin.rpc('reserve_subscription_invoice_payment', {
       p_tenant: row.tenant_id,
       p_order: order,
+      p_recipient: prepared.profile,
+      p_actor: null,
+      p_action: 'renewal',
+      p_plan: null,
+      p_period: null,
+      p_seats: null,
+      p_expected_total: null,
     })
     if (error) failed++
     if (error || typeof amount !== 'number') continue
@@ -59,5 +76,5 @@ Deno.serve(async (request) => {
       failed++
     }
   }
-  return Response.json({ charged, failed })
+  return Response.json({ charged, failed, fiscalBlocked })
 })

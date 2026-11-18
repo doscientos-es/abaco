@@ -41,6 +41,7 @@ import { WorkspaceChromeContext } from '@/shared/ui/workspace-page-chrome'
 import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
+import { PlatformMenuSection } from './platform-menu-section'
 import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
 type NavGroup = { label: string; items: NavItem[] }
@@ -139,10 +140,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const procurement = useModuleEnabled(tenant.id, 'procurement')
   const saveStatus = useSaveStatus()
   const session = useSession()
-  const platformAccess = useQuery({
-    ...platformAccessQuery(session?.userId ?? ''),
-    enabled: Boolean(session?.userId),
-  })
+  const { data: hasPlatformAccess } = useQuery(platformAccessQuery(session?.userId ?? ''))
   const signOut = useSignOut()
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
@@ -151,7 +149,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [tabsTarget, setTabsTarget] = useState<HTMLDivElement | null>(null)
   const userName = session?.fullName || session?.email || tenant.name
   const allowed = (item: NavItem) => {
-    if (item.to === '/superadmin') return platformAccess.data === true
+    if (item.to === '/superadmin') return hasPlatformAccess === true
     if (item.to === '/proveedores' && !procurement) return false
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
@@ -227,6 +225,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ))}
       <DropdownMenuItem onAction={() => setCreatingCompany(true)}>Nueva empresa…</DropdownMenuItem>
       <DropdownMenuSeparator />
+      {hasPlatformAccess === true ? (
+        <>
+          <PlatformMenuSection onOpen={() => void navigate({ to: '/superadmin' })} />
+          <DropdownMenuSeparator />
+        </>
+      ) : null}
       {canSeeSettings ? (
         <>
           <DropdownMenuItem onAction={() => void navigate({ to: '/personalizar' })}>

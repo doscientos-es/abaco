@@ -112,6 +112,8 @@ describe('PaymentHistory', () => {
       status: 'succeeded',
       createdAt: new Date('2026-11-01'),
       settledAt: null,
+      invoiceNumber: null,
+      invoicePortalUrl: null,
     }
     query.mockReturnValue({ data: [payment], isPending: false, isError: false })
     render()
@@ -119,6 +121,31 @@ describe('PaymentHistory', () => {
     const receipt = download.mock.calls[0]?.[1] as string
     expect(receipt).toContain(`IVA (${payment.vatPercent} %)`)
     expect(receipt).toContain(`>${tax}\u00a0€</td>`)
+  })
+
+  it('links the fiscal invoice separately from the payment receipt once available', () => {
+    const payment: Payment = {
+      id: 'paid',
+      order: '1234TEST',
+      plan: 'solo',
+      period: 'month',
+      kind: 'first',
+      vatPercent: 21,
+      netCents: 2000,
+      amountCents: 2420,
+      status: 'succeeded',
+      createdAt: new Date('2026-11-01'),
+      settledAt: null,
+      invoiceNumber: 'TEST-0001',
+      invoicePortalUrl: 'https://invoices.example.test/p/invoice/synthetic',
+    }
+    query.mockReturnValue({ data: [payment], isPending: false, isError: false })
+    const html = render()
+    expect(html).toContain(`href="${payment.invoicePortalUrl}"`)
+    expect(html).toContain('Factura TEST-0001')
+    expect(html).toContain('Justificante')
+    query.mockReturnValue({ data: [{ ...payment, invoicePortalUrl: null, invoiceNumber: null }] })
+    expect(render()).toContain('Factura aún no disponible')
   })
 
   it('keeps the end date visible for an expired trial', () => {

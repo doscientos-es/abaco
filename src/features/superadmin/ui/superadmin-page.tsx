@@ -1,198 +1,86 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { useSession } from '@/features/auth'
-import { billingPreviewQuery } from '@/features/billing'
-import { ModuleSubscriptions } from '@/features/product-modules'
 
 import {
   platformAccessQuery,
   platformCompaniesQuery,
-  platformPaymentsQuery,
-  platformPaymentSummaryQuery,
-  type PlatformCompany,
+  platformCompanyQuery,
 } from '../application/superadmin-queries'
-import { CompanyBillingAgreement } from './company-billing-agreement'
+import { platformPageSize, type PlatformSearch } from '../domain/platform-navigation'
+import { CompanyDetail, DirectoryBackLink } from './company-detail'
+import { CompanyDirectory } from './company-directory'
+import { PlatformShell } from './platform-shell'
+import { PlatformMessage } from './platform-ui'
 
-const date = (value: string | null) =>
-  value ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(value)) : '—'
-const money = (cents: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100)
-
-export function SuperadminPage() {
+export function SuperadminPage({ search }: { search: PlatformSearch }) {
   const session = useSession()
   const access = useQuery(platformAccessQuery(session?.userId ?? ''))
-  if (access.isPending) return <p>Cargando acceso…</p>
-  if (access.isError) return <p role="alert">No se pudo comprobar el acceso. Inténtalo de nuevo.</p>
-  if (!access.data) return <p role="alert">No tienes acceso al panel de plataforma.</p>
-  return <CompanyBrowser />
-}
 
-function CompanyBrowser() {
-  const [search, setSearch] = useState('')
-  const [offset, setOffset] = useState(0)
-  const [company, setCompany] = useState<PlatformCompany | null>(null)
-  const companies = useQuery(platformCompaniesQuery(search.trim(), offset))
-  return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <header>
-        <Link to="/" className="text-primary text-sm">
-          ← Volver a la aplicación
-        </Link>
-        <h1 className="text-xl font-semibold">Administración de Ábaco</h1>
-      </header>
-      {company ? (
-        <CompanyDetail key={company.id} company={company} onBack={() => setCompany(null)} />
-      ) : (
-        <section className="space-y-4">
-          <label className="block text-sm font-medium" htmlFor="platform-search">
-            Buscar empresa
-          </label>
-          <input
-            id="platform-search"
-            className="border-border bg-background w-full rounded-md border px-3 py-2"
-            maxLength={120}
-            value={search}
-            onChange={(event) => {
-              setSearch(event.currentTarget.value)
-              setOffset(0)
-            }}
+  if (!access.data || access.isError) {
+    return (
+      <main className="mx-auto max-w-lg px-4 py-10">
+        {access.isPending ? (
+          <output>Comprobando acceso…</output>
+        ) : access.isError ? (
+          <PlatformMessage
+            title="No se pudo comprobar el acceso."
+            onRetry={() => void access.refetch()}
           />
-          {companies.isPending ? <p>Cargando empresas…</p> : null}
-          {companies.isError ? <p role="alert">No se pudieron cargar las empresas.</p> : null}
-          {companies.data?.length === 0 ? <p>No hay empresas para esta búsqueda.</p> : null}
-          <ul className="divide-border divide-y">
-            {companies.data?.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className="w-full py-3 text-left"
-                  onClick={() => setCompany(item)}
-                >
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-muted-foreground block text-sm">
-                    {item.plan} · {item.subscription_status} · {item.member_count} personas ·
-                    Renovación: {date(item.current_period_end)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Pagination offset={offset} count={companies.data?.length ?? 0} onChange={setOffset} />
-        </section>
+        ) : (
+          <p role="alert">No tienes acceso al panel de plataforma.</p>
+        )}
+      </main>
+    )
+  }
+
+  return (
+    <PlatformShell session={session} search={search}>
+      {search.empresa ? (
+        <CompanyPage search={search} tenantId={search.empresa} />
+      ) : (
+        <DirectoryPage search={search} />
       )}
-    </main>
+    </PlatformShell>
   )
 }
 
-function CompanyDetail({ company, onBack }: { company: PlatformCompany; onBack: () => void }) {
-  const [offset, setOffset] = useState(0)
-  const [status, setStatus] = useState('')
-  const payments = useQuery(platformPaymentsQuery(company.id, offset, status))
-  const summary = useQuery(platformPaymentSummaryQuery(company.id))
-  const queryClient = useQueryClient()
-  const preview = useQuery({
-    ...billingPreviewQuery(company.id),
-    enabled: !company.is_complimentary,
-  })
+function DirectoryPage({ search }: { search: PlatformSearch }) {
+  const offset = ((search.page ?? 1) - 1) * platformPageSize
+  const companies = useQuery(platformCompaniesQuery(search.q ?? '', offset))
+
   return (
-    <section className="space-y-4">
-      <button type="button" onClick={onBack} className="text-primary text-sm">
-        ← Empresas
-      </button>
-      <h2 className="text-xl font-semibold">{company.name}</h2>
-      <p className="text-muted-foreground text-sm">
-        Plan: {company.plan} · Estado: {company.subscription_status} · Personas:{' '}
-        {company.member_count}
-        {' · '}Periodo: {company.billing_interval ?? '—'} · Renovación:{' '}
-        {date(company.current_period_end)}
-        {company.is_complimentary ? ' · Cortesía' : ''}
-      </p>
-      {!company.is_complimentary ? (
-        <CompanyBillingAgreement
-          tenantId={company.id}
-          members={company.member_count}
-          subscriptionStatus={company.subscription_status}
+    <CompanyDirectory
+      companies={companies.data ?? []}
+      search={search}
+      loading={companies.isPending}
+      onRetry={companies.isError ? () => void companies.refetch() : undefined}
+    />
+  )
+}
+
+function CompanyPage({ search, tenantId }: { search: PlatformSearch; tenantId: string }) {
+  const company = useQuery(platformCompanyQuery(tenantId))
+
+  if (company.data && !company.isError) {
+    return <CompanyDetail key={tenantId} company={company.data} search={search} />
+  }
+
+  return (
+    <div className="space-y-4">
+      <DirectoryBackLink search={search} />
+      {company.isPending ? (
+        <output>Cargando empresa…</output>
+      ) : company.isError ? (
+        <PlatformMessage
+          title="No se pudo cargar la empresa."
+          onRetry={() => void company.refetch()}
         />
-      ) : null}
-      <ModuleSubscriptions
-        tenantId={company.id}
-        active={company.subscription_status === 'active'}
-        courtesy={company.is_complimentary}
-        blocked={
-          !company.is_complimentary &&
-          (!preview.data ||
-            preview.data.pending ||
-            preview.data.cancel_at_period_end ||
-            company.subscription_status === 'past_due')
-        }
-        onChanged={() =>
-          queryClient.invalidateQueries({ queryKey: billingPreviewQuery(company.id).queryKey })
-        }
-      />
-      <h3 className="font-semibold">Pagos</h3>
-      {summary.isPending ? <p>Cargando resumen…</p> : null}
-      {summary.isError ? <p role="alert">No se pudo cargar el resumen de pagos.</p> : null}
-      {summary.data ? (
-        <p className="text-sm">
-          Cobrados: {summary.data.succeeded_count} ({money(summary.data.succeeded_cents)}) ·
-          Fallidos: {summary.data.failed_count} · Pendientes: {summary.data.pending_count}
-        </p>
-      ) : null}
-      <label htmlFor="platform-payment-status" className="text-sm">
-        Estado
-      </label>{' '}
-      <select
-        id="platform-payment-status"
-        value={status}
-        onChange={(event) => {
-          setStatus(event.currentTarget.value)
-          setOffset(0)
-        }}
-      >
-        <option value="">Todos</option>
-        <option value="succeeded">Cobrado</option>
-        <option value="failed">Fallido</option>
-        <option value="pending">Pendiente</option>
-      </select>
-      {payments.isPending ? <p>Cargando pagos…</p> : null}
-      {payments.isError ? <p role="alert">No se pudieron cargar los pagos.</p> : null}
-      {payments.data?.length === 0 ? <p>No hay pagos para este filtro.</p> : null}
-      <ul className="divide-border divide-y">
-        {payments.data?.map((payment) => (
-          <li key={payment.id} className="py-3 text-sm">
-            {date(payment.created_at)} · {money(payment.amount_cents)} IVA incluido ·{' '}
-            {payment.status} · {payment.plan} / {payment.period}
-          </li>
-        ))}
-      </ul>
-      <Pagination offset={offset} count={payments.data?.length ?? 0} onChange={setOffset} />
-    </section>
-  )
-}
-
-function Pagination({
-  offset,
-  count,
-  onChange,
-}: {
-  offset: number
-  count: number
-  onChange: (n: number) => void
-}) {
-  return (
-    <div className="flex gap-4 text-sm">
-      <button
-        type="button"
-        disabled={offset === 0}
-        onClick={() => onChange(Math.max(0, offset - 50))}
-      >
-        Anterior
-      </button>
-      <button type="button" disabled={count < 50} onClick={() => onChange(offset + 50)}>
-        Siguiente
-      </button>
+      ) : (
+        <PlatformMessage title="No se ha encontrado la empresa.">
+          Vuelve al directorio para elegir otra.
+        </PlatformMessage>
+      )}
     </div>
   )
 }

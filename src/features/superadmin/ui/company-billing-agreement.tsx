@@ -50,8 +50,8 @@ export function CompanyBillingAgreement({
       : null
 
   return (
-    <details className="border-border space-y-3 rounded-lg border p-4">
-      <summary className="cursor-pointer font-semibold">Condiciones de facturación</summary>
+    <div className="border-border bg-card space-y-4 rounded-lg border p-4 sm:p-5">
+      <h3 className="font-semibold">Condiciones de facturación</h3>
       {preview.isPending || catalog.isPending ? <output>Cargando condiciones…</output> : null}
       {preview.isError || catalog.isError ? (
         <p role="alert">No se pudieron consultar las condiciones.</p>
@@ -90,7 +90,7 @@ export function CompanyBillingAgreement({
       {mutation.isSuccess ? (
         <output className="block">Condiciones guardadas. No se ha realizado ningún cobro.</output>
       ) : null}
-    </details>
+    </div>
   )
 }
 

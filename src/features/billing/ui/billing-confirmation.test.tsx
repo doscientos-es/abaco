@@ -77,6 +77,9 @@ vi.mock('./pricing-catalog', () => ({
     ),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
+vi.mock('./subscription-billing-profile-form', () => ({
+  SubscriptionBillingProfileForm: () => null,
+}))
 vi.mock('@/features/product-modules', () => ({
   ModuleSubscriptions: () => null,
   moduleSubscriptionsQuery: () => ({ queryKey: ['module-subscriptions'] }),

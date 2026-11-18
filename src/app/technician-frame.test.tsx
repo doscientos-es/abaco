@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UserFrame } from './technician-frame'
 
-const { session, signOut, navigate, menuItem } = vi.hoisted(() => ({
+const { session, signOut, navigate, menuItem, platformAccess } = vi.hoisted(() => ({
   session: vi.fn(),
   signOut: vi.fn(),
   navigate: vi.fn(),
   menuItem: vi.fn(),
+  platformAccess: vi.fn(),
 }))
 
+vi.mock('@tanstack/react-query', () => ({ useQuery: platformAccess }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
     to,
@@ -39,6 +41,9 @@ vi.mock('@/features/global-search', () => ({
   GlobalSearch: ({ data }: { data?: unknown }) => (
     <span>{data ? 'Datos de empresa' : 'Buscar secciones'}</span>
   ),
+}))
+vi.mock('@/features/superadmin', () => ({
+  platformAccessQuery: (userId: string) => ({ queryKey: ['platform-access', userId] }),
 }))
 vi.mock('@doscientos/ui', () => {
   const box = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
@@ -77,6 +82,7 @@ vi.mock('@doscientos/ui', () => {
       variant?: string
     }) => <button {...props}>{children}</button>,
     DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    DropdownMenuGroup: box,
     DropdownMenuItem: menuItem,
     DropdownMenuLabel: box,
     DropdownMenuSeparator: () => <hr />,
@@ -88,7 +94,9 @@ vi.mock('@doscientos/ui', () => {
 describe('worker navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    platformAccess.mockReturnValue({ data: false })
     session.mockReturnValue({
+      userId: 'worker-user',
       fullName: 'Ana Pérez',
       email: 'ana@example.test',
       role: 'user',
@@ -117,8 +125,24 @@ describe('worker navigation', () => {
       expect(html).not.toContain(`href="${path}"`)
     }
     expect(html).toContain('Menú de usuario')
+    expect(html).not.toContain('Administración de Ábaco')
     expect(html).toContain('Buscar secciones')
     expect(html).not.toContain('Datos de empresa')
+  })
+
+  it('opens platform administration from either worker menu only with platform access', () => {
+    platformAccess.mockReturnValue({ data: true })
+    const html = renderToStaticMarkup(<UserFrame>Contenido</UserFrame>)
+
+    expect(platformAccess).toHaveBeenCalledWith({ queryKey: ['platform-access', 'worker-user'] })
+    expect(html).toContain('Plataforma')
+    const items = menuItem.mock.calls.filter(
+      ([props]) => props.children === 'Administración de Ábaco',
+    )
+    expect(items).toHaveLength(2)
+    for (const [item] of items) item.onAction()
+    expect(navigate).toHaveBeenCalledTimes(2)
+    expect(navigate).toHaveBeenCalledWith({ to: '/superadmin' })
   })
 
   it('keeps the page in a dedicated keyboard-accessible content region', () => {

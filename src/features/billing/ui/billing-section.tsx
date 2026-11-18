@@ -30,6 +30,7 @@ import {
 } from '../domain/plans'
 import { PaymentHistory } from './payment-history'
 import { PricingCatalog } from './pricing-catalog'
+import { SubscriptionBillingProfileForm } from './subscription-billing-profile-form'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', {
   day: 'numeric',
@@ -183,6 +184,7 @@ export function BillingSection({
           </output>
         ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
+        <SubscriptionBillingProfileForm key={tenantId} tenantId={tenantId} />
         <hr className="border-border" />
         {subscriptionState.isError || team.isError || preview.isError ? (
           <div role="alert" className="space-y-2">

@@ -72,11 +72,11 @@ function RootLayout() {
   const { session } = Route.useRouteContext()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isPublic = isPublicPath(pathname) || pathname === '/nueva-contrasena'
-  const signedIn = session?.role === 'admin' && !isPublic
+  const inOffice = session?.role === 'admin' && !isPublic && pathname !== '/superadmin'
 
   // Picks up changes made elsewhere (a client accepting an estimate) when the user comes back to the tab.
   useEffect(() => {
-    if (!signedIn) return
+    if (!inOffice) return
     const refresh = () => refreshStore()
     void refresh()
     const onVisible = () => {
@@ -88,7 +88,7 @@ function RootLayout() {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [signedIn])
+  }, [inOffice])
 
   if (isPublic || !session) return <Outlet />
   // Platform access is independent of the user's current company membership.

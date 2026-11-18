@@ -27,6 +27,9 @@ verify_jwt = false
 [functions.billing-renew]
 verify_jwt = false
 
+[functions.subscription-invoices]
+verify_jwt = false
+
 [functions.auth-email]
 verify_jwt = false
 

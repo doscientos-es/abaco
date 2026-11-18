@@ -52,6 +52,8 @@ export type PlatformPayment = {
   status: 'pending' | 'succeeded' | 'failed'
   created_at: string
   settled_at: string | null
+  invoice_number?: string | null
+  invoice_status?: string | null
 }
 
 export type PaymentSummary = {
@@ -64,6 +66,7 @@ export type PaymentSummary = {
 export const platformAccessQuery = (userId: string) =>
   queryOptions({
     queryKey: ['platform-access', userId],
+    enabled: Boolean(userId),
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await createBrowserSupabaseClient().rpc('is_platform_superadmin')
@@ -85,6 +88,18 @@ export const platformCompaniesQuery = (search: string, offset: number) =>
     },
   })
 
+export const platformCompanyQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['platform-company', tenantId],
+    queryFn: async (): Promise<PlatformCompany | null> => {
+      const { data, error } = await createBrowserSupabaseClient()
+        .rpc('superadmin_company', { p_tenant: tenantId })
+        .maybeSingle<PlatformCompany>()
+      if (error) throw new Error('No se pudo cargar la empresa.')
+      return data
+    },
+  })
+
 export const platformPaymentsQuery = (tenantId: string, offset: number, status: string) =>
   queryOptions({
     queryKey: ['platform-payments', tenantId, offset, status],
@@ -95,7 +110,21 @@ export const platformPaymentsQuery = (tenantId: string, offset: number, status: 
         p_status: status || null,
       })
       if (error) throw new Error('No se pudieron cargar los pagos.')
-      return data as PlatformPayment[]
+      const payments = data as PlatformPayment[]
+      const confirmed = payments.filter((payment) => payment.status === 'succeeded')
+      if (!confirmed.length) return payments
+      const { data: states, error: statesError } = await createBrowserSupabaseClient().rpc(
+        'superadmin_subscription_invoice_states',
+        {
+          p_tenant: tenantId,
+          p_payments: confirmed.map((payment) => payment.id),
+        },
+      )
+      if (statesError) throw new Error('No se pudo consultar el estado de las facturas.')
+      const byPayment = new Map<string, Pick<PlatformPayment, 'invoice_status' | 'invoice_number'>>(
+        states.map((row: PlatformPayment) => [row.id, row]),
+      )
+      return payments.map((payment) => ({ ...payment, ...byPayment.get(payment.id) }))
     },
   })
 

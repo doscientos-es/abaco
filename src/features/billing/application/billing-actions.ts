@@ -165,6 +165,8 @@ export type Payment = {
   status: PaymentStatus
   createdAt: Date
   settledAt: Date | null
+  invoiceNumber: string | null
+  invoicePortalUrl: string | null
 }
 
 /** Every charge attempt of the company, newest first. Only admins can read them (RLS). */
@@ -182,7 +184,7 @@ export const paymentsQuery = (tenantId: string) =>
           createBrowserSupabaseClient()
             .from('billing_payments')
             .select(
-              'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at',
+              'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url',
             )
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
@@ -207,6 +209,8 @@ export const paymentsQuery = (tenantId: string) =>
           status: row.status as PaymentStatus,
           createdAt: new Date(row.created_at),
           settledAt: row.settled_at ? new Date(row.settled_at) : null,
+          invoiceNumber: row.invoice_number,
+          invoicePortalUrl: row.invoice_portal_url,
         }))
       } finally {
         clearTimeout(timer)
