@@ -66,7 +66,7 @@ vi.mock('@tanstack/react-router', () => ({
   ),
   useNavigate: () => vi.fn(),
 }))
-vi.mock(import('@tanstack/react-query'), async (importOriginal) => ({
+vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal()),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data:
