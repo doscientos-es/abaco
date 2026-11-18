@@ -39,7 +39,7 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(html).toContain('contratos recurrentes y visitas')
   expect(html).toContain('Compras e inventario')
   expect(html).toMatch(/\+19,00\s*€ al mes/)
-  expect(html).toContain('no se contrata ni se cobra desde esta pantalla')
+  expect(html).toContain('Ajustes → Plan y facturación')
   expect(action).toHaveBeenCalledWith(
     expect.objectContaining({ net_cents: 3400, amount_cents: 4114 }),
     expect.objectContaining({ id: 'team' }),

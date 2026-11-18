@@ -2,8 +2,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(23);
 
-insert into public.tenants (id, name) values
-  ('91000000-0000-4000-8000-000000000001', 'Empresa inventario');
+insert into public.tenants (id, name, is_complimentary) values
+  ('91000000-0000-4000-8000-000000000001', 'Empresa inventario', true);
 insert into public.clients (id, tenant_id, name) values
   ('91000000-0000-4000-8000-000000000002', '91000000-0000-4000-8000-000000000001', 'Cliente');
 insert into auth.users (id, email) values
@@ -39,11 +39,11 @@ set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000003';
 select ok(not public.can_use_procurement('91000000-0000-4000-8000-000000000001'), 'New tenant has no optional module by default');
 select is((select count(*) from public.suppliers where tenant_id = '91000000-0000-4000-8000-000000000001'), 0::bigint, 'REST reads are gated even if data exists');
 select is((select count(*) from public.catalog_items where tenant_id = '91000000-0000-4000-8000-000000000001'), 2::bigint, 'The base catalog stays readable');
-select throws_ok($$select public.superadmin_set_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true)$$, '42501', 'No autorizado', 'Tenant users cannot grant themselves a module');
+select throws_ok($$select public.schedule_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true,1900,19000)$$, '42501', 'No autorizado', 'Tenant users cannot grant themselves a module');
 select throws_ok($$select public.save_inventory_item('91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000010', 5, null, null)$$, '42501', 'Compras e inventario no está activado en esta empresa', 'Stock RPC checks module access');
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000005';
-select throws_ok($$select public.superadmin_set_tenant_module('91000000-0000-4000-8000-000000000001','supplier_logistics',true)$$, '22023', 'Módulo no disponible', 'Planned modules cannot be enabled');
-select public.superadmin_set_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true);
+select throws_ok($$select public.schedule_tenant_module('91000000-0000-4000-8000-000000000001','supplier_logistics',true,2900,29000)$$, '22023', 'Módulo no disponible', 'Planned modules cannot be enabled');
+select public.schedule_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true,1900,19000);
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000003';
 select ok(public.can_use_procurement('91000000-0000-4000-8000-000000000001'), 'Platform activation enables the existing tenant role');
 select public.save_inventory_item('91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000010', 5, '91000000-0000-4000-8000-000000000012', null);
@@ -67,7 +67,7 @@ select is((select count(*) from public.inventory_items where tenant_id = '910000
 select throws_ok($$select public.save_inventory_item('91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000010', 10, null, 2)$$, '42501', 'Compras e inventario no está activado en esta empresa', 'Viewer cannot change inventory');
 
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000005';
-select public.superadmin_set_tenant_module('91000000-0000-4000-8000-000000000001','procurement',false);
+select public.schedule_tenant_module('91000000-0000-4000-8000-000000000001','procurement',false,1900,19000);
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000003';
 select is((select count(*) from public.inventory_items where tenant_id = '91000000-0000-4000-8000-000000000001'), 0::bigint, 'Deactivation hides existing stock');
 select throws_ok($$select public.resolve_inventory_shortage('91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000010')$$, '42501', 'Compras e inventario no está activado en esta empresa', 'Shortage RPC checks module access');
@@ -78,7 +78,7 @@ select is((select status::text from public.estimates where id = '91000000-0000-4
 select is((select count(*) from public.inventory_allocations where estimate_id = '91000000-0000-4000-8000-000000000022'), 0::bigint, 'Acceptance while disabled does not allocate stock');
 set local role authenticated;
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000005';
-select public.superadmin_set_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true);
+select public.schedule_tenant_module('91000000-0000-4000-8000-000000000001','procurement',true,1900,19000);
 set local request.jwt.claim.sub = '91000000-0000-4000-8000-000000000003';
 select is((select quantity from public.inventory_items where catalog_item_id = '91000000-0000-4000-8000-000000000011'), 9::numeric, 'Reactivation restores the existing stock unchanged');
 select * from finish();

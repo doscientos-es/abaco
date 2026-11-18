@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { catalogQuote, smallestRateFor, type CatalogRate } from './plans'
+import { catalogQuote, smallestRateFor, withModulePrice, type CatalogRate } from './plans'
 
 const rate = (plan: CatalogRate['plan'], seats: number, monthly: number): CatalogRate => ({
   plan,
@@ -45,6 +45,17 @@ describe('catalogue quotes', () => {
       period: 'year',
       net_cents: 329000,
       amount_cents: 398090,
+      vat_percent: 21,
+    })
+  })
+
+  it('does not add VAT to either the base plan or the modules at 0 %', () => {
+    const team = rate('team', 5, 3400)
+    expect(withModulePrice(catalogQuote(team, 'month', 0), 1900)).toMatchObject({
+      base_net_cents: 3400,
+      net_cents: 5300,
+      amount_cents: 5300,
+      vat_percent: 0,
     })
   })
 })

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { formatEuros, type BillingTerms, type PlanInfo } from '../domain/plans'
+import { billingVatLabel, formatEuros, type BillingTerms, type PlanInfo } from '../domain/plans'
 
 export function PlanOptionCard({
   plan,
@@ -45,7 +45,7 @@ export function PlanOptionCard({
           </span>
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          {formatEuros(terms.amount_cents / 100)} con IVA,{' '}
+          {formatEuros(terms.amount_cents / 100)} {billingVatLabel(terms.vat_percent)},{' '}
           {yearly ? 'en un único pago anual' : 'al mes'}.
         </p>
       </div>

@@ -21,10 +21,12 @@ import { PlanOptionCard } from './plan-option-card'
 export function PricingCatalog({
   actualMembers = 1,
   showModuleCatalog = true,
+  vatPercent,
   renderAction,
 }: {
   actualMembers?: number
   showModuleCatalog?: boolean
+  vatPercent?: number
   renderAction?: (terms: BillingTerms, plan: PlanInfo) => ReactNode
 }) {
   const catalog = useQuery(billingCatalogQuery)
@@ -89,7 +91,7 @@ export function PricingCatalog({
                 ? scaleRate
                 : catalog.data.find((option) => option.plan === plan.id)
             if (!rate) return null
-            const terms = catalogQuote(rate, period)
+            const terms = catalogQuote(rate, period, vatPercent)
             return (
               <PlanOptionCard
                 key={plan.id}

@@ -20,7 +20,14 @@ import {
   type BillingResult,
   type Subscription,
 } from '../application/billing-actions'
-import { formatEuros, planInfo, withModulePrice, type BillingTerms } from '../domain/plans'
+import {
+  billingVatLabel,
+  formatEuros,
+  planInfo,
+  STANDARD_BILLING_VAT,
+  withModulePrice,
+  type BillingTerms,
+} from '../domain/plans'
 import { PaymentHistory } from './payment-history'
 import { PricingCatalog } from './pricing-catalog'
 
@@ -191,16 +198,18 @@ export function BillingSection({
           </div>
         ) : null}
         {pending ? (
-          <p role="status">
+          <output className="block">
             Hay un pago pendiente de verificar. No repitas el pago. Si el estado no cambia, contacta
             con Ábaco.
-          </p>
+          </output>
         ) : null}
         {upcoming && !subscription?.cancelAtPeriodEnd && (active || scheduled || pastDue) ? (
           <p>
             {active ? 'Próxima renovación' : 'Importe a pagar'}:{' '}
-            <strong>{formatEuros(upcoming.amount_cents / 100)} con IVA</strong> por{' '}
-            {upcoming.period === 'year' ? 'año' : 'mes'}.
+            <strong>
+              {formatEuros(upcoming.amount_cents / 100)} {billingVatLabel(upcoming.vat_percent)}
+            </strong>{' '}
+            por {upcoming.period === 'year' ? 'año' : 'mes'}.
             {upcoming.module_net_cents ? (
               <> Incluye {formatEuros(upcoming.module_net_cents / 100)} en módulos, sin IVA.</>
             ) : null}
@@ -244,6 +253,7 @@ export function BillingSection({
         <PricingCatalog
           actualMembers={members}
           showModuleCatalog={false}
+          vatPercent={preview.data?.vat_percent ?? STANDARD_BILLING_VAT}
           renderAction={(terms, plan) => {
             const current = preview.data?.current
             const same =
@@ -293,8 +303,11 @@ export function BillingSection({
             </h3>
             <p>
               {formatEuros(selection.terms.net_cents / 100)} sin IVA ·{' '}
-              <strong>{formatEuros(selection.terms.amount_cents / 100)} con IVA</strong> por{' '}
-              {selection.terms.period === 'year' ? 'año' : 'mes'}.
+              <strong>
+                {formatEuros(selection.terms.amount_cents / 100)}{' '}
+                {billingVatLabel(selection.terms.vat_percent)}
+              </strong>{' '}
+              por {selection.terms.period === 'year' ? 'año' : 'mes'}.
             </p>
             {selection.terms.module_net_cents ? (
               <p className="text-sm">

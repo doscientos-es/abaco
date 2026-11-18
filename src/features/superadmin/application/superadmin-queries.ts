@@ -24,6 +24,14 @@ export async function scheduleBillingAgreement(tenantId: string, agreement: Bill
   }
 }
 
+export async function setCompanyBillingVat(tenantId: string, vatPercent: number) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_set_billing_vat', {
+    p_tenant: tenantId,
+    p_vat: vatPercent,
+  })
+  if (error) throw new Error(error.code === 'P0001' ? error.message : 'No se pudo guardar el IVA.')
+}
+
 export type PlatformCompany = {
   id: string
   name: string

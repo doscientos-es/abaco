@@ -23,12 +23,15 @@ alter table public.tenants drop constraint tenants_plan_check,
   add column billing_seats integer check (billing_seats between 1 and 200),
   add column billing_net_cents integer check (billing_net_cents between 1 and 10000000),
   add column billing_module_net_cents integer not null default 0 check (billing_module_net_cents >= 0),
+  add column billing_vat_percent integer not null default 21 check (billing_vat_percent in (0,21)),
+  add column billing_paid_vat_percent integer not null default 21 check (billing_paid_vat_percent in (0,21)),
   add column next_billing_seats integer check (next_billing_seats between 1 and 200),
   add column next_billing_net_cents integer check (next_billing_net_cents between 1 and 10000000);
 alter table public.billing_payments drop constraint billing_payments_plan_check,
   add constraint billing_payments_plan_check check (plan in ('solo','team','business','scale')),
   add column seats integer check (seats between 1 and 200),
   add column net_cents integer check (net_cents > 0),
+  add column vat_percent integer not null default 21 check (vat_percent in (0,21)),
   add column module_net_cents integer check (module_net_cents >= 0 and module_net_cents < net_cents);
 
 -- Preserve exactly what the old checkout/renewal would have charged at migration time.
@@ -47,10 +50,12 @@ begin
          or new.billing_interval is not null or new.current_period_end is not null
          or new.next_plan is not null or new.next_interval is not null
          or new.billing_module_net_cents <> 0
+         or new.billing_vat_percent <> 21 or new.billing_paid_vat_percent <> 21
          or num_nonnulls(new.billing_seats,new.billing_net_cents,new.next_billing_seats,new.next_billing_net_cents) > 0))
        or (tg_op = 'UPDATE' and row(new.billing_seats,new.billing_net_cents,new.next_billing_seats,new.next_billing_net_cents)
          is distinct from row(old.billing_seats,old.billing_net_cents,old.next_billing_seats,old.next_billing_net_cents)
-         or (tg_op = 'UPDATE' and new.billing_module_net_cents is distinct from old.billing_module_net_cents))
+         or (tg_op = 'UPDATE' and row(new.billing_module_net_cents,new.billing_vat_percent,new.billing_paid_vat_percent)
+           is distinct from row(old.billing_module_net_cents,old.billing_vat_percent,old.billing_paid_vat_percent)))
      ) then raise exception 'El plan se gestiona desde Facturación' using errcode = '42501'; end if;
   return new;
 end;
@@ -58,16 +63,16 @@ $$;
 create trigger tenants_protect_billing_terms before insert or update on public.tenants
 for each row execute function app_private.protect_billing_terms();
 
-create function app_private.billing_total(p_net integer) returns integer
-language sql immutable strict set search_path = '' as $$ select ((p_net::bigint * 121 + 50) / 100)::integer $$;
+create function app_private.billing_total(p_net integer, p_vat integer) returns integer
+language sql immutable strict set search_path = '' as $$ select ((p_net::bigint * (100 + p_vat) + 50) / 100)::integer $$;
 
 -- Standard catalogue quotes, with a frozen price for an existing or negotiated agreement.
 create function app_private.billing_terms(t public.tenants, p_next boolean)
-returns table (plan text, period text, seats integer, net_cents integer, amount_cents integer)
+returns table (plan text, period text, seats integer, net_cents integer, vat_percent integer)
 language sql stable set search_path = '' as $$
   select coalesce(case when p_next then t.next_plan end, t.plan),
     coalesce(case when p_next then t.next_interval end, t.billing_interval), s.seats, s.net,
-    app_private.billing_total(s.net)
+    case when p_next then t.billing_vat_percent else t.billing_paid_vat_percent end
   from lateral (
     select case when p_next and t.next_plan is not null
       then coalesce(t.next_billing_seats, public.plan_member_limit(t.next_plan))
@@ -89,7 +94,7 @@ create function app_private.billing_charge_preview(t public.tenants, p_next bool
 language sql stable set search_path = '' as $$
   select to_jsonb(q) || jsonb_build_object('base_net_cents', q.net_cents,
     'module_net_cents', a.net, 'net_cents', q.net_cents + a.net,
-    'amount_cents', app_private.billing_total(q.net_cents + a.net))
+    'amount_cents', app_private.billing_total(q.net_cents + a.net,q.vat_percent))
   from app_private.billing_terms(t,p_next) q
   cross join lateral (select case when p_next then app_private.billing_module_net(t.id,q.period)
     else t.billing_module_net_cents end as net) a
@@ -140,6 +145,7 @@ begin
     'next', app_private.billing_charge_preview(t,true),
     'module_monthly_cents', app_private.billing_module_net(t.id,'month'),
     'module_yearly_cents', app_private.billing_module_net(t.id,'year'),
+    'vat_percent', t.billing_vat_percent,
     'cancel_at_period_end', t.cancel_at_period_end,
     'pending', exists(select 1 from public.billing_payments where tenant_id = t.id and status = 'pending'));
 end;
@@ -183,16 +189,21 @@ begin
        or (p_action = 'checkout' and t.subscription_status in ('active','past_due')) then
       raise exception 'El estado de la suscripción ha cambiado. Revisa el plan.' using errcode = 'P0001';
     end if;
+    -- Older pages confirm the original fixed price. Never accept a different amount on their behalf.
+    if p_seats is null and p_expected_total is null and p_plan in ('solo','team','business') then
+      p_seats := public.plan_member_limit(p_plan);
+      p_expected_total := public.plan_charge_cents(p_plan,p_period);
+    end if;
     select * into q from app_private.billing_terms(t,true);
     if t.next_plan is null or row(q.plan,q.period,q.seats) is distinct from row(p_plan,p_period,p_seats) then
       select case p_period when 'month' then monthly_cents else yearly_cents end into net
       from public.billing_catalog where plan = p_plan and seats = p_seats;
       select p_plan as plan, p_period as period, p_seats as seats, net as net_cents,
-        app_private.billing_total(net) as amount_cents into q;
+        t.billing_vat_percent as vat_percent into q;
     end if;
   end if;
   modules := app_private.billing_module_net(t.id,q.period);
-  total := app_private.billing_total(q.net_cents + modules);
+  total := app_private.billing_total(q.net_cents + modules,q.vat_percent);
   if total is null or total is distinct from p_expected_total then
     raise exception 'El importe ha cambiado. Actualiza la página y confirma de nuevo.' using errcode = 'P0001';
   end if;
@@ -208,9 +219,9 @@ begin
        row(t.next_plan,t.next_interval,t.next_billing_seats) then
       raise exception 'Tienes una oferta acordada. Contacta con Ábaco para cambiarla.' using errcode = 'P0001';
     end if;
-    insert into public.billing_payments (tenant_id,merchant_order,kind,plan,period,seats,net_cents,module_net_cents,amount_cents)
+    insert into public.billing_payments (tenant_id,merchant_order,kind,plan,period,seats,net_cents,module_net_cents,vat_percent,amount_cents)
       values(t.id,p_order,case when p_action = 'retry' then 'renewal' else 'first' end,
-        q.plan,q.period,q.seats,q.net_cents + modules,modules,total);
+        q.plan,q.period,q.seats,q.net_cents + modules,modules,q.vat_percent,total);
   end if;
   return total;
 end;
@@ -231,10 +242,10 @@ begin
   select * into q from app_private.billing_terms(t,true);
   perform app_private.billing_require_capacity(t.id,q.seats);
   modules := app_private.billing_module_net(t.id,q.period);
-  total := app_private.billing_total(q.net_cents + modules);
+  total := app_private.billing_total(q.net_cents + modules,q.vat_percent);
   if total is null then return null; end if;
-  insert into public.billing_payments (tenant_id,merchant_order,kind,plan,period,seats,net_cents,module_net_cents,amount_cents)
-    values(t.id,p_order,'renewal',q.plan,q.period,q.seats,q.net_cents + modules,modules,total);
+  insert into public.billing_payments (tenant_id,merchant_order,kind,plan,period,seats,net_cents,module_net_cents,vat_percent,amount_cents)
+    values(t.id,p_order,'renewal',q.plan,q.period,q.seats,q.net_cents + modules,modules,q.vat_percent,total);
   return total;
 end;
 $$;
@@ -254,8 +265,10 @@ begin
   result := public.billing_apply_legacy(p_order,p_succeeded,p_code,p_reference);
   if result = 'succeeded' then
     update public.tenants set billing_seats = coalesce(pay.seats,public.plan_member_limit(pay.plan)),
-      billing_net_cents = coalesce(pay.net_cents,round(pay.amount_cents / 1.21)::integer) - coalesce(pay.module_net_cents,0),
+      billing_net_cents = coalesce(pay.net_cents,round(pay.amount_cents * 100.0 / (100 + pay.vat_percent))::integer)
+        - coalesce(pay.module_net_cents,0),
       billing_module_net_cents = coalesce(pay.module_net_cents,0),
+      billing_paid_vat_percent = pay.vat_percent,
       next_billing_seats = null, next_billing_net_cents = null where id = pay.tenant_id;
     if pay.module_net_cents is not null then perform app_private.apply_paid_modules(pay.tenant_id); end if;
   end if;
@@ -305,12 +318,34 @@ begin
   net := coalesce(p_net,net);
   if net < 1 or net > 10000000 then raise exception 'Importe fuera de rango'; end if;
   perform app_private.billing_require_capacity(t.id,p_seats);
-  select to_jsonb(q) into previous from app_private.billing_terms(t,true) q where q.net_cents is not null;
+  previous := app_private.billing_charge_preview(t,true);
   update public.tenants set next_plan = p_plan, next_interval = p_period, next_billing_seats = p_seats,
     next_billing_net_cents = net where id = t.id returning * into t;
   insert into public.billing_agreement_log(tenant_id,actor_id,previous_terms,scheduled_terms)
-    select t.id,(select auth.uid()),previous,to_jsonb(q) from app_private.billing_terms(t,true) q;
+    values (t.id,(select auth.uid()),previous,app_private.billing_charge_preview(t,true));
 end;
 $$;
 revoke all on function public.superadmin_schedule_billing(uuid,text,text,integer,integer) from public, anon;
 grant execute on function public.superadmin_schedule_billing(uuid,text,text,integer,integer) to authenticated;
+
+-- Tax changes do not require replacing the negotiated base price or the plan.
+create function public.superadmin_set_billing_vat(p_tenant uuid,p_vat integer) returns void
+language plpgsql security definer set search_path = '' as $$
+declare t public.tenants;
+begin
+  if not public.is_platform_superadmin() then raise exception 'No autorizado' using errcode = '42501'; end if;
+  if p_vat is null or p_vat not in (0,21) then
+    raise exception using message = 'Selecciona un IVA del 0 % o 21 %', errcode = '22023';
+  end if;
+  select * into strict t from public.tenants where id = p_tenant for update;
+  if p_vat = t.billing_vat_percent then return; end if;
+  if t.subscription_status = 'past_due' or exists(
+    select 1 from public.billing_payments where tenant_id = t.id and status = 'pending'
+  ) then raise exception 'Resuelve primero el pago pendiente'; end if;
+  update public.tenants set billing_vat_percent = p_vat where id = t.id;
+  insert into public.billing_agreement_log(tenant_id,actor_id,previous_terms,scheduled_terms)
+    values (t.id,(select auth.uid()),jsonb_build_object('vat_percent',t.billing_vat_percent),jsonb_build_object('vat_percent',p_vat));
+end;
+$$;
+revoke all on function public.superadmin_set_billing_vat(uuid,integer) from public, anon;
+grant execute on function public.superadmin_set_billing_vat(uuid,integer) to authenticated;

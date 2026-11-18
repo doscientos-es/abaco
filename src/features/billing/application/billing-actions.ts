@@ -132,6 +132,7 @@ export type BillingPreview = {
   next: BillingTerms | null
   pending: boolean
   cancel_at_period_end: boolean
+  vat_percent: number
   module_monthly_cents?: number
   module_yearly_cents?: number
 }
@@ -160,6 +161,7 @@ export type Payment = {
   /** Amount charged, VAT included. */
   amountCents: number
   netCents: number | null
+  vatPercent: number
   status: PaymentStatus
   createdAt: Date
   settledAt: Date | null
@@ -180,7 +182,7 @@ export const paymentsQuery = (tenantId: string) =>
           createBrowserSupabaseClient()
             .from('billing_payments')
             .select(
-              'id, merchant_order, kind, plan, period, amount_cents, net_cents, status, created_at, settled_at',
+              'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at',
             )
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
@@ -201,6 +203,7 @@ export const paymentsQuery = (tenantId: string) =>
           period: row.period as Interval,
           amountCents: row.amount_cents,
           netCents: row.net_cents,
+          vatPercent: row.vat_percent,
           status: row.status as PaymentStatus,
           createdAt: new Date(row.created_at),
           settledAt: row.settled_at ? new Date(row.settled_at) : null,

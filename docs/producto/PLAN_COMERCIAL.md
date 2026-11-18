@@ -54,6 +54,8 @@ El suplemento es fijo por empresa, no por plaza. Equipo con Compras son 53 €/m
 
 En **Superadmin → empresa → Condiciones de facturación** se puede cambiar el plan, la capacidad, el periodo y el precio base sin IVA. Los módulos contratados se suman automáticamente; no se deben volver a incluir en el precio base pactado. Guardar no cobra ni cambia el historial. La tarifa de catálogo restaura el precio base del tramo y periodo elegidos.
 
+En esa misma sección se puede configurar por empresa el IVA de la suscripción (21 % por defecto o 0 % cuando proceda). Cambiarlo no modifica el precio base pactado ni los justificantes de pagos anteriores; el nuevo tipo se aplica al próximo cobro.
+
 ## 3. Mercado: contexto, no previsión de ventas
 
 El documento comercial estima 320.776 empresas en España y 55.512 con establecimientos en Cataluña para CNAE 412, 432, 433 y 439. Para instalaciones, estima 78.775 y 14.472 respectivamente.

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import {
   billingCatalogQuery,
   billingPreviewQuery,
+  billingVatLabel,
   catalogQuote,
   planInfo,
   smallestRateFor,
@@ -16,6 +17,7 @@ import {
 import { applyRate, centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 
 import { scheduleBillingAgreement, type BillingAgreement } from '../application/superadmin-queries'
+import { CompanyBillingVat } from './company-billing-vat'
 
 const periodUnit = (period: Interval) => (period === 'year' ? 'año' : 'mes')
 
@@ -58,7 +60,15 @@ export function CompanyBillingAgreement({
         <AgreementSummary label="Condiciones vigentes" terms={preview.data?.current ?? null} />
         <AgreementSummary label="Próximo cobro u oferta" terms={next} />
       </dl>
-      {blocked ? <p role="status">{blocked}</p> : null}
+      {preview.isSuccess ? (
+        <CompanyBillingVat
+          key={preview.data.vat_percent}
+          tenantId={tenantId}
+          vatPercent={preview.data.vat_percent}
+          blocked={preview.data.pending || subscriptionStatus === 'past_due'}
+        />
+      ) : null}
+      {blocked ? <output className="block">{blocked}</output> : null}
       {preview.isSuccess && catalog.isSuccess && !blocked ? (
         <AgreementForm
           key={
@@ -71,13 +81,14 @@ export function CompanyBillingAgreement({
           terms={next}
           moduleMonthly={preview.data.module_monthly_cents ?? 0}
           moduleYearly={preview.data.module_yearly_cents ?? 0}
+          vatPercent={preview.data.vat_percent}
           saving={mutation.isPending}
           onSave={mutation.mutate}
         />
       ) : null}
       {mutation.error ? <p role="alert">{mutation.error.message}</p> : null}
       {mutation.isSuccess ? (
-        <p role="status">Condiciones guardadas. No se ha realizado ningún cobro.</p>
+        <output className="block">Condiciones guardadas. No se ha realizado ningún cobro.</output>
       ) : null}
     </details>
   )
@@ -89,7 +100,7 @@ function AgreementSummary({ label, terms }: { label: string; terms: BillingTerms
       <dt>{label}</dt>
       <dd>
         {terms
-          ? `${planInfo(terms.plan)?.name ?? terms.plan} · ${terms.seats} personas · ${formatEuros(terms.amount_cents)} con IVA / ${periodUnit(terms.period)}`
+          ? `${planInfo(terms.plan)?.name ?? terms.plan} · ${terms.seats} personas · ${formatEuros(terms.amount_cents)} ${billingVatLabel(terms.vat_percent)} / ${periodUnit(terms.period)}`
           : '—'}
       </dd>
     </div>
@@ -102,6 +113,7 @@ function AgreementForm({
   terms,
   moduleMonthly,
   moduleYearly,
+  vatPercent,
   saving,
   onSave,
 }: {
@@ -110,6 +122,7 @@ function AgreementForm({
   terms: BillingTerms | null
   moduleMonthly: number
   moduleYearly: number
+  vatPercent: number
   saving: boolean
   onSave: (agreement: BillingAgreement) => void
 }) {
@@ -135,7 +148,7 @@ function AgreementForm({
   const moduleNet = period === 'year' ? moduleYearly : moduleMonthly
   const baseNet = agreed ? netCents : (quote?.net_cents ?? null)
   const totalNet = baseNet === null ? null : baseNet + moduleNet
-  const amount = rate && totalNet !== null ? totalNet + applyRate(totalNet, rate.vat_percent) : null
+  const amount = rate && totalNet !== null ? totalNet + applyRate(totalNet, vatPercent) : null
   const canSave = Boolean(rate && rate.seats >= members && amount !== null && !saving)
 
   return (
@@ -200,7 +213,8 @@ function AgreementForm({
         ) : null}
         {amount !== null ? (
           <p className="text-sm">
-            Total previsto: {formatEuros(amount)} con IVA / {periodUnit(period)}.
+            Total previsto: {formatEuros(amount)} {billingVatLabel(vatPercent)} /{' '}
+            {periodUnit(period)}.
             {moduleNet > 0 ? <> Incluye {formatEuros(moduleNet)} en módulos, sin IVA.</> : null}
           </p>
         ) : null}

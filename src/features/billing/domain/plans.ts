@@ -66,9 +66,14 @@ export type BillingTerms = {
   seats: number
   net_cents: number
   amount_cents: number
+  vat_percent: number
   base_net_cents?: number
   module_net_cents?: number
 }
+
+export const STANDARD_BILLING_VAT = 21
+export const billingVatLabel = (vatPercent: number) =>
+  vatPercent === 0 ? 'sin IVA (0 %)' : 'con IVA'
 
 export function withModulePrice(terms: BillingTerms, moduleCents: number): BillingTerms {
   if (!moduleCents) return terms
@@ -78,18 +83,23 @@ export function withModulePrice(terms: BillingTerms, moduleCents: number): Billi
     base_net_cents: terms.net_cents,
     module_net_cents: moduleCents,
     net_cents: net,
-    amount_cents: Math.round((net * 121) / 100),
+    amount_cents: Math.round((net * (100 + terms.vat_percent)) / 100),
   }
 }
 
-export function catalogQuote(rate: CatalogRate, period: Interval): BillingTerms {
+export function catalogQuote(
+  rate: CatalogRate,
+  period: Interval,
+  vatPercent = rate.vat_percent,
+): BillingTerms {
   const net = period === 'year' ? rate.yearly_cents : rate.monthly_cents
   return {
     plan: rate.plan,
     seats: rate.seats,
     period,
     net_cents: net,
-    amount_cents: Math.round((net * (100 + rate.vat_percent)) / 100),
+    amount_cents: Math.round((net * (100 + vatPercent)) / 100),
+    vat_percent: vatPercent,
   }
 }
 

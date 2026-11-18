@@ -10,7 +10,7 @@ import {
   moduleSubscriptionsQuery,
 } from '@/features/product-modules'
 
-import { scheduleBillingAgreement } from '../application/superadmin-queries'
+import { scheduleBillingAgreement, setCompanyBillingVat } from '../application/superadmin-queries'
 import { CompanyBillingAgreement } from './company-billing-agreement'
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }))
@@ -30,6 +30,7 @@ const current: BillingTerms = {
   period: 'month',
   net_cents: 3400,
   amount_cents: 4114,
+  vat_percent: 21,
 }
 const next: BillingTerms = {
   ...current,
@@ -44,6 +45,7 @@ const preview = {
   next,
   pending: false,
   cancel_at_period_end: false,
+  vat_percent: 21,
   module_yearly_cents: 19000,
 }
 
@@ -101,6 +103,23 @@ describe('company billing controls', () => {
       p_net: null,
     })
     expect(rpc).toHaveBeenCalledTimes(2)
+  })
+
+  it('allows a 0 % VAT override without changing the plan or the agreed price', async () => {
+    client.setQueryData(billingPreviewQuery(tenantId).queryKey, {
+      ...preview,
+      vat_percent: 0,
+      next: { ...next, vat_percent: 0, amount_cents: 48750 },
+    })
+    const html = renderBilling(3)
+    expect(html).toContain('<option value="0" selected="">0 % · Sin IVA</option>')
+    expect(html).toMatch(/Total previsto: 487,50\s*€ sin IVA \(0 %\)/)
+    expect(html).toMatch(/41,14\s*€ con IVA \/ mes/)
+    await setCompanyBillingVat(tenantId, 0)
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('superadmin_set_billing_vat', {
+      p_tenant: tenantId,
+      p_vat: 0,
+    })
   })
 })
 

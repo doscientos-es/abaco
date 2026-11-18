@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(53);
 
 insert into auth.users (id,email) values
   ('ed000000-0000-4000-8000-000000000001','bill-admin@example.test'),
@@ -95,6 +95,74 @@ select is(public.apply_billing_payment('4321ABCI',true,'0000',null),'succeeded',
 reset role;
 select results_eq($$select billing_interval,billing_net_cents,next_plan from public.tenants where id='ed000000-0000-4000-8000-000000000011'$$,
   $$values ('year'::text,59000,null::text)$$,'Settling the renewal makes the new terms current');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'ed000000-0000-4000-8000-000000000001';
+select throws_ok($$select public.superadmin_set_billing_vat('ed000000-0000-4000-8000-000000000011',0)$$,
+  '42501','No autorizado','A tenant admin cannot change the subscription VAT');
+select throws_ok($$update public.tenants set billing_vat_percent = 0 where id='ed000000-0000-4000-8000-000000000011'$$,
+  '42501','El plan se gestiona desde Facturación','The VAT setting cannot be written directly by a tenant');
+set local request.jwt.claim.sub = 'ed000000-0000-4000-8000-000000000002';
+select throws_ok($$select public.superadmin_set_billing_vat('ed000000-0000-4000-8000-000000000011',10)$$,
+  '22023','Selecciona un IVA del 0 % o 21 %','Only the supported VAT rates can be saved');
+select lives_ok($$select public.superadmin_set_billing_vat('ed000000-0000-4000-8000-000000000011',0)$$,
+  'A platform admin can schedule 0% VAT without changing the base price');
+select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->'current'->>'amount_cents')::integer,
+  71390,'The paid period keeps the VAT originally charged');
+select lives_ok($$select public.schedule_tenant_module('ed000000-0000-4000-8000-000000000011','procurement',true,1900,19000)$$,
+  'The superadmin can still add a module with 0% VAT');
+select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->'next'->>'amount_cents')::integer,
+  78000,'The next quote includes the module but does not add VAT');
+
+reset role;
+update public.tenants set current_period_end=now()-interval '1 day' where id='ed000000-0000-4000-8000-000000000011';
+update public.billing_payments set created_at=now()-interval '2 days' where tenant_id='ed000000-0000-4000-8000-000000000011';
+set local role service_role;
+select is(public.billing_reserve_renewal('ed000000-0000-4000-8000-000000000011','4321ABCV'),78000,
+  'The reserved Redsys renewal equals the net total at 0% VAT');
+set local role authenticated;
+select throws_ok($$select public.superadmin_set_billing_vat('ed000000-0000-4000-8000-000000000011',21)$$,
+  'P0001','Resuelve primero el pago pendiente','VAT cannot change while Redsys is processing the charge');
+set local role service_role;
+select is(public.apply_billing_payment('4321ABCV',true,'0000',null),'succeeded','The 0% renewal settles');
+reset role;
+select results_eq($$select vat_percent, net_cents, amount_cents from public.billing_payments
+    where merchant_order in ('4321ABCI','4321ABCV') order by merchant_order$$,
+  $$values (21,59000,71390),(0,78000,78000)$$,'Each payment retains its own VAT for the receipt');
+select is((select billing_paid_vat_percent from public.tenants where id='ed000000-0000-4000-8000-000000000011'),
+  0,'Once paid, the paid period reflects the new VAT');
+
+insert into public.memberships (tenant_id,user_id,role) values
+  ('ed000000-0000-4000-8000-000000000012','ed000000-0000-4000-8000-000000000001','admin');
+set local role service_role;
+select is(public.billing_manage('ed000000-0000-4000-8000-000000000012','ed000000-0000-4000-8000-000000000001',
+  'checkout','solo','month',null,null,'4321ABCJ'),2420,'An older page can still reserve its unchanged published price');
+select is(public.apply_billing_payment('4321ABCJ',false,'0100',null),'failed','A failed first payment can be retried');
+
+set local role authenticated;
+select public.superadmin_set_billing_vat('ed000000-0000-4000-8000-000000000012',0);
+set local request.jwt.claim.sub = 'ed000000-0000-4000-8000-000000000001';
+select is(public.can_use_procurement('ed000000-0000-4000-8000-000000000011'),true,'The renewed module is available');
+select lives_ok($$select public.schedule_tenant_module('ed000000-0000-4000-8000-000000000011','procurement',false,1900,19000)$$,
+  'A tenant admin can turn off a paid module');
+select is(public.can_use_procurement('ed000000-0000-4000-8000-000000000011'),true,'Removal preserves access until the paid period ends');
+select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->'next'->>'amount_cents')::integer,
+  59000,'The next quote removes the module price');
+select throws_ok($$select public.schedule_tenant_module('ed000000-0000-4000-8000-000000000012','procurement',true,1,10)$$,
+  'P0001','La tarifa del módulo ha cambiado. Actualiza y confirma de nuevo','An altered module price is rejected');
+select lives_ok($$select public.schedule_tenant_module('ed000000-0000-4000-8000-000000000012','procurement',true,1900,19000)$$,
+  'A tenant admin can select a module before checkout');
+select is(public.can_use_procurement('ed000000-0000-4000-8000-000000000012'),false,'Module access is not granted before payment');
+
+set local role service_role;
+select throws_ok($$select public.billing_manage('ed000000-0000-4000-8000-000000000012','ed000000-0000-4000-8000-000000000001',
+  'checkout','solo','month',null,null,'4321ABCK')$$,'P0001','El importe ha cambiado. Actualiza la página y confirma de nuevo.',
+  'An older page cannot reserve an unconfirmed amount');
+select is(public.billing_manage('ed000000-0000-4000-8000-000000000012','ed000000-0000-4000-8000-000000000001',
+  'checkout','solo','month',1,3900,'4321ABCK'),3900,'First charge includes the selected module and 0% VAT');
+select is(public.apply_billing_payment('4321ABCK',true,'0000',null),'succeeded','The first 0% charge settles');
+set local role authenticated;
+select is(public.can_use_procurement('ed000000-0000-4000-8000-000000000012'),true,'Payment unlocks the selected module');
 
 select * from finish();
 rollback;

@@ -59,16 +59,18 @@ export function ModuleSubscriptions({
           ? 'Los cambios de cortesía son inmediatos y no generan cobros.'
           : `El suplemento se añade a la cuota de la empresa. El acceso cambia ${timing}, tras confirmar el pago. No se borran datos.`}
       </p>
-      {blocked ? <p role="status">Resuelve primero la cancelación o el pago pendiente.</p> : null}
+      {blocked ? (
+        <output className="block">Resuelve primero la cancelación o el pago pendiente.</output>
+      ) : null}
       {catalog.isPending || subscriptions.isPending ? <output>Cargando módulos…</output> : null}
       {catalog.isError || subscriptions.isError ? (
         <p role="alert">No se pudieron consultar los módulos.</p>
       ) : null}
       {change.error ? <p role="alert">{change.error.message}</p> : null}
       {change.isSuccess ? (
-        <p role="status">
+        <output className="block">
           {courtesy ? 'Acceso actualizado.' : 'Cambio guardado. No se ha realizado ningún cobro.'}
-        </p>
+        </output>
       ) : null}
       {catalog.data && subscriptions.data ? (
         <ul className="space-y-3">

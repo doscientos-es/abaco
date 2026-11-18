@@ -2,7 +2,7 @@ import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { BillingTerms } from '../domain/plans'
+import { catalogQuote, type BillingTerms } from '../domain/plans'
 import { BillingSection } from './billing-section'
 
 const fixtures = vi.hoisted(() => ({
@@ -17,6 +17,7 @@ const fixtures = vi.hoisted(() => ({
   courtesy: false,
   members: 16,
   moduleYearly: 0,
+  vatPercent: 21,
 }))
 const terms: BillingTerms = {
   plan: 'scale',
@@ -24,6 +25,7 @@ const terms: BillingTerms = {
   period: 'year',
   net_cents: 69000,
   amount_cents: 83490,
+  vat_percent: 21,
 }
 const current = { ...terms, period: 'month', net_cents: 6900, amount_cents: 8349 }
 
@@ -45,6 +47,7 @@ vi.mock('@tanstack/react-query', () => ({
               next: current,
               pending: fixtures.pending,
               module_yearly_cents: fixtures.moduleYearly,
+              vat_percent: fixtures.vatPercent,
             }
           : fixtures.members,
   }),
@@ -59,9 +62,19 @@ vi.mock('../application/billing-actions', () => ({
 vi.mock('./pricing-catalog', () => ({
   PricingCatalog: ({
     renderAction,
+    vatPercent,
   }: {
     renderAction: (terms: BillingTerms, plan: { name: string }) => React.ReactNode
-  }) => renderAction(terms, { name: 'Escala' }),
+    vatPercent: number
+  }) =>
+    renderAction(
+      catalogQuote(
+        { plan: 'scale', seats: 25, monthly_cents: 6900, yearly_cents: 69000, vat_percent: 21 },
+        'year',
+        vatPercent,
+      ),
+      { name: 'Escala' },
+    ),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
 vi.mock('@/features/product-modules', () => ({
@@ -85,6 +98,7 @@ describe('billing confirmation', () => {
     fixtures.pending = false
     fixtures.courtesy = false
     fixtures.moduleYearly = 0
+    fixtures.vatPercent = 21
     selection = null
     fixtures.state.mockImplementation((initial: unknown) => {
       if (typeof initial === 'function') return [null, vi.fn()]
@@ -100,6 +114,23 @@ describe('billing confirmation', () => {
     fixtures.button.mockImplementation(
       ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
         <button disabled={isDisabled}>{children}</button>
+      ),
+    )
+  })
+
+  it('shows and confirms the untaxed amount, including modules, at 0 % VAT', async () => {
+    fixtures.vatPercent = 0
+    fixtures.moduleYearly = 19000
+    fixtures.accept.mockResolvedValue({ ok: true })
+    render()
+    action('Elegir Escala').onPress()
+    expect(render()).toMatch(/880,00\s*€ sin IVA \(0 %\)/)
+    action('Continuar a Redsys').onPress()
+    await vi.waitFor(() =>
+      expect(fixtures.accept).toHaveBeenCalledWith(
+        'company',
+        'checkout',
+        expect.objectContaining({ amount_cents: 88000, vat_percent: 0 }),
       ),
     )
   })

@@ -2,19 +2,31 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Subscription } from '../application/billing-actions'
+import type { Payment, Subscription } from '../application/billing-actions'
 import { PaymentHistory } from './payment-history'
 
-const { query, button } = vi.hoisted(() => ({ query: vi.fn(), button: vi.fn() }))
+const { query, button, download } = vi.hoisted(() => ({
+  query: vi.fn(),
+  button: vi.fn(),
+  download: vi.fn(),
+}))
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: { queryKey: string[] }) => {
     if (options.queryKey[0] !== 'billing-preview') return query(options)
-    const terms = { plan: 'solo', period: 'month', seats: 1, net_cents: 2000, amount_cents: 2420 }
+    const terms = {
+      plan: 'solo',
+      period: 'month',
+      seats: 1,
+      net_cents: 2000,
+      amount_cents: 2420,
+      vat_percent: 21,
+    }
     return { data: { current: terms, next: terms, pending: false } }
   },
 }))
 vi.mock('@doscientos/ui', () => ({ Button: button }))
+vi.mock('@/shared/domain/csv', () => ({ downloadTextFile: download }))
 vi.mock('../application/billing-actions', () => ({
   paymentsQuery: (tenantId: string) => ({ queryKey: ['billing-payments', tenantId] }),
   billingPreviewQuery: (tenantId: string) => ({ queryKey: ['billing-preview', tenantId] }),
@@ -84,6 +96,29 @@ describe('PaymentHistory', () => {
 
     expect(html).not.toContain('Pagado hasta hoy')
     expect(html).toContain('Pagos realizados')
+  })
+
+  it.each([
+    { vatPercent: 0, netCents: 2000, amountCents: 2000, tax: '0,00' },
+    { vatPercent: 21, netCents: null, amountCents: 2420, tax: '4,20' },
+  ])('prints the rate and tax recorded on the payment ($vatPercent %)', ({ tax, ...amounts }) => {
+    const payment: Payment = {
+      id: 'paid',
+      order: '1234TEST',
+      plan: 'solo',
+      period: 'month',
+      kind: 'first',
+      ...amounts,
+      status: 'succeeded',
+      createdAt: new Date('2026-11-01'),
+      settledAt: null,
+    }
+    query.mockReturnValue({ data: [payment], isPending: false, isError: false })
+    render()
+    button.mock.calls.find(([props]) => props.children === 'Justificante')?.[0].onPress()
+    const receipt = download.mock.calls[0]?.[1] as string
+    expect(receipt).toContain(`IVA (${payment.vatPercent} %)`)
+    expect(receipt).toContain(`>${tax}\u00a0€</td>`)
   })
 
   it('keeps the end date visible for an expired trial', () => {
