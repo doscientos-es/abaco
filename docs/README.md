@@ -13,6 +13,7 @@ Comprueba los entornos y las migraciones antes de reutilizar cualquier instrucci
 
 ## Decisiones y diseño funcional
 
+- [Administración y trabajo personal](decisiones/ADMINISTRACION_Y_TRABAJO_PERSONAL.md): decisión de navegación y recorrido pendiente para administradores que realizan trabajos.
 - [Equipos de trabajo](decisiones/WORK_TEAMS.md): alcance, permisos y activación.
 - [Ausencias y cobertura](decisiones/COBERTURA_DE_VACACIONES.md): comportamiento implementado, límites y decisiones pendientes.
 
