@@ -95,15 +95,16 @@ function RootLayout() {
   if (pathname === '/superadmin') return <Outlet />
   if (!session.role) return <NoCompanyPage />
   if (pathname === '/bienvenida') return <Outlet />
+  const workspaceKey = `${session.userId}:${session.tenantId}`
   if (session.role === 'user') {
     return (
-      <UserFrame>
+      <UserFrame key={workspaceKey}>
         <Outlet />
       </UserFrame>
     )
   }
   return (
-    <AppFrame>
+    <AppFrame key={workspaceKey}>
       <Outlet />
       <Toaster />
     </AppFrame>

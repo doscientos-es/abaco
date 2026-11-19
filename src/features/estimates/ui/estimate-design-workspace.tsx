@@ -12,18 +12,15 @@ export function EstimateDesignWorkspace({
   client,
   tenant,
   documentRef,
-  example = false,
 }: {
   controls?: ReactNode
   estimate: Estimate
   client: Client | undefined
   tenant: Tenant
   documentRef?: Ref<HTMLElement>
-  example?: boolean
 }) {
-  const liveLabel = example ? 'en directo · Documento de ejemplo' : 'en directo'
   const preview = (
-    <DocumentPreview label={controls || example ? liveLabel : 'del presupuesto'}>
+    <DocumentPreview label={controls ? 'en directo' : 'del presupuesto'}>
       <EstimateDocument
         estimate={estimate}
         client={client}
@@ -39,7 +36,7 @@ export function EstimateDesignWorkspace({
       <div className="grid min-w-0 items-start gap-5 @min-[43rem]:grid-cols-[minmax(17rem,30%)_minmax(0,1fr)] print:block">
         <div className="min-w-0 print:hidden">{controls}</div>
         <section
-          aria-label={example ? 'Páginas del presupuesto de ejemplo' : 'Páginas del presupuesto'}
+          aria-label="Páginas del presupuesto"
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrollable preview needs keyboard focus.
           tabIndex={0}
           className="focus-visible:outline-ring min-w-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 @min-[43rem]:sticky @min-[43rem]:top-4 @min-[43rem]:max-h-[min(72dvh,52rem)] @min-[43rem]:overflow-auto print:static print:max-h-none print:overflow-visible"
@@ -101,21 +98,18 @@ const exampleEstimate: Estimate = {
 }
 
 export function EstimateDesignExample({
-  controls,
   design,
   tenant,
 }: {
-  controls?: ReactNode
   design: EstimateDesign
   tenant: Tenant
 }) {
   return (
-    <EstimateDesignWorkspace
-      controls={controls}
+    <EstimateDocument
       estimate={{ ...exampleEstimate, vatRate: tenant.defaultVatRate, documentDesign: design }}
       client={exampleClient}
       tenant={tenant}
-      example
+      documentRef={null}
     />
   )
 }

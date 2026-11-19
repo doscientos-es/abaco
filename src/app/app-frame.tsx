@@ -17,7 +17,7 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import {
   can,
@@ -29,25 +29,36 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
-import { GlobalSearch, type SearchItem } from '@/features/global-search'
+import { GlobalSearch, type SearchItem, type SearchMode } from '@/features/global-search'
+import {
+  NavigationLayoutContext,
+  useNavigationLayout,
+  type NavigationGroup,
+} from '@/features/interface-preferences'
 import { ContractInvoiceNotifications } from '@/features/invoices'
 import { useModuleEnabled, useStaffModule } from '@/features/product-modules'
 import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
+import { brandThemeStyle } from '@/shared/ui/brand-theme'
 import { WorkspaceChromeContext } from '@/shared/ui/workspace-page-chrome'
 
-import { initials, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
+import {
+  initials,
+  MobileBrandLink,
+  SidebarLink,
+  type NavItem,
+  type NavTo,
+} from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 import { PlatformMenuSection } from './platform-menu-section'
-import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
+import { MobileSaveStatus, SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
 
-type NavGroup = { label: string; items: NavItem[] }
-
-const navGroups: NavGroup[] = [
+const navGroups: NavigationGroup<NavItem>[] = [
   {
+    id: 'general',
     label: 'General',
     items: [
       { to: '/', label: 'Resumen', icon: navIcons.home },
@@ -57,6 +68,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'sales',
     label: 'Ventas',
     items: [
       {
@@ -72,6 +84,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'operations',
     label: 'Operaciones',
     items: [
       { to: '/trabajos', label: 'Planificación', mobileLabel: 'Trabajos', icon: navIcons.work },
@@ -79,6 +92,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'finance',
     label: 'Finanzas',
     items: [
       { to: '/facturas', label: 'Facturas', icon: navIcons.invoices },
@@ -86,6 +100,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'account',
     label: 'Cuenta',
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
@@ -94,10 +109,8 @@ const navGroups: NavGroup[] = [
   },
 ]
 
-const MAX_TABS = 5
-
-/** Bottom bar on mobile, most used first. Ajustes lives in the user menu instead. */
-const bottomOrder: NavTo[] = [
+/** Keep the existing shortcuts as defaults, with fallbacks for restricted accounts. */
+const mobileDefaults: NavTo[] = [
   '/',
   '/presupuestos',
   '/clientes',
@@ -108,9 +121,7 @@ const bottomOrder: NavTo[] = [
   '/catalogo',
   '/contabilidad',
 ]
-const flatItems = bottomOrder.flatMap((to) =>
-  navGroups.flatMap((group) => group.items).filter((item) => item.to === to),
-)
+const settingsItem: NavItem = { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings }
 
 /** Pages each item needs; hidden from the menu when the role lacks it. RLS still enforces it. */
 const navPermission: Partial<Record<NavTo, Permission>> = {
@@ -129,30 +140,19 @@ const navPermission: Partial<Record<NavTo, Permission>> = {
   '/personalizar': 'settings:write',
 }
 
-function readableTextColor(hex: string) {
-  const channels = hex.match(/[a-f\d]{2}/gi)?.map((value) => Number.parseInt(value, 16) / 255)
-  if (!channels || channels.length !== 3) return '#ffffff'
-  const linear = channels.map((channel) =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  )
-  const [red, green, blue] = linear
-  if (red === undefined || green === undefined || blue === undefined) return '#ffffff'
-  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-  return luminance > 0.42 ? '#171717' : '#ffffff'
-}
-
 export function AppFrame({ children }: { children: ReactNode }) {
   const data = useTenantData()
+  const session = useSession()
   const { tenant } = data
   const procurement = useModuleEnabled(tenant.id, 'procurement')
   const staff = useStaffModule(tenant.id)
   const saveStatus = useSaveStatus()
-  const session = useSession()
   const { data: hasPlatformAccess } = useQuery(platformAccessQuery(session?.userId ?? ''))
   const signOut = useSignOut()
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
+  const [searchMode, setSearchMode] = useState<SearchMode>(null)
   const [headingTarget, setHeadingTarget] = useState<HTMLDivElement | null>(null)
   const [tabsTarget, setTabsTarget] = useState<HTMLDivElement | null>(null)
   const userName = session?.fullName || session?.email || tenant.name
@@ -166,15 +166,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const groups = navGroups
     .map((group) => ({ ...group, items: group.items.filter(allowed) }))
     .filter((group) => group.items.length > 0)
-  const bottomItems = flatItems.filter(allowed)
-  // Reserve a slot for every permitted section not shown directly in the bar.
-  const allItems = groups.flatMap((group) => group.items)
-  const tabs = allItems.length > MAX_TABS ? bottomItems.slice(0, MAX_TABS - 1) : bottomItems
-  const tabPaths = new Set(tabs.map((item) => item.to))
-  const moreItems = allItems.filter((item) => !tabPaths.has(item.to))
+  const canSeeSettings = allowed(settingsItem)
+  const navigationLayout = useNavigationLayout({
+    tenantId: tenant.id,
+    userId: session?.userId ?? '',
+    groups,
+    choices: [
+      ...groups.flatMap((group) => group.items).filter((item) => item.to !== '/superadmin'),
+      ...(canSeeSettings ? [settingsItem] : []),
+    ],
+    mobileDefaults,
+  })
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isInternalPage = pathname.split('/').filter(Boolean).length > 1
-  const canSeeSettings = can(session?.role, 'settings:write')
   const shortcuts: Record<string, string> = {
     '/': 'g r',
     '/presupuestos': 'g p',
@@ -262,15 +266,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <WorkspaceChromeContext.Provider value={{ heading: headingTarget, tabs: tabsTarget }}>
       <AppShell
         className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
-        style={
-          tenant.brandColor && /^#[0-9a-f]{6}$/i.test(tenant.brandColor)
-            ? ({
-                '--primary': tenant.brandColor,
-                '--primary-foreground': readableTextColor(tenant.brandColor),
-                '--ring': tenant.brandColor,
-              } as CSSProperties)
-            : undefined
-        }
+        style={brandThemeStyle(tenant.brandColor)}
       >
         <a href="#main-content" className="skip-link">
           Saltar al contenido
@@ -306,8 +302,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
             aria-label="Principal"
             className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1"
           >
-            {groups.map((group) => (
-              <div key={group.label} className="space-y-1">
+            {navigationLayout.desktop.map((group) => (
+              <div key={group.id} className="space-y-1">
                 <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
                   {group.label}
                 </p>
@@ -366,37 +362,31 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </div>
         </AppShellSidebar>
 
+        <AppShellMobileHeader className="workspace-mobile-header hidden max-md:flex">
+          <MobileBrandLink
+            to="/"
+            label="Ir al resumen"
+            name={tenant.name}
+            logoUrl={tenant.logoUrl}
+          />
+          <MobileSaveStatus status={saveStatus} />
+          {can(session?.role, 'invoices:read') && session?.tenantId ? (
+            <ContractInvoiceNotifications tenantId={session.tenantId} userId={session.userId} />
+          ) : null}
+          <DropdownMenuTrigger>
+            <Button
+              variant="ghost"
+              aria-label="Menú de usuario"
+              className="h-auto rounded-full p-1"
+            >
+              <Avatar>
+                <AvatarFallback>{initials(userName)}</AvatarFallback>
+              </Avatar>
+            </Button>
+            {userMenu('bottom end')}
+          </DropdownMenuTrigger>
+        </AppShellMobileHeader>
         <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          <AppShellMobileHeader className="hidden max-md:flex">
-            <Link to="/" className="min-w-0 flex-1 leading-tight" aria-label="Ir al resumen">
-              {tenant.logoUrl ? (
-                <img
-                  src={tenant.logoUrl}
-                  alt={tenant.name}
-                  className="mr-2 inline-block max-h-7 max-w-10 object-contain align-middle"
-                />
-              ) : null}
-              <span className="block truncate text-sm font-semibold tracking-tight">
-                {tenant.name}
-              </span>
-            </Link>
-            <SaveStatusIndicator status={saveStatus} />
-            {can(session?.role, 'invoices:read') && session?.tenantId ? (
-              <ContractInvoiceNotifications tenantId={session.tenantId} userId={session.userId} />
-            ) : null}
-            <DropdownMenuTrigger>
-              <Button
-                variant="ghost"
-                aria-label="Menú de usuario"
-                className="h-auto rounded-full p-1"
-              >
-                <Avatar>
-                  <AvatarFallback>{initials(userName)}</AvatarFallback>
-                </Avatar>
-              </Button>
-              {userMenu('bottom end')}
-            </DropdownMenuTrigger>
-          </AppShellMobileHeader>
           <div className="workspace-topbar">
             <div className="workspace-topbar__row">
               <div className="workspace-topbar__identity">
@@ -412,7 +402,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 <div ref={setHeadingTarget} className="workspace-topbar__heading" />
               </div>
               <GlobalSearch
-                key={session?.tenantId}
+                mode={searchMode}
+                onModeChange={setSearchMode}
                 data={session?.role === 'admin' ? data : undefined}
                 navigation={searchNavigation}
               />
@@ -427,11 +418,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
             size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
             className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
           >
-            {children}
+            <NavigationLayoutContext.Provider value={navigationLayout}>
+              {children}
+            </NavigationLayoutContext.Provider>
           </AppShellContent>
         </AppShellMain>
 
-        <MobileNavigation items={tabs} moreItems={moreItems} pathname={pathname} />
+        <MobileNavigation
+          items={navigationLayout.mobile}
+          searchOpen={searchMode === 'mobile'}
+          onOpenSearch={() => setSearchMode('mobile')}
+        />
         <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
       </AppShell>
     </WorkspaceChromeContext.Provider>

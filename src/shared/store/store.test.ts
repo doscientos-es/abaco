@@ -112,8 +112,9 @@ describe('store persistence', () => {
     first.resolve({ ...initial(), tenants: { ...initial().tenants, a: tenant('a', 'Primero') } })
     await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
     expect(currentTenantData()?.tenant.name).toBe('Segundo')
+    expect(getSaveStatus()).toEqual({ state: 'saving' })
     second.resolve(undefined)
-    await vi.waitFor(() => expect(getSaveStatus().state).toBe('saved'))
+    await vi.waitFor(() => expect(getSaveStatus()).toEqual({ state: 'saved', confirmed: true }))
   })
 
   it('keeps the current company and rejects a stale refresh', async () => {
@@ -269,6 +270,7 @@ describe('store persistence', () => {
     const synchronization = synchronizeStoreSaves()
     setRepository({ load: async () => initial(), save: async () => undefined })
     await expect(synchronization).rejects.toThrow('sesión ha cambiado')
+    expect(getSaveStatus()).toEqual({ state: 'saved' })
     await hydrateStore()
     recovering.resolve(billedState())
     await Promise.resolve()

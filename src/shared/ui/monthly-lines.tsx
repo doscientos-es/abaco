@@ -15,11 +15,14 @@ export function MonthlyLines({ data }: { data: MonthPoint[] }) {
     )
   }
 
-  const max = Math.max(1, ...data.flatMap((month) => [month.income, month.expense]))
+  const amounts = data.flatMap((month) => [month.income, month.expense])
+  const min = Math.min(0, ...amounts)
+  const max = Math.max(1, ...amounts)
   const points = (kind: 'income' | 'expense') =>
     data
       .map(
-        (month, index) => `${((index + 0.5) / data.length) * 100},${95 - (month[kind] / max) * 90}`,
+        (month, index) =>
+          `${((index + 0.5) / data.length) * 100},${95 - ((month[kind] - min) / (max - min)) * 90}`,
       )
       .join(' ')
 

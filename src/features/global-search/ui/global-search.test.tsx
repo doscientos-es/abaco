@@ -4,11 +4,12 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SearchItem } from '../domain/search'
-import { GlobalSearch } from './global-search'
+import { GlobalSearch, type SearchMode } from './global-search'
 
 const mocks = vi.hoisted(() => ({
   states: [] as unknown[],
   cursor: 0,
+  mode: null as SearchMode,
   navigate: vi.fn(),
   retry: vi.fn(),
   presses: new Map<string, () => void>(),
@@ -53,7 +54,9 @@ vi.mock('@doscientos/ui', () => ({
     return <button aria-label={label}>{children}</button>
   },
   Dialog: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogContent: ({ children }: { children: ReactNode }) => <section>{children}</section>,
+  DialogContent: ({ children, overlaySlot }: { children: ReactNode; overlaySlot: string }) => (
+    <section data-slot={overlaySlot}>{children}</section>
+  ),
   DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
   Input: (props: ComponentProps<'input'>) => {
     mocks.input = props
@@ -72,9 +75,18 @@ const navigation: SearchItem[] = [
   },
   { id: 'work', title: 'Planificación', category: 'Navegación', target: { to: '/trabajos' } },
 ]
-function render() {
+function render(navigationOnly = false) {
   mocks.cursor = 0
-  return renderToStaticMarkup(<GlobalSearch navigation={navigation} />)
+  return renderToStaticMarkup(
+    <GlobalSearch
+      navigation={navigation}
+      navigationOnly={navigationOnly}
+      mode={mocks.mode}
+      onModeChange={(mode) => {
+        mocks.mode = mode
+      }}
+    />,
+  )
 }
 function open() {
   render()
@@ -89,6 +101,7 @@ function key(key: string, isComposing = false) {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.states = []
+  mocks.mode = null
   mocks.presses.clear()
   mocks.items = navigation
   mocks.loading = false
@@ -101,6 +114,7 @@ describe('global command palette', () => {
     const html = open()
     expect(html).toContain(`id="${mocks.input['aria-controls']}"`)
     expect(html).toContain(`id="${mocks.input['aria-activedescendant']}"`)
+    expect(mocks.input.autoFocus).toBe(true)
     expect(key('ArrowUp').preventDefault).toHaveBeenCalledOnce()
     render()
     key('Enter')
@@ -150,13 +164,22 @@ describe('global command palette', () => {
   })
 
   it('describes section-only search accurately for workers', () => {
-    mocks.cursor = 0
-    const trigger = renderToStaticMarkup(<GlobalSearch navigation={navigation} navigationOnly />)
+    const trigger = render(true)
     expect(trigger).toContain('Buscar una sección…')
     mocks.presses.get('Búsqueda global')?.()
-    mocks.cursor = 0
-    const html = renderToStaticMarkup(<GlobalSearch navigation={navigation} navigationOnly />)
+    const html = render(true)
     expect(html).toContain('placeholder="Buscar una sección…"')
     expect(html).not.toContain('Clientes, presupuestos, facturas, personas…')
+  })
+
+  it('opens mobile navigation without forcing the keyboard and closes after selection', () => {
+    mocks.mode = 'mobile'
+    const html = render()
+    expect(html).toContain('data-slot="global-search-overlay"')
+    expect(html).toContain('Clientes')
+    expect(mocks.input.autoFocus).toBe(false)
+    key('Enter')
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/clientes' })
+    expect(mocks.mode).toBeNull()
   })
 })

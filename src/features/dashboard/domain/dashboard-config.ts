@@ -63,6 +63,33 @@ export function resolveDashboardChart(config?: DashboardConfig) {
   } as const
 }
 
+export type DashboardCharts = Required<NonNullable<DashboardConfig['charts']>> &
+  ReturnType<typeof resolveDashboardChart>
+
+export function resolveDashboardCharts(config?: DashboardConfig): DashboardCharts {
+  const expenses = config?.charts?.['expense-categories']
+  const estimates = config?.charts?.['estimate-status']
+  return {
+    ...resolveDashboardChart(config),
+    'expense-categories': {
+      format: expenses?.format === 'ranking' ? 'ranking' : 'donut',
+      months: expenses?.months === 6 || expenses?.months === 12 ? expenses.months : 1,
+    },
+    'estimate-status': {
+      metric: estimates?.metric === 'count' ? 'count' : 'amount',
+      months: estimates?.months === 6 || estimates?.months === 12 ? estimates.months : 'all',
+    },
+  }
+}
+
+export function dashboardConfigFrom(
+  widgets: DashboardWidgetId[],
+  options: DashboardCharts,
+): DashboardConfig {
+  const { incomeChart, incomeMonths, ...charts } = options
+  return { version: 1, widgets, incomeChart, incomeMonths, charts }
+}
+
 export function resolveDashboardWidgets(config?: DashboardConfig): DashboardWidgetId[] {
   if (!config || config.version !== 1) return [...defaultDashboardWidgets]
   const uniqueKnown = config.widgets.filter(

@@ -2,8 +2,11 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { SaveStatus } from '@/shared/store/store'
+
 const state = vi.hoisted(() => ({
   pathname: '/',
+  saveStatus: { state: 'saved' } as SaveStatus,
   canManageVacations: true,
   canReadInvoices: true,
   canEditSettings: true,
@@ -32,7 +35,13 @@ vi.mock('@/features/auth', () => ({
   CompanyDialog: () => null,
   roleLabels: { admin: 'Administrador' },
   useCompanyActions: () => ({ switchTo: vi.fn() }),
-  useSession: () => ({ role: 'admin', fullName: 'Ana', tenantId: 'company', companies: [] }),
+  useSession: () => ({
+    role: 'admin',
+    fullName: 'Ana',
+    tenantId: 'company',
+    userId: 'user',
+    companies: [],
+  }),
   useSignOut: () => vi.fn(),
 }))
 vi.mock('@/features/billing', () => ({ PlanBanner: () => null }))
@@ -40,12 +49,16 @@ vi.mock('@/features/global-search', () => ({ GlobalSearch: () => <span>Búsqueda
 vi.mock('@/features/invoices', () => ({
   ContractInvoiceNotifications: () => <span>Avisos de facturas</span>,
 }))
+vi.mock('@/features/product-modules', () => ({
+  useModuleEnabled: () => false,
+  useStaffModule: () => true,
+}))
 vi.mock('@/features/superadmin', () => ({ platformAccessQuery: () => ({}) }))
 vi.mock('@/features/vacations', () => ({ PendingAbsenceNotifications: () => <span>Avisos</span> }))
 vi.mock('@/shared/store/store', () => ({
   retryStoreSaves: vi.fn(),
-  useSaveStatus: () => ({ state: 'saved' }),
-  useTenantData: () => ({ tenant: { name: 'Empresa' } }),
+  useSaveStatus: () => state.saveStatus,
+  useTenantData: () => ({ tenant: { id: 'company', name: 'Empresa' } }),
 }))
 
 import { AppFrame } from './app-frame'
@@ -120,13 +133,46 @@ describe('estado de guardado en la aplicación', () => {
     for (const path of ['/presupuestos', '/clientes', '/trabajos']) {
       expect(mobile).toContain(`href="${path}"`)
     }
-    expect(mobile).toContain('Más secciones')
+    expect(mobile).toContain('>Buscar</span>')
+    expect(mobile.match(/<a /g)).toHaveLength(4)
     state.canReadWork = false
     try {
       const restricted = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
       expect(restricted).not.toContain('href="/trabajos"')
     } finally {
       state.canReadWork = true
+    }
+  })
+
+  it('applies stored mobile shortcuts and desktop order without reviving restricted links', () => {
+    const getItem = vi.fn((key: string) =>
+      key === 'abaco:interface:v1:company:user'
+        ? JSON.stringify({
+            mobile: ['/facturas', '/trabajos', '/clientes', '/personalizar'],
+            desktopGroups: ['finance', 'sales'],
+            desktopItems: ['/contabilidad', '/facturas'],
+          })
+        : null,
+    )
+    vi.stubGlobal('window', { localStorage: { getItem } })
+    state.canReadWork = false
+    try {
+      const html = renderToStaticMarkup(<AppFrame>Contenido</AppFrame>)
+      const desktop = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
+      const mobile = html.slice(html.indexOf('aria-label="Navegación móvil"'))
+
+      expect(getItem).toHaveBeenCalledWith('abaco:interface:v1:company:user')
+      expect(desktop.indexOf('>Finanzas<')).toBeLessThan(desktop.indexOf('>Ventas<'))
+      expect(desktop.indexOf('>Contabilidad</a>')).toBeLessThan(desktop.indexOf('>Facturas</a>'))
+      expect([...mobile.matchAll(/href="([^"]+)"/g)].map((match) => match[1])).toEqual([
+        '/facturas',
+        '/clientes',
+        '/personalizar',
+        '/',
+      ])
+    } finally {
+      state.canReadWork = true
+      vi.unstubAllGlobals()
     }
   })
 
@@ -155,17 +201,17 @@ describe('estado de guardado en la aplicación', () => {
     }
   })
 
-  it('lo sitúa en la barra lateral y la cabecera móvil, fuera del contenido', () => {
-    const html = renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
-    const main = html.indexOf('data-slot="app-shell-main"')
-    const mobileHeader = html.indexOf('data-slot="app-shell-mobile-header"')
-    const content = html.indexOf('Contenido de la página')
-    const firstStatus = html.indexOf('>Guardado</span>')
-    const secondStatus = html.indexOf('>Guardado</span>', firstStatus + 1)
-    expect(firstStatus).toBeGreaterThan(-1)
-    expect(firstStatus).toBeLessThan(main)
-    expect(secondStatus).toBeGreaterThan(mobileHeader)
-    expect(secondStatus).toBeLessThan(content)
-    expect(html.indexOf('>Guardado</span>', secondStatus + 1)).toBe(-1)
+  it('mantiene Guardado en la barra lateral, pero solo muestra el progreso en la cabecera móvil', () => {
+    const render = () => renderToStaticMarkup(<AppFrame>Contenido de la página</AppFrame>)
+    const header = (html: string) => html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+    const idle = render()
+    expect(idle.slice(0, idle.indexOf('<header'))).toContain('>Guardado</span>')
+    expect(header(idle)).not.toContain('>Guardado</span>')
+    state.saveStatus = { state: 'saving' }
+    try {
+      expect(header(render())).toContain('>Guardando…</span>')
+    } finally {
+      state.saveStatus = { state: 'saved' }
+    }
   })
 })

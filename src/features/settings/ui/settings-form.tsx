@@ -25,9 +25,6 @@ export type FormProps = {
   tenant: Tenant
 }
 
-export const hexColor = /^#[0-9a-fA-F]{6}$/
-export const defaultBrandColor = '#2a4227'
-
 export const isLogoOk = (logoUrl: string) =>
   logoUrl.trim() === '' || /^https:\/\/\S+$/.test(logoUrl.trim())
 export const isWebsiteOk = (website: string) =>

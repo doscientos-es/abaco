@@ -1,15 +1,32 @@
-import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
+import type { SaveStatus } from '@/shared/store/store'
+
+import { MobileSaveStatus, SaveStatusIndicator, SaveStatusNotice } from './save-status-notice'
+
+const hooks = vi.hoisted(() => ({
+  effect: vi.fn<(effect: React.EffectCallback) => void>(),
+  dismissed: undefined as SaveStatus | undefined,
+}))
+vi.mock('react', async (load) => ({
+  ...(await load<typeof React>()),
+  useEffect: hooks.effect,
+  useState: (initial: SaveStatus) => [
+    (hooks.dismissed ??= initial),
+    (value: SaveStatus) => {
+      hooks.dismissed = value
+    },
+  ],
+}))
 
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+  Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
   buttonVariants: () => 'button',
 }))
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/ajustes?tab=plan">{children}</a>,
+  Link: ({ children }: { children: React.ReactNode }) => <a href="/ajustes?tab=plan">{children}</a>,
 }))
 
 describe('SaveStatusNotice', () => {
@@ -71,5 +88,37 @@ describe('SaveStatusIndicator', () => {
     expect(html).toContain('aria-live="polite"')
     expect(html).toContain('h-7 shrink-0')
     expect(html).toContain('aria-hidden="true"')
+  })
+})
+
+describe('MobileSaveStatus', () => {
+  const render = (status: SaveStatus) => renderToStaticMarkup(<MobileSaveStatus status={status} />)
+
+  afterEach(() => {
+    hooks.dismissed = undefined
+    hooks.effect.mockClear()
+    vi.useRealTimers()
+  })
+
+  it('shows progress only during a save and no success for a reset or a failure', () => {
+    expect(render({ state: 'saved' })).not.toContain('Guardado')
+    expect(render({ state: 'saving' })).toContain('Guardando…')
+    expect(render({ state: 'saved' })).not.toContain('Guardado')
+    const failed = render({ state: 'error' })
+    expect(failed).not.toContain('Guardado')
+    expect(failed).toContain('<span class="sr-only">Sin guardar</span>')
+  })
+
+  it('shows a brief, accessible check without replaying an old confirmation on mount', () => {
+    vi.useFakeTimers()
+    expect(render({ state: 'saved', confirmed: true })).not.toContain('Guardado')
+    const saved = { state: 'saved', confirmed: true } as const
+    expect(render(saved)).toContain('<span class="sr-only">Guardado</span>')
+    const cleanup = hooks.effect.mock.lastCall?.[0]()
+    vi.advanceTimersByTime(800)
+    expect(render(saved)).toContain('Guardado')
+    vi.advanceTimersByTime(800)
+    expect(render(saved)).not.toContain('Guardado')
+    cleanup?.()
   })
 })

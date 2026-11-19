@@ -10,22 +10,26 @@ import { shortcutCommand } from '../application/keyboard-shortcuts'
 import { useSearchResults } from '../application/use-search-results'
 import type { SearchItem } from '../domain/search'
 
+import './global-search.css'
+
+export type SearchMode = 'search' | 'help' | 'mobile' | null
+
 export function GlobalSearch({
   data,
   navigation,
   navigationOnly = false,
+  mode,
+  onModeChange,
 }: {
   data?: TenantData | undefined
   navigation: SearchItem[]
   navigationOnly?: boolean
+  mode: SearchMode
+  onModeChange: (mode: SearchMode) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const [help, setHelp] = useState(false)
+  const open = mode !== null
+  const help = mode === 'help'
   const navigate = useNavigate()
-  function showSearch() {
-    setHelp(false)
-    setOpen(true)
-  }
   useEffect(() => {
     let prefixUntil = 0
     function onKeyDown(event: KeyboardEvent) {
@@ -39,13 +43,11 @@ export function GlobalSearch({
       const command = shortcutCommand(event, editing, inDialog)
       if (command === 'search') {
         event.preventDefault()
-        setHelp(false)
-        setOpen((value) => !value)
+        onModeChange(open ? null : 'search')
         prefixUntil = 0
       } else if (command === 'help') {
         event.preventDefault()
-        setHelp(true)
-        setOpen(true)
+        onModeChange('help')
         prefixUntil = 0
       } else if (command === 'filter') {
         const input = document.querySelector<HTMLInputElement>(
@@ -67,15 +69,19 @@ export function GlobalSearch({
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [navigate, navigation])
+  }, [navigate, navigation, onModeChange, open])
 
   return (
     <>
-      <div className={navigationOnly ? 'workspace-tools worker-search' : 'workspace-tools'}>
+      <div
+        className={`workspace-tools workspace-tools--desktop${navigationOnly ? ' worker-search' : ''}`}
+      >
         <Button
           variant="ghost"
-          onPress={showSearch}
+          onPress={() => onModeChange('search')}
           aria-label="Búsqueda global"
+          aria-haspopup="dialog"
+          aria-expanded={mode === 'search'}
           aria-keyshortcuts="Control+k Meta+k"
           className="workspace-search-trigger"
         >
@@ -88,20 +94,20 @@ export function GlobalSearch({
         <Button
           variant="ghost"
           aria-label="Atajos de teclado"
+          aria-haspopup="dialog"
+          aria-expanded={help}
           aria-keyshortcuts="?"
-          onPress={() => {
-            setHelp(true)
-            setOpen(true)
-          }}
+          onPress={() => onModeChange('help')}
           className="mr-0.5 size-8 shrink-0 p-0"
         >
           <Question aria-hidden="true" className="size-3.5" />
         </Button>
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => onModeChange(nextOpen ? 'search' : null)}>
         {open ? (
           <DialogContent
-            className="app-dialog app-dialog--details overflow-hidden p-0"
+            overlaySlot="global-search-overlay"
+            className="global-search-dialog overflow-hidden p-0"
             aria-label={help ? 'Atajos de teclado' : 'Búsqueda global'}
           >
             <DialogTitle className="sr-only">
@@ -131,7 +137,7 @@ export function GlobalSearch({
                     </div>
                   ))}
                 </dl>
-                <Button variant="outline" className="mt-6" onPress={showSearch}>
+                <Button variant="outline" className="mt-6" onPress={() => onModeChange('search')}>
                   Abrir búsqueda
                 </Button>
               </div>
@@ -140,8 +146,9 @@ export function GlobalSearch({
                 data={data}
                 navigation={navigation}
                 navigationOnly={navigationOnly}
+                focusInput={mode !== 'mobile'}
                 onSelect={(item) => {
-                  setOpen(false)
+                  onModeChange(null)
                   void navigate(item.target)
                 }}
               />
@@ -157,11 +164,13 @@ function SearchPanel({
   data,
   navigation,
   navigationOnly,
+  focusInput,
   onSelect,
 }: {
   data?: TenantData | undefined
   navigation: SearchItem[]
   navigationOnly: boolean
+  focusInput: boolean
   onSelect: (item: SearchItem) => void
 }) {
   const [query, setQuery] = useState('')
@@ -175,11 +184,11 @@ function SearchPanel({
   }, [selected?.id])
   return (
     <>
-      <div className="flex items-center gap-3 border-b px-5 py-3 pr-12">
+      <div className="global-search-field flex items-center gap-3 border-b px-5 py-3 pr-12">
         <MagnifyingGlass aria-hidden="true" className="text-muted-foreground size-5 shrink-0" />
         <Input
           // oxlint-disable-next-line jsx-a11y/no-autofocus -- This dialog is explicitly opened by the user to start searching.
-          autoFocus
+          autoFocus={focusInput}
           aria-label="Buscar recursos y secciones"
           role="combobox"
           aria-autocomplete="list"
@@ -215,7 +224,7 @@ function SearchPanel({
           }}
         />
       </div>
-      <div className="max-h-[min(60svh,28rem)] overflow-y-auto p-2">
+      <div className="global-search-results max-h-[min(60svh,28rem)] overflow-y-auto p-2">
         <output className="text-muted-foreground block px-3 py-2 text-xs">
           {loading
             ? 'Buscando…'
@@ -247,9 +256,12 @@ function SearchPanel({
                 <span className="text-muted-foreground block text-xs">{item.category}</span>
               </span>
               {item.shortcut ? (
-                <Kbd>{item.shortcut}</Kbd>
+                <Kbd className="hidden md:inline-flex">{item.shortcut}</Kbd>
               ) : selected?.id === item.id ? (
-                <ArrowElbowDownLeft aria-hidden="true" className="text-muted-foreground size-4" />
+                <ArrowElbowDownLeft
+                  aria-hidden="true"
+                  className="text-muted-foreground hidden size-4 md:block"
+                />
               ) : null}
             </button>
           ))}
@@ -268,7 +280,7 @@ function SearchPanel({
           </div>
         ) : null}
       </div>
-      <div className="text-muted-foreground flex flex-wrap items-center gap-4 border-t px-5 py-3 text-xs">
+      <div className="text-muted-foreground hidden flex-wrap items-center gap-4 border-t px-5 py-3 text-xs md:flex">
         <span>
           <Kbd>↑ ↓</Kbd> Navegar
         </span>

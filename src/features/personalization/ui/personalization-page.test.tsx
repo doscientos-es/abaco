@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: vi.fn(),
   tabs: vi.fn(),
-  setDocumentType: vi.fn(),
+  uploadLogo: vi.fn(),
+  uploadField: vi.fn(),
 }))
 
 vi.mock('react', async (importOriginal) => ({
@@ -33,6 +34,7 @@ vi.mock('@doscientos/ui', () => ({
   PageHeaderTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
   PageHeaderDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Tabs: mocks.tabs,
+  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
@@ -50,7 +52,18 @@ vi.mock('@/features/invoices', () => import('@/features/invoices/ui/invoice-docu
 vi.mock('@/features/clients', () => ({ ClientTypesSection: () => <p>Tipos de cliente</p> }))
 vi.mock('@/features/staff-schedules', () => ({ StaffFunctionsSection: () => <p>Funciones</p> }))
 vi.mock('@/features/settings/application/settings-actions', () => ({ patchTenant: mocks.patch }))
+vi.mock('../application/brand-logo-actions', () => ({ uploadBrandLogo: mocks.uploadLogo }))
+vi.mock(import('@/shared/ui/upload-file-field'), async (importOriginal) => {
+  const { UploadFileField } = await importOriginal()
+  return {
+    UploadFileField: (props: React.ComponentProps<typeof UploadFileField>) => {
+      mocks.uploadField(props)
+      return <span>{props.label}</span>
+    },
+  }
+})
 vi.mock('@/shared/store/store', () => ({
+  currentTenantData: () => ({ tenant: { id: 'one' } }),
   useTenantData: () => ({
     tenant: { id: 'one', name: 'Empresa', defaultVatRate: 21, emailFromName: 'Equipo' },
   }),
@@ -67,7 +80,13 @@ describe('personalization sections', () => {
     mocks.checkbox.mockClear()
     mocks.field.mockClear()
     mocks.layoutPicker.mockClear()
+    mocks.tabs.mockClear()
     return renderToStaticMarkup(<PersonalizationPage />)
+  }
+  function changeField(label: string, value: string) {
+    const field = mocks.field.mock.calls.find(([props]) => props.label === label)?.[0]
+    expect(field).toBeDefined()
+    field.onChange(value)
   }
   beforeEach(() => {
     vi.clearAllMocks()
@@ -81,7 +100,6 @@ describe('personalization sections', () => {
       const set = (next: unknown) => {
         values[index] = typeof next === 'function' ? next(values[index]) : next
       }
-      if (initial === 'estimate') mocks.setDocumentType.mockImplementation(set)
       return [values[index], set]
     })
     mocks.button.mockImplementation(
@@ -99,7 +117,11 @@ describe('personalization sections', () => {
   })
 
   it('keeps messages and configurable lists in their own sections', () => {
-    expect(render()).toContain('Identidad de marca')
+    const identity = render()
+    expect(identity).toContain('Identidad de marca')
+    expect(identity).toMatch(
+      /<aside[^>]*aria-label="Personalizar identidad".*?<footer[^>]*>.*Guardar personalización/,
+    )
     tab = 'documentos'
     const documents = render()
     expect(documents).toContain('Diseño de presupuestos')
@@ -109,6 +131,9 @@ describe('personalization sections', () => {
     tab = 'correos'
     const emails = render()
     expect(emails).toContain('Nombre del remitente')
+    expect(emails).toMatch(
+      /<aside[^>]*aria-label="Personalizar correo".*?<footer[^>]*>.*Guardar personalización/,
+    )
     expect(emails).not.toContain('Pie de página de los documentos')
     tab = 'listas'
     const lists = render()
@@ -117,10 +142,94 @@ describe('personalization sections', () => {
     expect(lists).not.toContain('Guardar personalización')
   })
 
-  it('previews the selected template before saving company design defaults', () => {
+  it('applies the draft color and logo to the sample workspace without saving', () => {
+    expect(render()).toContain('Nuevo presupuesto')
+    changeField('Color hexadecimal', '#AAAAAA')
+    changeField('Logo de la empresa', 'https://example.test/logo.png')
+    const customized = render()
+    expect(customized).toContain('--primary:#AAAAAA;--primary-foreground:#000000')
+    expect(customized).toContain('src="https://example.test/logo.png"')
+    expect(mocks.patch).not.toHaveBeenCalled()
+
+    changeField('Logo de la empresa', 'http://example.test/logo.png')
+    expect(render()).not.toContain('src="http://example.test/logo.png"')
+    const save = mocks.button.mock.calls.find(
+      ([props]) => props.children === 'Guardar personalización',
+    )?.[0]
+    expect(save?.isDisabled).toBe(true)
+  })
+
+  it('uploads the logo only on save and keeps a failed selection available for retry', async () => {
+    const logo = new File(['image'], 'logo.png', { type: 'image/png' })
+    const url = 'https://storage.example.test/logo.png'
+    mocks.uploadLogo
+      .mockRejectedValueOnce(new Error('No se pudo subir el logo'))
+      .mockResolvedValueOnce(url)
+    expect(render()).toContain('Subir logo de la empresa')
+    mocks.uploadField.mock.lastCall?.[0].onChange(logo)
+    expect(render()).toContain('src="blob:')
+    const save = () =>
+      mocks.button.mock.calls.find(([props]) => props.children === 'Guardar personalización')?.[0]
+    expect(save()?.isDisabled).toBe(false)
+    expect(mocks.uploadLogo).not.toHaveBeenCalled()
+
+    save()?.onPress()
+    await Promise.resolve()
+    expect(render()).toContain('No se pudo subir el logo')
+    expect(mocks.patch).not.toHaveBeenCalled()
+
+    save()?.onPress()
+    await Promise.resolve()
+    expect(mocks.uploadLogo).toHaveBeenLastCalledWith('one', logo)
+    expect(mocks.patch).toHaveBeenCalledWith({ brandColor: '', logoUrl: url })
+    expect(render()).toContain(`src="${url}"`)
+  })
+
+  it('previews both email drafts with shared sender and signature and separate messages', () => {
+    tab = 'correos'
+    expect(render()).toContain('Presupuesto DEMO-001 · Empresa')
+    changeField('Nombre del remitente', 'Equipo comercial')
+    changeField('Firma del correo', 'Saludos del equipo')
+    changeField('Mensaje en correos de presupuesto', 'Tu <propuesta> personalizada')
+    const estimate = render()
+    expect(estimate).toContain('>Equipo comercial</dd>')
+    expect(estimate).toContain('Tu &lt;propuesta&gt; personalizada')
+    expect(estimate).toContain('Saludos del equipo')
+
+    const typeTabs = mocks.tabs.mock.calls.find(([props]) => props.selectedKey === 'estimate')?.[0]
+    typeTabs.onSelectionChange('invoice')
+    expect(render()).toContain('Factura DEMO-001 · Empresa')
+    changeField('Mensaje en correos de factura', 'Tu factura personalizada')
+    const invoice = render()
+    expect(invoice).toContain('Tu factura personalizada')
+    expect(invoice).not.toContain('Tu &lt;propuesta&gt; personalizada')
+    expect(invoice).toContain('>Equipo comercial</dd>')
+    expect(invoice).toContain('Saludos del equipo')
+    expect(mocks.patch).not.toHaveBeenCalled()
+
+    mocks.button.mock.calls
+      .find(([props]) => props.children === 'Guardar personalización')?.[0]
+      .onPress()
+    expect(mocks.patch).toHaveBeenCalledWith({
+      emailFromName: 'Equipo comercial',
+      emailSignature: 'Saludos del equipo',
+      estimateEmailIntro: 'Tu <propuesta> personalizada',
+      invoiceEmailIntro: 'Tu factura personalizada',
+    })
+  })
+
+  it('previews the selected template without a caption and saves from the drawer footer', () => {
     tab = 'documentos'
     const proposal = render()
-    expect(proposal).toContain('Vista previa en directo · Documento de ejemplo')
+    expect(proposal).toContain('>Presupuesto</span>')
+    expect(proposal).toContain('>Factura</span>')
+    expect(proposal).not.toContain('Vista previa en directo')
+    expect(proposal).not.toContain('Documento de ejemplo')
+    expect(proposal).not.toContain('<details')
+    const drawer = proposal.match(
+      /<aside[^>]*aria-label="Personalizar documento"[^>]*>.*?<\/aside>/,
+    )?.[0]
+    expect(drawer).toMatch(/<footer[^>]*>.*Guardar personalización.*<\/footer>/)
     expect(proposal).toContain('Mostrar índice')
     expect(proposal).toContain('estimate-document__cover')
     expect(proposal).toContain('estimate-document__index')
@@ -201,11 +310,14 @@ describe('personalization sections', () => {
   it('switches to the real invoice preview and saves its selected layout', () => {
     tab = 'documentos'
     render()
-    mocks.setDocumentType('invoice')
+    const documentTabs = mocks.tabs.mock.calls.find(([props]) => props.selectedKey === 'estimate')
+    expect(documentTabs).toBeDefined()
+    documentTabs?.[0].onSelectionChange('invoice')
     const initial = render()
     expect(initial).toContain('Diseño de facturas')
     expect(initial).toContain('invoice-document invoice-sheet')
     expect(initial).toContain('data-layout="classic"')
+    expect(initial).not.toContain('Documento de ejemplo')
     mocks.layoutPicker.mock.lastCall?.[0].onChange('modern')
     expect(render()).toContain('data-layout="modern"')
     mocks.button.mock.calls

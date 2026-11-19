@@ -7,6 +7,7 @@ const tabs = [
   'empresa',
   'operativa',
   'cuenta',
+  'interfaz',
   'documentos',
   'listas',
   'equipo',

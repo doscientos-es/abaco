@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
+import { InterfaceSettings } from '@/features/interface-preferences'
 import doscientosLogo from '@/shared/assets/logo.svg'
 import type { Tenant } from '@/shared/domain/types'
 import { brand } from '@/shared/lib/brand'
@@ -26,12 +27,13 @@ import {
 } from './settings-form'
 import { AccountSettings } from './user-settings-page'
 
-export type SettingsTab = 'empresa' | 'operativa' | 'cuenta' | 'plan' | 'novedades'
+export type SettingsTab = 'empresa' | 'operativa' | 'cuenta' | 'interfaz' | 'plan' | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   operativa: 'Presupuestos y facturas',
   cuenta: 'Mi cuenta',
+  interfaz: 'Interfaz',
   plan: 'Suscripción de Ábaco',
   novedades: 'Novedades',
 }
@@ -49,7 +51,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
   const [saved, setSaved] = useState(false)
 
   const canPlan = Boolean(session?.tenantId && session.role === 'admin')
-  const allowed: SettingsTab[] = ['empresa', 'operativa', 'cuenta']
+  const allowed: SettingsTab[] = ['empresa', 'operativa', 'cuenta', 'interfaz']
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
   const tab = allowed.find((id) => id === requested) ?? 'empresa'
@@ -105,6 +107,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'cuenta' ? <AccountSettings /> : null}
+      {tab === 'interfaz' ? <InterfaceSettings /> : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}

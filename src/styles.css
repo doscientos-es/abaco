@@ -412,7 +412,7 @@ h3 {
   background-color: var(--card);
 }
 
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .workspace-topbar {
     padding-inline: 1rem;
   }
@@ -423,6 +423,15 @@ h3 {
 
   .admin-frame .workspace-topbar {
     padding-inline: 1rem;
+    min-height: 0;
+  }
+
+  .admin-frame
+    .workspace-topbar:not(
+      :has(.workspace-topbar__heading:not(:empty), .workspace-topbar__tabs:not(:empty))
+    ),
+  .admin-frame .workspace-topbar__row:has(.workspace-topbar__heading:empty) {
+    display: none;
   }
 
   .workspace-topbar__row {

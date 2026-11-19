@@ -7,8 +7,7 @@ import { expect, it, vi } from 'vitest'
 import { MobileNavigation } from './mobile-navigation'
 
 const mocks = vi.hoisted(() => ({
-  navigate: vi.fn(),
-  action: undefined as (() => void) | undefined,
+  press: undefined as (() => void) | undefined,
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({
@@ -24,37 +23,47 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
-  useNavigate: () => mocks.navigate,
 }))
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children, className }: { children: ReactNode; className: string }) => (
-    <button className={className}>{children}</button>
-  ),
-  DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({ children, onAction }: { children: ReactNode; onAction: () => void }) => {
-    mocks.action = onAction
-    return <button>{children}</button>
+  Button: ({
+    children,
+    onPress,
+    'aria-expanded': expanded,
+    'aria-haspopup': popup,
+  }: {
+    children: ReactNode
+    onPress: () => void
+    'aria-expanded': boolean
+    'aria-haspopup': 'dialog'
+  }) => {
+    mocks.press = onPress
+    return (
+      <button aria-expanded={expanded} aria-haspopup={popup}>
+        {children}
+      </button>
+    )
   },
 }))
 
-it('exposes direct links and navigates to remaining modules from Más', () => {
+it('renders the search dialog trigger after the configured shortcuts', () => {
+  const onOpenSearch = vi.fn()
   const html = renderToStaticMarkup(
     <MobileNavigation
       items={[
         { to: '/', label: 'Resumen', icon: null },
         { to: '/trabajos', label: 'Planificación', mobileLabel: 'Trabajos', icon: null },
       ]}
-      moreItems={[{ to: '/facturas', label: 'Facturas', icon: null }]}
-      pathname="/facturas/123"
+      onOpenSearch={onOpenSearch}
+      searchOpen={true}
     />,
   )
   expect(html).toContain('href="/trabajos" aria-label="Planificación"')
   expect(html).toContain('Trabajos')
-  expect(html).toContain('Facturas')
-  expect(html).toContain('mobile-bottom-nav__link--active')
-  mocks.action?.()
-  expect(mocks.navigate).toHaveBeenCalledWith({ to: '/facturas' })
+  expect(html).toContain('aria-expanded="true" aria-haspopup="dialog"')
+  expect(html).toContain('>Buscar</span></button></nav>')
+  expect(html.indexOf('>Trabajos</span>')).toBeLessThan(html.indexOf('>Buscar</span>'))
+  mocks.press?.()
+  expect(onOpenSearch).toHaveBeenCalledOnce()
 })
 
 it('shows the bar below the desktop breakpoint and reserves the safe area', () => {

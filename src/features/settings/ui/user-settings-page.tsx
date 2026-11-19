@@ -1,14 +1,39 @@
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
-import { Link } from '@tanstack/react-router'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '@doscientos/ui'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useCompanyActions, useSession } from '@/features/auth'
+import { InterfaceSettings } from '@/features/interface-preferences'
 
 export function UserSettingsPage() {
+  const { tab } = useSearch({ from: '/ajustes' })
+  const navigate = useNavigate()
+  const isInterface = tab === 'interfaz'
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">Ajustes</h1>
-      <AccountSettings />
+      <Tabs
+        selectedKey={isInterface ? 'interfaz' : 'cuenta'}
+        onSelectionChange={(key) => {
+          if (key === 'interfaz' || key === 'cuenta')
+            void navigate({ to: '/ajustes', search: { tab: key } })
+        }}
+      >
+        <TabsList aria-label="Secciones de ajustes">
+          <TabsTrigger id="cuenta">Mi cuenta</TabsTrigger>
+          <TabsTrigger id="interfaz">Interfaz</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {isInterface ? <InterfaceSettings /> : <AccountSettings />}
     </div>
   )
 }

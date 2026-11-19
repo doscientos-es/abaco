@@ -1,49 +1,66 @@
-import { DragDropProvider } from '@dnd-kit/react'
-import { isSortable } from '@dnd-kit/react/sortable'
-import { Button, Card, CardContent, CardHeader, CardTitle, IconButton } from '@doscientos/ui'
-import { ArrowCounterClockwise, Check, Plus, SlidersHorizontal, X } from '@phosphor-icons/react'
+import { Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
-import { useMemo, useState, type ComponentProps, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { saveDashboardConfig } from '@/features/dashboard/application/dashboard-actions'
 import { estimateTotalCents, paidForEstimate } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
-import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
-import type { DashboardConfig, TenantData } from '@/shared/domain/types'
+import { monthlySeries } from '@/shared/domain/stats'
+import type { TenantData } from '@/shared/domain/types'
 import { useSaveStatus, useTenantData } from '@/shared/store/store'
-import { ChartCard, Donut, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
+import { EmptyHint } from '@/shared/ui/charts'
+import {
+  DashboardCanvas,
+  DashboardLayoutActions,
+  DashboardLayoutHelp,
+  DashboardModule,
+} from '@/shared/ui/dashboard-layout-editor'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge } from '@/shared/ui/status-badge'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import {
+  dashboardConfigFrom,
   dashboardWidgets,
   defaultDashboardWidgets,
   moveDashboardWidget,
-  resolveDashboardChart,
+  resolveDashboardCharts,
   resolveDashboardWidgets,
+  type DashboardCharts,
   type DashboardWidgetId,
 } from '../domain/dashboard-config'
-import { EstimateStatusSummary } from './estimate-status-summary'
-import { MonthlyLines } from './monthly-lines'
-import { SortableDashboardWidget } from './sortable-dashboard-widget'
+import {
+  DashboardExpenseChart,
+  DashboardIncomeChart,
+  DashboardStatusChart,
+} from './dashboard-charts'
 
 export function DashboardPage() {
-  const { estimates, ledger, clients, tenant, invoices } = useTenantData()
+  const data = useTenantData()
+  return <DashboardContent key={data.tenant.id} tenantData={data} />
+}
+
+type Layout = { widgets: DashboardWidgetId[]; charts: DashboardCharts }
+
+function DashboardContent({
+  tenantData: { estimates, ledger, clients, tenant, invoices },
+}: {
+  tenantData: TenantData
+}) {
   const session = useSession()
   const saveStatus = useSaveStatus()
   const canCustomize = can(session?.role, 'settings:write')
-  const savedWidgets = useMemo(
-    () => resolveDashboardWidgets(tenant.dashboardConfig),
-    [tenant.dashboardConfig],
-  )
-  const savedChart = resolveDashboardChart(tenant.dashboardConfig)
-  const [editing, setEditing] = useState(false)
-  const [draftWidgets, setDraftWidgets] = useState<DashboardWidgetId[]>([])
-  const [draftChart, setDraftChart] = useState(savedChart)
+  const saved: Layout = {
+    widgets: resolveDashboardWidgets(tenant.dashboardConfig),
+    charts: resolveDashboardCharts(tenant.dashboardConfig),
+  }
+  const [draft, setDraft] = useState<Layout | null>(null)
   const [justSaved, setJustSaved] = useState(false)
+  const editing = canCustomize && draft !== null
+  const layout = editing ? draft : saved
+  const changed = editing && JSON.stringify(saved) !== JSON.stringify(draft)
 
   const todayIso = new Date().toISOString().slice(0, 10)
   const owed = invoices
@@ -65,68 +82,36 @@ export function DashboardPage() {
     (estimate) => estimate.status === 'accepted' || estimate.status === 'rejected',
   )
   const winRate = decided.length ? Math.round((accepted.length / decided.length) * 100) : 0
-  const chart = editing ? draftChart : savedChart
-  const months = monthlySeries(ledger, chart.incomeMonths)
   const data = {
     estimates,
     ledger,
     clients,
-    invoices,
     owed,
     owedTotal,
     overdueTotal,
-    months,
     sentTotal,
     open,
     pendingCollection,
     winRate,
     decided,
   }
-  const savedConfig = JSON.stringify({ widgets: savedWidgets, ...savedChart })
-  const draftConfig = JSON.stringify({ widgets: draftWidgets, ...draftChart })
-  const dirty = savedConfig !== draftConfig
-  const availableWidgets = dashboardWidgets.filter((widget) => !draftWidgets.includes(widget.id))
-  const visibleWidgets = editing ? draftWidgets : savedWidgets
 
-  function startEditing() {
-    setDraftWidgets(savedWidgets)
-    setDraftChart(savedChart)
-    setJustSaved(false)
-    setEditing(true)
+  function updateDraft(update: (current: Layout) => Layout) {
+    if (canCustomize) setDraft((current) => (current ? update(current) : current))
   }
 
-  function cancelEditing() {
-    setDraftWidgets(savedWidgets)
-    setDraftChart(savedChart)
-    setJustSaved(false)
-    setEditing(false)
-  }
-
-  function saveLayout() {
-    const config: DashboardConfig = { version: 1, widgets: draftWidgets, ...draftChart }
-    saveDashboardConfig(config)
-    setEditing(false)
+  function persist(next: Layout) {
+    if (!canCustomize) return
+    saveDashboardConfig(dashboardConfigFrom(next.widgets, next.charts))
+    setDraft(null)
     setJustSaved(true)
   }
 
-  function removeWidget(id: DashboardWidgetId) {
-    setDraftWidgets((widgets) => widgets.filter((widget) => widget !== id))
-    setJustSaved(false)
-  }
-
   function addWidget(id: DashboardWidgetId) {
-    setDraftWidgets((widgets) => (widgets.includes(id) ? widgets : [...widgets, id]))
-    setJustSaved(false)
-  }
-
-  function handleDragEnd(
-    event: Parameters<NonNullable<ComponentProps<typeof DragDropProvider>['onDragEnd']>>[0],
-  ) {
-    if (event.canceled || !isSortable(event.operation.source)) return
-    const { initialIndex, index } = event.operation.source
-    if (initialIndex === index) return
-    setDraftWidgets((widgets) => moveDashboardWidget(widgets, initialIndex, index))
-    setJustSaved(false)
+    const append = (current: Layout): Layout =>
+      current.widgets.includes(id) ? current : { ...current, widgets: [...current.widgets, id] }
+    if (editing) updateDraft(append)
+    else if (!saved.widgets.includes(id)) persist(append(saved))
   }
 
   return (
@@ -142,116 +127,30 @@ export function DashboardPage() {
               Ver presupuestos
             </Link>
             {canCustomize ? (
-              editing ? (
-                <>
-                  <Button variant="outline" onPress={cancelEditing}>
-                    <X aria-hidden="true" className="mr-2 size-4" />
-                    Cancelar
-                  </Button>
-                  <Button isDisabled={!dirty} onPress={saveLayout}>
-                    <Check aria-hidden="true" className="mr-2 size-4" />
-                    Guardar
-                  </Button>
-                </>
-              ) : (
-                <IconButton label="Personalizar resumen" variant="ghost" onPress={startEditing}>
-                  <SlidersHorizontal aria-hidden="true" className="size-4" />
-                </IconButton>
-              )
+              <DashboardLayoutActions
+                iconOnly
+                editing={editing}
+                changed={changed}
+                onEdit={() => {
+                  setJustSaved(false)
+                  setDraft(saved)
+                }}
+                onCancel={() => setDraft(null)}
+                onSave={() => {
+                  if (changed) persist(draft)
+                }}
+              />
             ) : null}
           </>
         }
       />
 
       {editing ? (
-        <section
-          className="border-border bg-muted/40 space-y-4 rounded-xl border p-4 sm:p-5"
-          aria-label="Editor del resumen"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold">Organiza tu resumen</h2>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Arrastra los bloques para ordenarlos. En teclado, enfoca el control de arrastre y
-                usa espacio y flechas.
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              isDisabled={
-                JSON.stringify({ widgets: draftWidgets, ...draftChart }) ===
-                JSON.stringify({ widgets: defaultDashboardWidgets, ...resolveDashboardChart() })
-              }
-              onPress={() => {
-                setDraftWidgets([...defaultDashboardWidgets])
-                setDraftChart(resolveDashboardChart())
-                setJustSaved(false)
-              }}
-            >
-              <ArrowCounterClockwise aria-hidden="true" className="mr-2 size-4" />
-              Restaurar predeterminado
-            </Button>
-          </div>
-          {availableWidgets.length ? (
-            <div>
-              <h3 className="mb-2 text-xs font-semibold">Añadir bloques</h3>
-              <div className="flex flex-wrap gap-2">
-                {availableWidgets.map((widget) => (
-                  <button
-                    key={widget.id}
-                    type="button"
-                    onClick={() => addWidget(widget.id)}
-                    className="border-border bg-background hover:bg-muted flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs"
-                  >
-                    <Plus aria-hidden="true" className="size-4" />
-                    <span className="flex flex-col items-start">
-                      <span className="font-medium">{widget.title}</span>
-                      <span className="text-muted-foreground text-[11px]">
-                        {widget.description}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {draftWidgets.includes('income-expenses') ? (
-            <div className="flex flex-wrap gap-4">
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Gráfico de ingresos y gastos
-                <select
-                  className="border-border bg-background rounded-lg border px-3 py-2 text-sm"
-                  value={draftChart.incomeChart}
-                  onChange={(event) =>
-                    setDraftChart((current) => ({
-                      ...current,
-                      incomeChart: event.target.value === 'lines' ? 'lines' : 'bars',
-                    }))
-                  }
-                >
-                  <option value="bars">Barras</option>
-                  <option value="lines">Líneas</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Periodo
-                <select
-                  className="border-border bg-background rounded-lg border px-3 py-2 text-sm"
-                  value={draftChart.incomeMonths}
-                  onChange={(event) =>
-                    setDraftChart((current) => ({
-                      ...current,
-                      incomeMonths: event.target.value === '12' ? 12 : 6,
-                    }))
-                  }
-                >
-                  <option value="6">Últimos 6 meses</option>
-                  <option value="12">Últimos 12 meses</option>
-                </select>
-              </label>
-            </div>
-          ) : null}
-        </section>
+        <DashboardLayoutHelp
+          onReset={() =>
+            setDraft({ widgets: [...defaultDashboardWidgets], charts: resolveDashboardCharts() })
+          }
+        />
       ) : null}
 
       {justSaved ? (
@@ -264,44 +163,69 @@ export function DashboardPage() {
         </output>
       ) : null}
 
-      {visibleWidgets.length ? (
-        <DragDropProvider onDragEnd={handleDragEnd}>
-          <section className="grid gap-x-4 gap-y-6 md:grid-cols-2" aria-label="Bloques del resumen">
-            {visibleWidgets.map((id, index) => {
-              const widget = dashboardWidgets.find((item) => item.id === id)
-              if (!widget) return null
-              const fullWidth = ['key-metrics', 'receivables', 'recent-estimates'].includes(id)
-              return (
-                <SortableDashboardWidget
-                  key={id}
-                  id={id}
-                  index={index}
-                  title={widget.title}
-                  fullWidth={fullWidth}
-                  editing={editing}
-                  onRemove={removeWidget}
-                >
-                  <DashboardWidget id={id} data={data} chart={chart} editing={editing} />
-                </SortableDashboardWidget>
-              )
-            })}
-          </section>
-        </DragDropProvider>
-      ) : (
-        <div className="border-border bg-card rounded-xl border border-dashed px-5 py-12 text-center">
-          <h2 className="text-base font-semibold">Tu resumen está vacío</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {canCustomize
-              ? 'Personaliza el resumen y añade los bloques que te interesan.'
-              : 'Pide a un administrador que configure los bloques del resumen.'}
-          </p>
-          {canCustomize && !editing ? (
-            <Button className="mt-4" onPress={startEditing}>
-              Personalizar resumen
-            </Button>
-          ) : null}
-        </div>
-      )}
+      <DashboardCanvas
+        label="Bloques del resumen"
+        gridClassName="grid gap-4 md:grid-cols-2"
+        activeIds={layout.widgets}
+        options={canCustomize ? dashboardWidgets : []}
+        onAdd={addWidget}
+        onMove={(id, index) =>
+          updateDraft((current) => {
+            const from = current.widgets.findIndex((widget) => widget === id)
+            return { ...current, widgets: moveDashboardWidget(current.widgets, from, index) }
+          })
+        }
+        empty={
+          <div className="border-border bg-card rounded-xl border border-dashed px-5 py-12 text-center">
+            <h2 className="text-base font-semibold">Tu resumen está vacío</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {canCustomize
+                ? 'Añade abajo los módulos que te interesen.'
+                : 'Pide a un administrador que configure los bloques del resumen.'}
+            </p>
+          </div>
+        }
+      >
+        {layout.widgets.map((id, index) => {
+          const widget = dashboardWidgets.find((item) => item.id === id)
+          if (!widget) return null
+          const fullWidth = ['key-metrics', 'receivables', 'recent-estimates'].includes(id)
+          return (
+            <DashboardModule
+              key={id}
+              id={id}
+              index={index}
+              title={widget.title}
+              className={fullWidth ? 'md:col-span-2' : ''}
+              onRemove={
+                editing
+                  ? () =>
+                      updateDraft((current) => ({
+                        ...current,
+                        widgets: current.widgets.filter((item) => item !== id),
+                      }))
+                  : undefined
+              }
+            >
+              <DashboardWidget
+                id={id}
+                data={data}
+                charts={layout.charts}
+                editing={editing}
+                onChartChange={
+                  editing
+                    ? (patch) =>
+                        updateDraft((current) => ({
+                          ...current,
+                          charts: { ...current.charts, ...patch },
+                        }))
+                    : undefined
+                }
+              />
+            </DashboardModule>
+          )
+        })}
+      </DashboardCanvas>
     </div>
   )
 }
@@ -310,11 +234,9 @@ type DashboardData = {
   estimates: TenantData['estimates']
   ledger: TenantData['ledger']
   clients: TenantData['clients']
-  invoices: TenantData['invoices']
   owed: TenantData['invoices']
   owedTotal: number
   overdueTotal: number
-  months: ReturnType<typeof monthlySeries>
   sentTotal: number
   open: TenantData['estimates']
   pendingCollection: number
@@ -349,16 +271,19 @@ function DashboardMetric({
 function DashboardWidget({
   id,
   data,
-  chart,
+  charts,
   editing,
+  onChartChange,
 }: {
   id: DashboardWidgetId
   data: DashboardData
-  chart: ReturnType<typeof resolveDashboardChart>
+  charts: DashboardCharts
   editing: boolean
+  onChartChange: ((patch: Partial<DashboardCharts>) => void) | undefined
 }) {
   switch (id) {
-    case 'key-metrics':
+    case 'key-metrics': {
+      const months = monthlySeries(data.ledger)
       return (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardMetric
@@ -394,11 +319,11 @@ function DashboardWidget({
           >
             <StatCard
               label="Cobrado este mes"
-              value={formatEuros(data.months.at(-1)?.income ?? 0)}
-              hint={`Gastos ${formatEuros(data.months.at(-1)?.expense ?? 0)}`}
+              value={formatEuros(months.at(-1)?.income ?? 0)}
+              hint={`Gastos ${formatEuros(months.at(-1)?.expense ?? 0)}`}
               tone="success"
               icon={fieldIcons.bank}
-              trend={data.months.map((month) => month.income)}
+              trend={months.map((month) => month.income)}
             />
           </DashboardMetric>
           <DashboardMetric
@@ -415,25 +340,17 @@ function DashboardWidget({
           </DashboardMetric>
         </div>
       )
+    }
     case 'income-expenses':
-      return (
-        <ChartCard
-          title="Ingresos y gastos"
-          description={`Últimos ${chart.incomeMonths} meses. Pasa el ratón o enfoca un mes para ver el detalle.`}
-        >
-          {chart.incomeChart === 'lines' ? (
-            <MonthlyLines data={data.months} />
-          ) : (
-            <MonthlyBars
-              data={data.months}
-              emptyIcon={fieldIcons.bank}
-              emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
-            />
-          )}
-        </ChartCard>
-      )
+      return <DashboardIncomeChart ledger={data.ledger} chart={charts} onChange={onChartChange} />
     case 'estimate-status':
-      return <EstimateStatusSummary estimates={data.estimates} />
+      return (
+        <DashboardStatusChart
+          estimates={data.estimates}
+          chart={charts['estimate-status']}
+          onChange={onChartChange}
+        />
+      )
     case 'receivables':
       return (
         <Card className="overflow-hidden">
@@ -572,27 +489,14 @@ function DashboardWidget({
         </Card>
       )
     }
-    case 'expense-categories': {
-      const currentMonth = data.months.at(-1)?.key ?? ''
-      const expenses = data.ledger.filter((entry) => entry.date.startsWith(currentMonth))
+    case 'expense-categories':
       return (
-        <ChartCard title="Gastos por categoría" description="Gastos registrados este mes.">
-          <Donut
-            data={categoryTotals(expenses, 'expense')}
-            centerLabel="Gastos"
-            empty="Aún no hay gastos este mes"
-            emptyDescription="Registra gastos en contabilidad para ver su distribución."
-            emptyIcon={fieldIcons.euro}
-          />
-          <Link
-            to="/contabilidad"
-            className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
-          >
-            Ver contabilidad →
-          </Link>
-        </ChartCard>
+        <DashboardExpenseChart
+          ledger={data.ledger}
+          chart={charts['expense-categories']}
+          onChange={onChartChange}
+        />
       )
-    }
     case 'recent-movements': {
       const recent = [...data.ledger].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
       return (

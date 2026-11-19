@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { EstimateDesignExample } from '@/features/estimates'
 import { InvoiceDocument } from '@/features/invoices'
@@ -9,6 +9,9 @@ import { DocumentPreview } from '@/shared/ui/document-preview'
 import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
 import { TextareaField } from '@/shared/ui/form'
 import { VisualRadioGroup } from '@/shared/ui/visual-radio-group'
+
+import { DocumentTypeTabs } from './document-type-tabs'
+import { PersonalizationWorkspace } from './personalization-workspace'
 
 const client: Client = {
   id: 'example',
@@ -74,6 +77,7 @@ export function DocumentDesignWorkspace({
   onInvoiceDesignChange,
   footer,
   onFooterChange,
+  saveActions,
 }: {
   tenant: Tenant
   design: EstimateDesign
@@ -82,75 +86,68 @@ export function DocumentDesignWorkspace({
   onInvoiceDesignChange: (value: InvoiceDesign) => void
   footer: string
   onFooterChange: (value: string) => void
+  saveActions: ReactNode
 }) {
-  const [documentType, setDocumentType] = useState<'estimate' | 'invoice'>('estimate')
   const previewTenant = { ...tenant, documentFooter: footer.trim() }
   return (
-    <div className="space-y-4">
-      <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
-        Tipo de documento
-        <select
-          value={documentType}
-          onChange={(event) => setDocumentType(event.target.value as 'estimate' | 'invoice')}
-          className="border-border bg-background rounded-md border px-3 py-2"
-        >
-          <option value="estimate">Presupuesto</option>
-          <option value="invoice">Factura</option>
-        </select>
-      </label>
-      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="min-w-0">
-          {documentType === 'estimate' ? (
-            <EstimateDesignExample design={design} tenant={previewTenant} />
-          ) : (
-            <DocumentPreview label="en directo · Documento de ejemplo">
-              <InvoiceDocument
-                invoice={invoice}
-                client={client}
-                tenant={previewTenant}
-                previewDesign={invoiceDesign}
-              />
-            </DocumentPreview>
-          )}
-        </div>
-        <details
-          open
-          className="border-border bg-card min-w-0 rounded-xl border p-5 lg:open:w-[22rem]"
-        >
-          <summary className="cursor-pointer text-sm font-semibold">Personalizar documento</summary>
-          <div className="mt-5 space-y-5">
-            <div>
-              <h2 className="text-sm font-semibold">
-                {documentType === 'estimate' ? 'Diseño de presupuestos' : 'Diseño de facturas'}
-              </h2>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {documentType === 'estimate'
-                  ? 'Se copia a los presupuestos nuevos; no modifica los publicados.'
-                  : 'Se aplica a las facturas nuevas; no modifica las ya emitidas.'}
-              </p>
-            </div>
-            {documentType === 'estimate' ? (
-              <EstimateDesignFields value={design} onChange={onDesignChange} />
-            ) : (
-              <VisualRadioGroup
-                label="Plantilla"
-                value={invoiceDesign}
-                options={invoiceOptions}
-                onChange={onInvoiceDesignChange}
-                compact
-              />
-            )}
-            <TextareaField
-              label="Pie de página de los documentos"
-              maxLength={500}
-              placeholder="Añade tus datos registrales o una nota para el cliente."
-              helper="Se usa en presupuestos y facturas; los documentos publicados conservan su copia."
-              value={footer}
-              onChange={onFooterChange}
-            />
-          </div>
-        </details>
-      </div>
-    </div>
+    <DocumentTypeTabs label="Tipo de documento">
+      {(type) => {
+        const isEstimate = type === 'estimate'
+        return (
+          <PersonalizationWorkspace
+            previewLabel={isEstimate ? 'Páginas del presupuesto' : 'Páginas de la factura'}
+            controlsLabel="Personalizar documento"
+            saveActions={saveActions}
+            preview={
+              <DocumentPreview label={null}>
+                {isEstimate ? (
+                  <EstimateDesignExample design={design} tenant={previewTenant} />
+                ) : (
+                  <InvoiceDocument
+                    invoice={invoice}
+                    client={client}
+                    tenant={previewTenant}
+                    previewDesign={invoiceDesign}
+                  />
+                )}
+              </DocumentPreview>
+            }
+            controls={
+              <>
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    {isEstimate ? 'Diseño de presupuestos' : 'Diseño de facturas'}
+                  </h2>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {isEstimate
+                      ? 'Se copia a los presupuestos nuevos; no modifica los publicados.'
+                      : 'Se aplica a las facturas nuevas; no modifica las ya emitidas.'}
+                  </p>
+                </div>
+                {isEstimate ? (
+                  <EstimateDesignFields value={design} onChange={onDesignChange} />
+                ) : (
+                  <VisualRadioGroup
+                    label="Plantilla"
+                    value={invoiceDesign}
+                    options={invoiceOptions}
+                    onChange={onInvoiceDesignChange}
+                    compact
+                  />
+                )}
+                <TextareaField
+                  label="Pie de página de los documentos"
+                  maxLength={500}
+                  placeholder="Añade tus datos registrales o una nota para el cliente."
+                  helper="Se usa en presupuestos y facturas; los documentos publicados conservan su copia."
+                  value={footer}
+                  onChange={onFooterChange}
+                />
+              </>
+            }
+          />
+        )
+      }}
+    </DocumentTypeTabs>
   )
 }

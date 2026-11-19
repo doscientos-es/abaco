@@ -4,11 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UserSettingsPage } from './user-settings-page'
 
-const { state, button, switchTo, session } = vi.hoisted(() => ({
+const { state, button, switchTo, session, search } = vi.hoisted(() => ({
   state: vi.fn(),
   button: vi.fn(),
   switchTo: vi.fn(),
   session: vi.fn(),
+  search: vi.fn(),
 }))
 
 vi.mock('react', async (importOriginal) => ({
@@ -21,15 +22,23 @@ vi.mock('@doscientos/ui', () => ({
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
+  useNavigate: () => vi.fn(),
+  useSearch: search,
 }))
 vi.mock('@/features/auth', () => ({
   useSession: session,
   useCompanyActions: () => ({ switchTo }),
+}))
+vi.mock('@/features/interface-preferences', () => ({
+  InterfaceSettings: () => <p>Preferencias de navegación</p>,
 }))
 
 describe('worker settings', () => {
@@ -72,6 +81,14 @@ describe('worker settings', () => {
       fullName: 'Usuario',
     })
     switchTo.mockResolvedValue(undefined)
+    search.mockReturnValue({})
+  })
+
+  it('opens interface preferences without rendering the account panel', () => {
+    search.mockReturnValue({ tab: 'interfaz' })
+    const html = render()
+    expect(html).toContain('Preferencias de navegación')
+    expect(html).not.toContain('Cuenta y seguridad')
   })
 
   it('shows the current company and switches only to another accessible company', async () => {

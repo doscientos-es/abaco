@@ -16,14 +16,15 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { roleLabels, useSession, useSignOut } from '@/features/auth'
-import { GlobalSearch } from '@/features/global-search'
+import { GlobalSearch, type SearchMode } from '@/features/global-search'
+import { NavigationLayoutContext, useNavigationLayout } from '@/features/interface-preferences'
 import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 
-import { initials, SidebarLink, type NavItem } from './frame-navigation'
+import { initials, MobileBrandLink, SidebarLink, type NavItem } from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 import { PlatformMenuSection } from './platform-menu-section'
@@ -50,6 +51,13 @@ export function UserFrame({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const company = session?.companies.find((item) => item.id === session.tenantId)
   const userName = session?.fullName || session?.email || 'Usuario'
+  const [searchMode, setSearchMode] = useState<SearchMode>(null)
+  const navigationLayout = useNavigationLayout({
+    tenantId: session?.tenantId ?? '',
+    userId: session?.userId ?? '',
+    groups: [{ id: 'personal', label: 'Navegación de usuario', items: navigation }],
+    choices: navigation,
+  })
   const userMenu = (placement: 'top start' | 'bottom end') => (
     <DropdownMenuContent placement={placement}>
       <DropdownMenuLabel>{session?.email ?? ''}</DropdownMenuLabel>
@@ -99,9 +107,9 @@ export function UserFrame({ children }: { children: ReactNode }) {
           aria-label="Navegación de usuario"
           className="min-h-0 flex-1 overflow-y-auto px-3 py-1"
         >
-          {navigation.map((item) => (
-            <SidebarLink key={item.to} {...item} />
-          ))}
+          {navigationLayout.desktop.flatMap((group) =>
+            group.items.map((item) => <SidebarLink key={item.to} {...item} />),
+          )}
         </nav>
         <div className="border-border mt-auto shrink-0 border-t p-3">
           <DropdownMenuTrigger>
@@ -125,12 +133,12 @@ export function UserFrame({ children }: { children: ReactNode }) {
         </div>
       </AppShellSidebar>
       <AppShellMain className="user-frame__main">
-        <AppShellMobileHeader className="hidden max-md:flex">
-          <Link to="/mi-jornada" className="min-w-0 leading-tight" aria-label="Ir a mi jornada">
-            <span className="block truncate text-sm font-semibold tracking-tight">
-              {company?.name ?? 'Mi empresa'}
-            </span>
-          </Link>
+        <AppShellMobileHeader className="workspace-mobile-header hidden max-md:flex">
+          <MobileBrandLink
+            to="/mi-jornada"
+            label="Ir a mi jornada"
+            name={company?.name ?? 'Mi empresa'}
+          />
           <DropdownMenuTrigger>
             <Button
               variant="ghost"
@@ -144,9 +152,10 @@ export function UserFrame({ children }: { children: ReactNode }) {
             {userMenu('bottom end')}
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
-        <div className="user-frame__search">
+        <div className="user-frame__search hidden md:block">
           <GlobalSearch
-            key={session?.tenantId}
+            mode={searchMode}
+            onModeChange={setSearchMode}
             navigationOnly
             navigation={navigation.map((item) => ({
               id: `page:${item.to}`,
@@ -167,10 +176,18 @@ export function UserFrame({ children }: { children: ReactNode }) {
           aria-label="Contenido principal"
           tabIndex={0}
         >
-          <div className="user-frame__page">{children}</div>
+          <div className="user-frame__page">
+            <NavigationLayoutContext.Provider value={navigationLayout}>
+              {children}
+            </NavigationLayoutContext.Provider>
+          </div>
         </AppShellContent>
       </AppShellMain>
-      <MobileNavigation items={navigation} />
+      <MobileNavigation
+        items={navigationLayout.mobile}
+        searchOpen={searchMode === 'mobile'}
+        onOpenSearch={() => setSearchMode('mobile')}
+      />
       <Toaster />
     </AppShell>
   )

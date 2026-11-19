@@ -76,10 +76,12 @@ vi.mock('@doscientos/ui', () => {
     Button: ({
       children,
       variant: _variant,
+      onPress: _onPress,
       ...props
     }: {
       children: ReactNode
       variant?: string
+      onPress?: () => void
     }) => <button {...props}>{children}</button>,
     DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     DropdownMenuGroup: box,
@@ -127,6 +129,7 @@ describe('worker navigation', () => {
     expect(html).toContain('Menú de usuario')
     expect(html).not.toContain('Administración de Ábaco')
     expect(html).toContain('Buscar secciones')
+    expect(html).toContain('>Buscar</span>')
     expect(html).not.toContain('Datos de empresa')
   })
 

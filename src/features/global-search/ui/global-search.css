@@ -1,0 +1,57 @@
+.global-search-dialog,
+[data-slot='global-search-overlay'] > :has(> .global-search-dialog) {
+  max-width: min(100%, 42rem);
+}
+
+@media (width < 48rem) {
+  .workspace-tools.workspace-tools--desktop {
+    display: none;
+  }
+
+  [data-slot='global-search-overlay'] {
+    height: var(--visual-viewport-height, 100dvh);
+    padding: 0;
+  }
+
+  [data-slot='global-search-overlay'] > :has(> .global-search-dialog),
+  .global-search-dialog {
+    height: 100%;
+    max-height: none;
+    max-width: none;
+  }
+
+  .global-search-dialog {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+    border-radius: 0;
+    overflow-y: auto;
+  }
+
+  .global-search-dialog [data-slot='dialog-close'] {
+    top: calc(env(safe-area-inset-top) + 0.625rem);
+    right: calc(env(safe-area-inset-right) + 0.5rem);
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .global-search-field {
+    flex-shrink: 0;
+    padding-right: 3.75rem;
+  }
+
+  .global-search-field [role='combobox'] {
+    min-width: 0;
+    font-size: 1rem;
+  }
+
+  .global-search-results {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overscroll-behavior-y: contain;
+  }
+}

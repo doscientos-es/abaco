@@ -3,6 +3,9 @@ import { useState, type ReactNode } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 
+import { ChartContent } from './chart-content'
+import { fieldIcons } from './field-icons'
+
 export type ChartTone = 'primary' | 'info' | 'success' | 'warning' | 'danger' | 'muted'
 
 // Full class names (not built dynamically) so Tailwind can see them.
@@ -20,11 +23,13 @@ const cycle: ChartTone[] = ['primary', 'info', 'warning', 'success', 'danger', '
 export function ChartCard({
   title,
   description,
+  settings,
   children,
   className = '',
 }: {
   title: string
   description?: string
+  settings?: ReactNode
   children: ReactNode
   className?: string
 }) {
@@ -36,8 +41,62 @@ export function ChartCard({
       ) : (
         <div className="mb-3" />
       )}
-      {children}
+      {settings ? (
+        <div
+          aria-label={`Personalizar ${title}`}
+          role="group"
+          className="border-border mb-3 flex flex-wrap gap-2 border-b pb-3"
+        >
+          {settings}
+        </div>
+      ) : null}
+      <ChartContent title={title}>{children}</ChartContent>
     </section>
+  )
+}
+
+type CategoryData = { label: string; value: number }[]
+
+export function ExpenseCategoryPlot({
+  items,
+  format,
+}: {
+  items: CategoryData
+  format: 'donut' | 'ranking'
+}) {
+  return format === 'ranking' ? (
+    <CategoryRanking items={items} />
+  ) : (
+    <Donut
+      data={items}
+      centerLabel="Gastos"
+      empty="Aún no hay gastos en este periodo"
+      emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
+      emptyIcon={fieldIcons.euro}
+    />
+  )
+}
+
+function CategoryRanking({ items }: { items: CategoryData }) {
+  if (!items.length) return <EmptyHint title="Aún no hay gastos en este periodo" />
+  const max = Math.max(1, ...items.map(({ value }) => Math.abs(value)))
+  return (
+    <ul className="space-y-2">
+      {items.map(({ label, value }, index) => (
+        <li key={`${label}-${index}`} className="space-y-1">
+          <div className="flex justify-between gap-2 text-sm">
+            <span className="min-w-0 break-words">{label}</span>
+            <span className="shrink-0 tabular-nums">{formatEuros(value)}</span>
+          </div>
+          <div aria-hidden="true" className="bg-muted h-2 rounded-full">
+            <div
+              className="bg-primary h-full rounded-full"
+              style={{ width: `${(Math.abs(value) / max) * 100}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -92,11 +151,19 @@ export function MonthlyBars({
   emptyDescription?: string
 }) {
   const isEmpty = data.every((d) => d.income === 0 && d.expense === 0)
-  const max = Math.max(1, ...data.flatMap((d) => [d.income, d.expense]))
-  const pct = (value: number) => `${Math.max(value > 0 ? 3 : 0, (value / max) * 100)}%`
+  const amounts = data.flatMap((d) => [d.income, d.expense])
+  const min = Math.min(0, ...amounts)
+  const max = Math.max(0, ...amounts)
+  const range = max - min || 1
+  const zero = (-min / range) * 100
+  const barStyle = (value: number) => ({
+    height: `${value === 0 ? 0 : Math.min(value > 0 ? 100 - zero : zero, Math.max(3, (Math.abs(value) / range) * 100))}%`,
+    ...(value < 0 ? { top: `${100 - zero}%` } : { bottom: `${zero}%` }),
+  })
+  const columnGap = data.length > 6 ? 'gap-1' : 'gap-2 sm:gap-4'
   return (
     <div>
-      <div className="relative flex h-44 items-end gap-2 sm:gap-4">
+      <div className={`relative flex h-44 items-end ${columnGap}`}>
         {[0, 1, 2, 3].map((line) => (
           <div
             key={line}
@@ -104,6 +171,13 @@ export function MonthlyBars({
             style={{ bottom: `${line * 33.3}%` }}
           />
         ))}
+        {min < 0 && zero < 100 ? (
+          <div
+            aria-hidden="true"
+            className="border-border pointer-events-none absolute inset-x-0 border-t"
+            style={{ bottom: `${zero}%` }}
+          />
+        ) : null}
         {isEmpty ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <EmptyHint
@@ -121,16 +195,20 @@ export function MonthlyBars({
             tabIndex={isEmpty ? -1 : 0}
             aria-hidden={isEmpty || undefined}
             aria-label={`${d.label}: ${incomeLabel} ${formatEuros(d.income)}, ${expenseLabel} ${formatEuros(d.expense)}`}
-            className="group focus-visible:ring-ring relative flex h-full flex-1 items-end justify-center gap-1 rounded-md outline-none focus-visible:ring-2"
+            className="group focus-visible:ring-ring relative flex h-full min-w-0 flex-1 justify-center gap-px rounded-md outline-none focus-visible:ring-2 sm:gap-1"
           >
-            <span
-              className="bg-success/80 group-hover:bg-success block w-full max-w-6 rounded-t transition-all"
-              style={{ height: pct(d.income) }}
-            />
-            <span
-              className="bg-destructive/70 group-hover:bg-destructive block w-full max-w-6 rounded-t transition-all"
-              style={{ height: pct(d.expense) }}
-            />
+            <span className="relative h-full max-w-6 min-w-0 flex-1">
+              <span
+                className={`bg-success/80 group-hover:bg-success absolute inset-x-0 transition-colors ${d.income < 0 ? 'rounded-b' : 'rounded-t'}`}
+                style={barStyle(d.income)}
+              />
+            </span>
+            <span className="relative h-full max-w-6 min-w-0 flex-1">
+              <span
+                className={`bg-destructive/70 group-hover:bg-destructive absolute inset-x-0 transition-colors ${d.expense < 0 ? 'rounded-b' : 'rounded-t'}`}
+                style={barStyle(d.expense)}
+              />
+            </span>
             {isEmpty ? null : (
               <span
                 aria-hidden="true"
@@ -148,11 +226,11 @@ export function MonthlyBars({
           </button>
         ))}
       </div>
-      <div className="mt-2 flex gap-2 sm:gap-4">
+      <div className={`mt-2 flex ${columnGap}`}>
         {data.map((d) => (
           <span
             key={d.label}
-            className="text-muted-foreground flex-1 text-center text-xs capitalize"
+            className="text-muted-foreground min-w-0 flex-1 truncate text-center text-xs capitalize"
           >
             {d.label}
           </span>

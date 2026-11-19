@@ -1,24 +1,60 @@
 import { Button, buttonVariants } from '@doscientos/ui'
 import { CloudArrowUp, CloudCheck, Info, WarningCircle } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 
 import type { SaveStatus } from '@/shared/store/store'
 
-export function SaveStatusIndicator({ status }: { status: SaveStatus }) {
-  const Icon =
-    status.state === 'saving' ? CloudArrowUp : status.state === 'error' ? WarningCircle : CloudCheck
-  const label =
-    status.state === 'saving' ? 'Guardando…' : status.state === 'error' ? 'Sin guardar' : 'Guardado'
+export function SaveStatusIndicator({
+  status,
+  compact = false,
+}: {
+  status: SaveStatus | null
+  compact?: boolean
+}) {
+  const state = status?.state
+  const Icon = state === 'saving' ? CloudArrowUp : state === 'error' ? WarningCircle : CloudCheck
+  const label = state === 'saving' ? 'Guardando…' : state === 'error' ? 'Sin guardar' : 'Guardado'
+  const tone =
+    state === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-muted/70 text-muted-foreground'
 
   return (
     <output
       aria-live="polite"
       aria-atomic="true"
-      className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${status.state === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-muted/70 text-muted-foreground'}`}
+      className={
+        state
+          ? `inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium ${tone}`
+          : 'sr-only'
+      }
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
-      <span className="max-[360px]:sr-only">{label}</span>
+      {state ? (
+        <>
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+          <span className={compact && state !== 'saving' ? 'sr-only' : 'max-[360px]:sr-only'}>
+            {label}
+          </span>
+        </>
+      ) : null}
     </output>
+  )
+}
+
+export function MobileSaveStatus({ status }: { status: SaveStatus }) {
+  const [dismissed, setDismissed] = useState(status)
+  const showConfirmation = status.state === 'saved' && status.confirmed && status !== dismissed
+
+  useEffect(() => {
+    if (!showConfirmation) return
+    const timer = setTimeout(() => setDismissed(status), 1600)
+    return () => clearTimeout(timer)
+  }, [showConfirmation, status])
+
+  return (
+    <SaveStatusIndicator
+      status={status.state !== 'saved' || showConfirmation ? status : null}
+      compact
+    />
   )
 }
 

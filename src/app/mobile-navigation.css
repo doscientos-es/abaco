@@ -1,3 +1,9 @@
+.workspace-mobile-header[data-slot='app-shell-mobile-header'] {
+  height: calc(3.5rem + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(0.75rem, env(safe-area-inset-right)) 0
+    max(0.75rem, env(safe-area-inset-left));
+}
+
 /* Unlayered styles prevent the UI library's later .hidden utility from hiding the bar. */
 .mobile-bottom-nav {
   display: grid;
@@ -30,6 +36,13 @@
   color: var(--primary);
   font-weight: 600;
   box-shadow: inset 0 2px var(--primary);
+}
+
+.mobile-bottom-nav__link > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-bottom-nav__link:focus-visible {

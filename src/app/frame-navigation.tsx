@@ -46,3 +46,30 @@ export function SidebarLink({ to, label, icon }: NavItem) {
     </Link>
   )
 }
+
+export function MobileBrandLink({
+  to,
+  label,
+  name,
+  logoUrl,
+}: {
+  to: NavTo
+  label: string
+  name: string
+  logoUrl?: string | undefined
+}) {
+  return (
+    <Link
+      to={to}
+      aria-label={label}
+      className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 leading-tight"
+    >
+      <img
+        src={logoUrl || '/abaco-logo-short.svg'}
+        alt=""
+        className="h-7 w-9 shrink-0 object-contain"
+      />
+      <span className="truncate text-sm font-semibold tracking-tight">{name}</span>
+    </Link>
+  )
+}

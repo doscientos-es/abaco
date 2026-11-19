@@ -17,49 +17,51 @@ import {
   TabsTrigger,
   toast,
 } from '@doscientos/ui'
-import { DotsThree, DownloadSimple, Plus, UploadSimple } from '@phosphor-icons/react'
+import { DotsThree, DownloadSimple, Paperclip, Plus, UploadSimple } from '@phosphor-icons/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useSession } from '@/features/auth'
-import {
-  buildClientsCsv,
-  buildExpensesCsv,
-  buildInvoicesCsv,
-  buildLedgerCsv,
-  buildPaymentsCsv,
-  buildQuarterlyVatCsv,
-  downloadTextFile,
-  ledgerVatSummary,
-  quarterlyVat,
-} from '@/shared/domain/csv'
+import { quarterlyVat } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
-import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
-import type { LedgerEntry, LedgerKind } from '@/shared/domain/types'
-import { newId, updateTenantData, useSaveStatus, useTenantData } from '@/shared/store/store'
-import { ChartCard, Donut, MonthlyBars } from '@/shared/ui/charts'
+import type { LedgerEntry, LedgerKind, TenantData } from '@/shared/domain/types'
+import { receiptUpload } from '@/shared/domain/upload-file'
+import {
+  currentTenantData,
+  newId,
+  synchronizeStoreSaves,
+  updateTenantData,
+  useSaveStatus,
+  useTenantData,
+} from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
-import { StatCard } from '@/shared/ui/stat-card'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
+import { UploadFileField } from '@/shared/ui/upload-file-field'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
-/** `2026-03-15` -> `2026-T1`, same key as quarterlyVat. */
-const quarterKey = (date: string) =>
-  `${date.slice(0, 4)}-T${Math.ceil(Number(date.slice(5, 7)) / 3)}`
-
-import { loadAccountingExport } from '../application/accounting-export-actions'
 import { hasProtectedLedgerHistory } from '../application/expense-allocation-actions'
+import {
+  listLedgerAttachments,
+  uploadLedgerAttachment,
+  type PendingLedgerAttachment,
+} from '../application/ledger-attachment-actions'
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
+import { ledgerSummaryStorageKey } from '../application/ledger-summary-preferences'
+import { ledgerEntriesInQuarter, ledgerQuarterOptions } from '../domain/ledger-quarter'
+import { accountingDatasetLabels, type AccountingDataset } from '../domain/ledger-summary-layout'
 import { ExpenseAllocationDialog } from './expense-allocation-dialog'
+import { LedgerAttachmentsDialog } from './ledger-attachments-dialog'
+import { LedgerSummary } from './ledger-summary'
 import { ledgerTabs, type LedgerTab } from './ledger-tabs'
 import { PaymentCalendar } from './payment-calendar'
+import { useLedgerExports } from './use-ledger-exports'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const ledgerTabLabels: Record<LedgerTab, string> = {
@@ -77,20 +79,12 @@ const ledgerColumns = [
   { id: 'total', label: 'Total', headClassName: 'text-right' },
 ] as const
 
-function MonthFilter({
-  month,
-  description,
-  onChange,
-}: {
-  month: string
-  description: string
-  onChange: (month: string) => void
-}) {
+function MonthFilter({ month, onChange }: { month: string; onChange: (month: string) => void }) {
   return (
     <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">Periodo</p>
-        <p className="text-muted-foreground text-xs">{description}</p>
+        <p className="text-muted-foreground text-xs">Filtra el libro por mes.</p>
       </div>
       <Input
         type="month"
@@ -109,15 +103,20 @@ function MonthFilter({
 }
 
 export function LedgerPage() {
+  const { ledger, tenant } = useTenantData()
+  return <LedgerContent key={tenant.id} ledger={ledger} tenant={tenant} />
+}
+
+function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>) {
   const session = useSession()
   const columns = useTableColumns('apuntes', ledgerColumns)
-  const { ledger, tenant } = useTenantData()
   const navigate = useNavigate()
   const search = useSearch({ from: '/contabilidad' })
   const requestedTab = search.tab
   const tab = requestedTab ?? 'resumen'
   const saveStatus = useSaveStatus()
   const [month, setMonth] = useState('')
+  const [quarterKey, setQuarterKey] = useState('')
   const query = search.q ?? ''
   const setQuery = (q: string) =>
     void navigate({
@@ -128,9 +127,14 @@ export function LedgerPage() {
   const [kindFilter, setKindFilter] = useState<'all' | LedgerKind>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [exportBusy, setExportBusy] = useState(false)
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
   const [toAllocate, setToAllocate] = useState<LedgerEntry | null>(null)
+  const [receipt, setReceipt] = useState<File | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [attachments, setAttachments] = useState<{
+    entry: LedgerEntry
+    pending: PendingLedgerAttachment | null
+  } | null>(null)
   const [form, setForm] = useState({
     kind: 'expense' as LedgerKind,
     date: today(),
@@ -140,9 +144,13 @@ export function LedgerPage() {
     vatRate: String(tenant.defaultVatRate),
   })
 
-  const monthEntries = ledger
-    .filter((entry) => !month || entry.date.startsWith(month))
-    .sort((a, b) => b.date.localeCompare(a.date))
+  const orderedEntries = useMemo(
+    () => [...ledger].sort((a, b) => b.date.localeCompare(a.date)),
+    [ledger],
+  )
+  const monthEntries = month
+    ? orderedEntries.filter((entry) => entry.date.startsWith(month))
+    : orderedEntries
   const visible = monthEntries.filter(
     (entry) =>
       (kindFilter === 'all' || entry.kind === kindFilter) &&
@@ -152,48 +160,33 @@ export function LedgerPage() {
     visible,
     `${month}|${kindFilter}|${query.trim().toLocaleLowerCase('es')}`,
   )
-  const income = monthEntries
-    .filter((e) => e.kind === 'income')
-    .reduce((s, e) => s + e.amountCents, 0)
-  const expense = monthEntries
-    .filter((e) => e.kind === 'expense')
-    .reduce((s, e) => s + e.amountCents, 0)
-  const vat = ledgerVatSummary(monthEntries)
-  const quarters = quarterlyVat(ledger)
-  const months = monthlySeries(ledger)
-  const expenseByCategory = categoryTotals(monthEntries, 'expense')
+  const quarters = useMemo(() => quarterlyVat(ledger), [ledger])
+  const quarterOptions = useMemo(
+    () => ledgerQuarterOptions(quarters.map(({ year }) => year)),
+    [quarters],
+  )
+  const quarter = quarterOptions.find(({ value }) => value === quarterKey) ?? null
+  const summaryEntries = useMemo(
+    () => (quarter ? ledgerEntriesInQuarter(orderedEntries, quarter) : orderedEntries),
+    [orderedEntries, quarter],
+  )
+  const isAdmin = session?.tenantId === tenant.id && session?.role === 'admin'
+  const storageKey = ledgerSummaryStorageKey(tenant.id, session?.userId ?? 'anonymous')
+  const { exportAction, downloadBook } = useLedgerExports({
+    tenant,
+    canExportDatasets: isAdmin,
+    period: tab === 'resumen' ? (quarter?.value ?? '') : tab === 'apuntes' ? month : '',
+    entries: tab === 'resumen' ? summaryEntries : tab === 'apuntes' ? monthEntries : orderedEntries,
+    quarters,
+  })
+  const bookExport = exportAction('book')
+  const vatExport = exportAction('vat')
 
-  async function exportDataset(dataset: 'clients' | 'invoices' | 'payments' | 'expenses') {
-    if (exportBusy || session?.tenantId !== tenant.id || session?.role !== 'admin') return
-    setExportBusy(true)
-    try {
-      const data = await loadAccountingExport(tenant.id, dataset)
-      const content = {
-        clients: buildClientsCsv(data.clients),
-        invoices: buildInvoicesCsv(data.invoices),
-        payments: buildPaymentsCsv(data.payments, data.invoices),
-        expenses: buildExpensesCsv(data.expenses),
-      }[dataset]
-      const slug = tenant.name
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-      downloadTextFile(`abaco-${slug || tenant.id}-${dataset}-${today()}.csv`, content)
-      toast.success('CSV preparado con todos los registros autorizados')
-    } catch (error) {
-      toast.error('No se pudo exportar el CSV', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
-      })
-    } finally {
-      setExportBusy(false)
-    }
-  }
-
-  function add() {
+  async function add() {
     const amountCents = parseEuros(form.amount)
     const vatRate = Number(form.vatRate.replace(',', '.'))
     if (
+      adding ||
       !form.concept.trim() ||
       form.concept.trim().length > formLimits.ledgerConcept ||
       form.category.trim().length > formLimits.ledgerCategory ||
@@ -218,7 +211,23 @@ export function LedgerPage() {
       milestoneId: null,
     }
     updateTenantData((data) => ({ ...data, ledger: [entry, ...data.ledger] }))
+    const pending = receipt && isAdmin ? { id: newId(), file: receipt } : null
+    if (pending) {
+      setAdding(true)
+      try {
+        await synchronizeStoreSaves()
+        if (currentTenantData()?.tenant.id === entry.tenantId) {
+          await uploadLedgerAttachment(entry, pending)
+          toast.success('Apunte y justificante guardados')
+        }
+      } catch {
+        if (currentTenantData()?.tenant.id === entry.tenantId) setAttachments({ entry, pending })
+      } finally {
+        setAdding(false)
+      }
+    }
     setForm({ ...form, concept: '', amount: '' })
+    setReceipt(null)
     setDialogOpen(false)
   }
 
@@ -229,6 +238,11 @@ export function LedgerPage() {
         toast.error('Este asiento tiene historial financiero y no se puede eliminar')
         return
       }
+      if (isAdmin && (await listLedgerAttachments(entry)).length > 0) {
+        toast.error('Quita los justificantes antes de eliminar el apunte')
+        setAttachments({ entry, pending: null })
+        return
+      }
     } catch (error) {
       toast.error('No se pudo comprobar el historial del asiento', {
         description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
@@ -236,6 +250,16 @@ export function LedgerPage() {
       return
     }
     setToDelete(entry)
+  }
+
+  function attachmentButton(entry: LedgerEntry) {
+    if (!isAdmin) return null
+    return (
+      <Button size="sm" variant="outline" onPress={() => setAttachments({ entry, pending: null })}>
+        <Paperclip aria-hidden="true" className="size-4" />
+        Justificantes
+      </Button>
+    )
   }
 
   return (
@@ -258,40 +282,27 @@ export function LedgerPage() {
                   <UploadSimple aria-hidden="true" className="size-4 shrink-0" />
                   <span className="whitespace-nowrap">Importar de Excel</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onAction={() =>
-                    downloadTextFile(
-                      `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${month || 'todo'}.csv`,
-                      buildLedgerCsv(monthEntries),
-                    )
-                  }
-                  isDisabled={monthEntries.length === 0}
-                >
+                <DropdownMenuItem onAction={bookExport.run} isDisabled={bookExport.disabled}>
                   <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
                   <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
                 </DropdownMenuItem>
-                {session?.tenantId === tenant.id && session?.role === 'admin' ? (
-                  <>
-                    {(['clients', 'invoices', 'payments', 'expenses'] as const).map((dataset) => (
-                      <DropdownMenuItem
-                        key={dataset}
-                        isDisabled={exportBusy}
-                        onAction={() => void exportDataset(dataset)}
-                      >
-                        <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
-                        <span className="whitespace-nowrap">
-                          {dataset === 'clients'
-                            ? 'Exportar clientes'
-                            : dataset === 'invoices'
-                              ? 'Exportar facturas'
-                              : dataset === 'payments'
-                                ? 'Exportar cobros'
-                                : 'Exportar gastos'}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                ) : null}
+                {isAdmin
+                  ? (Object.keys(accountingDatasetLabels) as AccountingDataset[]).map((dataset) => {
+                      const action = exportAction(dataset)
+                      return (
+                        <DropdownMenuItem
+                          key={dataset}
+                          isDisabled={action.disabled}
+                          onAction={action.run}
+                        >
+                          <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
+                          <span className="whitespace-nowrap">
+                            {accountingDatasetLabels[dataset]}
+                          </span>
+                        </DropdownMenuItem>
+                      )
+                    })
+                  : null}
               </DropdownMenuContent>
             </DropdownMenuTrigger>
           </>
@@ -324,65 +335,32 @@ export function LedgerPage() {
       ) : null}
 
       {tab === 'resumen' ? (
-        <div className="space-y-5">
-          <MonthFilter
-            month={month}
-            description="Filtra ingresos, gastos e IVA por mes."
-            onChange={setMonth}
-          />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label="Ingresos"
-              value={formatEuros(income)}
-              tone="success"
-              icon={fieldIcons.euro}
-              trend={months.map((m) => m.income)}
-            />
-            <StatCard
-              label="Gastos"
-              value={formatEuros(expense)}
-              tone="danger"
-              icon={fieldIcons.tag}
-              trend={months.map((m) => m.expense)}
-            />
-            <StatCard
-              label="Resultado"
-              value={formatEuros(income - expense)}
-              tone={income - expense < 0 ? 'danger' : 'default'}
-              icon={fieldIcons.bank}
-              trend={months.map((m) => m.income - m.expense)}
-            />
-            <StatCard
-              label="IVA a ingresar"
-              value={formatEuros(vat.collected - vat.paid)}
-              hint={`Repercutido ${formatEuros(vat.collected)} · Soportado ${formatEuros(vat.paid)}`}
-              icon={fieldIcons.percent}
-            />
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-5">
-            <ChartCard
-              className="lg:col-span-3"
-              title="Ingresos y gastos por mes"
-              description="Últimos 6 meses. Pasa el ratón por un mes para ver el detalle."
-            >
-              <MonthlyBars data={months} />
-            </ChartCard>
-            <ChartCard
-              className="lg:col-span-2"
-              title="En qué gastas"
-              description={month ? 'Gastos del mes elegido.' : 'Gastos por categoría.'}
-            >
-              <Donut
-                data={expenseByCategory}
-                centerLabel="Gastos"
-                empty="Aún no hay gastos"
-                emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
-                emptyIcon={fieldIcons.euro}
+        <LedgerSummary
+          key={`${storageKey}:${isAdmin}`}
+          storageKey={storageKey}
+          canExportDatasets={isAdmin}
+          entries={summaryEntries}
+          quarter={quarter}
+          exportAction={exportAction}
+          periodFilter={
+            <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
+              <div className="min-w-0 flex-1 basis-56">
+                <p className="text-sm font-medium">Periodo del resumen</p>
+                <p className="text-muted-foreground text-xs">
+                  Filtra los importes, los gráficos y el CSV para la gestoría.
+                </p>
+              </div>
+              <SelectField
+                label="Trimestre del resumen"
+                hideLabel
+                searchable={false}
+                value={quarter?.value ?? ''}
+                options={[{ value: '', label: 'Todos los trimestres' }, ...quarterOptions]}
+                onChange={setQuarterKey}
               />
-            </ChartCard>
-          </div>
-        </div>
+            </div>
+          }
+        />
       ) : null}
 
       {tab === 'iva' ? (
@@ -396,15 +374,7 @@ export function LedgerPage() {
               </p>
             </div>
             {quarters.length ? (
-              <Button
-                variant="outline"
-                onPress={() =>
-                  downloadTextFile(
-                    `iva-trimestral-${tenant.name.toLowerCase().replace(/\W+/g, '-')}.csv`,
-                    buildQuarterlyVatCsv(quarters),
-                  )
-                }
-              >
+              <Button variant="outline" onPress={vatExport.run}>
                 Exportar IVA trimestral
               </Button>
             ) : null}
@@ -434,12 +404,7 @@ export function LedgerPage() {
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
-                        onPress={() =>
-                          downloadTextFile(
-                            `libro-${tenant.name.toLowerCase().replace(/\W+/g, '-')}-${q.key}.csv`,
-                            buildLedgerCsv(ledger.filter((e) => quarterKey(e.date) === q.key)),
-                          )
-                        }
+                        onPress={() => downloadBook(ledgerEntriesInQuarter(ledger, q), q.key)}
                       >
                         Libro del trimestre
                       </Button>
@@ -471,7 +436,7 @@ export function LedgerPage() {
               {visible.length} {visible.length === 1 ? 'apunte' : 'apuntes'}
             </p>
           </div>
-          <MonthFilter month={month} description="Filtra el libro por mes." onChange={setMonth} />
+          <MonthFilter month={month} onChange={setMonth} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               type="search"
@@ -528,10 +493,15 @@ export function LedgerPage() {
 
       <FormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setReceipt(null)
+        }}
         title="Nuevo apunte"
         description="Registra un ingreso o un gasto en el libro."
-        submitLabel="Añadir apunte"
+        submitLabel={adding ? 'Guardando…' : 'Añadir apunte'}
+        isSubmitting={adding}
+        isDirty={!!receipt}
         submitDisabled={
           !form.concept.trim() ||
           form.concept.trim().length > formLimits.ledgerConcept ||
@@ -542,7 +512,7 @@ export function LedgerPage() {
           Number(form.vatRate.replace(',', '.')) < 0 ||
           Number(form.vatRate.replace(',', '.')) > 100
         }
-        onSubmit={add}
+        onSubmit={() => void add()}
       >
         <SelectField
           label="Tipo"
@@ -597,6 +567,16 @@ export function LedgerPage() {
           value={form.vatRate}
           onChange={(vatRate) => setForm({ ...form, vatRate })}
         />
+        {isAdmin ? (
+          <div className="sm:col-span-2">
+            <UploadFileField
+              label="Justificante (opcional)"
+              rules={receiptUpload}
+              file={receipt}
+              onChange={setReceipt}
+            />
+          </div>
+        ) : null}
       </FormDialog>
 
       {tab === 'apuntes' ? (
@@ -634,7 +614,7 @@ export function LedgerPage() {
                       </span>
                     </p>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Badge
                       variant={
                         entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'
@@ -646,6 +626,7 @@ export function LedgerPage() {
                           : 'Ingreso'
                         : 'Gasto'}
                     </Badge>
+                    {attachmentButton(entry)}
                     {entry.kind === 'expense' && session?.role === 'admin' ? (
                       <Button
                         variant="outline"
@@ -717,6 +698,7 @@ export function LedgerPage() {
                       }}
                     />
                     <TableCell className="text-right">
+                      {attachmentButton(entry)}{' '}
                       {entry.kind === 'expense' && session?.role === 'admin' ? (
                         <Button
                           size="sm"
@@ -745,6 +727,14 @@ export function LedgerPage() {
       ) : null}
 
       <ExpenseAllocationDialog entry={toAllocate} onClose={() => setToAllocate(null)} />
+      {isAdmin && attachments?.entry.tenantId === tenant.id ? (
+        <LedgerAttachmentsDialog
+          key={attachments.entry.id}
+          entry={attachments.entry}
+          initialFile={attachments.pending}
+          onClose={() => setAttachments(null)}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={toDelete !== null}

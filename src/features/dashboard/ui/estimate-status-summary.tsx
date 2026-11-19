@@ -1,8 +1,11 @@
 import { Link } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 
 import { estimateTotalCents } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
+import { filterByRecentMonths } from '@/shared/domain/stats'
 import type { Estimate, EstimateStatus } from '@/shared/domain/types'
+import { chartPeriodLabels } from '@/shared/ui/chart-settings'
 import { ChartCard, EmptyHint } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { statusLabels } from '@/shared/ui/status-badge'
@@ -14,7 +17,40 @@ const statuses: { id: EstimateStatus; color: string }[] = [
   { id: 'rejected', color: 'bg-destructive' },
 ]
 
-export function EstimateStatusSummary({ estimates }: { estimates: Estimate[] }) {
+type StatusChart = { months: 'all' | 6 | 12; metric: 'amount' | 'count' }
+
+export function EstimateStatusSummary({
+  estimates,
+  months = 'all',
+  metric = 'amount',
+  settings,
+}: {
+  estimates: Estimate[]
+  months?: StatusChart['months']
+  metric?: StatusChart['metric']
+  settings?: ReactNode
+}) {
+  return (
+    <ChartCard
+      title="Presupuestos por estado"
+      description={
+        months === 'all'
+          ? 'Todo el historial'
+          : `Creados en los ${chartPeriodLabels[months].toLowerCase()}.`
+      }
+      settings={settings}
+    >
+      <EstimateStatusPlot estimates={estimates} months={months} metric={metric} />
+    </ChartCard>
+  )
+}
+
+function EstimateStatusPlot({
+  estimates: allEstimates,
+  months,
+  metric,
+}: StatusChart & { estimates: Estimate[] }) {
+  const estimates = filterByRecentMonths(allEstimates, months, (estimate) => estimate.createdAt)
   const groups = statuses.map(({ id, color }) => {
     const matching = estimates.filter((estimate) => estimate.status === id)
     return {
@@ -25,15 +61,23 @@ export function EstimateStatusSummary({ estimates }: { estimates: Estimate[] }) 
     }
   })
   const total = groups.reduce((sum, group) => sum + group.amount, 0)
-  const chartTotal = groups.reduce((sum, group) => sum + Math.max(0, group.amount), 0)
+  const chartValue = (group: (typeof groups)[number]) =>
+    metric === 'count' ? group.count : Math.max(0, group.amount)
+  const chartTotal = groups.reduce((sum, group) => sum + chartValue(group), 0)
 
   return (
-    <ChartCard title="Presupuestos por estado">
+    <>
       {estimates.length === 0 ? (
         <EmptyHint
           icon={fieldIcons.file}
-          title="Aún no hay presupuestos"
-          description="Crea el primero para ver su distribución por estado."
+          title={
+            allEstimates.length ? 'No hay presupuestos en este periodo' : 'Aún no hay presupuestos'
+          }
+          description={
+            allEstimates.length
+              ? 'Elige un periodo más amplio para ver su distribución.'
+              : 'Crea el primero para ver su distribución por estado.'
+          }
           action={
             <Link to="/presupuestos" className="text-primary underline-offset-4 hover:underline">
               Ir a presupuestos →
@@ -54,7 +98,7 @@ export function EstimateStatusSummary({ estimates }: { estimates: Estimate[] }) 
                 <span
                   key={group.id}
                   className={group.color}
-                  style={{ width: `${(Math.max(0, group.amount) / chartTotal) * 100}%` }}
+                  style={{ width: `${(chartValue(group) / chartTotal) * 100}%` }}
                 />
               ))}
           </div>
@@ -77,6 +121,6 @@ export function EstimateStatusSummary({ estimates }: { estimates: Estimate[] }) 
           </ul>
         </div>
       )}
-    </ChartCard>
+    </>
   )
 }

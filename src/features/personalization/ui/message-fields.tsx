@@ -1,29 +1,32 @@
-import { Section } from '@/features/settings/ui/settings-form'
+import type { DocumentKind } from '@/shared/lib/send-document'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextareaField, TextField } from '@/shared/ui/form'
 
-export type MessageForm = {
-  emailFromName: string
-  emailSignature: string
-  estimateEmailIntro: string
-  invoiceEmailIntro: string
-  documentFooter: string
-}
+import type { MessageForm } from './message-form'
 
 export function MessageFields({
   form,
   set,
   companyName,
+  kind,
 }: {
   form: MessageForm
   set: (key: keyof MessageForm) => (value: string) => void
   companyName: string
+  kind: DocumentKind
 }) {
+  const isEstimate = kind === 'estimate'
+  const introKey = isEstimate ? 'estimateEmailIntro' : 'invoiceEmailIntro'
   return (
-    <Section
-      title="Correos"
-      description="Personaliza los correos con los que envías presupuestos y facturas."
-    >
+    <>
+      <div>
+        <h2 className="font-semibold">
+          {isEstimate ? 'Correo de presupuesto' : 'Correo de factura'}
+        </h2>
+        <p className="text-muted-foreground mt-1 text-xs">
+          El mensaje es distinto para cada documento. El remitente y la firma se comparten.
+        </p>
+      </div>
       <TextField
         label="Nombre del remitente"
         maxLength={80}
@@ -42,23 +45,17 @@ export function MessageFields({
         onChange={set('emailSignature')}
       />
       <TextareaField
-        className="sm:col-span-2"
-        label="Mensaje en correos de presupuesto"
+        label={isEstimate ? 'Mensaje en correos de presupuesto' : 'Mensaje en correos de factura'}
         maxLength={1000}
-        placeholder="Gracias por contar con nosotros. Cualquier duda, responde a este correo."
-        helper="Se añade antes de los datos del presupuesto."
-        value={form.estimateEmailIntro}
-        onChange={set('estimateEmailIntro')}
+        placeholder={
+          isEstimate
+            ? 'Gracias por contar con nosotros. Cualquier duda, responde a este correo.'
+            : 'El pago se realiza por transferencia.'
+        }
+        helper="Se añade antes de los datos del documento."
+        value={form[introKey]}
+        onChange={set(introKey)}
       />
-      <TextareaField
-        className="sm:col-span-2"
-        label="Mensaje en correos de factura"
-        maxLength={1000}
-        placeholder="Adjuntamos tu factura. El pago se realiza por transferencia."
-        helper="Se añade antes de los datos de la factura."
-        value={form.invoiceEmailIntro}
-        onChange={set('invoiceEmailIntro')}
-      />
-    </Section>
+    </>
   )
 }

@@ -14,7 +14,12 @@ export type AppState = {
   tenants: Record<string, TenantData>
 }
 
-export type SaveStatus = { state: 'saved' | 'saving' | 'error'; message?: string }
+export type SaveStatus = {
+  state: 'saved' | 'saving' | 'error'
+  message?: string
+  /** Synchronization finished, rather than the store starting or resetting. */
+  confirmed?: true
+}
 
 type PendingChange = { previous: AppState; next: AppState; epoch: number }
 
@@ -169,7 +174,8 @@ async function drainQueue(): Promise<void> {
         return
       }
     }
-    if (startedIn === epoch && queue.length === 0) setSaveStatus({ state: 'saved' })
+    if (startedIn === epoch && queue.length === 0)
+      setSaveStatus({ state: 'saved', confirmed: true })
   } finally {
     if (drainingEpoch === startedIn) drainingEpoch = null
     if (startedIn === epoch && queue.length && getSaveStatus().state !== 'error') {

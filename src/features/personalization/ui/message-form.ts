@@ -1,6 +1,12 @@
 import type { Tenant } from '@/shared/domain/types'
 
-import type { MessageForm } from './message-fields'
+export type MessageForm = {
+  emailFromName: string
+  emailSignature: string
+  estimateEmailIntro: string
+  invoiceEmailIntro: string
+  documentFooter: string
+}
 
 export function messageForm(tenant: Tenant): MessageForm {
   return {

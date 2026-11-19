@@ -3,7 +3,6 @@ import {
   CalendarMinus,
   ClipboardText,
   Clock,
-  DotsThreeCircle,
   FileText,
   GearSix,
   Handshake,
@@ -34,5 +33,4 @@ export const navIcons = {
   contracts: <Handshake aria-hidden="true" className={cls} />,
   settings: <GearSix aria-hidden="true" className={cls} />,
   personalize: <Palette aria-hidden="true" className={cls} />,
-  more: <DotsThreeCircle aria-hidden="true" className={cls} />,
 } as const

@@ -30,6 +30,10 @@ describe('settings route search', () => {
     expect(validate({ tab: 'listas' })).toEqual({ tab: 'listas' })
   })
 
+  it('supports direct links to interface settings', () => {
+    expect(validate({ tab: 'interfaz' })).toEqual({ tab: 'interfaz' })
+  })
+
   it('rejects unknown tabs', () => {
     expect(validate({ tab: 'unknown' })).toEqual({})
   })

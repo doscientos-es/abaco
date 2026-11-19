@@ -12,6 +12,10 @@ export type DashboardConfig = {
   widgets: string[]
   incomeChart?: 'bars' | 'lines'
   incomeMonths?: 6 | 12
+  charts?: {
+    'expense-categories'?: { format: 'donut' | 'ranking'; months: 1 | 6 | 12 }
+    'estimate-status'?: { metric: 'amount' | 'count'; months: 'all' | 6 | 12 }
+  }
 }
 
 export type Tenant = {
