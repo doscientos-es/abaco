@@ -42,7 +42,13 @@ it('includes legacy technicians when loading the team', async () => {
   const queryFn = teamQuery('tenant').queryFn
   if (typeof queryFn !== 'function') throw new Error('Missing team query function')
   expect(await queryFn({} as never)).toEqual([
-    { userId: 'worker', email: 'a@example.test', fullName: 'Ana', role: 'user' },
+    {
+      userId: 'worker',
+      email: 'a@example.test',
+      fullName: 'Ana',
+      role: 'user',
+      calendarColor: null,
+    },
   ])
 })
 

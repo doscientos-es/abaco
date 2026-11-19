@@ -18,6 +18,7 @@ import {
   staffSchedulesQuery,
 } from '@/features/staff-schedules'
 import { WorkerVacationAllowance } from '@/features/vacations'
+import { calendarColors, resolveCalendarColor } from '@/shared/domain/calendar-color'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
@@ -28,6 +29,7 @@ import {
   changeMemberRole,
   inviteMember,
   removeMember,
+  setMemberCalendarColor,
   teamQuery,
   type TeamMember,
   type TeamResult,
@@ -79,6 +81,7 @@ export function TeamSection({
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
     await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
     await queryClient.invalidateQueries({ queryKey: staffSchedulesQuery(tenantId).queryKey })
+    await queryClient.invalidateQueries({ queryKey: ['staff-calendar-colors', tenantId] })
   }
 
   async function run(action: () => Promise<TeamResult>, success: string) {
@@ -247,6 +250,44 @@ export function TeamSection({
                     }
                     onRemove={() => setRemoving(member)}
                   />
+                  <fieldset
+                    className="border-border bg-card mt-5 rounded-xl border p-4"
+                    disabled={busy}
+                  >
+                    <legend className="px-1 text-sm font-semibold">Color en el horario</legend>
+                    <p className="text-muted-foreground mb-3 text-sm">
+                      Identifica a esta persona en el calendario del equipo.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {calendarColors.map((color) => (
+                        <label
+                          key={color.id}
+                          className="focus-within:ring-ring flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm focus-within:ring-2"
+                        >
+                          <input
+                            type="radio"
+                            name={`calendar-color-${member.userId}`}
+                            value={color.id}
+                            checked={
+                              resolveCalendarColor(member.userId, member.calendarColor) === color.id
+                            }
+                            onChange={() =>
+                              void run(
+                                () => setMemberCalendarColor(tenantId, member.userId, color.id),
+                                'Color actualizado.',
+                              )
+                            }
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="size-4 rounded-full"
+                            style={{ backgroundColor: color.swatch }}
+                          />
+                          {color.label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                   <div className="mt-5">
                     <WorkerPersonalDataSection tenantId={tenantId} workerId={member.userId} />
                   </div>

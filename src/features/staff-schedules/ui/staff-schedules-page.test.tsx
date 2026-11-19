@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   selected: undefined as StaffSelection | undefined,
   filter: null as FilterProps | null,
   popover: null as { open: boolean | undefined; placement: string | undefined } | null,
-  events: [] as { id: string; title: string }[],
+  events: [] as { id: string; title: string; color?: string }[],
 }))
 vi.mock('react', async (original) => {
   const actual = await original<typeof React>()
@@ -71,7 +71,7 @@ vi.mock('./staff-people-filter', () => ({
   },
 }))
 vi.mock('@/shared/ui/event-calendar', () => ({
-  EventCalendar: ({ items }: { items: { id: string; title: string }[] }) => {
+  EventCalendar: ({ items }: { items: { id: string; title: string; color?: string }[] }) => {
     mocks.events = items
     return (
       <div>
@@ -98,6 +98,7 @@ describe('staff schedule access and availability', () => {
           { userId: 'luis', fullName: 'Luis', email: 'luis@example.com' },
         ],
         'staff-functions': [{ id: 'electricidad', name: 'Electricidad' }],
+        'staff-calendar-colors': [{ user_id: 'luis', calendar_color: 'blue' }],
         'work-teams': [
           { id: 'north', name: 'Norte', memberIds: ['ana', 'luis', 'outsider'], archived: false },
           { id: 'old', name: 'Archivado', memberIds: ['ana'], archived: true },
@@ -127,6 +128,12 @@ describe('staff schedule access and availability', () => {
       role: 'admin',
     })
   }
+
+  it('uses the saved color for each person’s calendar events', () => {
+    adminSession()
+    renderToStaticMarkup(<StaffSchedulesPage />)
+    expect(mocks.events.find((event) => event.title === 'Luis')?.color).toBe('blue')
+  })
 
   it('opens small companies with the whole company calendar and search', () => {
     adminSession()

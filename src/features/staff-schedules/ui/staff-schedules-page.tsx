@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useSession } from '@/features/auth'
 import { teamQuery } from '@/features/settings/application/team-actions'
 import { workTeamsQuery } from '@/features/work-teams'
+import { resolveCalendarColor } from '@/shared/domain/calendar-color'
 import { dateValue } from '@/shared/lib/date-range'
 import { calendarDays, calendarTime, type EventCalendarView } from '@/shared/lib/event-calendar'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
@@ -13,6 +14,7 @@ import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
   staffAbsencesQuery,
+  staffCalendarColorsQuery,
   staffFunctionsQuery,
   staffSchedulesQuery,
 } from '../application/staff-schedule-actions'
@@ -86,10 +88,16 @@ function ScheduleView({
   const absences = useQuery({ ...absenceOptions, queryKey: [...absenceOptions.queryKey, userId] })
   const team = useQuery({ ...teamQuery(tenantId), enabled: admin })
   const workTeams = useQuery({ ...workTeamsQuery(tenantId), enabled: admin })
+  const colors = useQuery({
+    ...staffCalendarColorsQuery(tenantId),
+    queryKey: ['staff-calendar-colors', tenantId, userId],
+  })
+  const colorsByUser = new Map((colors.data ?? []).map((row) => [row.user_id, row.calendar_color]))
   const loading =
     schedules.isPending ||
     functions.isPending ||
     absences.isPending ||
+    colors.isPending ||
     (admin && (team.isPending || workTeams.isPending))
   const failed =
     schedules.isError ||
@@ -131,6 +139,7 @@ function ScheduleView({
     title: item.name,
     start: item.start,
     end: item.end,
+    color: resolveCalendarColor(item.userId, colorsByUser.get(item.userId)),
   }))
 
   async function download() {
@@ -171,6 +180,11 @@ function ScheduleView({
           </Button>
         ) : null}
       </header>
+      {colors.isError ? (
+        <output className="text-muted-foreground text-sm">
+          No se pudieron cargar los colores personalizados; se muestran colores automáticos.
+        </output>
+      ) : null}
       {loading ? (
         <WorkerLoading label="Cargando horarios…" />
       ) : failed ? (

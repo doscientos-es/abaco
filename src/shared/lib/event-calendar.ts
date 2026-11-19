@@ -1,3 +1,5 @@
+import type { CalendarColor } from '@/shared/domain/calendar-color'
+
 import { calendarDate, dateValue, moveDays, moveMonths } from './date-range'
 
 export type EventCalendarView = 'day' | 'week' | 'month'
@@ -13,6 +15,7 @@ export type CalendarEvent = {
   resizable?: boolean
   tone?: 'primary' | 'success' | 'warning' | 'muted' | 'danger'
   description?: string
+  color?: CalendarColor
 }
 export type CalendarEventChange = {
   item: CalendarEvent

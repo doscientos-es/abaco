@@ -13,6 +13,23 @@ import type {
 type ScheduleRow = { user_id: string; updated_at: string; slots: StaffSlot[] }
 type AssignmentRow = { user_id: string; function_id: string }
 type AbsenceRow = { requester_id: string; start_date: string; end_date: string | null }
+type CalendarColorRow = { user_id: string; calendar_color: string | null }
+
+export const staffCalendarColorsQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['staff-calendar-colors', tenantId],
+    queryFn: () =>
+      fetchAllPages<CalendarColorRow>(
+        (from, to) =>
+          createBrowserSupabaseClient()
+            .from('memberships')
+            .select('user_id, calendar_color')
+            .eq('tenant_id', tenantId)
+            .order('user_id')
+            .range(from, to),
+        'No se pudieron cargar los colores del equipo.',
+      ),
+  })
 
 export const staffFunctionsQuery = (tenantId: string) =>
   queryOptions({

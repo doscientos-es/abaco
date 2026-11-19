@@ -1,9 +1,16 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { roleFromMembership, type Role } from '@/features/auth'
+import type { CalendarColor } from '@/shared/domain/calendar-color'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
-export type TeamMember = { userId: string; email: string; fullName: string; role: Role }
+export type TeamMember = {
+  userId: string
+  email: string
+  fullName: string
+  role: Role
+  calendarColor?: string | null
+}
 
 export const teamQuery = (tenantId: string) =>
   queryOptions({
@@ -11,7 +18,7 @@ export const teamQuery = (tenantId: string) =>
     queryFn: async (): Promise<TeamMember[]> => {
       const { data, error } = await createBrowserSupabaseClient()
         .from('memberships')
-        .select('user_id, role, profiles(email, full_name)')
+        .select('user_id, role, calendar_color, profiles(email, full_name)')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true })
       if (error) throw new Error('No se pudo cargar el equipo.')
@@ -25,6 +32,7 @@ export const teamQuery = (tenantId: string) =>
             email: profile.email,
             fullName: profile.full_name,
             role,
+            calendarColor: row.calendar_color ?? null,
           },
         ]
       })
@@ -32,6 +40,24 @@ export const teamQuery = (tenantId: string) =>
   })
 
 export type TeamResult = { ok: true; status?: 'invited' | 'added' } | { ok: false; message: string }
+
+export async function setMemberCalendarColor(
+  tenantId: string,
+  userId: string,
+  color: CalendarColor | null,
+): Promise<TeamResult> {
+  const { error } = await createBrowserSupabaseClient().rpc('set_member_calendar_color', {
+    p_tenant_id: tenantId,
+    p_user_id: userId,
+    p_color: color,
+  })
+  return error
+    ? {
+        ok: false,
+        message: 'No se pudo guardar el color. Comprueba tus permisos e inténtalo de nuevo.',
+      }
+    : { ok: true }
+}
 
 async function inviteErrorMessage(context: unknown): Promise<string> {
   const fallback = 'No se pudo invitar. Inténtalo de nuevo.'

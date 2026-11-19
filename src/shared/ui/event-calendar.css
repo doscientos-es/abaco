@@ -202,6 +202,46 @@
   border-left-color: var(--muted-foreground);
   background: var(--muted);
 }
+.event-calendar__event[data-calendar-color='forest'] {
+  border-color: #39754a;
+  background: #e0f0e3;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='blue'] {
+  border-color: #2867a4;
+  background: #dcecf9;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='violet'] {
+  border-color: #7951a7;
+  background: #eee3f8;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='rose'] {
+  border-color: #a54869;
+  background: #f8e2e9;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='amber'] {
+  border-color: #946313;
+  background: #f8edd4;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='teal'] {
+  border-color: #21766f;
+  background: #d9f0ed;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='indigo'] {
+  border-color: #4b5fa9;
+  background: #e3e9fa;
+  color: #17271b;
+}
+.event-calendar__event[data-calendar-color='coral'] {
+  border-color: #a65a3b;
+  background: #f8e6dc;
+  color: #17271b;
+}
 .event-calendar__event.is-timed {
   position: absolute;
   min-height: 15px;

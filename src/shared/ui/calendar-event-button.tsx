@@ -33,6 +33,7 @@ export function CalendarEventButton({
       className={`event-calendar__event ${timed ? 'is-timed' : ''} ${preview ? 'is-preview' : ''} ${dragSource ? 'is-drag-source' : ''}`}
       style={style}
       data-tone={item.tone ?? 'primary'}
+      data-calendar-color={item.color}
       aria-hidden={preview || dragSource || undefined}
     >
       <button

@@ -507,7 +507,11 @@ describe('AgendaPage: nueva visita', () => {
         operationId: expect.any(String),
       }),
     )
-    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith('Trabajo reprogramado'))
+    await vi.waitFor(() =>
+      expect(mocks.success).toHaveBeenCalledWith('Trabajo reprogramado', {
+        description: expect.stringContaining('11:00'),
+      }),
+    )
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['office-visits', 'tenant-1'] })
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['my-visits', 'tenant-1'] })
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['vacation-coverage', 'tenant-1'] })

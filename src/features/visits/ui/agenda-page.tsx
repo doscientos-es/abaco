@@ -79,6 +79,10 @@ const statusTones: Record<VisitStatus, NonNullable<CalendarEvent['tone']>> = {
 }
 
 const planningDayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' })
+const replannedStartLabel = new Intl.DateTimeFormat('es-ES', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 export function AgendaPage() {
   const { tenant, clients } = useTenantData()
@@ -334,7 +338,9 @@ export function AgendaPage() {
       await replanServiceVisit({ ...payload, operationId })
       operations.current.delete(key)
       await refreshReplannedVisits()
-      toast.success('Trabajo reprogramado')
+      toast.success('Trabajo reprogramado', {
+        description: replannedStartLabel.format(change.start),
+      })
     } catch (error) {
       toast.error('No se pudo reprogramar el trabajo', {
         description: error instanceof Error ? error.message : 'Vuelve a intentarlo.',
@@ -565,6 +571,15 @@ export function AgendaPage() {
 
         {view === 'calendar' ? (
           <>
+            {canReplan && calendarItems.some((item) => item.editable) ? (
+              <p className="text-muted-foreground text-xs">
+                {period === 'month'
+                  ? 'Arrastra a otro día para conservar la hora. Pulsa una fecha para ajustar la hora en su horario.'
+                  : period === 'day'
+                    ? 'Arrastra a otra hora o suelta el trabajo en Día anterior o Día siguiente.'
+                    : 'Arrastra a otra hora o columna. El cambio se guarda al soltar.'}
+              </p>
+            ) : null}
             <div className="planning-calendar" data-period={period}>
               <EventCalendar
                 key={`${period}:${date}`}
@@ -604,9 +619,14 @@ export function AgendaPage() {
                         <span className="truncate font-medium">{item.title}</span>
                       </span>
                       <span className="block truncate opacity-80">
-                        {visit && pendingChanges[visit.id]
+                        {visit && pendingChanges[item.id]
                           ? 'Guardando…'
-                          : [visit?.client_name, visit?.work_team_name || visit?.assigned_user_name]
+                          : visit &&
+                            [
+                              visit.client_name,
+                              visit.work_team_name || visit.assigned_user_name || 'Sin asignar',
+                              statusLabels[visit.status],
+                            ]
                               .filter(Boolean)
                               .join(' · ')}
                       </span>
@@ -615,15 +635,6 @@ export function AgendaPage() {
                 }}
               />
             </div>
-            {canReplan && calendarItems.some((item) => item.editable) ? (
-              <p className="text-muted-foreground text-xs">
-                {period === 'month'
-                  ? 'Arrastra a otro día para conservar la hora. Pulsa una fecha para ver su horario.'
-                  : period === 'day'
-                    ? 'Arrastra a otra hora o suelta el trabajo en Día anterior o Día siguiente.'
-                    : 'Arrastra a otra hora o columna. El cambio se guarda al soltar.'}
-              </p>
-            ) : null}
             {visits.isSuccess && !visibleVisits.length ? (
               <p className="text-muted-foreground text-xs">
                 No hay trabajos en este periodo con estos filtros.
