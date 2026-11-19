@@ -89,6 +89,14 @@ beforeEach(() => {
 })
 
 describe('unified work module', () => {
+  it('opens the calendar tab without an explicit section in the URL', () => {
+    state.search = {}
+    const html = renderToStaticMarkup(<WorkOrdersPage />)
+    expect(html).toContain('>Calendario<')
+    expect(html).toContain('Planificación compartida TEST')
+    expect(html).not.toContain('Revisión TEST')
+  })
+
   it.each([
     ['planificacion', 'Planificación compartida TEST'],
     ['revision', 'Revisión TEST'],

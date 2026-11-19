@@ -33,6 +33,24 @@ describe('event calendar presentation', () => {
     expect(html).toContain('height:6.25%')
     expect(html).toContain('23:00')
   })
+  it('renders the previous and following dates as explicit daily drop targets', () => {
+    const render = (view: 'day' | 'week') =>
+      renderToStaticMarkup(
+        <EventCalendar
+          value={value}
+          view={view}
+          items={[item]}
+          dayMoveTargets
+          onItemClick={vi.fn()}
+          onItemChange={vi.fn()}
+          onDayClick={vi.fn()}
+        />,
+      )
+    const day = render('day')
+    expect(day).toContain('data-calendar-move-day="2026-11-12"')
+    expect(day).toContain('data-calendar-move-day="2026-11-14"')
+    expect(render('week')).not.toContain('data-calendar-move-day')
+  })
   it('renders a full seven-day time grid and clips overnight events into two visible segments', () => {
     const night = { ...item, start: new Date(2026, 10, 13, 23), end: new Date(2026, 10, 14, 1) }
     const html = renderToStaticMarkup(

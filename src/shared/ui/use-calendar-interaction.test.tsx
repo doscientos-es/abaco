@@ -36,15 +36,16 @@ function setup(
   writable = true,
   scroller: object | null = null,
   selectable = false,
+  calendar = {},
 ) {
   function Harness({ receive }: { receive: (value: Interaction) => void }) {
     receive(
       useCalendarInteraction({
         root: {
-          current: {
+          current: Object.assign(calendar, {
             contains: () => true,
             querySelector: () => scroller,
-          } as unknown as HTMLDivElement,
+          }) as unknown as HTMLDivElement,
         },
         view,
         step: 15,
@@ -148,6 +149,33 @@ describe('calendar pointer and keyboard interactions', () => {
     expect(api.canClick()).toBe(false)
   })
 
+  it.each(['2026-11-12', '2026-11-14'])(
+    'moves a daily event to %s using an adjacent-day target',
+    (date) => {
+      setup('day')
+      const offGrid = {
+        ...item,
+        start: new Date(2026, 10, 13, 9, 7),
+        end: new Date(2026, 10, 13, 10, 7),
+      }
+      api.start(pointer(550), offGrid, 'move')
+      hit = { closest: () => ({ dataset: { calendarMoveDay: date } }) }
+      api.move(pointer(20))
+      api.finish(pointer(20))
+      const result = changed.mock.calls[0]?.[0]
+      expect(result && calendarLocalInput(result.start)).toBe(`${date}T09:07`)
+      expect(result && calendarLocalInput(result.end)).toBe(`${date}T10:07`)
+    },
+  )
+
+  it('moves a daily event to a different hour within the same date', () => {
+    setup('day')
+    api.start(pointer(545), item, 'move')
+    api.move(pointer(665))
+    api.finish(pointer(665))
+    expect(changed.mock.calls[0]?.[0].start).toEqual(new Date(2026, 10, 13, 11))
+  })
+
   it('resizes from the bottom without changing the start', () => {
     api.start(pointer(600), item, 'resize')
     api.move(pointer(675))
@@ -192,11 +220,12 @@ describe('calendar pointer and keyboard interactions', () => {
 
   it('moves month events by date while preserving the hour and supports inclusive all-day resizing', () => {
     setup('month')
-    api.start(pointer(10), item, 'move')
+    const offGrid = { ...item, start: new Date(2026, 10, 13, 9, 7) }
+    api.start(pointer(10), offGrid, 'move')
     hit = cell('2026-11-15')
     api.move(pointer(20))
     api.finish(pointer(20))
-    expect(changed.mock.calls[0]?.[0].start).toEqual(new Date(2026, 10, 15, 9))
+    expect(changed.mock.calls[0]?.[0].start).toEqual(new Date(2026, 10, 15, 9, 7))
     const absence = {
       ...item,
       allDay: true,
@@ -249,5 +278,33 @@ describe('calendar pointer and keyboard interactions', () => {
     api.cancel()
     expect(cancelFrame).toHaveBeenCalledWith(2)
     expect(changed).not.toHaveBeenCalled()
+  })
+
+  it('scrolls the weekly columns sideways and resolves the newly revealed drop target', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+      frames.push(callback),
+    )
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    let left = 0
+    const calendar = {
+      get scrollLeft() {
+        return left
+      },
+      set scrollLeft(value: number) {
+        left = value
+        hit = cell('2026-11-14')
+      },
+      clientWidth: 300,
+      scrollWidth: 640,
+      getBoundingClientRect: () => ({ left: 0, right: 300, top: 0, bottom: 600 }),
+    }
+    setup('week', true, null, false, calendar)
+    api.start(pointer(545, 200), item, 'move')
+    api.move(pointer(545, 285))
+    frames[0]?.(0)
+    expect(left).toBe(10)
+    api.finish(pointer(545, 285))
+    expect(changed.mock.calls[0]?.[0].start).toEqual(new Date(2026, 10, 14, 9))
   })
 })

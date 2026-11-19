@@ -192,7 +192,6 @@ h3 {
 .sidebar-link--active:hover {
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 8%, var(--card));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .workspace-topbar {

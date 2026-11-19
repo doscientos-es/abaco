@@ -21,11 +21,6 @@
   padding: 1rem max(1rem, env(safe-area-inset-right)) 1.5rem max(1rem, env(safe-area-inset-left));
 }
 
-.user-frame .sidebar-link--active,
-.user-frame .sidebar-link--active:hover {
-  box-shadow: none;
-}
-
 .user-frame__search {
   position: fixed;
   z-index: 21;
