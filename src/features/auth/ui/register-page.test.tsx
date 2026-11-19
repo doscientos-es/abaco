@@ -68,9 +68,7 @@ describe('RegisterPage positioning', () => {
     const html = render()
 
     expect(html).toContain('href="/precios"')
-    expect(html).toContain(
-      'Todos los planes incluyen las mismas funciones; solo cambia el tamaño del equipo',
-    )
+    expect(html).toContain('El módulo de trabajadores está incluido desde el plan Equipo.')
     expect(html).toContain('Sin tarjeta.')
     expect(html).toContain('conservas tus datos en modo lectura')
     expect(html).toContain(`Crear cuenta y probar ${TRIAL_DAYS} días`)

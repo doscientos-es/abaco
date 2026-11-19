@@ -41,6 +41,18 @@ export const teamQuery = (tenantId: string) =>
 
 export type TeamResult = { ok: true; status?: 'invited' | 'added' } | { ok: false; message: string }
 
+export const pendingTeamActivationsQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['pending-team-activations', tenantId],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc('pending_team_activations', {
+        p_tenant_id: tenantId,
+      })
+      if (error) throw new Error('No se pudieron cargar las invitaciones pendientes.')
+      return (data as { user_id: string }[]).map((row) => row.user_id)
+    },
+  })
+
 export async function setMemberCalendarColor(
   tenantId: string,
   userId: string,

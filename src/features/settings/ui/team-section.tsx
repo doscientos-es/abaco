@@ -28,6 +28,7 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import {
   changeMemberRole,
   inviteMember,
+  pendingTeamActivationsQuery,
   removeMember,
   setMemberCalendarColor,
   teamQuery,
@@ -39,6 +40,7 @@ import {
   validWorkerDni,
   validWorkerPhone,
 } from '../domain/worker-personal-data'
+import { PendingTeamActivations } from './pending-team-activations'
 import { TeamImportDialog } from './team-import-dialog'
 import { TeamPersonCard, TeamPersonDetails } from './team-person'
 import { WorkerPersonalDataSection } from './worker-personal-data'
@@ -79,6 +81,9 @@ export function TeamSection({
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: teamQuery(tenantId).queryKey })
+    await queryClient.invalidateQueries({
+      queryKey: pendingTeamActivationsQuery(tenantId).queryKey,
+    })
     await queryClient.invalidateQueries({ queryKey: ['work-teams', tenantId] })
     await queryClient.invalidateQueries({ queryKey: staffSchedulesQuery(tenantId).queryKey })
     await queryClient.invalidateQueries({ queryKey: ['staff-calendar-colors', tenantId] })
@@ -346,6 +351,10 @@ export function TeamSection({
         )}
         {!inviting && !personId && matching.length > 10 ? (
           <TablePagination controller={pager} noun="personas" />
+        ) : null}
+
+        {!inviting && !personId && showInviteLink && team.isSuccess ? (
+          <PendingTeamActivations tenantId={tenantId} members={team.data} />
         ) : null}
 
         {inviting && team.isError ? (

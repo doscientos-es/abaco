@@ -74,8 +74,7 @@ export function RegisterPage() {
       <div className="bg-accent text-accent-foreground mb-4 rounded-lg px-4 py-3 text-sm">
         <p className="font-medium">{TRIAL_DAYS} días gratis con el plan Empresa completo</p>
         <p className="mt-1 text-xs">
-          Sin tarjeta. Todos los planes incluyen las mismas funciones; solo cambia el tamaño del
-          equipo.{' '}
+          Sin tarjeta. El módulo de trabajadores está incluido desde el plan Equipo.{' '}
           <Link to="/precios" className="font-medium underline">
             Ver planes y precios
           </Link>
