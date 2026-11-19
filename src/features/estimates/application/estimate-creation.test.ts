@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
 import type { Estimate, TenantData } from '@/shared/domain/types'
 import {
   currentTenantData,
@@ -10,6 +11,12 @@ import {
   setRepository,
   type AppState,
 } from '@/shared/store/store'
+import {
+  estimateFromRow,
+  estimateToRow,
+  tenantFromRow,
+  tenantToRow,
+} from '@/shared/store/supabase-mappers'
 
 import { changeSectionPrice } from '../domain/estimate-section-price'
 import { buildEstimateDraft, newEstimateError } from '../domain/new-estimate'
@@ -68,6 +75,33 @@ function completeDraft(): Estimate {
 const saved = () => vi.waitFor(() => expect(getSaveStatus().state).toBe('saved'))
 
 describe('explicit estimate creation', () => {
+  it('copies company defaults on creation and persists a later override only on that draft', async () => {
+    const companyDesign = { ...defaultEstimateDesign, layout: 'compact' } as const
+    const tenant = tenantFromRow(
+      tenantToRow({ ...data.tenant, defaultEstimateDesign: companyDesign }),
+    )
+    const draft = {
+      ...buildEstimateDraft(tenant, 'client', 'Servicio', 'table', newId),
+      lines: completeDraft().lines,
+    }
+    expect(draft.documentDesign).toEqual(companyDesign)
+    submitEstimateDraft(draft)
+    await saved()
+    const design = { ...defaultEstimateDesign, showLogo: false }
+    patchEstimate(draft.id, { documentDesign: design })
+    await saved()
+    const persisted = save.mock.lastCall?.[1].tenants.tenant?.estimates[0]
+    expect(persisted?.documentDesign).toEqual(design)
+    const row = {
+      ...estimateToRow(persisted ?? draft),
+      estimate_lines: [],
+      estimate_milestones: [],
+    }
+    expect(estimateFromRow(row).documentDesign).toEqual(design)
+    expect(estimateFromRow({ ...row, document_design: null })).not.toHaveProperty('documentDesign')
+    expect(tenant.defaultEstimateDesign).toEqual(companyDesign)
+  })
+
   it('prepares and edits a complete local proposal without saving or consuming numbering', () => {
     const draft = completeDraft()
     expect(newEstimateError(draft)).toBeNull()

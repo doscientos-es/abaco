@@ -41,12 +41,14 @@ import {
   milestonePercentSum,
   paidForEstimate,
 } from '@/shared/domain/estimate'
+import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { whatsappLink } from '@/shared/lib/whatsapp'
 import { getSaveStatus, refreshStore, useTenantData } from '@/shared/store/store'
 import { DocumentPreview } from '@/shared/ui/document-preview'
+import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { PageNotFound } from '@/shared/ui/page-states'
@@ -300,7 +302,9 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
     }
   }
 
-  if (preview) {
+  if (preview && estimate.status === 'draft') {
+    const design = estimate.documentDesign ?? defaultEstimateDesign
+    const companyDesign = tenant.defaultEstimateDesign ?? defaultEstimateDesign
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2 print:hidden">
@@ -309,6 +313,32 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </Button>
           <Button onPress={print}>Imprimir o guardar PDF</Button>
         </div>
+        {can(session?.role, 'estimates:write') && !creation?.submitted ? (
+          <Card className="print:hidden">
+            <CardHeader>
+              <CardTitle>Diseño del presupuesto</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-muted-foreground text-sm">
+                Los cambios solo afectan a este presupuesto. Al publicarlo, se conserva este diseño.
+              </p>
+              <EstimateDesignFields
+                value={design}
+                onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
+              />
+              {!sameEstimateDesign(design, companyDesign) ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => patchEstimate(estimate.id, { documentDesign: companyDesign })}
+                >
+                  Usar diseño de la empresa
+                </Button>
+              ) : null}
+              {!creation ? <EstimateAutoSaveStatus /> : null}
+            </CardContent>
+          </Card>
+        ) : null}
         <DocumentPreview label="del presupuesto">
           <EstimateDocument
             estimate={estimate}
@@ -624,7 +654,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           <Button variant="outline" onPress={() => setPreview(true)}>
             <span className="inline-flex items-center gap-2">
               <Eye aria-hidden="true" className="size-4" />
-              Vista del cliente
+              Diseño y vista previa
             </span>
           </Button>
           {!creation ? (

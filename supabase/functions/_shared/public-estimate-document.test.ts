@@ -17,6 +17,7 @@ describe('public estimate document projection', () => {
       title: 'Original',
       status: 'sent',
       document_format: 'sections',
+      document_design: { layout: 'compact', showIndex: false, showLogo: true, showFooter: false },
       document_sections: sections,
       conversion_destination: 'contract',
       contract_billing_frequency: 'quarterly',
@@ -26,6 +27,7 @@ describe('public estimate document projection', () => {
       title: 'Modificado',
       status: 'accepted',
       responded_by: 'Cliente',
+      document_design: { layout: 'proposal' },
       document_sections: [],
     })
     expect(projected).toMatchObject({
@@ -33,6 +35,7 @@ describe('public estimate document projection', () => {
       status: 'accepted',
       responded_by: 'Cliente',
       document_format: 'sections',
+      document_design: published.document_design,
       document_sections: sections,
       conversion_destination: 'contract',
       contract_billing_frequency: 'quarterly',
@@ -43,6 +46,7 @@ describe('public estimate document projection', () => {
   it('keeps old publications on the traditional layout', () => {
     expect(publicEstimateDocument({ title: 'Histórico' }, { status: 'sent' })).toMatchObject({
       document_format: 'table',
+      document_design: null,
       document_sections: [],
     })
   })

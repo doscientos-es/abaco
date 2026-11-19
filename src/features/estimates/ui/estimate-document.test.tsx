@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
 import type { Estimate, Tenant } from '@/shared/domain/types'
 
 import { EstimateDocument } from './estimate-document'
@@ -68,6 +69,48 @@ describe('customer-facing estimate', () => {
     expect(html.indexOf('estimate-document__index')).toBeLessThan(
       html.indexOf('estimate-document__content'),
     )
+  })
+
+  it('flows the compact header and prices together without blank cover or index pages', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={{ ...estimate, documentDesign: { ...defaultEstimateDesign, layout: 'compact' } }}
+        tenant={{ ...tenant, logoUrl: 'https://example.test/logo.svg', documentFooter: 'Gracias' }}
+        client={undefined}
+      />,
+    )
+    expect(html).toContain('estimate-document__compact-header')
+    expect(html).not.toContain('estimate-document__cover')
+    expect(html).not.toContain('estimate-document__index')
+    expect(html).toMatch(/Página (?:<!-- -->)?1(?:<!-- -->)? de (?:<!-- -->)?1/)
+    expect(html).toContain('Limpieza ordinaria')
+    expect(html).toContain('Base imponible')
+    expect(html).toContain('logo.svg')
+    expect(html).toContain('Gracias')
+  })
+
+  it('omits optional branding and index without changing the proposal cover or payment content', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={{
+          ...estimate,
+          documentDesign: {
+            layout: 'proposal',
+            showIndex: false,
+            showLogo: false,
+            showFooter: false,
+          },
+        }}
+        tenant={{ ...tenant, logoUrl: 'https://example.test/logo.svg', documentFooter: 'Gracias' }}
+        client={undefined}
+      />,
+    )
+    expect(html).toContain('estimate-document__cover')
+    expect(html).not.toContain('estimate-document__index')
+    expect(html).not.toContain('logo.svg')
+    expect(html).not.toContain('Gracias')
+    expect(html).toContain('Forma de pago')
+    expect(html).toContain('Conforme del cliente')
   })
 
   it('renders every section in order, escapes text and counts prices only once', () => {

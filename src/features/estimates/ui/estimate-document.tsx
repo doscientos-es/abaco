@@ -1,6 +1,7 @@
 import { useState, type ReactNode, type Ref } from 'react'
 
 import { estimateTotals, milestoneAmounts } from '@/shared/domain/estimate'
+import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Estimate, Tenant } from '@/shared/domain/types'
 
@@ -37,12 +38,20 @@ export function EstimateDocument({
   const mainSectionCount = estimate.documentFormat === 'sections' ? sections.length : 2
   const paymentNumber = mainSectionCount + 1
   const conditionsNumber = mainSectionCount + (showPayment ? 2 : 1)
+  const design = estimate.documentDesign ?? defaultEstimateDesign
+  const hasCover = design.layout === 'proposal'
+  const hasIndex = hasCover && design.showIndex
   const Page = paginated ? EstimatePageFlow : Unpaginated
   const [pageCounts, setPageCounts] = useState<[number, number, number]>([1, 1, 1])
-  const totalPages = pageCounts.reduce((total, count) => total + count, 0)
+  const activePageCounts = [
+    hasCover ? pageCounts[0] : 0,
+    hasIndex ? pageCounts[1] : 0,
+    pageCounts[2],
+  ]
+  const totalPages = activePageCounts.reduce((total, count) => total + count, 0)
   const pageProps = (group: 0 | 1 | 2) => ({
     pageCount: pageCounts[group],
-    firstPage: 1 + pageCounts.slice(0, group).reduce((total, count) => total + count, 0),
+    firstPage: 1 + activePageCounts.slice(0, group).reduce((total, count) => total + count, 0),
     totalPages,
     tenantName: tenant.name,
     estimateNumber: estimate.number,
@@ -55,80 +64,61 @@ export function EstimateDocument({
       })
     },
   })
+  const header = (
+    <EstimateDocumentHeader
+      estimate={estimate}
+      tenant={tenant}
+      client={client}
+      cover={hasCover}
+      showLogo={design.showLogo}
+    />
+  )
 
   return (
     <article
       ref={documentRef}
+      data-layout={design.layout}
       className={
         paginated
           ? 'estimate-document estimate-document--paged text-sm'
           : 'estimate-document bg-card mx-auto max-w-3xl space-y-8 rounded-lg border p-4 text-sm shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none'
       }
     >
-      <Page {...pageProps(0)}>
-        <header className="estimate-document__cover space-y-8">
-          <div>
-            {tenant.logoUrl ? (
-              <img
-                src={tenant.logoUrl}
-                alt={tenant.name}
-                className="mb-3 max-h-14 max-w-44 object-contain"
-              />
-            ) : null}
-            <h2
-              className="text-xl font-semibold tracking-tight"
-              style={tenant.brandColor ? { color: tenant.brandColor } : undefined}
-            >
-              {tenant.name}
-            </h2>
-            <p className="text-muted-foreground">
-              {[tenant.taxId, tenant.phone, tenant.email].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-lg font-semibold">Presupuesto {estimate.number}</p>
-            <h1 className="text-2xl font-semibold">{estimate.title}</h1>
-            <p className="text-muted-foreground">Fecha: {estimate.createdAt}</p>
-            <p className="text-muted-foreground">Válido hasta: {estimate.validUntil}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">Cliente</p>
-            <p className="font-medium">{client?.name ?? 'Sin cliente'}</p>
-            <p className="text-muted-foreground">{client?.address}</p>
-          </div>
-        </header>
-      </Page>
+      {hasCover ? <Page {...pageProps(0)}>{header}</Page> : null}
 
-      <Page {...pageProps(1)}>
-        <nav className="estimate-document__index" aria-label="Índice">
-          <h2 className="mb-5 text-xl font-semibold">Índice</h2>
-          <ul className="space-y-2">
-            {estimate.documentFormat === 'sections' ? (
-              sections.map((section, index) => (
-                <li key={section.id}>
-                  {`${index + 1}. ${
-                    section.type === 'prices'
-                      ? sectionPriceNarrative(
-                          sectionPriceTotal(estimate, section),
-                          estimatePriceFrequency(estimate),
-                        ).heading
-                      : section.title
-                  }`}
-                </li>
-              ))
-            ) : (
-              <>
-                <li>1. {estimate.title}</li>
-                <li>2. Resumen económico</li>
-              </>
-            )}
-            {showPayment ? <li>{paymentNumber}. Forma de pago</li> : null}
-            {showConditions ? <li>{conditionsNumber}. Descripción y condiciones</li> : null}
-          </ul>
-        </nav>
-      </Page>
+      {hasIndex ? (
+        <Page {...pageProps(1)}>
+          <nav className="estimate-document__index" aria-label="Índice">
+            <h2 className="mb-5 text-xl font-semibold">Índice</h2>
+            <ul className="space-y-2">
+              {estimate.documentFormat === 'sections' ? (
+                sections.map((section, index) => (
+                  <li key={section.id}>
+                    {`${index + 1}. ${
+                      section.type === 'prices'
+                        ? sectionPriceNarrative(
+                            sectionPriceTotal(estimate, section),
+                            estimatePriceFrequency(estimate),
+                          ).heading
+                        : section.title
+                    }`}
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li>1. {estimate.title}</li>
+                  <li>2. Resumen económico</li>
+                </>
+              )}
+              {showPayment ? <li>{paymentNumber}. Forma de pago</li> : null}
+              {showConditions ? <li>{conditionsNumber}. Descripción y condiciones</li> : null}
+            </ul>
+          </nav>
+        </Page>
+      ) : null}
 
       <Page {...pageProps(2)}>
+        {hasCover ? null : header}
         <div className="estimate-document__content space-y-8">
           {estimate.documentFormat !== 'sections' ? (
             <section>
@@ -185,7 +175,7 @@ export function EstimateDocument({
             <div className="border-t pt-2">Firma de la empresa</div>
             <div className="border-t pt-2">Conforme del cliente</div>
           </footer>
-          {tenant.documentFooter ? (
+          {design.showFooter && tenant.documentFooter ? (
             <p className="text-muted-foreground border-t pt-3 text-center text-xs whitespace-pre-line">
               {tenant.documentFooter}
             </p>
@@ -193,6 +183,60 @@ export function EstimateDocument({
         </div>
       </Page>
     </article>
+  )
+}
+
+function EstimateDocumentHeader({
+  estimate,
+  tenant,
+  client,
+  cover,
+  showLogo,
+}: {
+  estimate: Estimate
+  tenant: Tenant
+  client: Client | undefined
+  cover: boolean
+  showLogo: boolean
+}) {
+  return (
+    <header
+      className={cover ? 'estimate-document__cover space-y-8' : 'estimate-document__compact-header'}
+    >
+      <div>
+        {showLogo && tenant.logoUrl ? (
+          <img
+            src={tenant.logoUrl}
+            alt={tenant.name}
+            className="mb-3 max-h-14 max-w-44 object-contain"
+          />
+        ) : null}
+        <h2
+          className="text-xl font-semibold tracking-tight"
+          style={tenant.brandColor ? { color: tenant.brandColor } : undefined}
+        >
+          {tenant.name}
+        </h2>
+        <p className="text-muted-foreground">
+          {[tenant.taxId, tenant.phone, tenant.email].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <div className={cover ? 'space-y-2' : 'estimate-document__heading space-y-1'}>
+        <p className={cover ? 'text-lg font-semibold' : 'text-muted-foreground font-medium'}>
+          Presupuesto {estimate.number}
+        </p>
+        <h1 className={cover ? 'text-2xl font-semibold' : 'text-xl font-semibold'}>
+          {estimate.title}
+        </h1>
+        <p className="text-muted-foreground">Fecha: {estimate.createdAt}</p>
+        <p className="text-muted-foreground">Válido hasta: {estimate.validUntil}</p>
+      </div>
+      <div>
+        <p className="text-muted-foreground text-xs tracking-wider uppercase">Cliente</p>
+        <p className="font-medium">{client?.name ?? 'Sin cliente'}</p>
+        <p className="text-muted-foreground">{client?.address}</p>
+      </div>
+    </header>
   )
 }
 

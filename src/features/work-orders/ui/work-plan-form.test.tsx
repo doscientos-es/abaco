@@ -5,17 +5,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WorkOrder } from '../application/work-order-actions'
 import { WorkPlanForm } from './work-plan-form'
 
-const lookup = vi.hoisted(() => ({ pending: false, failed: false }))
+const lookup = vi.hoisted(() => ({ pending: false, failed: false, self: false }))
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     isSuccess: !lookup.pending && !lookup.failed,
     isError: lookup.failed,
-    data: [],
+    data: lookup.self ? [{ id: 'admin-1', label: 'Ana' }] : [],
     error: lookup.failed ? new Error('Sin conexión') : null,
     refetch: vi.fn(),
   }),
 }))
-vi.mock('@/features/auth', () => ({ can: () => false, useSession: () => null }))
+vi.mock('@/features/auth', () => ({
+  can: () => false,
+  useSession: () => (lookup.self ? { tenantId: 'tenant-1', userId: 'admin-1' } : null),
+}))
 vi.mock('@/features/work-teams', () => ({
   workTeamsQuery: () => ({ queryKey: ['work-teams'] }),
   assignableWorkTeams: () => [],
@@ -90,6 +93,7 @@ describe('WorkPlanForm feedback', () => {
   beforeEach(() => {
     lookup.pending = false
     lookup.failed = false
+    lookup.self = false
   })
 
   it('does not offer to save an unchanged plan and retains operational notes', () => {
@@ -98,6 +102,12 @@ describe('WorkPlanForm feedback', () => {
     expect(html).toContain('<button disabled="" type="submit">Guardar planificación</button>')
     expect(html).toContain('Llevar herramientas')
     expect(html).not.toContain('Restablecer')
+  })
+
+  it('offers the signed-in member a shortcut to coordinate the work', () => {
+    lookup.self = true
+    expect(render()).toContain('Asignarme como responsable')
+    expect(render({ responsible_user_id: 'admin-1' })).not.toContain('Asignarme como responsable')
   })
 
   it('explains reversed dates inline before attempting a save', () => {

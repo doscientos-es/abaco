@@ -1,14 +1,13 @@
 -- Optional for legacy rows. Missing preferences preserve the original published look.
 create function app_private.estimate_design_is_valid(design jsonb) returns boolean
 language sql immutable strict set search_path = '' as $$
-  select (
-    jsonb_typeof(design) = 'object'
-    and design ->> 'layout' in ('compact', 'proposal')
+  select case when jsonb_typeof(design) = 'object' then (
+    design ->> 'layout' in ('compact', 'proposal')
     and jsonb_typeof(design -> 'showIndex') = 'boolean'
     and jsonb_typeof(design -> 'showLogo') = 'boolean'
     and jsonb_typeof(design -> 'showFooter') = 'boolean'
     and design - array['layout', 'showIndex', 'showLogo', 'showFooter'] = '{}'::jsonb
-  ) is true;
+  ) is true else false end;
 $$;
 revoke all on function app_private.estimate_design_is_valid(jsonb) from public, anon;
 grant execute on function app_private.estimate_design_is_valid(jsonb) to authenticated, service_role;
@@ -25,8 +24,9 @@ alter table public.estimates add column document_design jsonb
 -- Keep the existing agreement and section validation, and freeze only the estimate's choices.
 create or replace function public.estimate_publication_snapshot(p_estimate_id uuid) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
-declare captured jsonb := public.estimate_publication_snapshot_before_agreement(p_estimate_id);
-declare design jsonb;
+declare
+  captured jsonb := public.estimate_publication_snapshot_before_agreement(p_estimate_id);
+  design jsonb;
 begin
   if captured is null then return null; end if;
   select e.document_design into design from public.estimates e where e.id = p_estimate_id;

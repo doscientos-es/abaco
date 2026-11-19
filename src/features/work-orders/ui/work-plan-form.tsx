@@ -151,22 +151,40 @@ export function WorkPlanForm({
                 </Button>
               </div>
             ) : null}
-            <SelectField
-              label="Responsable"
-              isDisabled={saving || !members.isSuccess}
-              value={responsibleId}
-              options={[
-                { value: '', label: 'Sin asignar' },
-                ...(members.data ?? []).map((member) => ({
-                  value: member.id,
-                  label: member.label,
-                })),
-              ]}
-              onChange={(value) => {
-                setResponsibleId(value)
-                changed()
-              }}
-            />
+            <div className="space-y-2">
+              <SelectField
+                label="Responsable"
+                isDisabled={saving || !members.isSuccess}
+                value={responsibleId}
+                options={[
+                  { value: '', label: 'Sin asignar' },
+                  ...(members.data ?? []).map((member) => ({
+                    value: member.id,
+                    label: member.label,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setResponsibleId(value)
+                  changed()
+                }}
+              />
+              {session?.tenantId === tenantId &&
+              session.userId &&
+              members.data?.some((member) => member.id === session.userId) &&
+              responsibleId !== session.userId ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  isDisabled={saving || !members.isSuccess}
+                  onPress={() => {
+                    setResponsibleId(session.userId)
+                    changed()
+                  }}
+                >
+                  Asignarme como responsable
+                </Button>
+              ) : null}
+            </div>
             <div className="space-y-2">
               <SelectField
                 label="Equipo de trabajo"

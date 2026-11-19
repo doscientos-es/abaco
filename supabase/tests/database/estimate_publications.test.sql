@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(14);
 
 insert into public.tenants (id, name) values
   ('30000000-0000-4000-8000-000000000001', 'Empresa original'),
@@ -27,6 +27,14 @@ insert into public.memberships (tenant_id, user_id, role) values
 
 set local role authenticated;
 set local request.jwt.claim.sub = '30000000-0000-4000-8000-000000000006';
+select throws_ok(
+  $$update public.estimates set document_design = '{"layout":"compact","showIndex":false,"showLogo":"false","showFooter":true}'
+    where id = '30000000-0000-4000-8000-000000000004'$$,
+  '23514', null, 'Malformed design settings are rejected');
+select lives_ok(
+  $$update public.estimates set document_design = '{"layout":"compact","showIndex":false,"showLogo":false,"showFooter":true}'
+    where id = '30000000-0000-4000-8000-000000000004'$$,
+  'An editor can set the design of a draft');
 select lives_ok(
   $$update public.estimates set status = 'sent'
     where id = '30000000-0000-4000-8000-000000000004'$$,
@@ -38,15 +46,28 @@ select is((select source from public.estimate_publications), 'publication',
 select is((select snapshot #>> '{estimate,estimate_lines,0,description}'
   from public.estimate_publications), 'Instalación',
   'The exact line description is captured');
+select is((select snapshot #> '{estimate,document_design}' from public.estimate_publications),
+  '{"layout":"compact","showIndex":false,"showLogo":false,"showFooter":true}'::jsonb,
+  'Publishing captures the exact visual choices');
+select throws_ok(
+  $$update public.estimates set document_design = null
+    where id = '30000000-0000-4000-8000-000000000004'$$,
+  'P0001', 'El contenido de un presupuesto enviado es inmutable; crea una copia',
+  'A published design cannot be edited');
 
 update public.clients set name = 'Cliente cambiado'
 where id = '30000000-0000-4000-8000-000000000003';
-update public.tenants set name = 'Empresa cambiada'
+set local role postgres;
+update public.tenants set name = 'Empresa cambiada',
+  default_estimate_design = '{"layout":"proposal","showIndex":true,"showLogo":true,"showFooter":true}'
 where id = '30000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select is((select snapshot #>> '{client,name}' from public.estimate_publications),
   'Cliente original', 'Changing the client does not rewrite a published version');
 select is((select snapshot #>> '{tenant,name}' from public.estimate_publications),
   'Empresa original', 'Changing the company does not rewrite a published version');
+select is((select snapshot #>> '{estimate,document_design,layout}' from public.estimate_publications),
+  'compact', 'Changing the company default does not affect the snapshot');
 select throws_ok(
   $$update public.estimates set email_sent_at = now()
     where id = '30000000-0000-4000-8000-000000000004'$$,

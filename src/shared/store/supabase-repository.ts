@@ -185,11 +185,13 @@ export function createSupabaseRepository(supabase: SupabaseClient): TenantReposi
       ),
     )
     if (Object.keys(changedSettings).length > 0) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tenants')
         .update(changedSettings)
         .eq('id', nextTenant.id as string)
+        .select('id')
       if (error) throw new Error(`tenants: ${error.message}`)
+      if (!data?.length) throw new Error('No tienes permiso para editar esta empresa.')
     }
     await write('clients', d.clients.changed, a.clients)
     await write('catalog_items', d.catalog.changed, a.catalog)

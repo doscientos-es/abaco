@@ -11,8 +11,10 @@ import {
   Section,
 } from '@/features/settings/ui/settings-form'
 import { StaffFunctionsSection } from '@/features/staff-schedules'
+import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
 import type { Tenant } from '@/shared/domain/types'
-import { useTenantData } from '@/shared/store/store'
+import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
+import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
 import { TextField } from '@/shared/ui/form'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
@@ -38,12 +40,17 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   const [brandColor, setBrandColor] = useState(tenant.brandColor ?? '')
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl ?? '')
   const [messages, setMessages] = useState(() => messageForm(tenant))
+  const companyDesign = tenant.defaultEstimateDesign ?? defaultEstimateDesign
+  const [design, setDesign] = useState(companyDesign)
   const [saved, setSaved] = useState(false)
+  const saveStatus = useSaveStatus()
   const color = hexColor.test(brandColor) ? brandColor : defaultBrandColor
   const logoOk = isLogoOk(logoUrl)
+  const designChanged = !sameEstimateDesign(design, companyDesign)
+  const messagesChanged = JSON.stringify(messages) !== JSON.stringify(messageForm(tenant))
   const dirty =
     tab === 'documentos'
-      ? JSON.stringify(messages) !== JSON.stringify(messageForm(tenant))
+      ? designChanged || messagesChanged
       : brandColor !== (tenant.brandColor ?? '') || logoUrl !== (tenant.logoUrl ?? '')
   const valid =
     tab === 'documentos'
@@ -58,7 +65,12 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   function save() {
     if (!valid) return
     patchTenant(
-      tab === 'documentos' ? messagePatch(messages) : { brandColor, logoUrl: logoUrl.trim() },
+      tab === 'documentos'
+        ? {
+            ...(messagesChanged ? messagePatch(messages) : {}),
+            ...(designChanged ? { defaultEstimateDesign: design } : {}),
+          }
+        : { brandColor, logoUrl: logoUrl.trim() },
     )
     setSaved(true)
   }
@@ -238,7 +250,23 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
       ) : null}
 
       {tab === 'documentos' ? (
-        <MessageFields form={messages} set={setMessage} companyName={tenant.name} />
+        <>
+          <Section
+            title="Diseño de presupuestos"
+            description="Estos ajustes se copian al crear un presupuesto. No cambian los documentos que ya existen."
+          >
+            <div className="sm:col-span-2">
+              <EstimateDesignFields
+                value={design}
+                onChange={(next) => {
+                  setDesign(next)
+                  setSaved(false)
+                }}
+              />
+            </div>
+          </Section>
+          <MessageFields form={messages} set={setMessage} companyName={tenant.name} />
+        </>
       ) : null}
       {tab === 'listas' ? (
         <div className="space-y-4">
@@ -250,11 +278,23 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
       {tab !== 'listas' ? (
         <div className="flex items-center justify-end gap-3">
           {saved ? (
-            <output className="text-muted-foreground text-sm">Cambios guardados</output>
+            <output className="text-muted-foreground text-sm">
+              {saveStatus.state === 'saving'
+                ? 'Guardando cambios…'
+                : saveStatus.state === 'error'
+                  ? 'No se pudieron guardar los cambios.'
+                  : 'Cambios guardados'}
+            </output>
           ) : null}
-          <Button isDisabled={!dirty || !valid} onPress={save}>
-            Guardar personalización
-          </Button>
+          {saved && saveStatus.state === 'error' ? (
+            <Button variant="outline" onPress={retryStoreSaves}>
+              Reintentar guardado
+            </Button>
+          ) : (
+            <Button isDisabled={!dirty || !valid} onPress={save}>
+              Guardar personalización
+            </Button>
+          )}
         </div>
       ) : null}
     </div>

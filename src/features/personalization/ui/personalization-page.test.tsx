@@ -24,6 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: mocks.button,
+  Checkbox: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
   PageHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
   PageHeaderHeading: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PageHeaderTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
@@ -32,12 +33,17 @@ vi.mock('@doscientos/ui', () => ({
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
-vi.mock('@/shared/ui/form', () => ({ TextField: mocks.field, TextareaField: mocks.field }))
+vi.mock('@/shared/ui/form', () => ({
+  SelectField: mocks.field,
+  TextField: mocks.field,
+  TextareaField: mocks.field,
+}))
 vi.mock('@/features/clients', () => ({ ClientTypesSection: () => <p>Tipos de cliente</p> }))
 vi.mock('@/features/staff-schedules', () => ({ StaffFunctionsSection: () => <p>Funciones</p> }))
 vi.mock('@/features/settings/application/settings-actions', () => ({ patchTenant: mocks.patch }))
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'one', name: 'Empresa', emailFromName: 'Equipo' } }),
+  useSaveStatus: () => ({ state: 'saved' }),
 }))
 
 describe('personalization sections', () => {
@@ -81,6 +87,7 @@ describe('personalization sections', () => {
     expect(render()).toContain('Identidad de marca')
     tab = 'documentos'
     const documents = render()
+    expect(documents).toContain('Diseño de presupuestos')
     expect(documents).toContain('Nombre del remitente')
     expect(documents).toContain('Pie de página de los documentos')
     expect(documents).not.toContain('Identidad de marca')
@@ -89,6 +96,26 @@ describe('personalization sections', () => {
     expect(lists).toContain('Tipos de cliente')
     expect(lists).toContain('Funciones')
     expect(lists).not.toContain('Guardar personalización')
+  })
+
+  it('saves company defaults independently of message templates', () => {
+    tab = 'documentos'
+    expect(render()).toContain('Mostrar índice')
+    mocks.field.mock.calls.find(([props]) => props.label === 'Plantilla')?.[0].onChange('compact')
+    expect(render()).not.toContain('Mostrar índice')
+    const save = mocks.button.mock.calls.find(
+      ([props]) => props.children === 'Guardar personalización',
+    )?.[0]
+    expect(save?.isDisabled).toBe(false)
+    save.onPress()
+    expect(mocks.patch).toHaveBeenCalledWith({
+      defaultEstimateDesign: {
+        layout: 'compact',
+        showIndex: true,
+        showLogo: true,
+        showFooter: true,
+      },
+    })
   })
 
   it('preserves unsaved drafts across tabs and saves only the selected section', () => {
