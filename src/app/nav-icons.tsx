@@ -1,5 +1,8 @@
 import {
   CalendarBlank,
+  CalendarMinus,
+  ClipboardText,
+  Clock,
   DotsThreeCircle,
   FileText,
   GearSix,
@@ -25,6 +28,9 @@ export const navIcons = {
   ledger: <Wallet aria-hidden="true" className={cls} />,
   work: <Wrench aria-hidden="true" className={cls} />,
   visits: <CalendarBlank aria-hidden="true" className={cls} />,
+  myDay: <ClipboardText aria-hidden="true" className={cls} />,
+  mySchedule: <Clock aria-hidden="true" className={cls} />,
+  myAbsences: <CalendarMinus aria-hidden="true" className={cls} />,
   contracts: <Handshake aria-hidden="true" className={cls} />,
   settings: <GearSix aria-hidden="true" className={cls} />,
   personalize: <Palette aria-hidden="true" className={cls} />,

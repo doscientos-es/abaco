@@ -31,13 +31,13 @@ import { PlatformMenuSection } from './platform-menu-section'
 import './technician-frame.css'
 
 const navigation: NavItem[] = [
-  { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.home },
-  { to: '/horarios', label: 'Mi horario', icon: navIcons.visits },
+  { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.myDay },
+  { to: '/horarios', label: 'Mi horario', icon: navIcons.mySchedule },
   {
     to: '/mis-vacaciones',
     label: 'Mis vacaciones',
     mobileLabel: 'Vacaciones',
-    icon: navIcons.visits,
+    icon: navIcons.myAbsences,
   },
   { to: '/ajustes', label: 'Ajustes', icon: navIcons.settings },
 ]

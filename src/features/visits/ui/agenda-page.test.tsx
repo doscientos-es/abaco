@@ -15,22 +15,17 @@ const mocks = vi.hoisted(() => ({
   valid: false,
   setOpen: vi.fn(),
   create: vi.fn(),
+  replan: vi.fn(),
   invalidate: vi.fn(),
   error: vi.fn(),
+  success: vi.fn(),
   navigate: vi.fn(),
   search: {} as WorkPlanningSearch,
   visits: [] as VisitSummary[],
   selectedVisitId: null as string | null,
   role: 'admin',
   setSelected: vi.fn(),
-  setReplan: vi.fn(),
-  setProposal: vi.fn(),
-  replan: null as VisitSummary | null,
-  proposal: null as CalendarEventChange | null,
-  replanProps: null as null | {
-    proposal?: { localStart: string; durationMinutes: number }
-    onDone: () => Promise<void>
-  },
+  setPending: vi.fn(),
   change: undefined as undefined | ((change: CalendarEventChange) => void),
   click: undefined as undefined | ((item: CalendarEvent) => void),
   events: [] as CalendarEvent[],
@@ -54,8 +49,7 @@ vi.mock('react', async (importOriginal) => {
       if (index === 1) return [mocks.open, mocks.setOpen]
       if (index === 3 && mocks.valid) return ['client-1', vi.fn()]
       if (index === 5 && mocks.valid) return ['Revisión', vi.fn()]
-      if (index === 12) return [mocks.replan, mocks.setReplan]
-      if (index === 14) return [mocks.proposal, mocks.setProposal]
+      if (index === 14) return [{}, mocks.setPending]
       return actual.useState(initial)
     },
   }
@@ -98,7 +92,7 @@ vi.mock('@doscientos/ui', () => {
         {children}
       </>
     ),
-    toast: { success: vi.fn(), error: mocks.error },
+    toast: { success: mocks.success, error: mocks.error },
   }
 })
 vi.mock('@/shared/ui/event-calendar', () => ({
@@ -172,7 +166,7 @@ vi.mock('@/features/work-orders/application/work-order-actions', () => ({
 }))
 vi.mock('../application/visit-actions', () => ({
   createServiceVisit: mocks.create,
-  listOfficeVisits: vi.fn(),
+  replanServiceVisit: mocks.replan,
   listPlanningVisits: vi.fn(),
   listTechnicians: vi.fn(),
 }))
@@ -194,12 +188,7 @@ vi.mock('@/shared/ui/form-dialog', () => ({
     return props.open ? <dialog open>{props.children}</dialog> : null
   },
 }))
-vi.mock('./visit-replan-form', () => ({
-  VisitReplanForm: (props: NonNullable<typeof mocks.replanProps>) => {
-    mocks.replanProps = props
-    return null
-  },
-}))
+vi.mock('./visit-replan-form', () => ({ VisitReplanForm: () => null }))
 vi.mock('./visit-report-editor', () => ({ VisitReportEditor: () => null }))
 vi.mock('./batch-work-sheets', () => ({ BatchWorkSheets: () => null }))
 
@@ -219,9 +208,6 @@ describe('AgendaPage: nueva visita', () => {
     mocks.visits = []
     mocks.selectedVisitId = null
     mocks.role = 'admin'
-    mocks.replan = null
-    mocks.proposal = null
-    mocks.replanProps = null
     mocks.change = undefined
     mocks.click = undefined
     mocks.events = []
@@ -232,6 +218,7 @@ describe('AgendaPage: nueva visita', () => {
     mocks.dialog = null
     vi.clearAllMocks()
     mocks.create.mockResolvedValue('visit-1')
+    mocks.replan.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
   })
 
@@ -240,10 +227,12 @@ describe('AgendaPage: nueva visita', () => {
     expect(html).toContain('Nueva visita')
     expect(html).not.toContain('Lista de trabajos')
     expect(html).not.toContain('Consulta las visitas de contratos')
-    expect(html).toContain('Calendario')
+    expect(html).toContain('Calendario de trabajos')
+    expect(mocks.buttons.has('Día')).toBe(true)
+    expect(mocks.buttons.has('Semana')).toBe(true)
+    expect(mocks.buttons.has('Mes')).toBe(true)
     for (const field of [
       'Fecha de referencia',
-      'Periodo',
       'Técnico',
       'Equipo',
       'Estado',
@@ -280,7 +269,7 @@ describe('AgendaPage: nueva visita', () => {
   })
 
   it('defaults the calendar to a month and supports a day view', () => {
-    mocks.search = { view: 'calendar', date: '2026-11-13' }
+    mocks.search = { date: '2026-11-13' }
     render()
     expect(mocks.calendarView).toBe('month')
     expect(mocks.queryKeys.find((key) => key[0] === 'office-visits')?.slice(2, 4)).toEqual([
@@ -325,6 +314,7 @@ describe('AgendaPage: nueva visita', () => {
       },
     ]
     mocks.search = {
+      view: 'list',
       date: '2026-11-13',
       period: 'week',
       team: 'unassigned',
@@ -370,7 +360,7 @@ describe('AgendaPage: nueva visita', () => {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch
     }
     expect(navigation.search(mocks.search)).toMatchObject({ date: '2026-11-14', period: 'day' })
-    mocks.search = { date: '2026-11-13' }
+    mocks.search = { date: '2026-11-13', view: 'list' }
     mocks.queryKeys = []
     render()
     expect(mocks.queryKeys.find((key) => key[0] === 'office-visits')?.slice(2, 4)).toEqual([
@@ -416,6 +406,9 @@ describe('AgendaPage: nueva visita', () => {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch
     }
     expect(navigation.search(mocks.search)).toEqual({ ...mocks.search, q: 'Oficinas' })
+    mocks.buttons.get('Quitar filtro Estado: Planificada')?.()
+    const clearStatus = mocks.navigate.mock.calls.at(-1)?.[0] as typeof navigation
+    expect(clearStatus.search(mocks.search)).toEqual({ ...mocks.search, status: undefined })
   })
 
   it('clears planning filters without changing the date, period or view', () => {
@@ -468,7 +461,7 @@ describe('AgendaPage: nueva visita', () => {
     expect(mocks.setOpen).not.toHaveBeenCalledWith(false)
   })
 
-  it('opens the proposed move for confirmation in the visit timezone and refreshes affected screens on save', async () => {
+  it('saves the dropped local time directly without changing the assignment or duration', async () => {
     const visit: VisitSummary = {
       id: 'move',
       title: 'Cristales',
@@ -480,6 +473,7 @@ describe('AgendaPage: nueva visita', () => {
       scheduled_end_at: '2026-11-13T09:00:00Z',
       status: 'scheduled',
       priority: 'normal',
+      assigned_user_id: 'technician-1',
       notes: '',
       updated_at: 'version',
     }
@@ -494,24 +488,27 @@ describe('AgendaPage: nueva visita', () => {
       item,
       start: new Date(2026, 10, 14, 11),
       end: new Date(2026, 10, 14, 12, 30),
-      kind: 'resize',
+      kind: 'move',
     }
     mocks.change?.({ ...change, item: { ...item, revision: 'old-version' } })
-    expect(mocks.setReplan).not.toHaveBeenCalled()
+    expect(mocks.replan).not.toHaveBeenCalled()
     expect(mocks.error).toHaveBeenCalled()
     mocks.change?.(change)
-    expect(mocks.setSelected).toHaveBeenCalledWith(visit.id)
-    expect(mocks.setReplan).toHaveBeenCalledWith(visit)
-    expect(mocks.setProposal).toHaveBeenCalledWith(change)
-    mocks.selectedVisitId = visit.id
-    mocks.replan = visit
-    mocks.proposal = change
-    render()
-    expect(mocks.replanProps?.proposal).toEqual({
-      localStart: '2026-11-14T11:00',
-      durationMinutes: 90,
-    })
-    await mocks.replanProps?.onDone()
+    mocks.change?.(change)
+    expect(mocks.setSelected).not.toHaveBeenCalled()
+    expect(mocks.replan).toHaveBeenCalledTimes(1)
+    expect(mocks.replan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visitId: visit.id,
+        expectedUpdatedAt: 'version',
+        localStart: '2026-11-14T11:00',
+        durationMinutes: 60,
+        assignedUserId: 'technician-1',
+        operationId: expect.any(String),
+      }),
+    )
+    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalledWith('Trabajo reprogramado'))
+    expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['office-visits', 'tenant-1'] })
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['my-visits', 'tenant-1'] })
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['vacation-coverage', 'tenant-1'] })
     mocks.role = 'user'
@@ -524,7 +521,7 @@ describe('AgendaPage: nueva visita', () => {
     expect(mocks.events[0]?.editable).toBe(false)
   })
 
-  it('groups a contract’s jobs into one event and shows the individual actions on opening it', () => {
+  it('makes each contract job individually draggable and opens only the selected visit', () => {
     const visit: VisitSummary = {
       id: 'one',
       title: 'Fregar',
@@ -553,18 +550,61 @@ describe('AgendaPage: nueva visita', () => {
     ]
     mocks.search = { view: 'calendar', date: '2026-11-13', period: 'week' }
     render()
-    expect(mocks.events).toHaveLength(1)
+    expect(mocks.calendarIds).toEqual(['one', 'two'])
+    expect(mocks.events.every((event) => event.editable)).toBe(true)
     const event = mocks.events[0]
-    if (!event) throw new Error('Missing grouped event')
-    expect(event.title).toBe('Oficina')
-    expect(event.editable).toBe(false)
+    if (!event) throw new Error('Missing event')
+    expect(event.title).toBe('Fregar')
     mocks.click?.(event)
     expect(mocks.setSelected).toHaveBeenCalledWith(event.id)
     mocks.selectedVisitId = event.id
     const html = render()
     expect(html).toContain('Fregar')
-    expect(html).toContain('Cristales')
-    expect(html.match(/Reprogramar/g)).toHaveLength(2)
-    expect(html.match(/Ver parte/g)).toHaveLength(2)
+    expect(html).not.toContain('Cristales')
+    expect(html).toContain('Reprogramar')
+    expect(html).toContain('Ver parte')
+  })
+
+  it('restores a failed optimistic move and retries it with the same operation id', async () => {
+    mocks.visits = [
+      {
+        id: 'visit',
+        title: 'Revisión',
+        client_name: 'TEST',
+        location_name: '',
+        address: '',
+        timezone: 'Europe/Madrid',
+        status: 'scheduled',
+        priority: 'normal',
+        notes: '',
+        updated_at: 'version',
+        scheduled_start_at: '2026-11-13T08:00:00Z',
+        scheduled_end_at: '2026-11-13T09:00:00Z',
+      },
+    ]
+    mocks.search = { date: '2026-11-13', period: 'day' }
+    mocks.replan.mockRejectedValueOnce(new Error('Sin conexión'))
+    render()
+    const item = mocks.events[0]
+    if (!item) throw new Error('Missing event')
+    const change: CalendarEventChange = {
+      item,
+      kind: 'move',
+      start: new Date(2026, 10, 12, 9),
+      end: new Date(2026, 10, 12, 10),
+    }
+    mocks.change?.(change)
+    await vi.waitFor(() => expect(mocks.setPending).toHaveBeenCalledTimes(2))
+    const add = mocks.setPending.mock.calls[0]?.[0]
+    const undo = mocks.setPending.mock.calls[1]?.[0]
+    expect(add({})).toEqual({ visit: change })
+    expect(undo({ visit: change })).toEqual({})
+    expect(mocks.error).toHaveBeenCalledWith('No se pudo reprogramar el trabajo', {
+      description: 'Sin conexión',
+    })
+    mocks.change?.(change)
+    expect(mocks.replan).toHaveBeenCalledTimes(2)
+    expect(mocks.replan.mock.calls[1]?.[0]).toEqual(mocks.replan.mock.calls[0]?.[0])
+    await vi.waitFor(() => expect(mocks.success).toHaveBeenCalled())
   })
 })

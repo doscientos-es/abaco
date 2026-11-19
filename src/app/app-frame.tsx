@@ -51,9 +51,9 @@ const navGroups: NavGroup[] = [
     label: 'General',
     items: [
       { to: '/', label: 'Resumen', icon: navIcons.home },
-      { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.visits },
-      { to: '/horarios', label: 'Mi horario', icon: navIcons.visits },
-      { to: '/mis-vacaciones', label: 'Mis ausencias', icon: navIcons.visits },
+      { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.myDay },
+      { to: '/horarios', label: 'Mi horario', icon: navIcons.mySchedule },
+      { to: '/mis-vacaciones', label: 'Mis ausencias', icon: navIcons.myAbsences },
     ],
   },
   {
