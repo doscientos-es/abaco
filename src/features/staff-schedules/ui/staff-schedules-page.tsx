@@ -12,6 +12,7 @@ import {
   calendarVisibleRange,
   type EventCalendarView,
 } from '@/shared/lib/event-calendar'
+import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
 import { EventCalendar } from '@/shared/ui/event-calendar'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
@@ -304,7 +305,12 @@ function ScheduleView({
                   ) : null
                 }}
                 aria-label="Calendario de horarios previstos"
-                onItemClick={(item) => setItemId(item.id)}
+                onItemClick={(item) => {
+                  const occurrence = occurrences.find((candidate) => candidate.id === item.id)
+                  if (!occurrence) return
+                  if (admin) setEditingId(occurrence.userId)
+                  else setItemId(occurrence.id)
+                }}
                 onDayClick={(day) => {
                   setDate(day)
                   setView('day')
@@ -313,10 +319,16 @@ function ScheduleView({
             </>
           ) : null}
           {selectedItem ? (
-            <output className="text-sm">
-              {selectedItem.name}: {selectedItem.date}, {calendarTime(selectedItem.start)}–
-              {calendarTime(selectedItem.end)}
-            </output>
+            <CalendarDetailsDialog
+              title={`Horario de ${selectedItem.name}`}
+              description="Horario previsto"
+              onClose={() => setItemId(null)}
+            >
+              <p className="text-sm">
+                {selectedItem.date} · {calendarTime(selectedItem.start)}–
+                {calendarTime(selectedItem.end)}
+              </p>
+            </CalendarDetailsDialog>
           ) : null}
           {admin && selectedIds.size === 0 ? (
             <p className="text-muted-foreground text-sm">

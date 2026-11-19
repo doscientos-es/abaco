@@ -73,6 +73,7 @@ try {
       run(process.execPath, [
         binary('oxlint'),
         '--fix',
+        '--fix-suggestions',
         '--no-error-on-unmatched-pattern',
         ...paths,
       ])

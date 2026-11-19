@@ -49,6 +49,9 @@ vi.mock('../application/staff-schedule-actions', () => ({
   staffSchedulesQuery: () => ({ queryKey: ['staff-schedules', 'tenant'] }),
 }))
 vi.mock('./staff-function-picker', () => ({ StaffFunctionPicker: () => null }))
+vi.mock('@/shared/ui/calendar-details-dialog', () => ({
+  CalendarDetailsDialog: ({ children }: { children: React.ReactNode }) => children,
+}))
 vi.mock('@/shared/ui/event-calendar', () => ({
   EventCalendar: (props: NonNullable<typeof mocks.calendar>) => {
     mocks.calendar = props

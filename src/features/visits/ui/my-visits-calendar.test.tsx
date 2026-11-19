@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +8,8 @@ import { MyVisitsCalendar } from './my-visits-calendar'
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
+  selectedId: null as string | null,
+  openGroup: undefined as (() => void) | undefined,
   query: null as null | (() => Promise<unknown>),
   items: [] as CalendarEvent[],
   click: null as null | ((item: CalendarEvent) => void),
@@ -15,6 +18,23 @@ const mocks = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
 }))
 
+vi.mock('react', async (load) => ({
+  ...(await load<typeof React>()),
+  useState: () => [mocks.selectedId, (id: string | null) => (mocks.selectedId = id)],
+}))
+vi.mock('@doscientos/ui', () => ({
+  Button: ({ children, onPress }: { children: string; onPress: () => void }) => {
+    mocks.openGroup = onPress
+    return <button>{children}</button>
+  },
+}))
+vi.mock('@/shared/ui/calendar-details-dialog', () => ({
+  CalendarDetailsDialog: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <dialog open aria-label={title}>
+      {children}
+    </dialog>
+  ),
+}))
 vi.mock('@/shared/ui/calendar-toolbar', () => ({
   CalendarToolbar: ({ onDateChange }: { onDateChange: (day: Date) => void }) => {
     mocks.navigateMonth = onDateChange
@@ -48,6 +68,8 @@ vi.mock('@/shared/ui/event-calendar', () => ({
 describe('calendario de trabajos del usuario', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.selectedId = null
+    mocks.openGroup = undefined
     mocks.data = []
     mocks.query = null
     mocks.items = []
@@ -92,7 +114,7 @@ describe('calendario de trabajos del usuario', () => {
     expect(mocks.list).toHaveBeenCalledWith('tenant', '2026-11-27', '2026-12-06')
   })
 
-  it('opens the selected contract and day to reveal its individual jobs', () => {
+  it('shows the individual jobs in a dialog before navigating to the selected contract and day', () => {
     const visit = {
       id: 'one',
       title: 'Fregar',
@@ -106,20 +128,29 @@ describe('calendario de trabajos del usuario', () => {
     }
     mocks.data = [visit, { ...visit, id: 'two', title: 'Cristales' }]
     const open = vi.fn()
-    renderToStaticMarkup(
-      <MyVisitsCalendar
-        tenantId="tenant"
-        date="2026-11-13"
-        onDateChange={vi.fn()}
-        onSelectDay={vi.fn()}
-        onOpenGroup={open}
-      />,
-    )
+    const render = () =>
+      renderToStaticMarkup(
+        <MyVisitsCalendar
+          tenantId="tenant"
+          date="2026-11-13"
+          onDateChange={vi.fn()}
+          onSelectDay={vi.fn()}
+          onOpenGroup={open}
+        />,
+      )
+    render()
     expect(mocks.items).toHaveLength(1)
     const item = mocks.items[0]
     if (!item) throw new Error('Missing contract event')
     expect(item.title).toBe('Oficina')
     mocks.click?.(item)
+    expect(open).not.toHaveBeenCalled()
+    const details = render()
+    expect(details).toContain('aria-label="Oficina"')
+    expect(details).toContain('Fregar')
+    expect(details).toContain('Cristales')
+    mocks.openGroup?.()
     expect(open).toHaveBeenCalledWith('2026-11-13', 'contract')
+    expect(mocks.selectedId).toBeNull()
   })
 })

@@ -64,11 +64,12 @@ export function PaymentCalendar({
   const query = useQuery({ queryKey, queryFn: () => loadPaymentCalendar(tenantId) })
   const today = localToday()
   const items = calendarItems(query.data?.invoices ?? [], query.data?.payments ?? [])
+  const itemsByEventId = new Map(items.map((item) => [`${item.kind}:${item.id}`, item]))
   const summary = calendarSummary(items, month, today)
   const monthly = items.filter((item) => item.date.startsWith(month))
   const earlierOverdue = summary.overdue.filter((item) => !item.date.startsWith(month))
-  const events: CalendarEvent[] = items.map((item) => ({
-    id: `${item.kind}:${item.id}`,
+  const events: CalendarEvent[] = Array.from(itemsByEventId, ([id, item]) => ({
+    id,
     title: `${item.concept} · ${formatEuros(item.amount)}`,
     start: atCalendarMinutes(calendarDate(item.date), 0),
     end: atCalendarMinutes(calendarDate(moveDays(item.date, 1)), 0),
@@ -84,7 +85,7 @@ export function PaymentCalendar({
           : 'warning',
     description: `${item.kind === 'income' ? 'Cobro' : 'Pago'} · ${item.party}`,
   }))
-  const selected = items.find((item) => `${item.kind}:${item.id}` === selectedId)
+  const selected = selectedId ? itemsByEventId.get(selectedId) : undefined
   const amount = parseEuros(form?.amount ?? '')
   const vatRate = Number((form?.vatRate ?? '').replace(',', '.'))
   const valid =
@@ -262,8 +263,7 @@ export function PaymentCalendar({
             </p>
           </div>
           <p className="text-muted-foreground text-xs">
-            Los vencimientos son de día completo y no tienen duración. Arrastrar un pago pendiente
-            propone otra fecha; las facturas se consultan en su detalle.
+            Solo se puede cambiar la fecha de los pagos pendientes.
           </p>
           <EventCalendar
             allDayOnly
@@ -272,9 +272,13 @@ export function PaymentCalendar({
             view={view}
             items={events}
             aria-label="Calendario de cobros y pagos"
-            onItemClick={(item) => setSelectedId(item.id)}
+            onItemClick={(event) => {
+              const item = itemsByEventId.get(event.id)
+              if (item?.payment && event.editable) edit(item.payment)
+              else if (item) setSelectedId(event.id)
+            }}
             onItemChange={(change) => {
-              const item = items.find((item) => `${item.kind}:${item.id}` === change.item.id)
+              const item = itemsByEventId.get(change.item.id)
               if (item?.payment && !item.paid && !busy) edit(item.payment, dateValue(change.start))
             }}
             onDayClick={(day) => {

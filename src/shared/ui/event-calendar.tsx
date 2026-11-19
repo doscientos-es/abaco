@@ -30,7 +30,7 @@ export function EventCalendar({
   view,
   minuteStep = 15,
   allDayOnly = false,
-  showInstructions = true,
+  showInstructions = false,
   onItemClick,
   onItemChange,
   onRangeSelect,

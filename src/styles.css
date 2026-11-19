@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap');
+/* Keep the library defaults below application utilities, including icon padding overrides. */
+@layer doscientos, theme, base, components, utilities;
 @import 'tailwindcss';
-@import '@doscientos/ui/styles.css';
+@import '@doscientos/ui/styles.css' layer(doscientos);
 
 @theme inline {
   --color-primary: var(--primary);

@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   setOpen: vi.fn(),
   create: vi.fn(),
   replan: vi.fn(),
+  replanContract: vi.fn(),
   invalidate: vi.fn(),
   error: vi.fn(),
   success: vi.fn(),
@@ -25,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   selectedVisitId: null as string | null,
   role: 'admin',
   setSelected: vi.fn(),
+  setReplanning: vi.fn(),
   setPending: vi.fn(),
   change: undefined as undefined | ((change: CalendarEventChange) => void),
   click: undefined as undefined | ((item: CalendarEvent) => void),
@@ -49,6 +51,7 @@ vi.mock('react', async (importOriginal) => {
       if (index === 1) return [mocks.open, mocks.setOpen]
       if (index === 3 && mocks.valid) return ['client-1', vi.fn()]
       if (index === 5 && mocks.valid) return ['Revisión', vi.fn()]
+      if (index === 12) return [null, mocks.setReplanning]
       if (index === 14) return [{}, mocks.setPending]
       return actual.useState(initial)
     },
@@ -167,6 +170,7 @@ vi.mock('@/features/work-orders/application/work-order-actions', () => ({
 vi.mock('../application/visit-actions', () => ({
   createServiceVisit: mocks.create,
   replanServiceVisit: mocks.replan,
+  replanContractDay: mocks.replanContract,
   listPlanningVisits: vi.fn(),
   listTechnicians: vi.fn(),
 }))
@@ -219,6 +223,7 @@ describe('AgendaPage: nueva visita', () => {
     vi.clearAllMocks()
     mocks.create.mockResolvedValue('visit-1')
     mocks.replan.mockResolvedValue(undefined)
+    mocks.replanContract.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
   })
 
@@ -342,6 +347,13 @@ describe('AgendaPage: nueva visita', () => {
       status: 'scheduled',
       q: 'Oficinas',
     })
+    render()
+    const event = mocks.events[0]
+    if (!event) throw new Error('Missing visit event')
+    mocks.click?.(event)
+    expect(mocks.setSelected).toHaveBeenCalledWith('visible')
+    expect(mocks.setReplanning).toHaveBeenCalledWith(mocks.visits[0])
+    expect(mocks.replan).not.toHaveBeenCalled()
     mocks.selectedVisitId = 'visible'
     mocks.queryKeys = []
     const calendar = render()
@@ -517,7 +529,12 @@ describe('AgendaPage: nueva visita', () => {
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['vacation-coverage', 'tenant-1'] })
     mocks.role = 'user'
     render()
-    expect(mocks.events[0]?.editable).toBe(false)
+    const event = mocks.events[0]
+    if (!event) throw new Error('Missing visit event')
+    expect(event.editable).toBe(false)
+    mocks.click?.(event)
+    expect(mocks.setSelected).toHaveBeenCalledWith(event.id)
+    expect(mocks.setReplanning).toHaveBeenLastCalledWith(null)
     expect(mocks.change).toBeUndefined()
     mocks.role = 'admin'
     mocks.visits = [{ ...visit, status: 'completed' }]
@@ -525,7 +542,7 @@ describe('AgendaPage: nueva visita', () => {
     expect(mocks.events[0]?.editable).toBe(false)
   })
 
-  it('makes each contract job individually draggable and opens only the selected visit', () => {
+  it('groups a contract and opens its individual jobs, including jobs hidden by a filter', async () => {
     const visit: VisitSummary = {
       id: 'one',
       title: 'Fregar',
@@ -541,6 +558,7 @@ describe('AgendaPage: nueva visita', () => {
       updated_at: 'version',
       contract_id: 'contract',
       contract_title: 'Oficina',
+      assigned_user_id: 'worker-one',
     }
     mocks.visits = [
       visit,
@@ -548,25 +566,57 @@ describe('AgendaPage: nueva visita', () => {
         ...visit,
         id: 'two',
         title: 'Cristales',
+        assigned_user_id: 'worker-two',
         scheduled_start_at: '2026-11-13T09:00:00Z',
         scheduled_end_at: '2026-11-13T10:00:00Z',
       },
     ]
-    mocks.search = { view: 'calendar', date: '2026-11-13', period: 'week' }
+    mocks.search = {
+      view: 'calendar',
+      date: '2026-11-13',
+      period: 'week',
+      technician: 'worker-one',
+    }
     render()
-    expect(mocks.calendarIds).toEqual(['one', 'two'])
+    expect(mocks.calendarIds).toEqual(['contract:contract:2026-11-13'])
     expect(mocks.events.every((event) => event.editable)).toBe(true)
     const event = mocks.events[0]
     if (!event) throw new Error('Missing event')
-    expect(event.title).toBe('Fregar')
+    expect(event.title).toBe('Oficina')
+    expect(event.resizable).toBe(false)
+    mocks.change?.({
+      item: event,
+      kind: 'move',
+      start: new Date(2026, 10, 14, 9),
+      end: new Date(2026, 10, 14, 11),
+    })
+    await vi.waitFor(() =>
+      expect(mocks.replanContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contractId: 'contract',
+          sourceDate: '2026-11-13',
+          shiftMinutes: 1440,
+          visits: [
+            { id: 'one', updated_at: 'version' },
+            { id: 'two', updated_at: 'version' },
+          ],
+        }),
+      ),
+    )
     mocks.click?.(event)
     expect(mocks.setSelected).toHaveBeenCalledWith(event.id)
+    expect(mocks.setReplanning).toHaveBeenLastCalledWith(null)
     mocks.selectedVisitId = event.id
     const html = render()
     expect(html).toContain('Fregar')
-    expect(html).not.toContain('Cristales')
+    expect(html).toContain('Cristales')
     expect(html).toContain('Reprogramar')
     expect(html).toContain('Ver parte')
+    const secondVisit = mocks.visits[1]
+    if (!secondVisit) throw new Error('Missing second visit')
+    mocks.visits = [visit, { ...secondVisit, status: 'completed' }]
+    render()
+    expect(mocks.events[0]?.editable).toBe(false)
   })
 
   it('restores a failed optimistic move and retries it with the same operation id', async () => {

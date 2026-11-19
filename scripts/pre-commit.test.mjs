@@ -59,7 +59,7 @@ function repository() {
   )
   writeFileSync(
     join(cwd, '.oxlintrc.json'),
-    JSON.stringify({ rules: { 'no-useless-escape': 'error' } }),
+    JSON.stringify({ rules: { 'no-useless-escape': 'error', 'no-debugger': 'warn' } }),
   )
   writeFileSync(join(cwd, 'source.js'), 'console.log("original")\n')
   writeFileSync(join(cwd, 'unrelated.js'), 'console.log("original")\n')
@@ -77,9 +77,9 @@ afterEach(() => {
 })
 
 describe('pre-commit automatic fixes', () => {
-  it('fixes and commits staged files without staging unrelated changes', () => {
+  it('commits automatic fixes and suggestions without staging unrelated changes', () => {
     const cwd = repository()
-    writeFileSync(join(cwd, 'source.js'), 'const value="\\#"; console.log(value);\n')
+    writeFileSync(join(cwd, 'source.js'), 'debugger;\nconst value="\\#"; console.log(value);\n')
     writeFileSync(join(cwd, 'unrelated.js'), 'const unchanged   =  1;\n')
     git(cwd, 'add', 'source.js')
 
@@ -87,6 +87,7 @@ describe('pre-commit automatic fixes', () => {
     expect(result.status, result.stderr + result.stdout).toBe(0)
     expect(readFileSync(join(cwd, 'quality-quick-called'), 'utf8')).toBe('')
     const committed = git(cwd, 'show', 'HEAD:source.js')
+    expect(committed).not.toContain('debugger')
     expect(committed).toContain("const value = '#'")
     expect(readFileSync(join(cwd, 'source.js'), 'utf8')).toBe(committed)
     expect(readFileSync(join(cwd, 'unrelated.js'), 'utf8')).toBe('const unchanged   =  1;\n')
@@ -111,17 +112,15 @@ describe('pre-commit automatic fixes', () => {
 
   it('blocks the commit when lint reports an unfixable error', () => {
     const cwd = repository()
-    writeFileSync(
-      join(cwd, '.oxlintrc.json'),
-      JSON.stringify({ rules: { 'no-debugger': 'error' } }),
-    )
-    writeFileSync(join(cwd, 'source.js'), 'debugger;\n')
+    writeFileSync(join(cwd, '.oxlintrc.json'), JSON.stringify({ rules: { 'no-eval': 'error' } }))
+    const source = 'eval("1 + 1");\n'
+    writeFileSync(join(cwd, 'source.js'), source)
     git(cwd, 'add', 'source.js')
 
     const result = command(cwd, 'git', ['commit', '-m', 'invalid'])
     expect(result.status).not.toBe(0)
-    expect(result.stdout + result.stderr).toContain('no-debugger')
-    expect(git(cwd, 'show', ':source.js')).toBe('debugger;\n')
+    expect(result.stdout + result.stderr).toContain('no-eval')
+    expect(git(cwd, 'show', ':source.js')).toBe(source)
   }, 30000)
 
   it('refuses glob-like filenames rather than modifying other files', () => {

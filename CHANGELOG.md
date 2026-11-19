@@ -6,6 +6,14 @@
 
 ### Nuevas funciones
 
+- Add replan functionality for contract day moves
+- Add calendar color selection for team members
+- Enhance visit replan functionality and error handling
+- Add new migration for admin personal work
+- Enhance estimate design workspace with improved layout
+- Add compact view for empty hours in weekly schedule
+- Implement customizable estimate design options
+- Enhance platform UI with new loading and feedback states
 - Add invoice detail view and enhance invoice listing
 - Enhance billing agreement and navigation features
 - Add fixed billing price management and restoration feature
@@ -74,6 +82,7 @@
 
 ### Correcciones
 
+- Adjust search width for better layout consistency
 - Update git hooks messages to clarify pre-push behavior and local checks
 - Aislar pruebas del hook de Git
 

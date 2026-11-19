@@ -2,6 +2,7 @@ import { Button, toast } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
 import {
   WeeklyScheduleCalendar,
   type WeeklyCalendarSlot,
@@ -80,24 +81,16 @@ export function StaffScheduleEditor({
   }
 
   return (
-    <section
-      className="border-border bg-card space-y-4 rounded-xl border p-5"
-      aria-label={`Editar horario de ${person.name}`}
+    <CalendarDetailsDialog
+      title={`Editar horario de ${person.name}`}
+      description="Semana tipo; añade varias franjas por día si hay pausas. Para un turno nocturno usa dos días; como fin, 00:00 significa medianoche."
+      onClose={onClose}
+      preventDismissal={busy}
     >
-      <div>
-        <h2 className="font-semibold">Editar horario de {person.name}</h2>
-        <p className="text-muted-foreground text-sm">
-          Semana tipo; añade varias franjas por día si hay pausas. Para un turno nocturno usa dos
-          días; como fin, 00:00 significa medianoche.
-        </p>
-      </div>
       <StaffFunctionPicker functions={functions} selected={functionIds} onChange={setFunctionIds} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold">Dibuja el horario semanal</h3>
-          <p className="text-muted-foreground text-sm">
-            Arrastra para añadir turnos; también puedes moverlos o ampliar su borde inferior.
-          </p>
         </div>
         <Button
           variant="outline"
@@ -223,6 +216,6 @@ export function StaffScheduleEditor({
           Cancelar
         </Button>
       </div>
-    </section>
+    </CalendarDetailsDialog>
   )
 }

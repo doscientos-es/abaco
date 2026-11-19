@@ -8,6 +8,14 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add replan functionality for contract day moves",
+            "Add calendar color selection for team members",
+            "Enhance visit replan functionality and error handling",
+            "Add new migration for admin personal work",
+            "Enhance estimate design workspace with improved layout",
+            "Add compact view for empty hours in weekly schedule",
+            "Implement customizable estimate design options",
+            "Enhance platform UI with new loading and feedback states",
             "Add invoice detail view and enhance invoice listing",
             "Enhance billing agreement and navigation features",
             "Add fixed billing price management and restoration feature",
@@ -78,12 +86,76 @@
         {
           "title": "Correcciones",
           "items": [
+            "Adjust search width for better layout consistency",
             "Update git hooks messages to clarify pre-push behavior and local checks",
             "Aislar pruebas del hook de Git"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "5350da98a2904e7d8fada8de248beb1206f7c35f",
+          "type": "feat",
+          "scope": "contract",
+          "breaking": false,
+          "description": "Add replan functionality for contract day moves"
+        },
+        {
+          "sha": "a32dd07f2973b96922c0ef739069ce83647a83a0",
+          "type": "feat",
+          "scope": "calendar",
+          "breaking": false,
+          "description": "Add calendar color selection for team members"
+        },
+        {
+          "sha": "fe54aed1e37fc78b073f836e308ffd90447fd439",
+          "type": "feat",
+          "scope": "agenda-page",
+          "breaking": false,
+          "description": "Enhance visit replan functionality and error handling"
+        },
+        {
+          "sha": "b128d1154abc1afc8cb853c4fe5d8b3b06a51c5f",
+          "type": "feat",
+          "scope": "migrations",
+          "breaking": false,
+          "description": "Add new migration for admin personal work"
+        },
+        {
+          "sha": "b3665cd4e60d5b505024495a7d315c83eeea5da0",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Enhance estimate design workspace with improved layout"
+        },
+        {
+          "sha": "0cd6104c8fd8e98a83f8fad037c55360ace02bba",
+          "type": "feat",
+          "scope": "event-calendar",
+          "breaking": false,
+          "description": "Add compact view for empty hours in weekly schedule"
+        },
+        {
+          "sha": "902f23865c6d33bd7bc5bd4f9296f17cdf3561d7",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Implement customizable estimate design options"
+        },
+        {
+          "sha": "67fd01bc5510e1d75ed6227278788dade1a8d8b5",
+          "type": "fix",
+          "scope": "technician-frame",
+          "breaking": false,
+          "description": "Adjust search width for better layout consistency"
+        },
+        {
+          "sha": "b11d027eb389ee2dea2bc56be6b1c23d7e77edd5",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Enhance platform UI with new loading and feedback states"
+        },
         {
           "sha": "ed153e4ee21e563fcd28ea7a48cdb26b1ff49b42",
           "type": "feat",

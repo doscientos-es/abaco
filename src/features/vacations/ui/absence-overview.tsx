@@ -1,4 +1,4 @@
-import { Button, toast } from '@doscientos/ui'
+import { toast } from '@doscientos/ui'
 import { useState } from 'react'
 
 import { calendarDate, dateValue, todayInMadrid } from '@/shared/lib/date-range'
@@ -49,7 +49,16 @@ export function AbsenceOverview({
         view={view}
         aria-label="Calendario de ausencias"
         items={absenceEvents(requests, to, Boolean(onEdit))}
-        onItemClick={(item) => setSelectedId(item.id)}
+        onItemClick={(item) => {
+          const request = requests.find((candidate) => candidate.id === item.id)
+          if (!request) return
+          if (onEdit && item.editable) {
+            setSelectedId(null)
+            onEdit(request)
+          } else {
+            setSelectedId(item.id)
+          }
+        }}
         onItemChange={
           onEdit
             ? (change) => {
@@ -79,16 +88,6 @@ export function AbsenceOverview({
           </p>
           <p className="whitespace-pre-wrap">{selected.comment}</p>
           <p className="whitespace-pre-wrap">{selected.decisionComment}</p>
-          {onEdit ? (
-            <Button
-              onPress={() => {
-                setSelectedId(null)
-                onEdit(selected)
-              }}
-            >
-              Editar / cancelar
-            </Button>
-          ) : null}
         </CalendarDetailsDialog>
       ) : null}
     </section>

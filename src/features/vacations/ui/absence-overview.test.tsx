@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,18 +9,29 @@ import { AbsenceOverview } from './absence-overview'
 
 const mocks = vi.hoisted(() => ({
   error: vi.fn(),
+  selectedId: null as string | null,
   calendar: null as null | {
     items: CalendarEvent[]
     allDayOnly: boolean
     showInstructions: boolean
     renderDaySummary?: unknown
+    onItemClick: (item: CalendarEvent) => void
     onItemChange?: (change: CalendarEventChange) => void
     onDayClick: (day: Date) => void
   },
 }))
+vi.mock('react', async (load) => {
+  const actual = await load<typeof React>()
+  return {
+    ...actual,
+    useState: (initial: unknown) =>
+      initial === null
+        ? [mocks.selectedId, (id: string | null) => (mocks.selectedId = id)]
+        : actual.useState(initial),
+  }
+})
 vi.mock('@doscientos/ui', () => ({
   toast: { error: mocks.error },
-  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
 }))
 vi.mock('@/shared/ui/calendar-toolbar', () => ({ CalendarToolbar: () => null }))
 vi.mock('@/shared/ui/event-calendar', () => ({
@@ -30,7 +41,7 @@ vi.mock('@/shared/ui/event-calendar', () => ({
   },
 }))
 vi.mock('@/shared/ui/calendar-details-dialog', () => ({
-  CalendarDetailsDialog: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CalendarDetailsDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 const request: VacationRequest = {
   id: 'absence',
@@ -53,6 +64,30 @@ const request: VacationRequest = {
 describe('absence overview calendar integration', () => {
   beforeEach(() => {
     mocks.calendar = null
+    mocks.selectedId = null
+  })
+  it('opens the existing editor for editable absences and only shows details for canceled ones', () => {
+    const edit = vi.fn()
+    const render = () =>
+      renderToStaticMarkup(
+        <AbsenceOverview
+          requests={[
+            request,
+            { ...request, id: 'canceled', status: 'canceled', comment: 'Cancelación TEST' },
+          ]}
+          onRange={vi.fn()}
+          onEdit={edit}
+        />,
+      )
+    render()
+    const [editable, canceled] = mocks.calendar?.items ?? []
+    if (!editable || !canceled) throw new Error('Missing absence events')
+    mocks.calendar?.onItemClick(editable)
+    expect(edit).toHaveBeenCalledWith(request)
+    expect(mocks.selectedId).toBeNull()
+    mocks.calendar?.onItemClick(canceled)
+    expect(edit).toHaveBeenCalledTimes(1)
+    expect(render()).toContain('Cancelación TEST')
   })
   it('proposes an inclusive changed period against the original version without writing immediately', () => {
     const edit = vi.fn()

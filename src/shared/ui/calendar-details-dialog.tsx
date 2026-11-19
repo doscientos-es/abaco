@@ -12,20 +12,25 @@ export function CalendarDetailsDialog({
   description,
   onClose,
   children,
+  preventDismissal = false,
 }: {
   title: string
   description: string
   onClose: () => void
   children: ReactNode
+  preventDismissal?: boolean
 }) {
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open && !preventDismissal) onClose()
       }}
     >
-      <DialogContent className="app-dialog app-dialog--details max-h-[90dvh] w-full overflow-y-auto">
+      <DialogContent
+        className="app-dialog app-dialog--details max-h-[90dvh] w-full overflow-y-auto"
+        showCloseButton={!preventDismissal}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

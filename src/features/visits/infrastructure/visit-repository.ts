@@ -221,3 +221,22 @@ export async function replanServiceVisit(input: {
   })
   if (error) throw new Error(error.message)
 }
+
+export async function replanContractDay(input: {
+  tenantId: string
+  contractId: string
+  sourceDate: string
+  visits: { id: string; updated_at: string }[]
+  shiftMinutes: number
+  operationId: string
+}): Promise<void> {
+  const { error } = await createBrowserSupabaseClient().rpc('replan_contract_day', {
+    p_tenant_id: input.tenantId,
+    p_contract_id: input.contractId,
+    p_source_date: input.sourceDate,
+    p_visits: input.visits,
+    p_shift_minutes: input.shiftMinutes,
+    p_operation_id: input.operationId,
+  })
+  if (error) throw new Error(error.message)
+}

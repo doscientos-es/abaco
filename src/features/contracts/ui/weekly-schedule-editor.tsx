@@ -49,12 +49,11 @@ export function WeeklyScheduleEditor({
               ? 'Marca el primer trabajo en su semana de referencia'
               : 'Dibuja el horario semanal'}
           </h3>
-          <p className="text-muted-foreground text-sm">
-            Arrastra en un día para marcar de qué hora a qué hora.{' '}
-            {referenceDate
-              ? `Se repetirá ${recurrenceLabel}; el día de la semana puede variar.`
-              : 'Puedes añadir varios turnos, moverlos y ampliar su borde inferior.'}
-          </p>
+          {referenceDate ? (
+            <p className="text-muted-foreground text-sm">
+              Se repetirá {recurrenceLabel}; el día de la semana puede variar.
+            </p>
+          ) : null}
         </div>
         {!referenceDate ? (
           <Button

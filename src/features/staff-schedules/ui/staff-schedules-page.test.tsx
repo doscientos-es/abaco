@@ -5,6 +5,8 @@ import { isValidElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { CalendarEvent } from '@/shared/lib/event-calendar'
+
 import type { StaffPerson } from '../domain/staff-schedule'
 import type { StaffSelection, StaffTeam } from '../domain/staff-selection'
 import { StaffSchedulesPage } from './staff-schedules-page'
@@ -21,7 +23,11 @@ const mocks = vi.hoisted(() => ({
   selected: undefined as StaffSelection | undefined,
   filter: null as FilterProps | null,
   popover: null as { open: boolean | undefined; placement: string | undefined } | null,
-  events: [] as { id: string; title: string; color?: string }[],
+  events: [] as CalendarEvent[],
+  click: undefined as ((item: CalendarEvent) => void) | undefined,
+  stateIndex: 0,
+  editorId: null as string | null,
+  itemId: null as string | null,
 }))
 vi.mock('react', async (original) => {
   const actual = await original<typeof React>()
@@ -29,6 +35,9 @@ vi.mock('react', async (original) => {
     ...actual,
     useState: (initial: unknown) => {
       const state = actual.useState(initial)
+      const index = mocks.stateIndex++
+      if (index === 4) return [mocks.editorId, (id: string | null) => (mocks.editorId = id)]
+      if (index === 5) return [mocks.itemId, (id: string | null) => (mocks.itemId = id)]
       return initial === undefined
         ? [
             mocks.selected,
@@ -76,8 +85,15 @@ vi.mock('./staff-people-filter', () => ({
   },
 }))
 vi.mock('@/shared/ui/event-calendar', () => ({
-  EventCalendar: ({ items }: { items: { id: string; title: string; color?: string }[] }) => {
+  EventCalendar: ({
+    items,
+    onItemClick,
+  }: {
+    items: CalendarEvent[]
+    onItemClick: (item: CalendarEvent) => void
+  }) => {
     mocks.events = items
+    mocks.click = onItemClick
     return (
       <div>
         {items.map((item) => (
@@ -87,6 +103,18 @@ vi.mock('@/shared/ui/event-calendar', () => ({
     )
   },
 }))
+vi.mock('./staff-schedule-editor', () => ({
+  StaffScheduleEditor: ({ person }: { person: StaffPerson }) => (
+    <p>Editar horario de {person.name}</p>
+  ),
+}))
+vi.mock('@/shared/ui/calendar-details-dialog', () => ({
+  CalendarDetailsDialog: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <dialog open aria-label={title}>
+      {children}
+    </dialog>
+  ),
+}))
 
 describe('staff schedule access and availability', () => {
   beforeEach(() => {
@@ -94,6 +122,10 @@ describe('staff schedule access and availability', () => {
     mocks.filter = null
     mocks.popover = null
     mocks.events = []
+    mocks.click = undefined
+    mocks.stateIndex = 0
+    mocks.editorId = null
+    mocks.itemId = null
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 10, 16, 12))
     mocks.query.mockImplementation(({ queryKey }: { queryKey: string[] }) => {
@@ -133,6 +165,29 @@ describe('staff schedule access and availability', () => {
       role: 'admin',
     })
   }
+
+  it.each(['admin', 'worker'])('routes a shift click by permission (%s)', (role) => {
+    if (role === 'admin') adminSession()
+    else
+      mocks.session.mockReturnValue({ tenantId: 'company', userId: 'luis', fullName: 'Luis', role })
+    const render = () => {
+      mocks.stateIndex = 0
+      return renderToStaticMarkup(<StaffSchedulesPage />)
+    }
+    render()
+    const item = mocks.events.find((event) => event.title === 'Luis')
+    if (!item) throw new Error('Missing staff shift')
+    mocks.click?.(item)
+    const html = render()
+    if (role === 'admin') {
+      expect(html).toContain('Editar horario de Luis')
+      expect(mocks.itemId).toBeNull()
+    } else {
+      expect(html).toContain('aria-label="Horario de Luis"')
+      expect(html).toContain('09:00–17:00')
+      expect(mocks.editorId).toBeNull()
+    }
+  })
 
   it('uses the saved color for each person’s calendar events', () => {
     adminSession()

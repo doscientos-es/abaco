@@ -15,7 +15,13 @@ import {
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
 import type { WorkPlanningSearch } from '@/shared/domain/work-planning-search'
-import { calendarDate, dateValue, monthDateRange, todayInMadrid } from '@/shared/lib/date-range'
+import {
+  calendarDate,
+  dateValue,
+  monthDateRange,
+  moveDays,
+  todayInMadrid,
+} from '@/shared/lib/date-range'
 import {
   calendarLocalInput,
   calendarTime,
@@ -35,6 +41,7 @@ import {
   listPlanningVisits,
   listTechnicians,
   replanServiceVisit,
+  replanContractDay,
   type VisitPriority,
   type VisitSummary,
   type VisitStatus,
@@ -44,6 +51,7 @@ import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
 import { PlanningToolbar } from './planning-toolbar'
+import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -120,24 +128,28 @@ export function AgendaPage() {
   const queryKey = ['office-visits', tenant.id, from, to, filterTechnicianId, queryPage]
   const visits = useQuery({
     queryKey,
-    queryFn: () =>
-      listPlanningVisits(
-        tenant.id,
-        from,
-        to,
-        filterTechnicianId === 'unassigned' ? null : filterTechnicianId || null,
-      ),
+    queryFn: () => listPlanningVisits(tenant.id, moveDays(from, -1), to, null),
   })
   const teams = useQuery(workTeamsQuery(tenant.id))
   const visibleVisits = (visits.data ?? [])
     .filter(
       (visit) =>
+        dateValue(toCalendarWallTime(visit.scheduled_start_at, visit.timezone)) <= to &&
+        dateValue(
+          toCalendarWallTime(
+            new Date(Date.parse(visit.scheduled_end_at) - 1).toISOString(),
+            visit.timezone,
+          ),
+        ) >= from &&
         (!teamFilter ||
           (teamFilter === 'unassigned'
             ? !visit.work_team_id
             : visit.work_team_id === teamFilter)) &&
         (!statusFilter || visit.status === statusFilter) &&
-        (filterTechnicianId !== 'unassigned' || (!visit.assigned_user_id && !visit.work_team_id)) &&
+        (!filterTechnicianId ||
+          (filterTechnicianId === 'unassigned'
+            ? !visit.assigned_user_id && !visit.work_team_id
+            : visit.assigned_user_id === filterTechnicianId)) &&
         `${visit.client_name} ${visit.location_name} ${visit.address} ${visit.title} ${visit.contract_title ?? ''}`
           .toLocaleLowerCase('es')
           .includes(textFilter.trim().toLocaleLowerCase('es')),
@@ -167,27 +179,35 @@ export function AgendaPage() {
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
-  const calendarVisitById = new Map(visibleVisits.map((visit) => [visit.id, visit]))
+  const visibleIds = new Set(visibleVisits.map((visit) => visit.id))
+  const calendarGroups = groupVisitsByContractDay(visits.data ?? []).filter((group) =>
+    group.visits.some((visit) => visibleIds.has(visit.id)),
+  )
+  const calendarGroupById = new Map(calendarGroups.map((group) => [group.id, group]))
   const canReplan = session?.role === 'admin'
-  const calendarItems: CalendarEvent[] = visibleVisits.map((visit) => {
-    const pending = pendingChanges[visit.id]
+  const calendarItems: CalendarEvent[] = calendarGroups.map((group) => {
+    const visit = group.visits[0]
+    const pending = pendingChanges[group.id]
+    const multiple = group.visits.length > 1
     return {
-      id: visit.id,
-      revision: visit.updated_at,
-      title: visit.title,
-      start: pending?.start ?? toCalendarWallTime(visit.scheduled_start_at, visit.timezone),
-      end: pending?.end ?? toCalendarWallTime(visit.scheduled_end_at, visit.timezone),
-      editable: canReplan && visit.status === 'scheduled' && !pending,
-      resizable: period !== 'month',
+      id: group.id,
+      revision: multiple
+        ? group.visits.map((item) => `${item.id}:${item.updated_at}`).join('|')
+        : visit.updated_at,
+      title: group.title,
+      start: pending?.start ?? group.start,
+      end: pending?.end ?? group.end,
+      editable: canReplan && group.visits.every((item) => item.status === 'scheduled') && !pending,
+      resizable: !multiple && period !== 'month',
       tone:
         visit.priority === 'urgent' && visit.status === 'scheduled'
           ? 'danger'
           : statusTones[visit.status],
-      description: `${visit.client_name} · ${statusLabels[visit.status]}${pending ? ' · Guardando' : ''}`,
+      description: `${visit.client_name} · ${multiple ? `${group.visits.length} trabajos` : statusLabels[visit.status]}${pending ? ' · Guardando' : ''}`,
     }
   })
-  const selectedCalendarVisit = selectedCalendarVisitId
-    ? calendarVisitById.get(selectedCalendarVisitId)
+  const selectedCalendarGroup = selectedCalendarVisitId
+    ? calendarGroupById.get(selectedCalendarVisitId)
     : undefined
   const timezone = selectedLocation?.timezone ?? 'Europe/Madrid'
   const durationMinutes = Number(duration)
@@ -280,7 +300,61 @@ export function AgendaPage() {
   }
 
   async function saveCalendarChange(change: CalendarEventChange) {
-    const visit = calendarVisitById.get(change.item.id)
+    const group = calendarGroupById.get(change.item.id)
+    if (!group) return
+    const visit = group.visits[0]
+    if (group.visits.length > 1) {
+      if (
+        !canReplan ||
+        change.kind !== 'move' ||
+        moving.current.has(group.id) ||
+        group.visits.some((item) => item.status !== 'scheduled') ||
+        !visit.contract_id
+      )
+        return
+      const revision = group.visits.map((item) => `${item.id}:${item.updated_at}`).join('|')
+      if (revision !== change.item.revision) {
+        toast.error('El contrato ha cambiado. Revisa el calendario antes de moverlo.')
+        return
+      }
+      const shiftMinutes = Math.round(
+        (wallTimeNumber(change.start) - wallTimeNumber(group.start)) / 60_000,
+      )
+      if (!shiftMinutes) return
+      const payload = {
+        tenantId: tenant.id,
+        contractId: visit.contract_id,
+        sourceDate: dateValue(group.start),
+        visits: group.visits.map((item) => ({ id: item.id, updated_at: item.updated_at })),
+        shiftMinutes,
+      }
+      const key = JSON.stringify(payload)
+      const operationId = operations.current.get(key) ?? crypto.randomUUID()
+      operations.current.set(key, operationId)
+      moving.current.add(group.id)
+      setPendingChanges((previous) => ({ ...previous, [group.id]: change }))
+      try {
+        await replanContractDay({ ...payload, operationId })
+        operations.current.delete(key)
+        await refreshReplannedVisits()
+        toast.success('Contrato reprogramado', {
+          description: replannedStartLabel.format(change.start),
+        })
+      } catch (error) {
+        toast.error('No se pudo reprogramar el contrato', {
+          description: error instanceof Error ? error.message : 'Vuelve a intentarlo.',
+        })
+        await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
+      } finally {
+        moving.current.delete(group.id)
+        setPendingChanges((previous) => {
+          const next = { ...previous }
+          delete next[group.id]
+          return next
+        })
+      }
+      return
+    }
     if (!canReplan || !visit || visit.status !== 'scheduled' || moving.current.has(visit.id)) return
     if (visit.updated_at !== change.item.revision) {
       toast.error('El trabajo ha cambiado. Revisa el calendario antes de moverlo.')
@@ -549,15 +623,6 @@ export function AgendaPage() {
 
         {view === 'calendar' ? (
           <>
-            {canReplan && calendarItems.some((item) => item.editable) ? (
-              <p className="text-muted-foreground text-xs">
-                {period === 'month'
-                  ? 'Arrastra a otro día para conservar la hora. Pulsa una fecha para ajustar la hora en su horario.'
-                  : period === 'day'
-                    ? 'Arrastra a otra hora o suelta el trabajo en Día anterior o Día siguiente.'
-                    : 'Arrastra a otra hora o columna. El cambio se guarda al soltar.'}
-              </p>
-            ) : null}
             <div className="planning-calendar" data-period={period}>
               <EventCalendar
                 key={`${period}:${date}`}
@@ -581,13 +646,16 @@ export function AgendaPage() {
                 }
                 onDayClick={(day) => updateSearch({ date: dateValue(day), period: 'day' })}
                 onItemClick={(item) => {
+                  const group = calendarGroupById.get(item.id)
+                  if (!group) return
                   setSelectedCalendarVisitId(item.id)
                   setOpenReportId(null)
-                  setReplanning(null)
+                  setReplanning(item.editable && group.visits.length === 1 ? group.visits[0] : null)
                 }}
                 onItemChange={canReplan ? (change) => void saveCalendarChange(change) : undefined}
                 renderItem={(item) => {
-                  const visit = calendarVisitById.get(item.id)
+                  const group = calendarGroupById.get(item.id)
+                  const visit = group?.visits[0]
                   return (
                     <span className="planning-calendar__entry">
                       <span className="planning-calendar__entry-line">
@@ -603,7 +671,9 @@ export function AgendaPage() {
                             [
                               visit.client_name,
                               visit.work_team_name || visit.assigned_user_name || 'Sin asignar',
-                              statusLabels[visit.status],
+                              group && group.visits.length > 1
+                                ? `${group.visits.length} trabajos`
+                                : statusLabels[visit.status],
                             ]
                               .filter(Boolean)
                               .join(' · ')}
@@ -618,49 +688,65 @@ export function AgendaPage() {
                 No hay trabajos en este periodo con estos filtros.
               </p>
             ) : null}
-            {selectedCalendarVisit ? (
+            {selectedCalendarGroup ? (
               <CalendarDetailsDialog
-                title={selectedCalendarVisit.title}
-                description={`Detalle del trabajo · ${selectedCalendarVisit.timezone}`}
+                title={selectedCalendarGroup.title}
+                description={
+                  selectedCalendarGroup.visits.length > 1
+                    ? `${selectedCalendarGroup.visits.length} trabajos del contrato`
+                    : 'Detalle del trabajo'
+                }
                 onClose={() => {
                   setSelectedCalendarVisitId(null)
                   setReplanning(null)
                   setOpenReportId(null)
                 }}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold">{selectedCalendarVisit.title}</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {new Date(selectedCalendarVisit.scheduled_start_at).toLocaleString('es-ES', {
-                        timeZone: selectedCalendarVisit.timezone,
-                        dateStyle: 'full',
-                        timeStyle: 'short',
-                      })}{' '}
-                      · {selectedCalendarVisit.client_name}
-                      {selectedCalendarVisit.location_name
-                        ? ` · ${selectedCalendarVisit.location_name}`
-                        : ''}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {selectedCalendarVisit.work_team_name ||
-                        selectedCalendarVisit.assigned_user_name ||
-                        'Pendiente de asignar'}{' '}
-                      · {statusLabels[selectedCalendarVisit.status]}
-                      {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
-                    </p>
-                    {hasApprovedVacationConflict(selectedCalendarVisit) ? (
-                      <p className="text-destructive text-sm font-medium">
-                        Vacaciones aprobadas · revisar cobertura en{' '}
-                        <Link to="/vacaciones" className="underline">
-                          Vacaciones
-                        </Link>
-                      </p>
-                    ) : null}
-                  </div>
-                  {renderVisitActions(selectedCalendarVisit)}
+                <div className="space-y-4">
+                  {selectedCalendarGroup.visits.map((selectedCalendarVisit) => (
+                    <div
+                      key={selectedCalendarVisit.id}
+                      className="border-border space-y-3 rounded-lg border p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-semibold">{selectedCalendarVisit.title}</h3>
+                          <p className="text-muted-foreground text-sm">
+                            {new Date(selectedCalendarVisit.scheduled_start_at).toLocaleString(
+                              'es-ES',
+                              {
+                                timeZone: selectedCalendarVisit.timezone,
+                                dateStyle: 'full',
+                                timeStyle: 'short',
+                              },
+                            )}{' '}
+                            · {selectedCalendarVisit.client_name}
+                            {selectedCalendarVisit.location_name
+                              ? ` · ${selectedCalendarVisit.location_name}`
+                              : ''}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {selectedCalendarVisit.work_team_name ||
+                              selectedCalendarVisit.assigned_user_name ||
+                              'Pendiente de asignar'}{' '}
+                            · {statusLabels[selectedCalendarVisit.status]}
+                            {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
+                          </p>
+                          {hasApprovedVacationConflict(selectedCalendarVisit) ? (
+                            <p className="text-destructive text-sm font-medium">
+                              Vacaciones aprobadas · revisar cobertura en{' '}
+                              <Link to="/vacaciones" className="underline">
+                                Vacaciones
+                              </Link>
+                            </p>
+                          ) : null}
+                        </div>
+                        {renderVisitActions(selectedCalendarVisit)}
+                      </div>
+                      {renderVisitExpandedDetails(selectedCalendarVisit)}
+                    </div>
+                  ))}
                 </div>
-                {renderVisitExpandedDetails(selectedCalendarVisit)}
               </CalendarDetailsDialog>
             ) : null}
           </>

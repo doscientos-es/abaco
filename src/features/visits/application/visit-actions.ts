@@ -55,6 +55,7 @@ export {
   listOfficeVisits,
   listTechnicians,
   replanServiceVisit,
+  replanContractDay,
   transitionServiceVisit,
 } from '../infrastructure/visit-repository'
 export type {

@@ -11,9 +11,11 @@ import { PaymentCalendar } from './payment-calendar'
 const mocks = vi.hoisted(() => ({
   save: vi.fn(),
   setForm: vi.fn(),
+  setSelected: vi.fn(),
   index: 0,
   calendar: null as null | {
     items: CalendarEvent[]
+    onItemClick: (item: CalendarEvent) => void
     onItemChange: (change: CalendarEventChange) => void
   },
 }))
@@ -23,7 +25,10 @@ vi.mock('react', async (load) => {
     ...actual,
     useState: (initial: unknown) => {
       const state = actual.useState(initial)
-      return mocks.index++ === 1 ? [state[0], mocks.setForm] : state
+      const index = mocks.index++
+      if (index === 1) return [state[0], mocks.setForm]
+      if (index === 7) return [state[0], mocks.setSelected]
+      return state
     },
   }
 })
@@ -93,6 +98,24 @@ describe('payment calendar interactions', () => {
     vi.clearAllMocks()
     mocks.index = 0
     mocks.calendar = null
+  })
+  it('edits a pending payment on click, but selects invoices and paid payments for viewing', () => {
+    renderToStaticMarkup(<PaymentCalendar tenantId="tenant" defaultVatRate={21} />)
+    const event = (id: string) => {
+      const item = mocks.calendar?.items.find((item) => item.id === id)
+      if (!item) throw new Error(`Missing event ${id}`)
+      mocks.calendar?.onItemClick(item)
+    }
+    event('expense:payment')
+    expect(mocks.setForm).toHaveBeenCalledWith(
+      expect.objectContaining({ id: payment.id, dueDate: payment.due_date }),
+    )
+    event('expense:paid')
+    expect(mocks.setSelected).toHaveBeenLastCalledWith('expense:paid')
+    event('income:invoice')
+    expect(mocks.setSelected).toHaveBeenLastCalledWith('income:invoice')
+    expect(mocks.setForm).toHaveBeenCalledTimes(1)
+    expect(mocks.save).not.toHaveBeenCalled()
   })
   it('only moves pending payments, without inventing durations or altering invoices and paid expenses', () => {
     renderToStaticMarkup(<PaymentCalendar tenantId="tenant" defaultVatRate={21} />)
