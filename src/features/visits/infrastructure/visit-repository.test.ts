@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { listMyVisits } from './visit-repository'
+import { listMyVisits, listTechnicians } from './visit-repository'
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   eq: vi.fn(),
   in: vi.fn(),
+  order: vi.fn(),
 }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({
@@ -17,10 +18,21 @@ vi.mock('@/shared/lib/supabase/client', () => ({
 describe('assigned visit acceptance', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const query = { select: mocks.select, eq: mocks.eq, in: mocks.in }
+    const query = { select: mocks.select, eq: mocks.eq, in: mocks.in, order: mocks.order }
     mocks.from.mockReturnValue(query)
     mocks.select.mockReturnValue(query)
     mocks.eq.mockReturnValue(query)
+    mocks.in.mockReturnValue(query)
+  })
+
+  it('offers administrators as well as workers for visit assignment', async () => {
+    mocks.order.mockResolvedValue({
+      data: [{ user_id: 'admin', profiles: { full_name: 'Ana' } }],
+      error: null,
+    })
+    expect(await listTechnicians('tenant')).toEqual([{ id: 'admin', label: 'Ana' }])
+    expect(mocks.in).toHaveBeenCalledWith('role', ['admin', 'user', 'technician'])
+    expect(mocks.eq).toHaveBeenCalledWith('tenant_id', 'tenant')
   })
 
   it('uses the captured acceptance setting for each authorized visit', async () => {

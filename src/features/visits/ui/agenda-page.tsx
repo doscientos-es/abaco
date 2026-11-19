@@ -1,5 +1,4 @@
-import { Button, Input, toast } from '@doscientos/ui'
-import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
+import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
@@ -20,6 +19,7 @@ import { dateValue } from '@/shared/lib/date-range'
 import {
   calendarDays,
   calendarLocalInput,
+  calendarTime,
   wallTimeNumber,
   type CalendarEvent,
   type CalendarEventChange,
@@ -27,7 +27,6 @@ import {
 import { useTenantData } from '@/shared/store/store'
 import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
 import { EventCalendar } from '@/shared/ui/event-calendar'
-import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
@@ -35,6 +34,7 @@ import {
   createServiceVisit,
   listPlanningVisits,
   listTechnicians,
+  replanServiceVisit,
   type VisitPriority,
   type VisitSummary,
   type VisitStatus,
@@ -43,14 +43,16 @@ import {
   calendarDateValue,
   calendarWeekRange,
   calendarMonthRange,
-  moveCalendarMonth,
+  toCalendarWallTime,
 } from './agenda-calendar'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
-import { groupVisitsByContractDay } from './visit-calendar-groups'
+import { PlanningToolbar } from './planning-toolbar'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
+
+import './planning-calendar.css'
 
 const todayInMadrid = () =>
   new Intl.DateTimeFormat('sv-SE', {
@@ -60,12 +62,6 @@ const todayInMadrid = () =>
     day: '2-digit',
   }).format(new Date())
 
-function addDays(date: string, days: number) {
-  const result = new Date(`${date}T12:00:00Z`)
-  result.setUTCDate(result.getUTCDate() + days)
-  return result.toISOString().slice(0, 10)
-}
-
 const statusLabels = {
   scheduled: 'Planificada',
   in_progress: 'En curso',
@@ -74,13 +70,15 @@ const statusLabels = {
   canceled: 'Cancelada',
 }
 
-const statusStyles: Record<VisitStatus, { border: string; badge: string }> = {
-  scheduled: { border: 'border-sky-500', badge: 'bg-sky-100 text-sky-900' },
-  in_progress: { border: 'border-amber-500', badge: 'bg-amber-100 text-amber-900' },
-  completed: { border: 'border-emerald-500', badge: 'bg-emerald-100 text-emerald-900' },
-  skipped: { border: 'border-slate-400', badge: 'bg-slate-100 text-slate-700' },
-  canceled: { border: 'border-rose-400', badge: 'bg-rose-100 text-rose-900' },
+const statusTones: Record<VisitStatus, NonNullable<CalendarEvent['tone']>> = {
+  scheduled: 'primary',
+  in_progress: 'warning',
+  completed: 'success',
+  skipped: 'muted',
+  canceled: 'muted',
 }
+
+const planningDayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' })
 
 export function AgendaPage() {
   const { tenant, clients } = useTenantData()
@@ -88,8 +86,9 @@ export function AgendaPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate({ from: '/trabajos' })
   const search = useSearch({ from: '/trabajos' })
-  const date = search.date ?? todayInMadrid()
-  const view: AgendaView = search.view ?? 'list'
+  const today = todayInMadrid()
+  const date = search.date ?? today
+  const view: AgendaView = search.view ?? 'calendar'
   const period: AgendaPeriod = search.period ?? 'month'
   const filterTechnicianId = search.technician ?? ''
   const teamFilter = search.team ?? ''
@@ -110,7 +109,8 @@ export function AgendaPage() {
   const [replanning, setReplanning] = useState<VisitSummary | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const operations = useRef(new Map<string, string>())
-  const [calendarProposal, setCalendarProposal] = useState<CalendarEventChange | null>(null)
+  const [pendingChanges, setPendingChanges] = useState<Record<string, CalendarEventChange>>({})
+  const moving = useRef(new Set<string>())
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
     clientId,
@@ -185,32 +185,27 @@ export function AgendaPage() {
     queryFn: () => loadWorkTargetOptions(tenant.id, clientId),
   })
   const selectedLocation = targets.data?.locations.find((location) => location.id === locationId)
-  const calendarGroups = groupVisitsByContractDay(visibleVisits)
-  const calendarGroupById = new Map(calendarGroups.map((group) => [group.id, group]))
-  const calendarItems: CalendarEvent[] = calendarGroups.map((group) => {
-    const visit = group.visits[0]
+  const calendarVisitById = new Map(visibleVisits.map((visit) => [visit.id, visit]))
+  const canReplan = session?.role === 'admin'
+  const calendarItems: CalendarEvent[] = visibleVisits.map((visit) => {
+    const pending = pendingChanges[visit.id]
     return {
-      id: group.id,
+      id: visit.id,
       revision: visit.updated_at,
-      title: group.title,
-      start: group.start,
-      end: group.end,
-      editable:
-        group.visits.length === 1 && session?.role === 'admin' && visit.status === 'scheduled',
-      tone: group.visits.every((item) => item.status === 'completed')
-        ? 'success'
-        : group.visits.every((item) => item.status === 'canceled')
-          ? 'muted'
-          : group.visits.some((item) => item.priority === 'urgent')
-            ? 'danger'
-            : 'primary',
-      description: `${visit.client_name} · ${group.visits.length} ${group.visits.length === 1 ? 'trabajo' : 'trabajos'}`,
+      title: visit.title,
+      start: pending?.start ?? toCalendarWallTime(visit.scheduled_start_at, visit.timezone),
+      end: pending?.end ?? toCalendarWallTime(visit.scheduled_end_at, visit.timezone),
+      editable: canReplan && visit.status === 'scheduled' && !pending,
+      resizable: period !== 'month',
+      tone:
+        visit.priority === 'urgent' && visit.status === 'scheduled'
+          ? 'danger'
+          : statusTones[visit.status],
+      description: `${visit.client_name} · ${statusLabels[visit.status]}${pending ? ' · Guardando' : ''}`,
     }
   })
-  const calendarVisitById = new Map((visits.data ?? []).map((visit) => [visit.id, visit]))
-  const selectedCalendarVisit = visibleVisits.find((visit) => visit.id === selectedCalendarVisitId)
-  const selectedCalendarGroup = selectedCalendarVisitId
-    ? calendarGroupById.get(selectedCalendarVisitId)
+  const selectedCalendarVisit = selectedCalendarVisitId
+    ? calendarVisitById.get(selectedCalendarVisitId)
     : undefined
   const timezone = selectedLocation?.timezone ?? 'Europe/Madrid'
   const durationMinutes = Number(duration)
@@ -283,12 +278,76 @@ export function AgendaPage() {
     }
   }
 
-  function updateSearch(update: WorkPlanningSearch) {
+  function updateSearch(update: WorkPlanningSearch, replace = false) {
     setSelectedCalendarVisitId(null)
+    setReplanning(null)
+    setOpenReportId(null)
     void navigate({
       to: '/trabajos',
       search: (previous) => ({ ...previous, date, period, ...update }),
+      replace,
     })
+  }
+
+  async function refreshReplannedVisits() {
+    await Promise.all(
+      ['office-visits', 'my-visits', 'vacation-coverage', 'visit-report'].map((key) =>
+        queryClient.invalidateQueries({ queryKey: [key, tenant.id] }),
+      ),
+    )
+  }
+
+  async function saveCalendarChange(change: CalendarEventChange) {
+    const visit = calendarVisitById.get(change.item.id)
+    if (!canReplan || !visit || visit.status !== 'scheduled' || moving.current.has(visit.id)) return
+    if (visit.updated_at !== change.item.revision) {
+      toast.error('El trabajo ha cambiado. Revisa el calendario antes de moverlo.')
+      return
+    }
+    const durationMinutes = Math.round(
+      (change.kind === 'move'
+        ? Date.parse(visit.scheduled_end_at) - Date.parse(visit.scheduled_start_at)
+        : wallTimeNumber(change.end) - wallTimeNumber(change.start)) / 60_000,
+    )
+    if (!Number.isFinite(durationMinutes) || durationMinutes < 15 || durationMinutes > 720) {
+      toast.error('El trabajo debe durar entre 15 minutos y 12 horas.')
+      return
+    }
+    const payload = {
+      tenantId: tenant.id,
+      visitId: visit.id,
+      expectedUpdatedAt: visit.updated_at,
+      localStart: calendarLocalInput(change.start),
+      durationMinutes,
+      assignedUserId: visit.assigned_user_id ?? null,
+      reason:
+        change.kind === 'move'
+          ? 'Cambio de fecha u hora desde el calendario'
+          : 'Cambio de duración desde el calendario',
+    }
+    const key = JSON.stringify(payload)
+    const operationId = operations.current.get(key) ?? crypto.randomUUID()
+    operations.current.set(key, operationId)
+    moving.current.add(visit.id)
+    setPendingChanges((previous) => ({ ...previous, [visit.id]: change }))
+    try {
+      await replanServiceVisit({ ...payload, operationId })
+      operations.current.delete(key)
+      await refreshReplannedVisits()
+      toast.success('Trabajo reprogramado')
+    } catch (error) {
+      toast.error('No se pudo reprogramar el trabajo', {
+        description: error instanceof Error ? error.message : 'Vuelve a intentarlo.',
+      })
+      await queryClient.invalidateQueries({ queryKey: ['office-visits', tenant.id] })
+    } finally {
+      moving.current.delete(visit.id)
+      setPendingChanges((previous) => {
+        const next = { ...previous }
+        delete next[visit.id]
+        return next
+      })
+    }
   }
 
   function hasApprovedVacationConflict(visit: VisitSummary) {
@@ -309,13 +368,11 @@ export function AgendaPage() {
   function renderVisitActions(visit: VisitSummary) {
     return (
       <div className="flex flex-wrap gap-2">
-        {visit.status === 'scheduled' && session?.role === 'admin' ? (
+        {visit.status === 'scheduled' && canReplan ? (
           <Button
             variant="outline"
-            onPress={() => {
-              setCalendarProposal(null)
-              setReplanning(visit)
-            }}
+            isDisabled={Boolean(pendingChanges[visit.id])}
+            onPress={() => setReplanning(visit)}
           >
             Reprogramar
           </Button>
@@ -335,35 +392,15 @@ export function AgendaPage() {
       <>
         {replanning?.id === visit.id ? (
           <VisitReplanForm
-            key={`${visit.id}:${visit.updated_at}:${calendarProposal?.start.getTime()}:${calendarProposal?.end.getTime()}`}
+            key={`${visit.id}:${visit.updated_at}`}
             tenantId={tenant.id}
             visit={visit}
             technicians={technicians.data ?? []}
-            proposal={
-              calendarProposal?.item.id === visit.id
-                ? {
-                    localStart: calendarLocalInput(calendarProposal.start),
-                    durationMinutes: Math.round(
-                      (wallTimeNumber(calendarProposal.end) -
-                        wallTimeNumber(calendarProposal.start)) /
-                        60000,
-                    ),
-                  }
-                : undefined
-            }
             onDone={async () => {
               setReplanning(null)
-              setCalendarProposal(null)
-              await Promise.all(
-                ['office-visits', 'my-visits', 'vacation-coverage', 'visit-report'].map((key) =>
-                  queryClient.invalidateQueries({ queryKey: [key, tenant.id] }),
-                ),
-              )
+              await refreshReplannedVisits()
             }}
-            onCancel={() => {
-              setReplanning(null)
-              setCalendarProposal(null)
-            }}
+            onCancel={() => setReplanning(null)}
           />
         ) : null}
         {openReportId === visit.id && session?.userId ? (
@@ -494,189 +531,20 @@ export function AgendaPage() {
       </FormDialog>
       {related.dialogs}
 
-      <section aria-label="Controles de planificación" className="space-y-3">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="w-44 max-w-full">
-            <TextField
-              label="Fecha de referencia"
-              type="date"
-              value={date}
-              onChange={(value) => {
-                if (value) {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({ date: value })
-                }
-              }}
-              placeholder="Fecha"
-            />
-          </div>
-          <div className="w-36 max-w-full">
-            <SelectField
-              label="Periodo"
-              value={period}
-              options={[
-                { value: 'day', label: 'Día' },
-                { value: 'week', label: 'Semana' },
-                { value: 'month', label: 'Mes' },
-              ]}
-              onChange={(value) => {
-                updateSearch({ period: value as AgendaPeriod })
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="size-8 p-0"
-              aria-label="Periodo anterior"
-              onPress={() => {
-                setSelectedCalendarVisitId(null)
-                updateSearch({
-                  date:
-                    period === 'month'
-                      ? moveCalendarMonth(date, -1)
-                      : addDays(date, period === 'day' ? -1 : -7),
-                })
-              }}
-            >
-              <CaretLeftIcon aria-hidden="true" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => {
-                setSelectedCalendarVisitId(null)
-                updateSearch({ date: todayInMadrid() })
-              }}
-            >
-              Hoy
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="size-8 p-0"
-              aria-label="Periodo siguiente"
-              onPress={() => {
-                setSelectedCalendarVisitId(null)
-                updateSearch({
-                  date:
-                    period === 'month'
-                      ? moveCalendarMonth(date, 1)
-                      : addDays(date, period === 'day' ? 1 : 7),
-                })
-              }}
-            >
-              <CaretRightIcon aria-hidden="true" />
-            </Button>
-          </div>
-          <fieldset className="inline-flex rounded-lg border p-1">
-            <legend className="sr-only">Cambiar vista de trabajos</legend>
-            {(['list', 'calendar'] as const).map((nextView) => (
-              <Button
-                key={nextView}
-                variant={view === nextView ? 'default' : 'ghost'}
-                aria-pressed={view === nextView}
-                onPress={() => {
-                  setSelectedCalendarVisitId(null)
-                  updateSearch({ view: nextView })
-                }}
-              >
-                {nextView === 'list' ? 'Lista' : 'Calendario'}
-              </Button>
-            ))}
-          </fieldset>
-          <Button className="sm:ml-auto" onPress={() => setCreateOpen(true)}>
-            <PlusIcon aria-hidden="true" />
-            Nueva visita
-          </Button>
-        </div>
-        <div className="flex flex-wrap items-start gap-2">
-          <div className="w-64 max-w-full">
-            <Input
-              type="search"
-              aria-label="Buscar cliente o centro"
-              value={textFilter}
-              onChange={(event) => updateSearch({ q: event.target.value || undefined })}
-              placeholder="Buscar cliente, centro o dirección"
-            />
-          </div>
-          <FilterDisclosure
-            activeCount={[filterTechnicianId, teamFilter, statusFilter].filter(Boolean).length}
-          >
-            <SelectField
-              label="Técnico"
-              className="w-40 max-w-full"
-              value={filterTechnicianId}
-              options={[
-                { value: '', label: 'Todos los técnicos' },
-                { value: 'unassigned', label: 'Sin persona ni equipo' },
-                ...(technicians.data ?? []).map((person) => ({
-                  value: person.id,
-                  label: person.label,
-                })),
-              ]}
-              onChange={(value) => {
-                updateSearch({ technician: value || undefined })
-              }}
-            />
-            <SelectField
-              label="Equipo"
-              className="w-40 max-w-full"
-              value={teamFilter}
-              onChange={(value) => updateSearch({ team: value || undefined })}
-              options={[
-                { value: '', label: 'Todos los equipos' },
-                { value: 'unassigned', label: 'Sin equipo' },
-                ...(teams.data ?? []).map((t) => ({ value: t.id, label: t.name })),
-              ]}
-            />
-            <SelectField
-              label="Estado"
-              className="w-40 max-w-full"
-              value={statusFilter}
-              onChange={(value) =>
-                updateSearch({ status: (value || undefined) as WorkPlanningSearch['status'] })
-              }
-              options={[
-                { value: '', label: 'Todos los estados' },
-                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-              ]}
-            />
-          </FilterDisclosure>
-          {filterTechnicianId || teamFilter || statusFilter || textFilter ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={() =>
-                updateSearch({
-                  technician: undefined,
-                  team: undefined,
-                  status: undefined,
-                  q: undefined,
-                })
-              }
-            >
-              Limpiar filtros
-            </Button>
-          ) : null}
-        </div>
-      </section>
+      <PlanningToolbar
+        date={date}
+        today={today}
+        period={period}
+        view={view}
+        filters={search}
+        technicians={technicians.data ?? []}
+        teams={teams.data ?? []}
+        statusLabels={statusLabels}
+        count={visits.isSuccess ? visibleVisits.length : undefined}
+        onChange={updateSearch}
+        onCreate={() => setCreateOpen(true)}
+      />
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          {visibleVisits.length} trabajos planificados ·{' '}
-          {Math.round(
-            visibleVisits
-              .filter((v) => v.status !== 'canceled' && v.status !== 'skipped')
-              .reduce(
-                (total, v) =>
-                  total +
-                  (Date.parse(v.scheduled_end_at) - Date.parse(v.scheduled_start_at)) / 60000,
-                0,
-              ),
-          )}{' '}
-          minutos estimados (no equivale a trabajo realizado)
-        </p>
         {view === 'list' && period === 'day' ? (
           <BatchWorkSheets
             tenantId={tenant.id}
@@ -697,133 +565,69 @@ export function AgendaPage() {
 
         {view === 'calendar' ? (
           <>
-            <EventCalendar
-              key={`${period}:${date}`}
-              aria-label={
-                period === 'month'
-                  ? 'Calendario mensual de trabajos'
-                  : period === 'day'
-                    ? 'Calendario diario de trabajos'
-                    : 'Calendario semanal de trabajos'
-              }
-              view={period}
-              value={calendarDateValue(date)}
-              items={calendarItems}
-              minuteStep={15}
-              showInstructions={false}
-              onDayClick={(day) =>
-                updateSearch({ date: calendarLocalInput(day).slice(0, 10), period: 'day' })
-              }
-              onItemClick={(item) => {
-                setSelectedCalendarVisitId(item.id)
-                setOpenReportId(null)
-                setReplanning(null)
-                setCalendarProposal(null)
-              }}
-              onItemChange={
-                session?.role === 'admin'
-                  ? (change) => {
-                      const visit = calendarVisitById.get(change.item.id)
-                      if (!visit || visit.status !== 'scheduled') return
-                      if (visit.updated_at !== change.item.revision) {
-                        toast.error(
-                          'El trabajo ha cambiado. Revisa los datos antes de reprogramar.',
-                        )
-                        return
-                      }
-                      setSelectedCalendarVisitId(visit.id)
-                      setOpenReportId(null)
-                      setReplanning(visit)
-                      setCalendarProposal(change)
-                    }
-                  : undefined
-              }
-              renderItem={(item) => {
-                const group = calendarGroupById.get(item.id)
-                const visit = group?.visits[0]
-                if (!visit) return typeof item.title === 'string' ? item.title : item.id
-                if (group.visits.length > 1) {
+            <div className="planning-calendar" data-period={period}>
+              <EventCalendar
+                key={`${period}:${date}`}
+                aria-label={
+                  period === 'month'
+                    ? 'Calendario mensual de trabajos'
+                    : period === 'day'
+                      ? 'Calendario diario de trabajos'
+                      : 'Calendario semanal de trabajos'
+                }
+                view={period}
+                value={calendarDateValue(date)}
+                items={calendarItems}
+                minuteStep={15}
+                showInstructions={false}
+                showAllDay={false}
+                dayMoveTargets={canReplan}
+                compactEmptyHours
+                renderDayLabel={(day) =>
+                  period === 'month' ? day.getDate() : planningDayLabel.format(day)
+                }
+                onDayClick={(day) => updateSearch({ date: dateValue(day), period: 'day' })}
+                onItemClick={(item) => {
+                  setSelectedCalendarVisitId(item.id)
+                  setOpenReportId(null)
+                  setReplanning(null)
+                }}
+                onItemChange={canReplan ? (change) => void saveCalendarChange(change) : undefined}
+                renderItem={(item) => {
+                  const visit = calendarVisitById.get(item.id)
                   return (
-                    <span className="border-primary grid gap-1 border-l-2 pl-2">
-                      <span className="truncate font-semibold">{group.title}</span>
-                      <span className="truncate text-xs opacity-80">
-                        {visit.client_name} · {group.visits.length} trabajos
+                    <span className="planning-calendar__entry">
+                      <span className="planning-calendar__entry-line">
+                        <span className="planning-calendar__entry-time">
+                          {calendarTime(item.start)}
+                        </span>
+                        <span className="truncate font-medium">{item.title}</span>
+                      </span>
+                      <span className="block truncate opacity-80">
+                        {visit && pendingChanges[visit.id]
+                          ? 'Guardando…'
+                          : [visit?.client_name, visit?.work_team_name || visit?.assigned_user_name]
+                              .filter(Boolean)
+                              .join(' · ')}
                       </span>
                     </span>
                   )
-                }
-                return (
-                  <span
-                    className={`grid gap-1 border-l-2 pl-2 ${statusStyles[visit.status].border}`}
-                  >
-                    <span className="truncate font-semibold">{group.title}</span>
-                    <span className="truncate text-xs opacity-80">
-                      {visit.client_name} ·{' '}
-                      {new Intl.DateTimeFormat('es-ES', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      }).format(item.start)}
-                    </span>
-                    <span className="truncate text-xs opacity-80">
-                      {visit.work_team_name || visit.assigned_user_name || 'Pendiente de asignar'}
-                      {visit.priority === 'urgent' ? ' · Urgente' : ''}
-                    </span>
-                    <span
-                      className={`w-fit rounded-full px-1.5 py-0.5 text-[10px] ${statusStyles[visit.status].badge}`}
-                    >
-                      {statusLabels[visit.status]}
-                    </span>
-                  </span>
-                )
-              }}
-            />
-            {selectedCalendarGroup && selectedCalendarGroup.visits.length > 1 ? (
-              <CalendarDetailsDialog
-                title={selectedCalendarGroup.title}
-                description={`${selectedCalendarGroup.visits.length} trabajos del contrato`}
-                onClose={() => {
-                  setSelectedCalendarVisitId(null)
-                  setReplanning(null)
-                  setCalendarProposal(null)
-                  setOpenReportId(null)
                 }}
-              >
-                {selectedCalendarGroup.visits.map((visit) => (
-                  <section key={visit.id} className="space-y-3 border-b pb-4 last:border-0">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold">{visit.title}</h3>
-                        <p className="text-muted-foreground text-sm">
-                          {new Date(visit.scheduled_start_at).toLocaleString('es-ES', {
-                            timeZone: visit.timezone,
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })}{' '}
-                          · {visit.client_name}
-                          {visit.location_name ? ` · ${visit.location_name}` : ''}
-                        </p>
-                        <p className="text-muted-foreground text-sm">
-                          {visit.work_team_name ||
-                            visit.assigned_user_name ||
-                            'Pendiente de asignar'}{' '}
-                          · {statusLabels[visit.status]}
-                          {visit.priority === 'urgent' ? ' · Urgente' : ''}
-                        </p>
-                        {hasApprovedVacationConflict(visit) ? (
-                          <p className="text-destructive text-sm font-medium">
-                            Vacaciones aprobadas · revisar cobertura en{' '}
-                            <Link to="/vacaciones" className="underline">
-                              Vacaciones
-                            </Link>
-                          </p>
-                        ) : null}
-                      </div>
-                      {renderVisitActions(visit)}
-                    </div>
-                    {renderVisitExpandedDetails(visit)}
-                  </section>
-                ))}
-              </CalendarDetailsDialog>
+              />
+            </div>
+            {canReplan && calendarItems.some((item) => item.editable) ? (
+              <p className="text-muted-foreground text-xs">
+                {period === 'month'
+                  ? 'Arrastra a otro día para conservar la hora. Pulsa una fecha para ver su horario.'
+                  : period === 'day'
+                    ? 'Arrastra a otra hora o suelta el trabajo en Día anterior o Día siguiente.'
+                    : 'Arrastra a otra hora o columna. El cambio se guarda al soltar.'}
+              </p>
+            ) : null}
+            {visits.isSuccess && !visibleVisits.length ? (
+              <p className="text-muted-foreground text-xs">
+                No hay trabajos en este periodo con estos filtros.
+              </p>
             ) : null}
             {selectedCalendarVisit ? (
               <CalendarDetailsDialog
@@ -832,7 +636,6 @@ export function AgendaPage() {
                 onClose={() => {
                   setSelectedCalendarVisitId(null)
                   setReplanning(null)
-                  setCalendarProposal(null)
                   setOpenReportId(null)
                 }}
               >

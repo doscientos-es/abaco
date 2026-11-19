@@ -17,6 +17,33 @@
   color: var(--muted-foreground);
   border-bottom: 1px solid var(--border);
 }
+.event-calendar__weekday-short {
+  display: none;
+}
+.event-calendar__adjacent-days {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.event-calendar__adjacent-days button {
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+.event-calendar__adjacent-days button:hover,
+.event-calendar__adjacent-days button[data-targeted='true'] {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.event-calendar__adjacent-days button[data-targeted='true'] {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 .event-calendar__month-day {
   min-height: 130px;
   padding: 0.3rem;
@@ -192,6 +219,9 @@
   position: absolute;
   opacity: 0;
   pointer-events: none;
+}
+.event-calendar__month-day .event-calendar__event.is-drag-source {
+  position: relative;
 }
 .event-calendar__event-body {
   display: flex;

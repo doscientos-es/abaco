@@ -232,4 +232,21 @@ describe('staff schedule access and availability', () => {
       mocks.query.mock.calls.find(([options]) => options.queryKey[0] === 'work-teams')?.[0].enabled,
     ).toBe(false)
   })
+
+  it('shows the administrator only their own schedule in personal mode', () => {
+    mocks.session.mockReturnValue({
+      tenantId: 'company',
+      userId: 'luis',
+      fullName: 'Luis',
+      role: 'admin',
+    })
+    const html = renderToStaticMarkup(<StaffSchedulesPage personal />)
+    expect(html).toContain('Mi horario')
+    expect(html).toContain('Luis')
+    expect(html).not.toContain('Ana')
+    expect(html).not.toContain('Filtrar por función')
+    expect(
+      mocks.query.mock.calls.find(([options]) => options.queryKey[0] === 'team')?.[0].enabled,
+    ).toBe(false)
+  })
 })

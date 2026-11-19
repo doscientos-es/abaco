@@ -471,10 +471,12 @@ export function MyDayPage() {
             cards
           )
         })}
-        <p className="worker-privacy">
-          <MapPinIcon size={16} aria-hidden="true" /> Al iniciar una visita se guarda la hora y una
-          ubicación puntual; no hay seguimiento continuo.
-        </p>
+        {session?.role === 'user' ? (
+          <p className="worker-privacy">
+            <MapPinIcon size={16} aria-hidden="true" /> Al iniciar una visita se guarda la hora y
+            una ubicación puntual; no hay seguimiento continuo.
+          </p>
+        ) : null}
       </div>
     </div>
   )

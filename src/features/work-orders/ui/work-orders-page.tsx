@@ -26,13 +26,13 @@ export function WorkOrdersPage() {
   )
   const tab = search.tab && tabs.includes(search.tab) ? search.tab : 'planificacion'
   const labels: Record<WorkTab, string> = {
-    planificacion: 'Planificación',
+    planificacion: 'Calendario',
     revision: 'Partes por revisar',
     contratados: 'Trabajos contratados',
     anteriores: 'Trabajos anteriores',
   }
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-3">
       <WorkspacePageHeading title="Planificación" />
       <Tabs
         className="block"

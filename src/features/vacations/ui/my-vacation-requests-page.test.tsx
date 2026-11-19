@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   setEnd: vi.fn(),
   mutate: vi.fn(),
   invalidate: vi.fn(),
+  query: null as null | { queryKey: unknown[]; queryFn: () => unknown },
   onOpen: null as null | (() => void),
   dialog: null as null | { open: boolean; isDirty: boolean; onSubmit: () => void },
   picker: null as null | {
@@ -51,10 +52,15 @@ vi.mock('@doscientos/ui', () => ({
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
-  useQuery: () => ({ data: mocks.requests }),
+  useQuery: (options: { queryKey: unknown[]; queryFn: () => unknown }) => {
+    mocks.query = options
+    return { data: mocks.requests }
+  },
   useMutation: () => ({ isPending: false, mutate: mocks.mutate }),
 }))
-vi.mock('@/features/auth', () => ({ useSession: () => ({ tenantId: 'tenant-1' }) }))
+vi.mock('@/features/auth', () => ({
+  useSession: () => ({ tenantId: 'tenant-1', userId: 'person-1', role: 'admin' }),
+}))
 vi.mock('../application/vacation-actions', () => ({
   listVacationRequests: vi.fn(),
   submitVacationRequest: vi.fn(),
@@ -96,7 +102,16 @@ describe('Solicitud de vacaciones', () => {
     mocks.onOpen = null
     mocks.dialog = null
     mocks.picker = null
+    mocks.query = null
     vi.clearAllMocks()
+  })
+
+  it('loads only the signed-in administrator’s own absences', async () => {
+    const { listVacationRequests } = await import('../application/vacation-actions')
+    render()
+    expect(mocks.query?.queryKey).toEqual(['vacation-requests', 'tenant-1', 'person-1'])
+    mocks.query?.queryFn()
+    expect(listVacationRequests).toHaveBeenCalledWith('tenant-1', 'person-1')
   })
 
   it('muestra el formulario solo después de solicitarlo', () => {

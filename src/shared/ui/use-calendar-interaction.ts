@@ -25,6 +25,7 @@ type Drag = {
   x: number
   y: number
   offset: number
+  dayOffset: number
   active: boolean
   change: CalendarEventChange | null
 }
@@ -36,7 +37,11 @@ function pointDate(
   item: CalendarEvent,
   view: EventCalendarView,
 ) {
-  const cell = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-calendar-day]')
+  const element = document.elementFromPoint(x, y)
+  const dateTarget = element?.closest<HTMLElement>('[data-calendar-move-day]')
+  if (dateTarget?.dataset.calendarMoveDay && root.contains(dateTarget))
+    return { date: calendarDate(dateTarget.dataset.calendarMoveDay), dateOnly: true }
+  const cell = element?.closest<HTMLElement>('[data-calendar-day]')
   if (
     !cell?.dataset.calendarDay ||
     !root.contains(cell) ||
@@ -44,9 +49,19 @@ function pointDate(
   )
     return null
   const day = calendarDate(cell.dataset.calendarDay)
-  if (view === 'month' || item.allDay) return atCalendarMinutes(day, 0)
+  if (view === 'month' || item.allDay) return { date: atCalendarMinutes(day, 0), dateOnly: true }
   const rect = cell.getBoundingClientRect()
-  return atCalendarMinutes(day, Math.max(0, Math.min(1439, ((y - rect.top) / rect.height) * 1440)))
+  return {
+    date: atCalendarMinutes(
+      day,
+      Math.max(0, Math.min(1439, ((y - rect.top) / rect.height) * 1440)),
+    ),
+    dateOnly: false,
+  }
+}
+
+function edgeScrollDelta(point: number, start: number, end: number) {
+  return point < start + 40 ? -10 : point > end - 40 ? 10 : 0
 }
 
 export function useCalendarInteraction({
@@ -104,7 +119,10 @@ export function useCalendarInteraction({
       pointerId: event.pointerId,
       x: event.clientX,
       y: event.clientY,
-      offset: wallTimeNumber(point) - wallTimeNumber(origin),
+      offset: wallTimeNumber(point.date) - wallTimeNumber(origin),
+      dayOffset:
+        wallTimeNumber(atCalendarMinutes(point.date, 0)) -
+        wallTimeNumber(atCalendarMinutes(item.start, 0)),
       active: false,
       change: null,
     }
@@ -120,14 +138,15 @@ export function useCalendarInteraction({
       (event.target as HTMLElement).closest('button, input, select, textarea')
     )
       return
-    const point = pointDate(
+    const target = pointDate(
       root.current,
       event.clientX,
       event.clientY,
       { allDay: false } as CalendarEvent,
       view,
     )
-    if (!point) return
+    if (!target || target.dateOnly) return
+    const point = target.date
     point.setMinutes(Math.floor(point.getMinutes() / step) * step, 0, 0)
     const end = atCalendarMinutes(point, point.getHours() * 60 + point.getMinutes() + step)
     const item: CalendarEvent = {
@@ -143,6 +162,7 @@ export function useCalendarInteraction({
       x: event.clientX,
       y: event.clientY,
       offset: 0,
+      dayOffset: 0,
       active: true,
       change: { item, start: point, end, kind: 'resize' },
     }
@@ -157,24 +177,32 @@ export function useCalendarInteraction({
     current.active = true
     lastPoint.current = { x: event.clientX, y: event.clientY }
     updatePreview()
-    if (scrollFrame.current === null && root.current.querySelector('.event-calendar__time-scroll'))
+    if (
+      scrollFrame.current === null &&
+      (root.current.scrollWidth > root.current.clientWidth ||
+        root.current.querySelector('.event-calendar__time-scroll'))
+    )
       scrollFrame.current = requestAnimationFrame(autoScroll)
   }
   function updatePreview() {
     const current = drag.current
     if (!current || !root.current) return
-    const point = pointDate(
+    const target = pointDate(
       root.current,
       lastPoint.current.x,
       lastPoint.current.y,
       current.item,
       view,
     )
-    if (!point) {
+    if (
+      !target ||
+      (target.dateOnly && view !== 'month' && !current.item.allDay && current.kind !== 'move')
+    ) {
       current.change = null
       setPreview(null)
       return
     }
+    const point = target.date
     if (current.kind === 'create') {
       point.setMinutes(Math.round(point.getMinutes() / step) * step, 0, 0)
       const anchor = current.item.start
@@ -192,34 +220,61 @@ export function useCalendarInteraction({
       setPreview(current.change)
       return
     }
-    if (view === 'month' && !current.item.allDay)
+    if (target.dateOnly && !current.item.allDay)
       point.setHours(
         current.kind === 'move' ? current.item.start.getHours() : current.item.end.getHours(),
         current.kind === 'move' ? current.item.start.getMinutes() : current.item.end.getMinutes(),
       )
-    if (current.kind === 'move') point.setMinutes(point.getMinutes() - current.offset / 60000)
+    if (current.kind === 'move')
+      point.setMinutes(
+        point.getMinutes() - (target.dateOnly ? current.dayOffset : current.offset) / 60000,
+      )
     else if (
       current.item.allDay ||
       (view === 'month' && current.item.end.getHours() === 0 && current.item.end.getMinutes() === 0)
     )
       point.setDate(point.getDate() + 1)
-    current.change = calendarChange(current.item, point, current.kind, step)
+    current.change = calendarChange(
+      current.item,
+      point,
+      current.kind,
+      target.dateOnly && current.kind === 'move' ? 1 : step,
+    )
     setPreview(current.change)
   }
   function autoScroll() {
     scrollFrame.current = null
-    const scroller = root.current?.querySelector<HTMLElement>('.event-calendar__time-scroll')
-    if (!scroller || !drag.current?.active) return
-    const bounds = scroller.getBoundingClientRect()
+    const calendar = root.current
+    if (!calendar || !drag.current?.active) return
     const { x, y } = lastPoint.current
-    if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return
-    const delta = y < bounds.top + 40 ? -10 : y > bounds.bottom - 40 ? 10 : 0
-    const before = scroller.scrollTop
-    scroller.scrollTop = Math.max(
-      0,
-      Math.min(scroller.scrollHeight - scroller.clientHeight, before + delta),
-    )
-    if (scroller.scrollTop !== before) {
+    const inside = (bounds: DOMRect) =>
+      x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom
+    const scroller = calendar.querySelector<HTMLElement>('.event-calendar__time-scroll')
+    const top = scroller?.scrollTop
+    const left = calendar.scrollLeft
+    if (scroller) {
+      const bounds = scroller.getBoundingClientRect()
+      if (inside(bounds))
+        scroller.scrollTop = Math.max(
+          0,
+          Math.min(
+            scroller.scrollHeight - scroller.clientHeight,
+            scroller.scrollTop + edgeScrollDelta(y, bounds.top, bounds.bottom),
+          ),
+        )
+    }
+    if (calendar.scrollWidth > calendar.clientWidth) {
+      const bounds = calendar.getBoundingClientRect()
+      if (inside(bounds))
+        calendar.scrollLeft = Math.max(
+          0,
+          Math.min(
+            calendar.scrollWidth - calendar.clientWidth,
+            left + edgeScrollDelta(x, bounds.left, bounds.right),
+          ),
+        )
+    }
+    if (scroller?.scrollTop !== top || calendar.scrollLeft !== left) {
       updatePreview()
       scrollFrame.current = requestAnimationFrame(autoScroll)
     }
@@ -265,10 +320,10 @@ export function useCalendarInteraction({
     event.preventDefault()
     const target = new Date(kind === 'move' ? item.start : item.end)
     const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1
-    if (item.allDay || event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-      target.setDate(target.getDate() + direction)
+    const byDay = item.allDay || event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+    if (byDay) target.setDate(target.getDate() + direction)
     else target.setMinutes(target.getMinutes() + direction * step)
-    onChange(calendarChange(item, target, kind, step))
+    onChange(calendarChange(item, target, kind, byDay && kind === 'move' ? 1 : step))
   }
   return {
     preview,

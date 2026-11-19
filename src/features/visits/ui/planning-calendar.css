@@ -1,0 +1,90 @@
+.planning-calendar .event-calendar__month {
+  min-width: 0;
+}
+.planning-calendar .event-calendar__month-day {
+  min-height: 5rem;
+  padding: 0.2rem;
+}
+.planning-calendar .event-calendar__weekday {
+  overflow: hidden;
+  padding: 0.4rem 0.1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planning-calendar .event-calendar__day-header {
+  min-height: 2rem;
+  padding: 0.15rem;
+  text-transform: capitalize;
+}
+.planning-calendar .event-calendar__day-header button:hover {
+  background: var(--secondary);
+}
+.planning-calendar .event-calendar__schedule {
+  min-width: 0;
+}
+.planning-calendar .event-calendar__schedule.is-week {
+  min-width: 40rem;
+}
+.planning-calendar .event-calendar__time-axis > span {
+  font-variant-numeric: tabular-nums;
+}
+.planning-calendar .event-calendar__time-scroll {
+  max-height: clamp(24rem, 65dvh, 56rem);
+}
+.planning-calendar .event-calendar__event {
+  border-left-width: 2px;
+}
+.planning-calendar .event-calendar__event-body {
+  padding: 1px 0.25rem;
+}
+.planning-calendar .event-calendar__event:has(.event-calendar__resize) .event-calendar__event-body {
+  padding-right: 1.25rem;
+}
+.planning-calendar .event-calendar__resize {
+  left: auto;
+  width: 1.25rem;
+}
+.planning-calendar .event-calendar__resize span {
+  width: 0.625rem;
+}
+.planning-calendar .event-calendar__event-body:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.planning-calendar .event-calendar__hours {
+  display: none;
+}
+.planning-calendar__entry {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  font-size: 0.6875rem;
+  line-height: 1.15;
+}
+.planning-calendar__entry-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+.planning-calendar__entry-time {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+@media (width < 40rem) {
+  .planning-calendar .event-calendar__weekday-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .planning-calendar .event-calendar__weekday-short {
+    display: inline;
+  }
+  .planning-calendar[data-period='month'] .planning-calendar__entry-line {
+    display: grid;
+    gap: 0.1rem;
+  }
+  .planning-calendar[data-period='month'] .planning-calendar__entry > :last-child {
+    display: none;
+  }
+}

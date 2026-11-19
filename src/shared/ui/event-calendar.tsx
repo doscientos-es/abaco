@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { dateValue } from '@/shared/lib/date-range'
 import {
   calendarDays,
+  calendarStep,
   atCalendarMinutes,
   eventIntersectsDay,
   timedEventLayout,
@@ -38,6 +39,7 @@ export function EventCalendar({
   compactEmptyHours = false,
   renderDayLabel,
   onDayClick,
+  dayMoveTargets = false,
   renderItem,
   renderDaySummary,
   'aria-label': label = 'Calendario',
@@ -56,6 +58,7 @@ export function EventCalendar({
   compactEmptyHours?: boolean
   renderDayLabel?: ((day: Date) => ReactNode) | undefined
   onDayClick?: ((day: Date) => void) | undefined
+  dayMoveTargets?: boolean
   renderItem?: ((item: CalendarEvent) => ReactNode) | undefined
   renderDaySummary?: ((day: Date) => ReactNode) | undefined
   'aria-label'?: string
@@ -118,7 +121,11 @@ export function EventCalendar({
         item={item}
         timed={timed}
         style={style}
-        renderItem={renderItem}
+        renderItem={
+          item.id === previewId && previewSource && renderItem
+            ? (preview) => renderItem({ ...preview, id: previewSource.id })
+            : renderItem
+        }
         preview={item.id === previewId}
         dragSource={item.id === previewSource?.id}
         canEdit={Boolean(original.editable && onItemChange)}
@@ -138,7 +145,7 @@ export function EventCalendar({
         aria-current={showToday && dateValue(day) === today ? 'date' : undefined}
       >
         {onDayClick ? (
-          <button type="button" onClick={() => onDayClick(day)}>
+          <button type="button" aria-label={dayLabel.format(day)} onClick={() => onDayClick(day)}>
             {renderDayLabel?.(day) ?? dayLabel.format(day)}
           </button>
         ) : (
@@ -153,7 +160,10 @@ export function EventCalendar({
       <p id={helpId} className={showInstructions ? 'text-muted-foreground text-xs' : 'sr-only'}>
         Pulsa un evento para ver detalles.
         {onItemChange
-          ? ' Arrastra para mover; usa el borde inferior para cambiar el final. Teclado: Alt + flechas; Alt + Mayús + flechas cambia la duración. Esc cancela el arrastre.'
+          ? ' Arrastra para mover. Teclado: Alt + flechas. Esc cancela el arrastre.'
+          : ''}
+        {onItemChange && items.some((item) => item.editable && item.resizable !== false)
+          ? ' Arrastra el borde inferior o usa Alt + Mayús + flechas para cambiar la duración.'
           : ''}
         {onRangeSelect ? ' Arrastra sobre un espacio vacío para marcar una nueva franja.' : ''}
       </p>
@@ -166,12 +176,36 @@ export function EventCalendar({
         onPointerCancel={interaction.cancel}
         onLostPointerCapture={interaction.cancel}
       >
+        {view === 'day' && dayMoveTargets && onDayClick ? (
+          <div className="event-calendar__adjacent-days">
+            {([-1, 1] as const).map((direction) => {
+              const day = calendarStep(value, 'day', direction)
+              const key = dateValue(day)
+              const targeted = interaction.preview && dateValue(interaction.preview.start) === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  data-calendar-move-day={key}
+                  data-targeted={Boolean(targeted)}
+                  aria-label={`Ir a ${dayLabel.format(day)}; también puedes soltar aquí un trabajo`}
+                  onClick={() => onDayClick(day)}
+                >
+                  {direction === -1 ? '← Día anterior' : 'Día siguiente →'}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
         {view === 'month' ? (
           <div className="event-calendar__month">
             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(
               (day) => (
                 <div className="event-calendar__weekday" key={day}>
-                  {day}
+                  <span className="event-calendar__weekday-full">{day}</span>
+                  <span className="event-calendar__weekday-short" aria-hidden="true">
+                    {day.slice(0, 3)}
+                  </span>
                 </div>
               ),
             )}
