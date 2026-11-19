@@ -67,6 +67,8 @@ vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children?: ReactNode }) => <div>{children}</div>
   return {
     Button: Container,
+    Checkbox: Container,
+    Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
     Badge: Container,
     Input: () => null,
     IconButton: ({ label, onPress }: { label: string; onPress: () => void }) => {

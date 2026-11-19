@@ -99,7 +99,6 @@ function ContractTemplates() {
 
 function ContractsList() {
   const { tenant, clients } = useTenantData()
-  const columns = useTableColumns('contratos', contractColumns)
   const navigate = useNavigate()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<ContractStatusFilter>('all')
@@ -107,6 +106,7 @@ function ContractsList() {
     queryKey: ['service-contracts', tenant.id, page, status],
     queryFn: () => listServiceContracts(tenant.id, page, status),
   })
+  const columns = useTableColumns('contratos', contractColumns)
   return (
     <div className="space-y-6">
       <Link to="/presupuestos" className="text-primary text-sm underline">

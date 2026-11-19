@@ -66,7 +66,6 @@ function ClientActions({
 
 export function ClientsPage() {
   const { clients, tenant } = useTenantData()
-  const columns = useTableColumns('clientes', clientColumns)
   const types = useQuery(clientTypesQuery(tenant.id))
   const navigate = useNavigate()
   const [importOpen, setImportOpen] = useState(false)
@@ -80,6 +79,7 @@ export function ClientsPage() {
       fuzzySearch(query, client.name, client.email, client.phone, client.taxId, client.address),
   )
   const pager = usePagination(visible, query)
+  const columns = useTableColumns('clientes', clientColumns)
 
   function create() {
     void navigate({ to: '/clientes/nuevo' })

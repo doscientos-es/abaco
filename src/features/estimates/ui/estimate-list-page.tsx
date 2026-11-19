@@ -77,7 +77,6 @@ function EstimateActions({
 
 export function EstimateListPage() {
   const { estimates, clients, invoices } = useTenantData()
-  const columns = useTableColumns('presupuestos', estimateColumns)
   const session = useSession()
   const activeClients = clients.filter((client) => !client.archivedAt)
   const navigate = useNavigate()
@@ -99,6 +98,7 @@ export function EstimateListPage() {
   const [creatingClient, setCreatingClient] = useState(false)
   const [toDelete, setToDelete] = useState<Estimate | null>(null)
   const [newFormat, setNewFormat] = useState<EstimateFormat>('sections')
+  const columns = useTableColumns('presupuestos', estimateColumns)
 
   function canDeleteEstimate(estimate: Estimate) {
     return (

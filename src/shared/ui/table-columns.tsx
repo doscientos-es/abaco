@@ -53,8 +53,7 @@ export function TableColumnsHeader({
         <span className="mr-2">Acciones</span>
         <Popover
           placement="bottom end"
-          title="Personalizar columnas"
-          description="Elige las columnas y cambia su orden en este navegador."
+          aria-label={`Personalizar columnas de ${tableName}`}
           className="max-h-[80dvh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"
           trigger={
             <IconButton label={`Personalizar columnas de ${tableName}`} variant="ghost">
@@ -62,13 +61,19 @@ export function TableColumnsHeader({
             </IconButton>
           }
         >
+          <div className="px-2 pt-2">
+            <p className="text-sm font-semibold">Personalizar columnas</p>
+            <p className="text-muted-foreground text-xs">
+              Elige las columnas y cambia su orden en este navegador.
+            </p>
+          </div>
           <ul className="space-y-1">
             {columns.ordered.map((column, index) => (
               <li key={column.id} className="flex items-center gap-1">
                 <div className="min-w-0 flex-1">
                   <Checkbox
                     isSelected={!columns.preferences.hidden.includes(column.id)}
-                    isDisabled={column.required}
+                    isDisabled={Boolean(column.required)}
                     onChange={(selected) =>
                       columns.commit({
                         ...columns.preferences,

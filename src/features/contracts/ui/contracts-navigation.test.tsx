@@ -47,6 +47,9 @@ vi.mock('@doscientos/ui', () => {
       return <button>{children}</button>
     },
     Badge: Container,
+    Checkbox: Container,
+    Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
+    IconButton: ({ label }: { label: string }) => <button aria-label={label} />,
     Card: Container,
     CardContent: Container,
     Table: (props: ComponentProps<'table'>) => <table {...props} />,
@@ -239,17 +242,11 @@ describe('contracts navigation', () => {
     state.statuses = ['draft', 'active']
     const html = renderToStaticMarkup(<ContractsPage />)
     expect(html).toContain('<table aria-label="Contratos de servicio">')
-    for (const heading of [
-      'Contrato',
-      'Cliente',
-      'Estado',
-      'Firma',
-      'Importe',
-      'Facturación',
-      'Acciones',
-    ]) {
+    for (const heading of ['Contrato', 'Cliente', 'Estado', 'Firma', 'Importe', 'Facturación']) {
       expect(html).toContain(`<th>${heading}</th>`)
     }
+    expect(html).toContain('aria-label="Personalizar columnas de contratos"')
+    expect(html).toContain('>Acciones</span>')
     expect(html.match(/Pendiente de firma/g)).toHaveLength(2)
     expect(html).toContain('href="/contratos/contract-0"')
     expect(html).toContain('aria-label="Acciones de Contrato 0"')
@@ -293,10 +290,11 @@ describe('contracts navigation', () => {
       'Importe',
       'Facturación',
       'Próximo cobro',
-      'Acciones',
     ]) {
       expect(html).toContain(`<th>${heading}</th>`)
     }
+    expect(html).toContain('aria-label="Personalizar columnas de contratos"')
+    expect(html).toContain('>Acciones</span>')
     const rows = html.match(/<tr>.*?<\/tr>/g) ?? []
     expect(rows).toHaveLength(3)
     expect(rows[1]).toContain('Contrato 0')

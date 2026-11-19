@@ -33,6 +33,8 @@ vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children?: ReactNode }) => <div>{children}</div>
   return {
     Button: Container,
+    Checkbox: Container,
+    Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
     ConfirmDialog: ({ onConfirm }: { onConfirm: () => void }) => {
       mocks.confirm = onConfirm
       return null
