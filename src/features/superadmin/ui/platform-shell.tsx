@@ -144,7 +144,7 @@ export function PlatformShell({
           ref={main}
           id="platform-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-7xl bg-transparent px-4 py-5 sm:px-6 lg:px-10 lg:py-8"
+          className="mx-auto w-full max-w-7xl scroll-mt-36 bg-transparent px-4 py-5 sm:px-6 md:scroll-mt-0 lg:px-10 lg:py-8"
         >
           {children}
         </AppShellMain>

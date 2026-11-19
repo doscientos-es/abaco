@@ -60,10 +60,9 @@ export function CompanyDirectory({
       >
         <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b px-4 py-4 sm:px-5">
           <PlatformSearchForm
-            key={q ?? ''}
             query={q ?? ''}
             label="Buscar empresa"
-            placeholder="Nombre de la empresa"
+            placeholder="Ej. Taller Norte"
             onSearch={(value) => void navigate({ search: value ? { q: value } : {} })}
           />
           {q ? (

@@ -1,10 +1,11 @@
-import { Button } from '@doscientos/ui'
+import { Button, FormFeedback } from '@doscientos/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 import { billingPreviewQuery, STANDARD_BILLING_VAT } from '@/features/billing'
 
 import { setCompanyBillingVat } from '../application/superadmin-queries'
+import { PlatformField, PlatformSelect } from './platform-form-field'
 
 export function CompanyBillingVat({
   tenantId,
@@ -15,47 +16,69 @@ export function CompanyBillingVat({
   vatPercent: number
   blocked: boolean
 }) {
-  const [selectedVat, setSelectedVat] = useState(vatPercent)
+  const titleId = useId()
+  const [draft, setDraft] = useState<{ initial: number; value: number } | null>(null)
+  const selectedVat = draft?.initial === vatPercent ? draft.value : vatPercent
   const queryClient = useQueryClient()
   const update = useMutation({
     mutationFn: (vat: number) => setCompanyBillingVat(tenantId, vat),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: billingPreviewQuery(tenantId).queryKey }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: billingPreviewQuery(tenantId).queryKey })
+      setDraft(null)
+    },
   })
   const canSave = !blocked && !update.isPending && selectedVat !== vatPercent
 
   return (
     <form
-      className="border-border space-y-2 border-t pt-3"
+      aria-labelledby={titleId}
+      className="border-border space-y-3 border-t pt-4"
       onSubmit={(event) => {
         event.preventDefault()
         if (canSave) update.mutate(selectedVat)
       }}
     >
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          IVA de la suscripción
-          <select
+      <h4 id={titleId} className="font-semibold">
+        IVA de la suscripción
+      </h4>
+      <PlatformField
+        label="Tipo de IVA"
+        className="max-w-lg"
+        hint="Selecciona el 0 % solo si fiscalmente corresponde. Se aplica al próximo cobro; no modifica pagos anteriores ni las facturas que emite la empresa."
+      >
+        {(control) => (
+          <PlatformSelect
+            {...control}
             value={selectedVat}
             disabled={blocked || update.isPending}
             onChange={(event) => {
               update.reset()
-              setSelectedVat(Number(event.currentTarget.value))
+              setDraft({ initial: vatPercent, value: Number(event.currentTarget.value) })
             }}
           >
             <option value={STANDARD_BILLING_VAT}>{STANDARD_BILLING_VAT} % · General</option>
             <option value={0}>0 % · Sin IVA</option>
-          </select>
-        </label>
-        <Button type="submit" isDisabled={!canSave}>
+          </PlatformSelect>
+        )}
+      </PlatformField>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" className="min-h-11" isDisabled={!canSave}>
           Guardar IVA
         </Button>
+        {update.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
+        {update.error ? (
+          <FormFeedback
+            className="h-auto"
+            state={{ status: 'error', message: update.error.message }}
+          />
+        ) : null}
+        {update.isSuccess ? (
+          <FormFeedback
+            className="h-auto"
+            state={{ status: 'success', message: 'IVA guardado para el próximo cobro.' }}
+          />
+        ) : null}
       </div>
-      <p className="text-muted-foreground text-xs">
-        Selecciona el 0 % solo si fiscalmente corresponde. Se aplica al próximo cobro; no modifica
-        pagos anteriores ni los impuestos de las facturas que emite la empresa.
-      </p>
-      {update.error ? <p role="alert">{update.error.message}</p> : null}
     </form>
   )
 }

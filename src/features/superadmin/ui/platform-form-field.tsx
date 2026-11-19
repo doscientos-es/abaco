@@ -3,8 +3,8 @@ import { useId, type ComponentProps, type ReactNode } from 'react'
 
 type ControlProps = {
   id: string
-  'aria-describedby'?: string
-  'aria-invalid'?: true
+  'aria-describedby': string | undefined
+  'aria-invalid': true | undefined
 }
 
 export function PlatformField({
@@ -16,7 +16,7 @@ export function PlatformField({
 }: {
   label: string
   hint?: ReactNode
-  error?: string
+  error?: string | undefined
   className?: string
   children: (props: ControlProps) => ReactNode
 }) {

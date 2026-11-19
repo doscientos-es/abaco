@@ -16,7 +16,12 @@ export type PlatformSearch = {
 }
 
 export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearch {
-  const q = typeof raw.q === 'string' ? raw.q.trim().slice(0, 120) : ''
+  const q =
+    typeof raw.q === 'string'
+      ? raw.q.trim().slice(0, 120)
+      : typeof raw.q === 'number' && Number.isSafeInteger(raw.q)
+        ? String(raw.q)
+        : ''
   const page = typeof raw.page === 'number' ? raw.page : 0
   const empresa =
     typeof raw.empresa === 'string' &&

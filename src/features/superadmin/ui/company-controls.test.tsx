@@ -16,12 +16,6 @@ import { CompanyBillingAgreement } from './company-billing-agreement'
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({ createBrowserSupabaseClient: () => ({ rpc }) }))
-vi.mock('@doscientos/ui', () => ({
-  Button: ({ children, isDisabled }: { children: string; isDisabled?: boolean }) => (
-    <button disabled={isDisabled}>{children}</button>
-  ),
-  Input: ({ value }: { value: string }) => <input value={value} readOnly />,
-}))
 
 const tenantId = 'company'
 const current: BillingTerms = {
@@ -78,11 +72,18 @@ describe('company billing controls', () => {
     expect(html).toMatch(/Total previsto: 589,88\s*€ con IVA \/ año/)
     expect(html).toContain('<option value="agreed" selected="">Precio pactado</option>')
     expect(html).toContain('value="297,50"')
-    expect(html).toContain('<button>Guardar condiciones</button>')
+    expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Guardar condiciones<\/button>/)
   })
 
   it('does not save a tier with insufficient seats or show an editor while a payment is pending', () => {
-    expect(renderBilling(6)).toContain('<button disabled="">Guardar condiciones</button>')
+    const insufficient = renderBilling(6)
+    expect(insufficient).toMatch(/<button\b[^>]*\bdisabled=""[^>]*>Guardar condiciones<\/button>/)
+    const capacityId = /<label\b[^>]*for="([^"]+)"[^>]*>Plan y capacidad<\/label>/.exec(
+      insufficient,
+    )?.[1]
+    expect(capacityId).toBeDefined()
+    expect(insufficient).toContain(`aria-describedby="${capacityId}-hint ${capacityId}-error"`)
+    expect(insufficient).toContain(`id="${capacityId}-error">El tramo no cubre al equipo.`)
     client.setQueryData(billingPreviewQuery(tenantId).queryKey, { ...preview, pending: true })
     const html = renderBilling(3)
     expect(html).toContain('Resuelve el pago pendiente')

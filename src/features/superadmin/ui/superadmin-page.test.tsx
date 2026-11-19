@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { PlatformSearch } from '../domain/platform-navigation'
+import { companyFromInvoice, type PlatformSearch } from '../domain/platform-navigation'
 import { SuperadminPage } from './superadmin-page'
 
 const tenantId = '37b30000-0000-0000-0000-000000000001'
@@ -223,7 +223,21 @@ describe('platform administration navigation', () => {
     expect(html).toContain('REF-2030')
     expect(html).toContain('Correo aceptado por el proveedor')
     expect(html).toContain(`empresa=${tenantId}&amp;seccion=pagos`)
+    expect(html).toContain('origen=facturas&amp;q=FA&amp;page=2&amp;factura=issued')
     expect(html).toContain('href="https://example.test/factura"')
+  })
+
+  it('links back to the filtered invoice list from the company profile', () => {
+    state.allowed = true
+    const search = companyFromInvoice(
+      { vista: 'facturas', q: 'FA', factura: 'issued', page: 2 },
+      tenantId,
+    )
+    const html = renderToStaticMarkup(<SuperadminPage search={search} />)
+    expect(html).toMatch(
+      /href="\/superadmin\?vista=facturas&amp;q=FA&amp;factura=issued&amp;page=2">[^]*?Volver a facturas<\/a>/,
+    )
+    expect(html).toContain('aria-label="Secciones de la empresa"')
   })
 
   it('loads the editor with the same published catalog used in customer pricing', () => {
@@ -233,6 +247,12 @@ describe('platform administration navigation', () => {
     expect(html).toContain('Equipo Plus')
     expect(html).toContain('value="34,90"')
     expect(html).toMatch(/349,00\s*€ al año/)
+    const priceId = /<label\b[^>]*for="([^"]+)"[^>]*>Hasta 5 personas · €\/mes<\/label>/.exec(
+      html,
+    )?.[1]
+    expect(priceId).toBeDefined()
+    expect(html).toContain(`aria-describedby="${priceId}-hint"`)
+    expect(html).toContain('placeholder="Ej. 34,90"')
     expect(html).toContain('href="/precios"')
   })
 

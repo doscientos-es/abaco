@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CatalogRate } from '@/features/billing'
 
-import { priceField, readCatalogUpdate } from './catalog-update'
+import { CatalogFieldError, priceField, readCatalogUpdate } from './catalog-update'
 
 const display = {
   revision: 7,
@@ -54,5 +54,17 @@ describe('editing plan pricing', () => {
     const form = edit()
     form.delete(priceField(25))
     expect(() => readCatalogUpdate(form, rates)).toThrow('tramo de 25')
+    expect(() => readCatalogUpdate(form, rates)).toThrow(
+      expect.objectContaining({ field: priceField(25) }),
+    )
+  })
+
+  it('attributes whitespace-only public copy to the corresponding field', () => {
+    const form = edit()
+    form.set('benefit', '  ')
+    expect(() => readCatalogUpdate(form, rates)).toThrow(CatalogFieldError)
+    expect(() => readCatalogUpdate(form, rates)).toThrow(
+      expect.objectContaining({ field: 'benefit' }),
+    )
   })
 })

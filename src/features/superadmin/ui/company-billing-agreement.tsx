@@ -1,6 +1,6 @@
-import { Button, Input } from '@doscientos/ui'
+import { Button, FormFeedback, Input } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 import {
   billingCatalogQuery,
@@ -18,6 +18,8 @@ import { applyRate, centsToInput, formatEuros, parseEuros } from '@/shared/domai
 
 import { scheduleBillingAgreement, type BillingAgreement } from '../application/superadmin-queries'
 import { CompanyBillingVat } from './company-billing-vat'
+import { PlatformField, PlatformSelect } from './platform-form-field'
+import { PlatformMessage } from './platform-ui'
 
 const periodUnit = (period: Interval) => (period === 'year' ? 'año' : 'mes')
 
@@ -51,12 +53,24 @@ export function CompanyBillingAgreement({
 
   return (
     <div className="border-border bg-card space-y-4 rounded-lg border p-4 sm:p-5">
-      <h3 className="font-semibold">Condiciones de facturación</h3>
+      <div className="space-y-1">
+        <h3 className="font-semibold">Condiciones de facturación</h3>
+        <p className="text-muted-foreground text-sm">
+          Consulta la cuota actual y prepara las condiciones de la próxima contratación o
+          renovación.
+        </p>
+      </div>
       {preview.isPending || catalog.isPending ? <output>Cargando condiciones…</output> : null}
       {preview.isError || catalog.isError ? (
-        <p role="alert">No se pudieron consultar las condiciones.</p>
+        <PlatformMessage
+          title="No se pudieron consultar las condiciones."
+          onRetry={() => {
+            if (preview.isError) void preview.refetch()
+            if (catalog.isError) void catalog.refetch()
+          }}
+        />
       ) : null}
-      <dl className="grid gap-1 text-sm sm:grid-cols-2">
+      <dl className="border-border bg-muted/40 grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
         <AgreementSummary
           label="Condiciones vigentes"
           terms={preview.data?.current ?? null}
@@ -66,13 +80,14 @@ export function CompanyBillingAgreement({
       </dl>
       {preview.isSuccess ? (
         <CompanyBillingVat
-          key={preview.data.vat_percent}
           tenantId={tenantId}
           vatPercent={preview.data.vat_percent}
           blocked={preview.data.pending || subscriptionStatus === 'past_due'}
         />
       ) : null}
-      {blocked ? <output className="block">{blocked}</output> : null}
+      {blocked ? (
+        <output className="bg-muted block rounded-md p-3 text-sm">{blocked}</output>
+      ) : null}
       {preview.isSuccess && catalog.isSuccess && !blocked ? (
         <AgreementForm
           key={
@@ -87,12 +102,27 @@ export function CompanyBillingAgreement({
           moduleYearly={preview.data.module_yearly_cents ?? 0}
           vatPercent={preview.data.vat_percent}
           saving={mutation.isPending}
+          onEdit={() => {
+            if (mutation.isSuccess || mutation.isError) mutation.reset()
+          }}
           onSave={mutation.mutate}
         />
       ) : null}
-      {mutation.error ? <p role="alert">{mutation.error.message}</p> : null}
+      {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
+      {mutation.error ? (
+        <FormFeedback
+          className="h-auto"
+          state={{ status: 'error', message: mutation.error.message }}
+        />
+      ) : null}
       {mutation.isSuccess ? (
-        <output className="block">Condiciones guardadas. No se ha realizado ningún cobro.</output>
+        <FormFeedback
+          className="h-auto"
+          state={{
+            status: 'success',
+            message: 'Condiciones guardadas. No se ha realizado ningún cobro.',
+          }}
+        />
       ) : null}
     </div>
   )
@@ -109,8 +139,8 @@ function AgreementSummary({
 }) {
   return (
     <div>
-      <dt>{label}</dt>
-      <dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-medium">
         {terms
           ? `${planLabel(terms.plan, rates)} · ${terms.seats} personas · ${formatEuros(terms.amount_cents)} ${billingVatLabel(terms.vat_percent)} / ${periodUnit(terms.period)}`
           : '—'}
@@ -127,6 +157,7 @@ function AgreementForm({
   moduleYearly,
   vatPercent,
   saving,
+  onEdit,
   onSave,
 }: {
   rates: CatalogRate[]
@@ -136,8 +167,10 @@ function AgreementForm({
   moduleYearly: number
   vatPercent: number
   saving: boolean
+  onEdit: () => void
   onSave: (agreement: BillingAgreement) => void
 }) {
+  const titleId = useId()
   const initialRate = terms
     ? rates.find((rate) => rate.plan === terms.plan && rate.seats === terms.seats)
     : smallestRateFor(rates, Math.max(members, 1))
@@ -162,79 +195,112 @@ function AgreementForm({
   const totalNet = baseNet === null ? null : baseNet + moduleNet
   const amount = rate && totalNet !== null ? totalNet + applyRate(totalNet, vatPercent) : null
   const canSave = Boolean(rate && rate.seats >= members && amount !== null && !saving)
+  const capacityError = rate && rate.seats < members ? 'El tramo no cubre al equipo.' : undefined
+  const priceHelp = 'Introduce entre 0,01 € y 100.000 € con hasta dos decimales.'
+  const priceError = raw && !validPrice ? priceHelp : undefined
 
   return (
     <form
-      className="space-y-3"
+      aria-labelledby={titleId}
+      className="border-border space-y-3 border-t pt-4"
+      onChange={onEdit}
       onSubmit={(event) => {
         event.preventDefault()
         if (canSave && rate) onSave({ plan: rate.plan, period, seats: rate.seats, netCents })
       }}
     >
-      <fieldset disabled={saving} className="space-y-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="grid gap-1 text-sm">
-            Plan y capacidad
-            <select
-              required
-              value={seats}
-              onChange={(event) => setSeats(Number(event.currentTarget.value))}
-            >
-              <option value={0}>Seleccionar</option>
-              {rates.map((entry) => (
-                <option key={entry.seats} value={entry.seats} disabled={entry.seats < members}>
-                  {planLabel(entry.plan, rates)} · {entry.seats}
+      <fieldset disabled={saving} className="min-w-0 space-y-4">
+        <legend id={titleId} className="pb-2 font-semibold">
+          Editar próximas condiciones
+        </legend>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          <PlatformField
+            label="Plan y capacidad"
+            hint={`El tramo debe cubrir el equipo actual (${members}).`}
+            error={capacityError}
+          >
+            {(control) => (
+              <PlatformSelect
+                {...control}
+                required
+                value={seats || ''}
+                onChange={(event) => setSeats(Number(event.currentTarget.value))}
+              >
+                <option value="" disabled>
+                  Selecciona un tramo
                 </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            Periodo
-            <select
-              value={period}
-              onChange={(event) => {
-                setPeriod(event.currentTarget.value === 'year' ? 'year' : 'month')
-                setPrice('')
-              }}
-            >
-              <option value="month">Mensual</option>
-              <option value="year">Anual</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            Tarifa
-            <select value={mode} onChange={(event) => setMode(event.currentTarget.value)}>
-              <option value="catalog">Tarifa de catálogo</option>
-              <option value="agreed">Precio pactado</option>
-            </select>
-          </label>
+                {rates.map((entry) => (
+                  <option key={entry.seats} value={entry.seats} disabled={entry.seats < members}>
+                    {planLabel(entry.plan, rates)} · {entry.seats}{' '}
+                    {entry.seats === 1 ? 'persona' : 'personas'}
+                  </option>
+                ))}
+              </PlatformSelect>
+            )}
+          </PlatformField>
+          <PlatformField label="Periodo de facturación">
+            {(control) => (
+              <PlatformSelect
+                {...control}
+                value={period}
+                onChange={(event) => {
+                  setPeriod(event.currentTarget.value === 'year' ? 'year' : 'month')
+                  setPrice('')
+                }}
+              >
+                <option value="month">Mensual</option>
+                <option value="year">Anual</option>
+              </PlatformSelect>
+            )}
+          </PlatformField>
+          <PlatformField label="Tipo de tarifa">
+            {(control) => (
+              <PlatformSelect
+                {...control}
+                value={mode}
+                onChange={(event) => setMode(event.currentTarget.value)}
+              >
+                <option value="catalog">Tarifa de catálogo</option>
+                <option value="agreed">Precio pactado</option>
+              </PlatformSelect>
+            )}
+          </PlatformField>
           {agreed ? (
-            <label className="grid gap-1 text-sm">
-              Precio base sin IVA por {periodUnit(period)}
-              <Input
-                inputMode="decimal"
-                value={price}
-                onChange={(event) => setPrice(event.currentTarget.value)}
-              />
-            </label>
+            <PlatformField
+              label={`Precio base sin IVA por ${periodUnit(period)}`}
+              hint={priceError ? undefined : priceHelp}
+              error={priceError}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  className="h-11"
+                  required
+                  inputMode="decimal"
+                  placeholder={period === 'year' ? 'Ej. 349,00' : 'Ej. 34,90'}
+                  value={price}
+                  onChange={(event) => setPrice(event.currentTarget.value)}
+                />
+              )}
+            </PlatformField>
           ) : null}
         </div>
-        {rate && rate.seats < members ? <p role="alert">El tramo no cubre al equipo.</p> : null}
-        {agreed && raw && !validPrice ? (
-          <p role="alert">Introduce entre 0,01 € y 100.000 € con hasta dos decimales.</p>
-        ) : null}
-        {amount !== null ? (
-          <p className="text-sm">
-            Total previsto: {formatEuros(amount)} {billingVatLabel(vatPercent)} /{' '}
-            {periodUnit(period)}.
-            {moduleNet > 0 ? <> Incluye {formatEuros(moduleNet)} en módulos, sin IVA.</> : null}
-          </p>
-        ) : null}
+        <output className="bg-muted/40 block rounded-lg p-3 text-sm">
+          {amount !== null ? (
+            <>
+              Total previsto: {formatEuros(amount)} {billingVatLabel(vatPercent)} /{' '}
+              {periodUnit(period)}.
+              {moduleNet > 0 ? <> Incluye {formatEuros(moduleNet)} en módulos, sin IVA.</> : null}
+            </>
+          ) : (
+            'Completa las condiciones para ver el importe previsto.'
+          )}
+        </output>
         <p className="text-muted-foreground text-xs">
           Los módulos de pago se añaden al precio base. El cambio se aplica al contratar o al
           renovar, sin cobro inmediato.
         </p>
-        <Button type="submit" isDisabled={!canSave}>
+        <Button type="submit" className="min-h-11" isDisabled={!canSave}>
           Guardar condiciones
         </Button>
       </fieldset>

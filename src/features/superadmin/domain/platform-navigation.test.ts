@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { directorySearch, parsePlatformSearch, platformMaxPage } from './platform-navigation'
+import {
+  companyFromInvoice,
+  directorySearch,
+  invoiceNavigation,
+  parsePlatformSearch,
+  platformMaxPage,
+} from './platform-navigation'
 
 describe('platform search parameters', () => {
   it('keeps the company and section separate from the directory position', () => {
@@ -33,5 +39,19 @@ describe('platform search parameters', () => {
       q: 'AB-24',
     })
     expect(parsePlatformSearch({ ...result, vista: 'planes' })).toEqual({ vista: 'planes' })
+  })
+
+  it('returns from the company to the original invoice result set, even after switching sections', () => {
+    const invoices = { vista: 'facturas', q: 'AB-24', factura: 'issued', page: 2 } as const
+    const company = companyFromInvoice(invoices, 'abc00000-0000-0000-0000-000000000001')
+    const section = parsePlatformSearch({ ...company, seccion: 'modulos' })
+    expect(section).toMatchObject({ origen: 'facturas', seccion: 'modulos' })
+    expect(invoiceNavigation(section)).toEqual(invoices)
+    expect(directorySearch(section)).toEqual({})
+  })
+
+  it('keeps numeric references and preserves leading zeros in shared search links', () => {
+    expect(parsePlatformSearch({ vista: 'facturas', q: 12345 }).q).toBe('12345')
+    expect(parsePlatformSearch({ vista: 'facturas', q: '012345' }).q).toBe('012345')
   })
 })
