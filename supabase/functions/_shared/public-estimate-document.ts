@@ -11,6 +11,7 @@ export function publicEstimateDocument(
     title: published.title,
     status: current.status,
     document_format: published.document_format ?? 'table',
+    document_design: published.document_design ?? null,
     document_sections: published.document_sections ?? [],
     conversion_destination: published.conversion_destination,
     contract_billing_frequency: published.contract_billing_frequency,

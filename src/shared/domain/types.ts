@@ -1,4 +1,5 @@
 import type { EstimateAgreement } from './estimate-agreement'
+import type { EstimateDesign } from './estimate-design'
 import type { EstimateFormat, EstimateSection } from './estimate-document'
 
 /** Money is always stored as integer cents to avoid floating point drift. */
@@ -33,6 +34,8 @@ export type Tenant = {
   invoiceEmailIntro?: string
   estimateEmailIntro?: string
   documentFooter?: string
+  /** Copied to each new estimate; does not change existing drafts or publications. */
+  defaultEstimateDesign?: EstimateDesign
   /** Opt-in: the daily job emails clients about overdue invoices and estimates about to expire. */
   autoReminders?: boolean
   defaultVatRate: number
@@ -100,6 +103,7 @@ export type Estimate = {
   status: EstimateStatus
   /** Missing on historical documents, which retain the original price-table layout. */
   documentFormat?: EstimateFormat
+  documentDesign?: EstimateDesign
   sections?: EstimateSection[]
   /** Conversion route agreed in the published proposal. Legacy proposals use work. */
   conversionDestination?: 'work' | 'contract'

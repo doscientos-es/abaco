@@ -1,4 +1,5 @@
 import { estimateAgreementSchema } from '../domain/estimate-agreement'
+import { estimateDesignSchema } from '../domain/estimate-design'
 import { estimateSectionsSchema } from '../domain/estimate-document'
 import type {
   CatalogItem,
@@ -37,6 +38,7 @@ function present<K extends string>(key: K, value: unknown): { [P in K]?: string 
 }
 
 export function tenantFromRow(row: Row): Tenant {
+  const design = estimateDesignSchema.safeParse(row.default_estimate_design)
   return {
     id: str(row.id),
     name: str(row.name),
@@ -60,6 +62,7 @@ export function tenantFromRow(row: Row): Tenant {
     ...present('invoiceEmailIntro', row.invoice_email_intro),
     ...present('estimateEmailIntro', row.estimate_email_intro),
     ...present('documentFooter', row.document_footer),
+    ...(design.success ? { defaultEstimateDesign: design.data } : {}),
     autoReminders: row.auto_reminders === true,
   }
 }
@@ -86,6 +89,7 @@ export function tenantToRow(tenant: Tenant): Row {
     invoice_email_intro: tenant.invoiceEmailIntro || null,
     estimate_email_intro: tenant.estimateEmailIntro || null,
     document_footer: tenant.documentFooter || null,
+    default_estimate_design: tenant.defaultEstimateDesign ?? null,
     auto_reminders: tenant.autoReminders === true,
     default_vat_rate: tenant.defaultVatRate,
     default_deposit_percent: tenant.defaultDepositPercent,
@@ -157,6 +161,7 @@ export const catalogToRow = (i: CatalogItem): Row => ({
 })
 
 export function estimateFromRow(row: EstimateRow): Estimate {
+  const design = estimateDesignSchema.safeParse(row.document_design)
   const lines = [...(row.estimate_lines ?? [])].sort((a, b) => num(a.position) - num(b.position))
   const milestones = [...(row.estimate_milestones ?? [])].sort(
     (a, b) => num(a.position) - num(b.position),
@@ -169,6 +174,7 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     title: str(row.title),
     status: str(row.status) as Estimate['status'],
     documentFormat: row.document_format === 'sections' ? 'sections' : 'table',
+    ...(design.success ? { documentDesign: design.data } : {}),
     sections: estimateSectionsSchema.parse(row.document_sections ?? []),
     conversionDestination: str(row.conversion_destination) === 'contract' ? 'contract' : 'work',
     automaticContract: row.automatic_contract === true,
@@ -216,6 +222,7 @@ export const estimateToRow = (e: Estimate): Row => ({
   title: e.title,
   status: e.status,
   document_format: e.documentFormat ?? 'table',
+  document_design: e.documentDesign ?? null,
   document_sections: e.sections ?? [],
   conversion_destination: e.conversionDestination ?? 'work',
   contract_billing_frequency: e.contractBillingFrequency ?? 'monthly',
