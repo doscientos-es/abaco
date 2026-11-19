@@ -9,6 +9,14 @@ import { Route as VacationsRoute } from '@/routes/vacaciones'
 
 vi.mock('@/features/auth', async () => ({
   requirePermission: (await import('@/features/auth/application/guards')).requirePermission,
+  sessionQuery: (await import('@/features/auth/application/auth-actions')).sessionQuery,
+}))
+vi.mock('@/features/product-modules', () => ({
+  staffModuleQuery: (tenantId: string) => ({
+    queryKey: ['staff-test', tenantId],
+    queryFn: async () => false,
+    staleTime: Infinity,
+  }),
 }))
 vi.mock('@/features/workers', async () => ({
   WorkersPage: () => null,
@@ -30,11 +38,26 @@ describe('workers access and legacy links', () => {
       needsWelcome: false,
     }
     cache.setQueryData(sessionQuery.queryKey, session)
+    cache.setQueryData(['staff-test', 'company'], true)
     const guard = WorkersRoute.options.beforeLoad
     if (!guard) throw new Error('Missing workers guard')
     const visit = Reflect.apply(guard, undefined, [{ context: { queryClient: cache } }])
     if (role === 'admin') await expect(visit).resolves.toBeUndefined()
     else await expect(visit).rejects.toMatchObject({ options: { to: '/', replace: true } })
+    cache.clear()
+  })
+
+  it('redirects an administrator without the staff module to the plan', async () => {
+    const cache = new QueryClient()
+    cache.setQueryData(sessionQuery.queryKey, { tenantId: 'company', role: 'admin' })
+    cache.setQueryData(['staff-test', 'company'], false)
+    const guard = WorkersRoute.options.beforeLoad
+    if (!guard) throw new Error('Missing workers guard')
+    await expect(
+      Reflect.apply(guard, undefined, [{ context: { queryClient: cache } }]),
+    ).rejects.toMatchObject({
+      options: { to: '/ajustes', search: { tab: 'plan' }, replace: true },
+    })
     cache.clear()
   })
 

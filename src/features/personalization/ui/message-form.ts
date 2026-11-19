@@ -17,17 +17,15 @@ export function messageFormValid(form: MessageForm) {
     form.emailFromName.length <= 80 &&
     form.emailSignature.length <= 500 &&
     form.estimateEmailIntro.length <= 1000 &&
-    form.invoiceEmailIntro.length <= 1000 &&
-    form.documentFooter.length <= 500
+    form.invoiceEmailIntro.length <= 1000
   )
 }
 
-export function messagePatch(form: MessageForm): MessageForm {
+export function messagePatch(form: MessageForm): Omit<MessageForm, 'documentFooter'> {
   return {
     emailFromName: form.emailFromName.trim(),
     emailSignature: form.emailSignature.trim(),
     estimateEmailIntro: form.estimateEmailIntro.trim(),
     invoiceEmailIntro: form.invoiceEmailIntro.trim(),
-    documentFooter: form.documentFooter.trim(),
   }
 }

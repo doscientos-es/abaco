@@ -95,6 +95,7 @@ export function BillingSection({
       void queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] })
       void queryClient.invalidateQueries({ queryKey: moduleSubscriptionsQuery(tenantId).queryKey })
       void queryClient.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey })
+      void queryClient.invalidateQueries({ queryKey: ['product-modules', 'staff', tenantId] })
       if (tries >= 15) window.clearInterval(timer)
     }, 3000)
     return () => window.clearInterval(timer)
@@ -110,6 +111,7 @@ export function BillingSection({
       void queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] })
       void queryClient.invalidateQueries({ queryKey: moduleSubscriptionsQuery(tenantId).queryKey })
       void queryClient.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey })
+      void queryClient.invalidateQueries({ queryKey: ['product-modules', 'staff', tenantId] })
     }
     window.addEventListener('pageshow', onPageShow)
     return () => window.removeEventListener('pageshow', onPageShow)
@@ -126,6 +128,7 @@ export function BillingSection({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] }),
         queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['product-modules', 'staff', tenantId] }),
       ])
     } catch {
       setError('No se pudo completar la operación. Inténtalo de nuevo.')

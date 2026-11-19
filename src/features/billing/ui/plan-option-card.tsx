@@ -35,6 +35,9 @@ export function PlanOptionCard({
       <p className="text-muted-foreground text-xs">
         Hasta {terms.seats} {terms.seats === 1 ? 'persona' : 'personas'}, incluida quien administra.
       </p>
+      <p className="text-muted-foreground text-xs">
+        {plan.id === 'solo' ? 'Sin módulo de trabajadores.' : 'Módulo de trabajadores incluido.'}
+      </p>
 
       <div className="mt-auto">
         <p>

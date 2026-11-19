@@ -145,6 +145,13 @@ export function PricingCatalog({
           ))}
         </ul>
       </section>
+      <section className="space-y-1 text-sm">
+        <h2 className="font-semibold">Módulo de trabajadores</h2>
+        <p className="text-muted-foreground">
+          Incluido automáticamente desde Equipo, también durante la prueba. No está incluido en
+          Autónomo.
+        </p>
+      </section>
       {showModuleCatalog ? (
         <section className="space-y-2">
           <h2 className="font-semibold">Módulos opcionales</h2>

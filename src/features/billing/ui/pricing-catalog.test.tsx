@@ -83,6 +83,8 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   )
 
   expect(html).toContain('contratos recurrentes y visitas')
+  expect(html).toContain('Módulo de trabajadores incluido.')
+  expect(html).toContain('No está incluido en Autónomo.')
   expect(html).toContain('Compras e inventario')
   expect(html).toMatch(/\+19,00\s*€ al mes/)
   expect(html).toContain('Ajustes → Suscripción de Ábaco')
@@ -90,6 +92,19 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
     expect.objectContaining({ net_cents: 3490, amount_cents: 4223 }),
     expect.objectContaining({ id: 'team', name: 'Equipo Plus', benefit: 'Coordina el equipo' }),
   )
+})
+
+it('shows that the solo plan excludes staff', () => {
+  const queryClient = catalogClient()
+  queryClient.setQueryData(billingCatalogQuery.queryKey, [
+    { plan: 'solo', seats: 1, monthly_cents: 2000, yearly_cents: 20000, vat_percent: 21 },
+  ])
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <PricingCatalog />
+    </QueryClientProvider>,
+  )
+  expect(html).toContain('Sin módulo de trabajadores.')
 })
 
 it('quotes the negotiated price and keeps its period when choosing capacity', () => {

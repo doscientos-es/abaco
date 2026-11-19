@@ -1,5 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 
+import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
+
 import type { ModuleCode } from '../domain/modules'
 import {
   listEnabledModules,
@@ -26,6 +28,24 @@ export const moduleSubscriptionsQuery = (tenantId: string) =>
     queryKey: ['product-modules', 'subscriptions', tenantId],
     queryFn: () => listModuleSubscriptions(tenantId),
   })
+
+/** Staff is included from Equipo onwards, rather than sold as a paid module. */
+export const staffModuleQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['product-modules', 'staff', tenantId],
+    queryFn: async () => {
+      const { data, error } = await createBrowserSupabaseClient().rpc('can_use_staff', {
+        p_tenant: tenantId,
+      })
+      if (error) throw error
+      return data === true
+    },
+  })
+
+export function useStaffModule(tenantId: string): boolean {
+  const { data } = useQuery(staffModuleQuery(tenantId))
+  return data === true
+}
 
 export function useModuleEnabled(tenantId: string, code: ModuleCode): boolean {
   const { data, isSuccess } = useQuery(tenantModulesQuery(tenantId))

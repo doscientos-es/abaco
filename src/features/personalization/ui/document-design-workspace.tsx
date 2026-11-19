@@ -98,7 +98,7 @@ export function DocumentDesignWorkspace({
           <option value="invoice">Factura</option>
         </select>
       </label>
-      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
           {documentType === 'estimate' ? (
             <EstimateDesignExample design={design} tenant={previewTenant} />
@@ -113,7 +113,10 @@ export function DocumentDesignWorkspace({
             </DocumentPreview>
           )}
         </div>
-        <details open className="border-border bg-card min-w-0 rounded-xl border p-5">
+        <details
+          open
+          className="border-border bg-card min-w-0 rounded-xl border p-5 lg:open:w-[22rem]"
+        >
           <summary className="cursor-pointer text-sm font-semibold">Personalizar documento</summary>
           <div className="mt-5 space-y-5">
             <div>
@@ -141,7 +144,7 @@ export function DocumentDesignWorkspace({
               label="Pie de página de los documentos"
               maxLength={500}
               placeholder="Añade tus datos registrales o una nota para el cliente."
-              helper="Se usa en presupuestos y facturas nuevos."
+              helper="Se usa en presupuestos y facturas; los documentos publicados conservan su copia."
               value={footer}
               onChange={onFooterChange}
             />

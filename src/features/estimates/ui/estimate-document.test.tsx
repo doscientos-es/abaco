@@ -89,6 +89,20 @@ describe('customer-facing estimate', () => {
     expect(html).toContain('Gracias')
   })
 
+  it.each(['minimal', 'editorial'] as const)('renders the %s preset without a cover', (layout) => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={{ ...estimate, documentDesign: { ...defaultEstimateDesign, layout } }}
+        tenant={tenant}
+        client={undefined}
+      />,
+    )
+    expect(html).toContain(`data-layout="${layout}"`)
+    expect(html).toContain('estimate-document__compact-header')
+    expect(html).not.toContain('estimate-document__index')
+    expect(html).toContain('Limpieza ordinaria')
+  })
+
   it('omits optional branding and index without changing the proposal cover or payment content', () => {
     const html = renderToStaticMarkup(
       <EstimateDocument

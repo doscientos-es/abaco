@@ -1,9 +1,9 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(10);
 
-insert into public.tenants (id, name) values
-  ('55000000-0000-4000-8000-000000000001', 'Estados factura');
+insert into public.tenants (id, name, default_invoice_design) values
+  ('55000000-0000-4000-8000-000000000001', 'Estados factura', 'modern');
 insert into public.clients (id, tenant_id, name) values
   ('55000000-0000-4000-8000-000000000002',
    '55000000-0000-4000-8000-000000000001', 'Cliente');
@@ -32,6 +32,18 @@ select is((select status from public.invoices
 select is((select email_accepted_at from public.invoices
   where id = '55000000-0000-4000-8000-000000000005'), null::timestamptz,
   'Issued document has no delivery event yet');
+select is((select document_snapshot->>'design' from public.invoices
+  where id = '55000000-0000-4000-8000-000000000005'), 'modern',
+  'Issuance captures the selected invoice design');
+update public.tenants set default_invoice_design = 'minimal'
+  where id = '55000000-0000-4000-8000-000000000001';
+select is((select document_snapshot->>'design' from public.invoices
+  where id = '55000000-0000-4000-8000-000000000005'), 'modern',
+  'Changing the default never changes an issued invoice');
+select throws_ok(
+  $$update public.tenants set default_invoice_design = 'unknown'
+    where id = '55000000-0000-4000-8000-000000000001'$$,
+  '23514', null, 'Unknown invoice designs are rejected');
 
 insert into public.invoice_delivery_events (
   tenant_id, invoice_id, event_type, recipient_email, resend_email_id

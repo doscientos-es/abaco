@@ -31,7 +31,7 @@ import {
 import { PlanBanner } from '@/features/billing'
 import { GlobalSearch, type SearchItem } from '@/features/global-search'
 import { ContractInvoiceNotifications } from '@/features/invoices'
-import { useModuleEnabled } from '@/features/product-modules'
+import { useModuleEnabled, useStaffModule } from '@/features/product-modules'
 import { platformAccessQuery } from '@/features/superadmin'
 import { PendingAbsenceNotifications } from '@/features/vacations'
 import { brand } from '@/shared/lib/brand'
@@ -145,6 +145,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const data = useTenantData()
   const { tenant } = data
   const procurement = useModuleEnabled(tenant.id, 'procurement')
+  const staff = useStaffModule(tenant.id)
   const saveStatus = useSaveStatus()
   const session = useSession()
   const { data: hasPlatformAccess } = useQuery(platformAccessQuery(session?.userId ?? ''))
@@ -158,6 +159,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const allowed = (item: NavItem) => {
     if (item.to === '/superadmin') return hasPlatformAccess === true
     if (item.to === '/proveedores' && !procurement) return false
+    if (item.to === '/trabajadores' && !staff) return false
     const needed = navPermission[item.to]
     return !needed || can(session?.role, needed)
   }
@@ -328,7 +330,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                     userId={session.userId}
                   />
                 ) : null}
-                {can(session?.role, 'vacations:manage') && session?.tenantId ? (
+                {staff && can(session?.role, 'vacations:manage') && session?.tenantId ? (
                   <PendingAbsenceNotifications tenantId={session.tenantId} />
                 ) : null}
                 {canSeeSettings ? (

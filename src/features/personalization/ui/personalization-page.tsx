@@ -67,7 +67,7 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
     tab === 'documentos'
       ? messages.documentFooter.length <= 500
       : tab === 'correos'
-        ? messageFormValid({ ...messages, documentFooter: '' })
+        ? messageFormValid(messages)
         : (brandColor === '' || hexColor.test(brandColor)) && logoUrl.length <= 500 && logoOk
 
   const setMessage = (key: keyof MessageForm) => (value: string) => {
@@ -85,7 +85,7 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
             ...(invoiceDesignChanged ? { defaultInvoiceDesign: invoiceDesign } : {}),
           }
         : tab === 'correos'
-          ? (({ documentFooter: _footer, ...email }) => email)(messagePatch(messages))
+          ? messagePatch(messages)
           : { brandColor, logoUrl: logoUrl.trim() },
     )
     setSaved(true)

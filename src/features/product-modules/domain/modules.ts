@@ -2,7 +2,7 @@ export const coreFeatures = [
   'Clientes, centros y catálogo de productos y servicios',
   'Presupuestos, plantillas, envío y aceptación en línea',
   'Trabajos, planificación, contratos recurrentes y visitas',
-  'Partes, horarios, vacaciones y gestión de equipo',
+  'Partes, horario personal y solicitudes de ausencia',
   'Facturas, cobros y contabilidad básica',
   'Permisos por rol y soporte por correo',
 ] as const
