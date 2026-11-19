@@ -6,6 +6,7 @@ export const paidPlans = ['solo', 'team', 'business', 'scale'] as const
 export type PaidPlan = (typeof paidPlans)[number]
 export type Plan = PaidPlan | 'trial'
 export type Interval = 'month' | 'year'
+export type FixedBillingPrice = { period: Interval; netCents: number }
 
 export type PlanInfo = {
   id: PaidPlan
@@ -99,8 +100,9 @@ export function catalogQuote(
   rate: CatalogRate,
   period: Interval,
   vatPercent = rate.vat_percent,
+  fixedNetCents?: number,
 ): BillingTerms {
-  const net = period === 'year' ? rate.yearly_cents : rate.monthly_cents
+  const net = fixedNetCents ?? (period === 'year' ? rate.yearly_cents : rate.monthly_cents)
   return {
     plan: rate.plan,
     seats: rate.seats,

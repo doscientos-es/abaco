@@ -136,9 +136,13 @@ export function BillingSection({
 
   const pending = preview.data?.pending === true
   const upcoming = preview.data?.next
+  const fixedNet = preview.data?.fixed_net_cents
+  const fixedPrice =
+    upcoming && fixedNet != null ? { period: upcoming.period, netCents: fixedNet } : undefined
   const active = subscription?.status === 'active'
   const pastDue = subscription?.status === 'past_due'
   const scheduled = Boolean(subscription?.nextPlan && upcoming)
+  const managedChange = scheduled && preview.data?.next_managed === true
   const members = Math.max(1, team.data ?? 1)
   const ready = Boolean(
     subscription && preview.data && team.data !== undefined && !pending && !busy,
@@ -230,7 +234,11 @@ export function BillingSection({
             {pastDue ? 'Reintentar el pago con tarjeta' : 'Contratar mi oferta acordada'}
           </Button>
         ) : null}
-        {active && scheduled ? (
+        {active && managedChange ? (
+          <p className="text-muted-foreground text-sm">
+            Ábaco ha programado las próximas condiciones. Contacta con soporte para modificarlas.
+          </p>
+        ) : active && scheduled ? (
           <Button
             variant="outline"
             isDisabled={!ready}
@@ -259,6 +267,7 @@ export function BillingSection({
           actualMembers={members}
           showModuleCatalog={false}
           vatPercent={preview.data?.vat_percent ?? STANDARD_BILLING_VAT}
+          fixedPrice={fixedPrice}
           renderAction={(terms, plan) => {
             const current = preview.data?.current
             const same =

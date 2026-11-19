@@ -20,7 +20,7 @@ vi.mock('./plan-option-card', () => ({
   PlanOptionCard: ({ children }: { children: ReactNode }) => <article>{children}</article>,
 }))
 
-it('lists the pilot surcharge separately from the amount sent to plan checkout', () => {
+function catalogClient() {
   const queryClient = new QueryClient()
   queryClient.setQueryData(billingCatalogQuery.queryKey, [
     {
@@ -40,6 +40,11 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   queryClient.setQueryData(moduleCatalogQuery.queryKey, [
     { code: 'procurement', monthly_cents: 1900, yearly_cents: 19000 },
   ])
+  return queryClient
+}
+
+it('lists the pilot surcharge separately from the amount sent to plan checkout', () => {
+  const queryClient = catalogClient()
   const action = vi.fn(() => null)
 
   const html = renderToStaticMarkup(
@@ -55,5 +60,25 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(action).toHaveBeenCalledWith(
     expect.objectContaining({ net_cents: 3490, amount_cents: 4223 }),
     expect.objectContaining({ id: 'team', name: 'Equipo Plus', benefit: 'Coordina el equipo' }),
+  )
+})
+
+it('quotes the negotiated price and keeps its period when choosing capacity', () => {
+  const action = vi.fn(() => null)
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={catalogClient()}>
+      <PricingCatalog
+        fixedPrice={{ period: 'year', netCents: 29000 }}
+        renderAction={action}
+        showModuleCatalog={false}
+      />
+    </QueryClientProvider>,
+  )
+
+  expect(html).toContain('Tu precio base pactado se mantiene al cambiar de capacidad')
+  expect(html).not.toContain('2 meses de ahorro')
+  expect(action).toHaveBeenCalledWith(
+    expect.objectContaining({ period: 'year', net_cents: 29000, amount_cents: 35090 }),
+    expect.objectContaining({ id: 'team' }),
   )
 })

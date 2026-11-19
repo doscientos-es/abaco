@@ -136,6 +136,8 @@ export type BillingPreview = {
   pending: boolean
   cancel_at_period_end: boolean
   vat_percent: number
+  fixed_net_cents?: number | null
+  next_managed?: boolean
   module_monthly_cents?: number
   module_yearly_cents?: number
 }

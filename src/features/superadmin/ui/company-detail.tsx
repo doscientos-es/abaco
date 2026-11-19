@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router'
 
 import { billingCatalogQuery, billingPreviewQuery, planLabel } from '@/features/billing'
 import { ModuleSubscriptions } from '@/features/product-modules'
+import { formatEuros } from '@/shared/domain/money'
 
 import type { PlatformCompany } from '../application/superadmin-queries'
 import {
@@ -124,12 +125,19 @@ function CompanyModules({ company }: { company: PlatformCompany }) {
   const queryClient = useQueryClient()
   const previewOptions = billingPreviewQuery(company.id)
   const preview = useQuery({ ...previewOptions, enabled: !company.is_complimentary })
+  const next = preview.data?.next
 
   return (
     <section aria-labelledby="platform-modules" className="space-y-3">
       <h2 id="platform-modules" className="text-lg font-semibold">
         Módulos
       </h2>
+      {!company.is_complimentary && !preview.isError && next ? (
+        <p className="text-muted-foreground text-sm">
+          Módulos en el próximo cobro u oferta: {formatEuros(next.module_net_cents ?? 0)} sin IVA /{' '}
+          {next.period === 'year' ? 'año' : 'mes'}.
+        </p>
+      ) : null}
       {!company.is_complimentary && (!preview.data || preview.isError) ? (
         preview.isError ? (
           <PlatformMessage
@@ -146,6 +154,7 @@ function CompanyModules({ company }: { company: PlatformCompany }) {
           tenantId={company.id}
           active={company.subscription_status === 'active'}
           courtesy={company.is_complimentary}
+          period={next?.period}
           blocked={
             !company.is_complimentary &&
             (preview.data?.pending ||

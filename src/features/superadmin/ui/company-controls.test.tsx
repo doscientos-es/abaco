@@ -10,7 +10,11 @@ import {
   moduleSubscriptionsQuery,
 } from '@/features/product-modules'
 
-import { scheduleBillingAgreement, setCompanyBillingVat } from '../application/superadmin-queries'
+import {
+  restoreBillingCatalog,
+  scheduleBillingAgreement,
+  setCompanyBillingVat,
+} from '../application/superadmin-queries'
 import { CompanyBillingAgreement } from './company-billing-agreement'
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }))
@@ -40,6 +44,7 @@ const preview = {
   pending: false,
   cancel_at_period_end: false,
   vat_percent: 21,
+  fixed_net_cents: 29750,
   module_yearly_cents: 19000,
 }
 
@@ -88,6 +93,25 @@ describe('company billing controls', () => {
     const html = renderBilling(3)
     expect(html).toContain('Resuelve el pago pendiente')
     expect(html).not.toContain('Guardar condiciones')
+    expect(html).toMatch(/<button\b[^>]*\bdisabled=""[^>]*>Volver a tarifa de catálogo<\/button>/)
+  })
+
+  it('offers a one-click restoration even when the negotiated amount equals the catalogue', async () => {
+    client.setQueryData(billingPreviewQuery(tenantId).queryKey, {
+      ...preview,
+      fixed_net_cents: 34000,
+      next: { ...next, base_net_cents: 34000, net_cents: 53000, amount_cents: 64130 },
+    })
+    const html = renderBilling(3)
+    expect(html).toContain('<option value="agreed" selected="">Precio pactado</option>')
+    expect(html).toMatch(/Catálogo: 340,00\s*€ sin IVA \/ año/)
+    expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Volver a tarifa de catálogo<\/button>/)
+
+    await restoreBillingCatalog(tenantId, 34000)
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('superadmin_restore_billing_catalog', {
+      p_tenant: tenantId,
+      p_expected_net: 34000,
+    })
   })
 
   it('uses the company agreement RPC for an exact net amount or the catalogue rate', async () => {
@@ -132,7 +156,7 @@ describe('company module controls', () => {
         enabled: false,
         next_enabled: true,
         monthly_cents: 1900,
-        yearly_cents: 19000,
+        yearly_cents: 18000,
       },
     ])
     client.setQueryData(moduleCatalogQuery.queryKey, [
@@ -142,6 +166,11 @@ describe('company module controls', () => {
     expect(html).toContain('Compras e inventario · Inactivo')
     expect(html).toContain('Alta programada')
     expect(html).toContain('Deshacer cambio')
-    expect(html).toMatch(/19,00\s*€\/mes o \+190,00\s*€\/año/)
+    expect(html).toMatch(/19,00\s*€\/mes o \+180,00\s*€\/año/)
+    const annual = render(
+      <ModuleSubscriptions tenantId={tenantId} active period="year" onChanged={vi.fn()} />,
+    )
+    expect(annual).toMatch(/\+180,00\s*€\/año, sin IVA/)
+    expect(annual).not.toContain('/mes')
   })
 })

@@ -24,6 +24,20 @@ export async function scheduleBillingAgreement(tenantId: string, agreement: Bill
   }
 }
 
+export async function restoreBillingCatalog(tenantId: string, expectedNetCents: number) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_restore_billing_catalog', {
+    p_tenant: tenantId,
+    p_expected_net: expectedNetCents,
+  })
+  if (error) {
+    throw new Error(
+      ['P0001', 'P0403'].includes(error.code)
+        ? error.message
+        : 'No se pudo restaurar la tarifa de catálogo.',
+    )
+  }
+}
+
 export async function setCompanyBillingVat(tenantId: string, vatPercent: number) {
   const { error } = await createBrowserSupabaseClient().rpc('superadmin_set_billing_vat', {
     p_tenant: tenantId,

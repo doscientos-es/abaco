@@ -16,7 +16,11 @@ import {
 } from '@/features/billing'
 import { applyRate, centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 
-import { scheduleBillingAgreement, type BillingAgreement } from '../application/superadmin-queries'
+import {
+  restoreBillingCatalog,
+  scheduleBillingAgreement,
+  type BillingAgreement,
+} from '../application/superadmin-queries'
 import { CompanyBillingVat } from './company-billing-vat'
 import { PlatformField, PlatformSelect } from './platform-form-field'
 import { PlatformMessage } from './platform-ui'
@@ -37,14 +41,27 @@ export function CompanyBillingAgreement({
   const preview = useQuery(previewOptions)
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: (agreement: BillingAgreement) => scheduleBillingAgreement(tenantId, agreement),
+    mutationFn: (agreement: BillingAgreement | { restoreCatalog: number }) =>
+      'restoreCatalog' in agreement
+        ? restoreBillingCatalog(tenantId, agreement.restoreCatalog)
+        : scheduleBillingAgreement(tenantId, agreement),
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: previewOptions.queryKey }),
         queryClient.invalidateQueries({ queryKey: subscriptionQuery(tenantId).queryKey }),
       ]),
+    onError: (_error, agreement) => {
+      if ('restoreCatalog' in agreement) {
+        void queryClient.invalidateQueries({ queryKey: billingCatalogQuery.queryKey })
+        void queryClient.invalidateQueries({ queryKey: previewOptions.queryKey })
+      }
+    },
   })
   const next = preview.data?.next ?? null
+  const fixedNet = preview.data?.fixed_net_cents ?? null
+  const catalogRate =
+    next && catalog.data?.find((rate) => rate.plan === next.plan && rate.seats === next.seats)
+  const catalogNet = next && catalogRate ? catalogQuote(catalogRate, next.period).net_cents : null
   const blocked = preview.data?.cancel_at_period_end
     ? 'Retira la cancelación antes de cambiar las condiciones.'
     : preview.data?.pending || subscriptionStatus === 'past_due'
@@ -78,6 +95,38 @@ export function CompanyBillingAgreement({
         />
         <AgreementSummary label="Próximo cobro u oferta" terms={next} rates={catalog.data} />
       </dl>
+      {next && fixedNet !== null ? (
+        <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">
+              Precio pactado: {formatEuros(fixedNet)} sin IVA / {periodUnit(next.period)}
+            </p>
+            {catalogNet !== null ? (
+              <p className="text-muted-foreground">
+                Catálogo: {formatEuros(catalogNet)} sin IVA / {periodUnit(next.period)}. Se aplica
+                al próximo cobro u oferta, sin cargo inmediato.
+              </p>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            isDisabled={
+              Boolean(blocked) ||
+              catalogNet === null ||
+              !catalog.isSuccess ||
+              !preview.isSuccess ||
+              mutation.isPending
+            }
+            onPress={() => {
+              if (catalogNet !== null) mutation.mutate({ restoreCatalog: catalogNet })
+            }}
+          >
+            Volver a tarifa de catálogo
+          </Button>
+        </div>
+      ) : null}
       {preview.isSuccess ? (
         <CompanyBillingVat
           tenantId={tenantId}
@@ -92,12 +141,13 @@ export function CompanyBillingAgreement({
         <AgreementForm
           key={
             next
-              ? `${next.plan}:${next.seats}:${next.period}:${next.base_net_cents ?? next.net_cents}`
+              ? `${next.plan}:${next.seats}:${next.period}:${next.base_net_cents ?? next.net_cents}:${fixedNet}`
               : 'new'
           }
           rates={catalog.data}
           members={members}
           terms={next}
+          fixedNet={fixedNet}
           moduleMonthly={preview.data.module_monthly_cents ?? 0}
           moduleYearly={preview.data.module_yearly_cents ?? 0}
           vatPercent={preview.data.vat_percent}
@@ -120,7 +170,10 @@ export function CompanyBillingAgreement({
           className="h-auto"
           state={{
             status: 'success',
-            message: 'Condiciones guardadas. No se ha realizado ningún cobro.',
+            message:
+              'restoreCatalog' in mutation.variables
+                ? 'Tarifa de catálogo restaurada para el próximo cobro. No se ha realizado ningún cobro.'
+                : 'Condiciones guardadas. No se ha realizado ningún cobro.',
           }}
         />
       ) : null}
@@ -153,6 +206,7 @@ function AgreementForm({
   rates,
   members,
   terms,
+  fixedNet,
   moduleMonthly,
   moduleYearly,
   vatPercent,
@@ -163,6 +217,7 @@ function AgreementForm({
   rates: CatalogRate[]
   members: number
   terms: BillingTerms | null
+  fixedNet: number | null
   moduleMonthly: number
   moduleYearly: number
   vatPercent: number
@@ -177,12 +232,9 @@ function AgreementForm({
   const [seats, setSeats] = useState(initialRate?.seats ?? 0)
   const [period, setPeriod] = useState<Interval>(terms?.period ?? 'month')
   const base = terms?.base_net_cents ?? terms?.net_cents
-  const [mode, setMode] = useState(
-    terms && initialRate && base !== catalogQuote(initialRate, terms.period).net_cents
-      ? 'agreed'
-      : 'catalog',
-  )
-  const [price, setPrice] = useState(base === undefined ? '' : centsToInput(base))
+  const [mode, setMode] = useState(fixedNet !== null ? 'agreed' : 'catalog')
+  const initialPrice = fixedNet ?? base
+  const [price, setPrice] = useState(initialPrice === undefined ? '' : centsToInput(initialPrice))
   const rate = rates.find((entry) => entry.seats === seats)
   const agreed = mode === 'agreed'
   const raw = price.trim()
@@ -296,9 +348,9 @@ function AgreementForm({
             'Completa las condiciones para ver el importe previsto.'
           )}
         </output>
-        <p className="text-muted-foreground text-xs">
-          Los módulos de pago se añaden al precio base. El cambio se aplica al contratar o al
-          renovar, sin cobro inmediato.
+        <p className="text-muted-foreground text-sm">
+          Los módulos se añaden al precio base. Si pactas un precio, se mantiene al cambiar de
+          capacidad. Los cambios se aplican al contratar o renovar, sin cobro inmediato.
         </p>
         <Button type="submit" className="min-h-11" isDisabled={!canSave}>
           Guardar condiciones

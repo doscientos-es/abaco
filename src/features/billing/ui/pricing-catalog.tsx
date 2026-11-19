@@ -13,6 +13,7 @@ import {
   planInfo,
   smallestRateFor,
   type BillingTerms,
+  type FixedBillingPrice,
   type Interval,
   type PlanInfo,
 } from '../domain/plans'
@@ -23,17 +24,20 @@ export function PricingCatalog({
   actualMembers = 1,
   showModuleCatalog = true,
   vatPercent,
+  fixedPrice,
   renderAction,
 }: {
   actualMembers?: number
   showModuleCatalog?: boolean
   vatPercent?: number
+  fixedPrice?: FixedBillingPrice | undefined
   renderAction?: (terms: BillingTerms, plan: PlanInfo) => ReactNode
 }) {
   const catalog = useQuery(billingCatalogQuery)
   const addons = useQuery({ ...moduleCatalogQuery, enabled: showModuleCatalog })
   const headcountId = useId()
-  const [period, setPeriod] = useState<Interval>('month')
+  const [selectedPeriod, setPeriod] = useState<Interval>('month')
+  const period = fixedPrice?.period ?? selectedPeriod
   const [headcount, setHeadcount] = useState<string>()
   const requested = Number(headcount ?? actualMembers)
   const members = Math.max(actualMembers, Number.isInteger(requested) ? requested : actualMembers)
@@ -72,15 +76,22 @@ export function PricingCatalog({
             onChange={(event) => setHeadcount(event.currentTarget.value)}
           />
         </label>
-        <Tabs
-          selectedKey={period}
-          onSelectionChange={(key) => setPeriod(key === 'year' ? 'year' : 'month')}
-        >
-          <TabsList aria-label="Periodo de pago">
-            <TabsTrigger id="month">Mensual</TabsTrigger>
-            <TabsTrigger id="year">Anual · 2 meses de ahorro</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {fixedPrice ? (
+          <p className="text-muted-foreground max-w-md text-sm">
+            Tu precio base pactado se mantiene al cambiar de capacidad. Para cambiar el periodo de
+            facturación, contacta con Ábaco.
+          </p>
+        ) : (
+          <Tabs
+            selectedKey={period}
+            onSelectionChange={(key) => setPeriod(key === 'year' ? 'year' : 'month')}
+          >
+            <TabsList aria-label="Periodo de pago">
+              <TabsTrigger id="month">Mensual</TabsTrigger>
+              <TabsTrigger id="year">Anual · 2 meses de ahorro</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </div>
       {members > MAX_SCALE_PLAN_MEMBERS ? (
         <CustomPlanCard />
@@ -91,7 +102,7 @@ export function PricingCatalog({
               id === 'scale' ? scaleRate : catalog.data.find((option) => option.plan === id)
             const plan = planInfo(id, catalog.data)
             if (!rate || !plan) return null
-            const terms = catalogQuote(rate, period, vatPercent)
+            const terms = catalogQuote(rate, period, vatPercent, fixedPrice?.netCents)
             return (
               <PlanOptionCard
                 key={plan.id}
@@ -111,9 +122,13 @@ export function PricingCatalog({
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {scale.map((rate) => (
               <li key={rate.seats}>
-                Hasta {rate.seats} personas:{' '}
-                {formatEuros(catalogQuote(rate, period).net_cents / 100)}{' '}
-                {period === 'year' ? 'al año' : 'al mes'}, sin IVA
+                Hasta {rate.seats} personas
+                {!fixedPrice ? (
+                  <>
+                    : {formatEuros(catalogQuote(rate, period).net_cents / 100)}{' '}
+                    {period === 'year' ? 'al año' : 'al mes'}, sin IVA
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>

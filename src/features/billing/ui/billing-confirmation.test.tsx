@@ -18,6 +18,7 @@ const fixtures = vi.hoisted(() => ({
   members: 16,
   moduleYearly: 0,
   vatPercent: 21,
+  managed: false,
 }))
 const terms: BillingTerms = {
   plan: 'scale',
@@ -40,7 +41,12 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data:
       queryKey[0] === 'subscription'
-        ? { status: fixtures.status, plan: 'scale', isComplimentary: fixtures.courtesy }
+        ? {
+            status: fixtures.status,
+            plan: 'scale',
+            isComplimentary: fixtures.courtesy,
+            nextPlan: fixtures.managed ? 'scale' : null,
+          }
         : queryKey[0] === 'billing-preview'
           ? {
               current,
@@ -48,6 +54,7 @@ vi.mock('@tanstack/react-query', () => ({
               pending: fixtures.pending,
               module_yearly_cents: fixtures.moduleYearly,
               vat_percent: fixtures.vatPercent,
+              next_managed: fixtures.managed,
             }
           : queryKey[0] === 'billing-catalog'
             ? undefined
@@ -105,6 +112,7 @@ describe('billing confirmation', () => {
     fixtures.courtesy = false
     fixtures.moduleYearly = 0
     fixtures.vatPercent = 21
+    fixtures.managed = false
     selection = null
     fixtures.state.mockImplementation((initial: unknown) => {
       if (typeof initial === 'function') return [null, vi.fn()]
@@ -181,6 +189,15 @@ describe('billing confirmation', () => {
     fixtures.members = 26
     render()
     expect(action('No cubre a tu equipo').isDisabled).toBe(true)
+  })
+
+  it('shows the upcoming charge without offering to undo a platform agreement', () => {
+    fixtures.status = 'active'
+    fixtures.managed = true
+    const html = render()
+    expect(html).toContain('Próxima renovación')
+    expect(html).toContain('Ábaco ha programado las próximas condiciones')
+    expect(action('Retirar el cambio programado')).toBeUndefined()
   })
 
   it('does not offer payments for a courtesy company', () => {

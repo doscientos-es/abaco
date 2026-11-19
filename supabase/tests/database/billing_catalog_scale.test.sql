@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(53);
+select plan(63);
 
 insert into auth.users (id,email) values
   ('ed000000-0000-4000-8000-000000000001','bill-admin@example.test'),
@@ -29,6 +29,10 @@ select throws_ok($$select public.superadmin_schedule_billing('ed000000-0000-4000
   '42501','No autorizado','A tenant admin cannot set an agreed price');
 select throws_ok($$update public.tenants set billing_net_cents = 1 where id = 'ed000000-0000-4000-8000-000000000011'$$,
   '42501','El plan se gestiona desde Facturación','Direct tenant edits cannot change the charge');
+select throws_ok($$update public.tenants set billing_fixed_net_cents = 1 where id = 'ed000000-0000-4000-8000-000000000011'$$,
+  '42501','El plan se gestiona desde Facturación','A tenant cannot write its own fixed price');
+select throws_ok($$select public.superadmin_restore_billing_catalog('ed000000-0000-4000-8000-000000000011',6900)$$,
+  '42501','No autorizado','Tenant admins cannot restore the catalogue rate');
 
 set local request.jwt.claim.sub = 'ed000000-0000-4000-8000-000000000002';
 select lives_ok($$select public.superadmin_schedule_billing('ed000000-0000-4000-8000-000000000011','scale','month',25,6100)$$,
@@ -50,7 +54,7 @@ select throws_ok($$select public.billing_manage('ed000000-0000-4000-8000-0000000
 select is(public.apply_billing_payment('4321ABCD',true,'0000','test-reference'), 'succeeded','Settlement applies contracted Scale terms');
 select is(public.apply_billing_payment('4321ABCD',true,'0000','test-reference'), 'duplicate','Duplicate settlement is idempotent');
 select throws_ok($$select public.billing_manage('ed000000-0000-4000-8000-000000000011','ed000000-0000-4000-8000-000000000001',
-  'change','solo','month',1,2420,'4321ABCF')$$,'P0403','El plan no cubre el número de personas con acceso',
+  'change','solo','month',1,7381,'4321ABCF')$$,'P0403','El plan no cubre el número de personas con acceso',
   'Server rejects a downgrade that would leave members over the limit');
 
 reset role;
@@ -72,10 +76,14 @@ set local role service_role;
 select is(public.apply_billing_payment('4321ABCG',true,'0000',null),'succeeded','Existing renewal settles normally');
 
 set local role authenticated;
-select lives_ok($$select public.superadmin_schedule_billing('ed000000-0000-4000-8000-000000000011','scale','month',25,null)$$,
+select throws_ok($$select public.superadmin_restore_billing_catalog('ed000000-0000-4000-8000-000000000011',6900)$$,
+  'P0001','La tarifa de catálogo ha cambiado. Actualiza y confirma de nuevo','Cannot restore a price that has changed');
+select lives_ok($$select public.superadmin_restore_billing_catalog('ed000000-0000-4000-8000-000000000011',7900)$$,
   'Platform staff can restore the catalogue rate');
 select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->'next'->>'net_cents')::integer,
   7900,'Restoring the catalogue uses its current price');
+select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->>'fixed_net_cents')::integer,
+  null::integer,'Restoration clears the persistent override');
 select lives_ok($$select public.superadmin_schedule_billing('ed000000-0000-4000-8000-000000000011','scale','year',25,59000)$$,
   'Platform staff can replace the scheduled rate and switch an active subscriber to annual billing');
 select is((public.billing_preview('ed000000-0000-4000-8000-000000000011')->'current'->>'net_cents')::integer,
@@ -89,6 +97,9 @@ select is((select count(*) from public.billing_payments where tenant_id='ed00000
 update public.tenants set current_period_end=now()-interval '1 day' where id='ed000000-0000-4000-8000-000000000011';
 update public.billing_payments set created_at=now()-interval '2 days' where tenant_id='ed000000-0000-4000-8000-000000000011';
 set local role service_role;
+select throws_ok($$select public.billing_manage('ed000000-0000-4000-8000-000000000011','ed000000-0000-4000-8000-000000000001',
+  'undo',null,null,null,null,null)$$,'P0001','Contacta con Ábaco para modificar las condiciones programadas',
+  'A tenant cannot undo conditions scheduled by the platform');
 select is(public.billing_reserve_renewal('ed000000-0000-4000-8000-000000000011','4321ABCI'),71390,
   'The next renewal reserves exactly the newly agreed annual price');
 select is(public.apply_billing_payment('4321ABCI',true,'0000',null),'succeeded','The new terms settle successfully');
@@ -131,6 +142,22 @@ select results_eq($$select vat_percent, net_cents, amount_cents from public.bill
   $$values (21,59000,71390),(0,78000,78000)$$,'Each payment retains its own VAT for the receipt');
 select is((select billing_paid_vat_percent from public.tenants where id='ed000000-0000-4000-8000-000000000011'),
   0,'Once paid, the paid period reflects the new VAT');
+select results_eq($$select billing_fixed_net_cents,next_billing_managed from public.tenants
+    where id='ed000000-0000-4000-8000-000000000011'$$,
+  $$values (59000,false)$$,'Settlement retains the fixed price and clears the managed change');
+
+set local role service_role;
+select throws_ok($$select public.billing_manage('ed000000-0000-4000-8000-000000000011','ed000000-0000-4000-8000-000000000001',
+  'change','scale','month',50,59000,null)$$,'P0001','Contacta con Ábaco para cambiar el periodo de una tarifa pactada',
+  'The fixed annual price cannot be applied to monthly billing');
+select is(public.billing_manage('ed000000-0000-4000-8000-000000000011','ed000000-0000-4000-8000-000000000001',
+  'change','scale','year',50,78000,null),78000,'A capacity change keeps the fixed base and module surcharge');
+select is(public.billing_manage('ed000000-0000-4000-8000-000000000011','ed000000-0000-4000-8000-000000000001',
+  'undo',null,null,null,null,null),0,'The tenant can undo its own capacity change');
+reset role;
+select results_eq($$select billing_fixed_net_cents,next_plan from public.tenants
+    where id='ed000000-0000-4000-8000-000000000011'$$,
+  $$values (59000,null::text)$$,'Undo leaves the fixed price unchanged');
 
 insert into public.memberships (tenant_id,user_id,role) values
   ('ed000000-0000-4000-8000-000000000012','ed000000-0000-4000-8000-000000000001','admin');

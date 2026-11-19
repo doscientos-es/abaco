@@ -14,20 +14,28 @@ import { modules, type ModuleRate } from '../domain/modules'
 
 type Selection = { rate: ModuleRate; enabled: boolean; undo: boolean }
 
-const price = (monthly: number, yearly: number) =>
-  `+${formatEuros(monthly)}/mes o +${formatEuros(yearly)}/año, sin IVA.`
+type ModulePeriod = 'month' | 'year'
+type ModulePrice = Pick<ModuleRate, 'monthly_cents' | 'yearly_cents'>
+
+function price({ monthly_cents, yearly_cents }: ModulePrice, period?: ModulePeriod) {
+  if (period === 'month') return `+${formatEuros(monthly_cents)}/mes, sin IVA.`
+  if (period === 'year') return `+${formatEuros(yearly_cents)}/año, sin IVA.`
+  return `+${formatEuros(monthly_cents)}/mes o +${formatEuros(yearly_cents)}/año, sin IVA.`
+}
 
 export function ModuleSubscriptions({
   tenantId,
   active,
   courtesy = false,
   blocked = false,
+  period,
   onChanged,
 }: {
   tenantId: string
   active: boolean
   courtesy?: boolean
   blocked?: boolean
+  period?: ModulePeriod | undefined
   onChanged: () => void | Promise<unknown>
 }) {
   const catalog = useQuery(moduleCatalogQuery)
@@ -80,6 +88,7 @@ export function ModuleSubscriptions({
             const pending = item?.next_enabled ?? null
             const module = modules[rate.code]
             const action = pending !== null ? 'Deshacer cambio' : enabled ? 'Desactivar' : 'Activar'
+            const modulePrice = item && (enabled || pending === true) ? item : rate
             return (
               <li
                 key={rate.code}
@@ -90,18 +99,11 @@ export function ModuleSubscriptions({
                     {module.name} · {enabled ? 'Activo' : 'Inactivo'}
                   </p>
                   <p className="text-muted-foreground">{module.description}</p>
-                  {courtesy ||
-                  ((enabled || pending === true) &&
-                    item?.monthly_cents === 0 &&
-                    item.yearly_cents === 0) ? (
-                    <p>Sin suplemento.</p>
-                  ) : (
-                    <p>
-                      {item && (enabled || pending === true)
-                        ? price(item.monthly_cents, item.yearly_cents)
-                        : price(rate.monthly_cents, rate.yearly_cents)}
-                    </p>
-                  )}
+                  <p>
+                    {courtesy || (modulePrice.monthly_cents === 0 && modulePrice.yearly_cents === 0)
+                      ? 'Sin suplemento.'
+                      : price(modulePrice, period)}
+                  </p>
                   {pending !== null ? <p>{pending ? 'Alta' : 'Baja'} programada.</p> : null}
                 </div>
                 <Button
@@ -134,7 +136,7 @@ export function ModuleSubscriptions({
                 : 'Desactivar'}{' '}
             {modules[selection.rate.code].name}.
             {!courtesy && !selection.undo && selection.enabled
-              ? ` ${price(selection.rate.monthly_cents, selection.rate.yearly_cents)}`
+              ? ` ${price(selection.rate, period)}`
               : null}
           </p>
           <div className="flex gap-2">
