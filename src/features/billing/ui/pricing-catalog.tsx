@@ -33,7 +33,7 @@ export function PricingCatalog({
   fixedPrice?: FixedBillingPrice | undefined
   renderAction?: (terms: BillingTerms, plan: PlanInfo) => ReactNode
 }) {
-  const catalog = useQuery(billingCatalogQuery)
+  const catalog = useQuery({ ...billingCatalogQuery, refetchOnMount: 'always' })
   const addons = useQuery({ ...moduleCatalogQuery, enabled: showModuleCatalog })
   const headcountId = useId()
   const [selectedPeriod, setPeriod] = useState<Interval>('month')
@@ -56,6 +56,7 @@ export function PricingCatalog({
   const recommended = smallestRateFor(catalog.data, members)
   const scale = catalog.data.filter((rate) => rate.plan === 'scale')
   const scaleRate = smallestRateFor(scale, members) ?? scale.at(-1)
+  const scalePlan = planInfo('scale', scale)
 
   return (
     <div className="space-y-5">
@@ -100,7 +101,7 @@ export function PricingCatalog({
           {paidPlans.map((id) => {
             const rate =
               id === 'scale' ? scaleRate : catalog.data.find((option) => option.plan === id)
-            const plan = planInfo(id, catalog.data)
+            const plan = id === 'scale' ? scalePlan : planInfo(id, catalog.data)
             if (!rate || !plan) return null
             const terms = catalogQuote(rate, period, vatPercent, fixedPrice?.netCents)
             return (
@@ -116,9 +117,11 @@ export function PricingCatalog({
           })}
         </div>
       )}
-      {scale.length > 0 ? (
+      {scaleRate && scalePlan ? (
         <details className="border-border rounded-lg border p-3 text-sm">
-          <summary className="cursor-pointer font-medium">Ver todos los tramos de Escala</summary>
+          <summary className="cursor-pointer font-medium">
+            Ver todos los tramos de {scalePlan.name}
+          </summary>
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {scale.map((rate) => (
               <li key={rate.seats}>

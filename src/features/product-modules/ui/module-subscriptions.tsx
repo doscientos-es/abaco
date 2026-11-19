@@ -1,6 +1,6 @@
 import { Button } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 
@@ -10,9 +10,24 @@ import {
   scheduleModule,
   tenantModulesQuery,
 } from '../application/module-queries'
-import { modules, type ModuleRate } from '../domain/modules'
+import {
+  modules,
+  type ModuleCode,
+  type ModuleRate,
+  type ModuleSubscription,
+} from '../domain/modules'
 
 type Selection = { rate: ModuleRate; enabled: boolean; undo: boolean }
+type ModuleNavigation =
+  | {
+      renderRow: (summary: {
+        code: ModuleCode
+        name: string
+        status: string
+        surcharge: string
+      }) => ReactNode
+    }
+  | { code: ModuleCode; editing: boolean; editLink: ReactNode }
 
 type ModulePeriod = 'month' | 'year'
 type ModulePrice = Pick<ModuleRate, 'monthly_cents' | 'yearly_cents'>
@@ -23,6 +38,12 @@ function price({ monthly_cents, yearly_cents }: ModulePrice, period?: ModulePeri
   return `+${formatEuros(monthly_cents)}/mes o +${formatEuros(yearly_cents)}/año, sin IVA.`
 }
 
+function changeFor(rate: ModuleRate, subscription: ModuleSubscription | undefined): Selection {
+  const enabled = subscription?.enabled ?? false
+  const undo = subscription?.next_enabled != null
+  return { rate, enabled: undo ? enabled : !enabled, undo }
+}
+
 export function ModuleSubscriptions({
   tenantId,
   active,
@@ -30,6 +51,7 @@ export function ModuleSubscriptions({
   blocked = false,
   period,
   onChanged,
+  navigation,
 }: {
   tenantId: string
   active: boolean
@@ -37,6 +59,7 @@ export function ModuleSubscriptions({
   blocked?: boolean
   period?: ModulePeriod | undefined
   onChanged: () => void | Promise<unknown>
+  navigation?: ModuleNavigation
 }) {
   const catalog = useQuery(moduleCatalogQuery)
   const subscriptions = useQuery(moduleSubscriptionsQuery(tenantId))
@@ -55,13 +78,30 @@ export function ModuleSubscriptions({
     onError: () => client.invalidateQueries({ queryKey: moduleCatalogQuery.queryKey }),
   })
   const timing = active ? 'en la próxima renovación' : 'al pagar la primera cuota'
+  const detail = navigation && 'code' in navigation ? navigation : undefined
+  const listing = navigation && 'renderRow' in navigation ? navigation : undefined
+  const ready = catalog.isSuccess && subscriptions.isSuccess
+  const rates = catalog.data?.filter((rate) => !detail || rate.code === detail.code) ?? []
+  const findSubscription = (code: ModuleCode) =>
+    subscriptions.data?.find((item) => item.module_code === code)
+  const rateToEdit =
+    detail?.editing && !change.isSuccess && !blocked && ready ? rates[0] : undefined
+  const confirmation = change.isPending
+    ? change.variables
+    : rateToEdit
+      ? changeFor(rateToEdit, findSubscription(rateToEdit.code))
+      : selection
 
   return (
     <section
       aria-label="Módulos opcionales"
-      className="border-border space-y-3 rounded-lg border p-4"
+      className={
+        navigation
+          ? 'border-border bg-card space-y-3 overflow-hidden rounded-xl border p-4'
+          : 'border-border space-y-3 rounded-lg border p-4'
+      }
     >
-      <h3 className="font-semibold">Módulos opcionales</h3>
+      <h3 className="font-semibold">{detail ? modules[detail.code].name : 'Módulos opcionales'}</h3>
       <p className="text-muted-foreground text-sm">
         {courtesy
           ? 'Los cambios de cortesía son inmediatos y no generan cobros.'
@@ -72,7 +112,15 @@ export function ModuleSubscriptions({
       ) : null}
       {catalog.isPending || subscriptions.isPending ? <output>Cargando módulos…</output> : null}
       {catalog.isError || subscriptions.isError ? (
-        <p role="alert">No se pudieron consultar los módulos.</p>
+        <div className="space-y-2">
+          <p role="alert">No se pudieron consultar los módulos.</p>
+          <Button
+            variant="outline"
+            onPress={() => void Promise.all([catalog.refetch(), subscriptions.refetch()])}
+          >
+            Reintentar
+          </Button>
+        </div>
       ) : null}
       {change.error ? <p role="alert">{change.error.message}</p> : null}
       {change.isSuccess ? (
@@ -80,15 +128,44 @@ export function ModuleSubscriptions({
           {courtesy ? 'Acceso actualizado.' : 'Cambio guardado. No se ha realizado ningún cobro.'}
         </output>
       ) : null}
-      {catalog.data && subscriptions.data ? (
-        <ul className="space-y-3">
-          {catalog.data.map((rate) => {
-            const item = subscriptions.data.find(({ module_code }) => module_code === rate.code)
+      {ready && rates.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {detail
+            ? 'Este módulo no está disponible para gestionar.'
+            : 'No hay módulos opcionales disponibles.'}
+        </p>
+      ) : null}
+      {ready && rates.length > 0 ? (
+        <ul
+          className={
+            listing ? 'divide-border border-border -mx-4 -mb-4 divide-y border-t' : 'space-y-3'
+          }
+        >
+          {rates.map((rate) => {
+            const item = findSubscription(rate.code)
             const enabled = item?.enabled ?? false
             const pending = item?.next_enabled ?? null
             const module = modules[rate.code]
             const action = pending !== null ? 'Deshacer cambio' : enabled ? 'Desactivar' : 'Activar'
             const modulePrice = item && (enabled || pending === true) ? item : rate
+            const surcharge =
+              courtesy || (modulePrice.monthly_cents === 0 && modulePrice.yearly_cents === 0)
+                ? 'Sin suplemento.'
+                : price(modulePrice, period)
+            const status = enabled ? 'Activo' : 'Inactivo'
+            const scheduled =
+              pending === null ? null : pending ? 'Alta programada' : 'Baja programada'
+            if (listing)
+              return (
+                <li key={rate.code}>
+                  {listing.renderRow({
+                    code: rate.code,
+                    name: module.name,
+                    status: scheduled ? `${status} · ${scheduled}` : status,
+                    surcharge,
+                  })}
+                </li>
+              )
             return (
               <li
                 key={rate.code}
@@ -96,63 +173,63 @@ export function ModuleSubscriptions({
               >
                 <div>
                   <p className="font-medium">
-                    {module.name} · {enabled ? 'Activo' : 'Inactivo'}
+                    {detail ? `Acceso: ${status.toLowerCase()}` : `${module.name} · ${status}`}
                   </p>
                   <p className="text-muted-foreground">{module.description}</p>
-                  <p>
-                    {courtesy || (modulePrice.monthly_cents === 0 && modulePrice.yearly_cents === 0)
-                      ? 'Sin suplemento.'
-                      : price(modulePrice, period)}
-                  </p>
-                  {pending !== null ? <p>{pending ? 'Alta' : 'Baja'} programada.</p> : null}
+                  <p>{surcharge}</p>
+                  {scheduled ? <p>{scheduled}.</p> : null}
                 </div>
-                <Button
-                  variant="outline"
-                  aria-label={`${action}: ${module.name}`}
-                  isDisabled={blocked || change.isPending || Boolean(selection)}
-                  onPress={() => {
-                    change.reset()
-                    setSelection({
-                      rate,
-                      enabled: pending !== null ? enabled : !enabled,
-                      undo: pending !== null,
-                    })
-                  }}
-                >
-                  {action}
-                </Button>
+                {detail ? (
+                  !detail.editing && !blocked ? (
+                    detail.editLink
+                  ) : null
+                ) : (
+                  <Button
+                    variant="outline"
+                    aria-label={`${action}: ${module.name}`}
+                    isDisabled={blocked || change.isPending || Boolean(selection)}
+                    onPress={() => {
+                      change.reset()
+                      setSelection(changeFor(rate, item))
+                    }}
+                  >
+                    {action}
+                  </Button>
+                )}
               </li>
             )
           })}
         </ul>
       ) : null}
-      {selection ? (
-        <div className="space-y-2 text-sm" aria-live="polite">
+      {confirmation ? (
+        <div className="border-border space-y-2 border-t pt-3 text-sm" aria-live="polite">
           <p>
-            {selection.undo
+            {confirmation.undo
               ? 'Deshacer el cambio de'
-              : selection.enabled
+              : confirmation.enabled
                 ? 'Activar'
                 : 'Desactivar'}{' '}
-            {modules[selection.rate.code].name}.
-            {!courtesy && !selection.undo && selection.enabled
-              ? ` ${price(selection.rate, period)}`
+            {modules[confirmation.rate.code].name}.
+            {!courtesy && !confirmation.undo && confirmation.enabled
+              ? ` ${price(confirmation.rate, period)}`
               : null}
           </p>
           <div className="flex gap-2">
             <Button
               isDisabled={blocked || change.isPending}
-              onPress={() => change.mutate(selection)}
+              onPress={() => change.mutate(confirmation)}
             >
-              Confirmar módulo
+              {change.isPending ? 'Guardando…' : detail ? 'Guardar cambio' : 'Confirmar módulo'}
             </Button>
-            <Button
-              variant="outline"
-              isDisabled={change.isPending}
-              onPress={() => setSelection(null)}
-            >
-              Volver
-            </Button>
+            {!detail ? (
+              <Button
+                variant="outline"
+                isDisabled={change.isPending}
+                onPress={() => setSelection(null)}
+              >
+                Volver
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}

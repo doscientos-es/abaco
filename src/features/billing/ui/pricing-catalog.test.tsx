@@ -16,9 +16,6 @@ vi.mock('@doscientos/ui', () => ({
   TabsTrigger: ({ children }: { children: ReactNode }) => <button>{children}</button>,
 }))
 vi.mock('./custom-plan-card', () => ({ CustomPlanCard: () => null }))
-vi.mock('./plan-option-card', () => ({
-  PlanOptionCard: ({ children }: { children: ReactNode }) => <article>{children}</article>,
-}))
 
 function catalogClient() {
   const queryClient = new QueryClient()
@@ -42,6 +39,38 @@ function catalogClient() {
   ])
   return queryClient
 }
+
+it('renders published prices and plan copy in the public cards and capacity breakdown', () => {
+  const queryClient = catalogClient()
+  queryClient.setQueryData(billingCatalogQuery.queryKey, [
+    {
+      plan: 'scale',
+      seats: 25,
+      monthly_cents: 7250,
+      yearly_cents: 72500,
+      vat_percent: 21,
+      plan_info: {
+        name: 'Cuadrillas Plus',
+        audience: 'Para equipos en expansión',
+        benefit: 'Coordina varias cuadrillas',
+        revision: 3,
+      },
+    },
+  ])
+
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <PricingCatalog />
+    </QueryClientProvider>,
+  )
+
+  expect(html).toContain('Cuadrillas Plus, hasta 25 personas')
+  expect(html).toContain('Para equipos en expansión')
+  expect(html).toContain('Coordina varias cuadrillas')
+  expect(html).toContain('Ver todos los tramos de Cuadrillas Plus')
+  expect(html).toMatch(/Hasta 25 personas: 72,50\s*€ al mes, sin IVA/)
+  expect(html).toMatch(/87,73\s*€ con IVA, al mes/)
+})
 
 it('lists the pilot surcharge separately from the amount sent to plan checkout', () => {
   const queryClient = catalogClient()

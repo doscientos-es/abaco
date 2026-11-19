@@ -24,27 +24,57 @@ import {
   priceField,
   readCatalogUpdate,
 } from '../domain/catalog-update'
+import { planSearch, type PlatformSearch } from '../domain/platform-navigation'
 import { PlatformField } from './platform-form-field'
-import { PlatformMessage } from './platform-ui'
+import {
+  PlatformBackLink,
+  PlatformEditLink,
+  PlatformMessage,
+  PlatformRowLink,
+  platformRowMetaClass,
+  platformRowTitleClass,
+} from './platform-ui'
 
-export function PlatformCatalog() {
+export function PlatformCatalog({ search }: { search: PlatformSearch }) {
   const catalog = useQuery({ ...billingCatalogQuery, refetchOnWindowFocus: false })
-  const rates = catalog.data ?? []
-  const planIds = [...new Set(rates.map((rate) => rate.plan))]
+  const plans = new Map<CatalogRate['plan'], CatalogRate[]>()
+  for (const rate of catalog.data ?? []) {
+    const group = plans.get(rate.plan)
+    if (group) group.push(rate)
+    else plans.set(rate.plan, [rate])
+  }
+  const plan = search.plan
+  const selectedRates = plan ? plans.get(plan) : undefined
+  const display = selectedRates?.[0]?.plan_info
+  const editing = search.edicion === 'plan'
 
   return (
-    <PageStack>
+    <PageStack className="max-w-4xl">
+      {plan ? (
+        <PlatformBackLink search={editing ? planSearch(plan) : { vista: 'planes' }}>
+          {editing ? 'Volver al plan' : 'Volver a planes y precios'}
+        </PlatformBackLink>
+      ) : null}
       <PageHeader>
         <PageHeaderHeading>
-          <PageHeaderTitle>Planes y precios</PageHeaderTitle>
+          <PageHeaderTitle>
+            {editing && display ? `Editar ${display.name}` : (display?.name ?? 'Planes y precios')}
+          </PageHeaderTitle>
           <PageHeaderDescription>
-            Los cambios se publican en la página de precios y se aplican a las nuevas
-            contrataciones. No cambian las cuotas vigentes ni las condiciones ya pactadas.
+            {plan && !editing
+              ? 'Información pública y tarifas por capacidad.'
+              : 'El catálogo se publica en la página de precios. Los cambios no alteran las cuotas vigentes ni los precios pactados.'}
           </PageHeaderDescription>
         </PageHeaderHeading>
-        <Link to="/precios" className="text-primary text-sm font-medium underline">
-          Ver precios públicos
-        </Link>
+        {plan ? (
+          display && !editing && !catalog.isError ? (
+            <PlatformEditLink search={planSearch(plan, true)}>Editar plan</PlatformEditLink>
+          ) : null
+        ) : (
+          <Link to="/precios" className="text-primary text-sm font-medium underline">
+            Ver precios públicos
+          </Link>
+        )}
       </PageHeader>
       {catalog.isPending ? <output>Cargando catálogo…</output> : null}
       {catalog.isError ? (
@@ -53,11 +83,11 @@ export function PlatformCatalog() {
           onRetry={() => void catalog.refetch()}
         />
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">
-          Importes sin IVA. La tarifa anual equivale a 10 mensualidades.
-        </p>
-        {!catalog.isError ? (
+      {editing && !catalog.isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-muted-foreground text-sm">
+            Importes sin IVA. La tarifa anual equivale a 10 mensualidades.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -66,29 +96,109 @@ export function PlatformCatalog() {
           >
             {catalog.isFetching ? 'Actualizando…' : 'Recargar catálogo'}
           </Button>
-        ) : null}
-      </div>
-      {!catalog.isPending && !catalog.isError && !rates.length ? (
-        <PlatformMessage title="No hay planes en el catálogo." />
+        </div>
       ) : null}
-      {!catalog.isError && rates.some((rate) => !rate.plan_info) ? (
-        <p role="alert">Hay planes sin datos comerciales. Recarga el catálogo antes de editar.</p>
+      {!catalog.isPending && !catalog.isError && plan && (!display || !selectedRates) ? (
+        <PlatformMessage title="No se ha encontrado este plan en el catálogo." />
       ) : null}
-      <div className="grid items-start gap-4 xl:grid-cols-2">
-        {planIds.map((id) => {
-          const planRates = rates.filter((rate) => rate.plan === id)
-          const display = planRates[0]?.plan_info
-          return display ? (
-            <CatalogPlanForm
-              key={id}
-              rates={planRates}
-              display={display}
-              unavailable={catalog.isError}
-            />
-          ) : null
-        })}
-      </div>
+      {plan && display && selectedRates ? (
+        editing ? (
+          <CatalogPlanForm
+            key={plan}
+            rates={selectedRates}
+            display={display}
+            unavailable={catalog.isError}
+          />
+        ) : (
+          <CatalogPlanDetail rates={selectedRates} display={display} />
+        )
+      ) : null}
+      {!plan && !catalog.isPending && !catalog.isError ? (
+        <section
+          aria-label="Catálogo de planes"
+          className="border-border bg-card overflow-hidden rounded-xl border"
+        >
+          <div className="border-border space-y-1 border-b px-4 py-3 sm:px-5">
+            <h2 className="font-semibold">Catálogo de planes</h2>
+            <p className="text-muted-foreground text-sm">Precios sin IVA.</p>
+          </div>
+          {plans.size ? (
+            <ul className="divide-border divide-y">
+              {[...plans].map(([id, planRates]) => {
+                const info = planRates[0]?.plan_info
+                const monthly = Math.min(...planRates.map((rate) => rate.monthly_cents))
+                return (
+                  <li key={id}>
+                    <PlatformRowLink
+                      search={planSearch(id)}
+                      aside={
+                        <>
+                          {planRates.length > 1 ? (
+                            <span className={platformRowMetaClass}>Desde</span>
+                          ) : null}
+                          <span className="font-semibold tabular-nums">
+                            {formatEuros(monthly)}/mes
+                          </span>
+                        </>
+                      }
+                    >
+                      <span className={platformRowTitleClass}>{info?.name ?? id}</span>
+                      <span className={platformRowMetaClass}>
+                        {info?.audience ?? 'Sin datos comerciales'}
+                      </span>
+                    </PlatformRowLink>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <PlatformMessage title="No hay planes en el catálogo." />
+          )}
+        </section>
+      ) : null}
     </PageStack>
+  )
+}
+
+function CatalogPlanDetail({
+  rates,
+  display,
+}: {
+  rates: CatalogRate[]
+  display: NonNullable<CatalogRate['plan_info']>
+}) {
+  return (
+    <section
+      aria-label="Detalle del plan"
+      className="border-border bg-card space-y-4 rounded-xl border p-4 sm:p-5"
+    >
+      <div className="space-y-1">
+        <h2 className="font-semibold">Información pública</h2>
+        <p className="text-muted-foreground text-sm">{display.audience}</p>
+        <p className="text-sm">{display.benefit}</p>
+      </div>
+      <div className="border-border border-t pt-4">
+        <h2 className="font-semibold">Tarifas sin IVA</h2>
+        <dl className="divide-border divide-y">
+          {rates.map((rate) => (
+            <div
+              key={rate.seats}
+              className="flex flex-wrap items-baseline justify-between gap-2 py-3 text-sm"
+            >
+              <dt className="font-medium">
+                {rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`}
+              </dt>
+              <dd className="flex flex-wrap gap-x-3 tabular-nums">
+                <span>{formatEuros(rate.monthly_cents)}/mes</span>
+                <span className="text-muted-foreground">
+                  {formatEuros(rate.yearly_cents)} al año
+                </span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   )
 }
 
@@ -163,7 +273,7 @@ function CatalogPlanForm({
       className="border-border bg-card space-y-5 rounded-xl border p-4 sm:p-5"
     >
       <h2 id={titleId} className="text-lg font-semibold">
-        {display.name}
+        Información y tarifas
       </h2>
       <fieldset disabled={mutation.isPending} className="min-w-0 space-y-3">
         <legend className="pb-2 text-sm font-semibold">Información pública</legend>
@@ -241,7 +351,9 @@ function CatalogPlanForm({
         </div>
         {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
         {mutation.isSuccess ? (
-          <FormFeedback state={{ status: 'success', message: 'Plan publicado.' }} />
+          <FormFeedback
+            state={{ status: 'success', message: 'Cambios publicados en la página de precios.' }}
+          />
         ) : null}
         {mutation.error || (validation && !fieldError) ? (
           <FormFeedback

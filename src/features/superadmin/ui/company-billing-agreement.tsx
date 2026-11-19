@@ -127,7 +127,7 @@ export function CompanyBillingAgreement({
               </p>
             ) : null}
           </div>
-          {editing === 'cuota' ? (
+          {!editing ? (
             <Button
               type="button"
               variant="outline"
@@ -190,16 +190,14 @@ export function CompanyBillingAgreement({
           onSave={mutation.mutate}
         />
       ) : null}
-      {editing === 'cuota' && mutation.isPending ? (
-        <FormFeedback state={{ status: 'pending' }} />
-      ) : null}
-      {editing === 'cuota' && mutation.error ? (
+      {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
+      {mutation.error ? (
         <FormFeedback
           className="h-auto"
           state={{ status: 'error', message: mutation.error.message }}
         />
       ) : null}
-      {editing === 'cuota' && mutation.isSuccess ? (
+      {mutation.isSuccess ? (
         <FormFeedback
           className="h-auto"
           state={{

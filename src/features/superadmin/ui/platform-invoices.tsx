@@ -10,10 +10,15 @@ import { Link, useNavigate } from '@tanstack/react-router'
 
 import { formatEuros } from '@/shared/domain/money'
 
-import { platformInvoicesQuery } from '../application/platform-billing'
+import {
+  platformInvoiceQuery,
+  platformInvoicesQuery,
+  type PlatformInvoice,
+} from '../application/platform-billing'
 import {
   companyFromInvoice,
   invoiceFilters,
+  invoiceNavigation,
   invoiceSearch,
   type PlatformSearch,
 } from '../domain/platform-navigation'
@@ -21,8 +26,13 @@ import { PlatformField, PlatformSelect } from './platform-form-field'
 import {
   formatPlatformDate,
   invoiceStatusLabel,
+  platformActionClass,
+  PlatformBackLink,
   PlatformMessage,
   PlatformPagination,
+  PlatformRowLink,
+  platformRowMetaClass,
+  platformRowTitleClass,
   PlatformSearchForm,
 } from './platform-ui'
 
@@ -32,6 +42,13 @@ const invoiceLink = (value: string | null) => {
 }
 
 export function PlatformInvoices({ search, userId }: { search: PlatformSearch; userId: string }) {
+  if (search.referencia) {
+    return <PlatformInvoiceDetail search={search} userId={userId} reference={search.referencia} />
+  }
+  return <PlatformInvoiceList search={search} userId={userId} />
+}
+
+function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userId: string }) {
   const page = search.page ?? 1
   const q = search.q ?? ''
   const filter = search.factura
@@ -96,53 +113,26 @@ export function PlatformInvoices({ search, userId }: { search: PlatformSearch; u
           <>
             {invoices.data.rows.length ? (
               <ul className="divide-border divide-y">
-                {invoices.data.rows.map((invoice) => {
-                  const url = invoice.invoice_number
-                    ? invoiceLink(invoice.invoice_portal_url)
-                    : null
-                  return (
-                    <li
-                      key={invoice.id}
-                      className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
-                    >
-                      <div className="min-w-0 space-y-1">
-                        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 break-words">
-                          <strong>{invoice.invoice_number ?? 'Factura sin número'}</strong>
-                          <Link
-                            to="/superadmin"
-                            search={companyFromInvoice(search, invoice.tenant_id)}
-                            className="text-primary underline"
-                          >
-                            {invoice.company_name}
-                          </Link>
-                        </p>
-                        <p className="text-muted-foreground">
-                          {invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          Cobro del {formatPlatformDate(invoice.paid_at)} · Ref.{' '}
-                          {invoice.merchant_order}
-                        </p>
-                      </div>
-                      <div className="flex items-baseline gap-3 sm:flex-col sm:items-end sm:gap-1">
+                {invoices.data.rows.map((invoice) => (
+                  <li key={invoice.id}>
+                    <PlatformRowLink
+                      search={{ ...search, referencia: invoice.merchant_order }}
+                      aside={
                         <strong className="tabular-nums">
                           {formatEuros(invoice.amount_cents)}
                         </strong>
-                        {url ? (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary underline"
-                            aria-label={`Abrir factura ${invoice.invoice_number ?? ''} (nueva pestaña)`}
-                          >
-                            Abrir factura
-                          </a>
-                        ) : null}
-                      </div>
-                    </li>
-                  )
-                })}
+                      }
+                    >
+                      <span className={platformRowTitleClass}>
+                        {invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`}
+                      </span>
+                      <span className={platformRowMetaClass}>
+                        {invoice.company_name} ·{' '}
+                        {invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)}
+                      </span>
+                    </PlatformRowLink>
+                  </li>
+                ))}
               </ul>
             ) : (
               <PlatformMessage title={page > 1 ? 'No hay más facturas' : 'No encontramos facturas'}>
@@ -161,5 +151,93 @@ export function PlatformInvoices({ search, userId }: { search: PlatformSearch; u
         ) : null}
       </section>
     </PageStack>
+  )
+}
+
+function PlatformInvoiceDetail({
+  search,
+  userId,
+  reference,
+}: {
+  search: PlatformSearch
+  userId: string
+  reference: string
+}) {
+  const query = useQuery(platformInvoiceQuery(userId, reference))
+  const invoice = query.data
+  const url = invoice?.invoice_number ? invoiceLink(invoice.invoice_portal_url) : null
+
+  return (
+    <PageStack className="max-w-3xl">
+      <PlatformBackLink search={invoiceNavigation(search)}>Volver a facturas</PlatformBackLink>
+      <PageHeader>
+        <PageHeaderHeading>
+          <PageHeaderTitle>{invoice?.invoice_number ?? 'Detalle de factura'}</PageHeaderTitle>
+          <PageHeaderDescription>
+            Las facturas de suscripción se emiten y gestionan en Backoffice.
+          </PageHeaderDescription>
+        </PageHeaderHeading>
+        {url && !query.isError ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className={platformActionClass}
+            aria-label={`Abrir factura ${invoice?.invoice_number} (nueva pestaña)`}
+          >
+            Abrir factura
+          </a>
+        ) : null}
+      </PageHeader>
+      {query.isPending ? (
+        <output>Cargando factura…</output>
+      ) : query.isError ? (
+        <PlatformMessage
+          title="No se pudo cargar la factura."
+          onRetry={() => void query.refetch()}
+        />
+      ) : invoice ? (
+        <InvoiceFacts invoice={invoice} search={search} />
+      ) : (
+        <PlatformMessage title="No se ha encontrado la factura." />
+      )}
+    </PageStack>
+  )
+}
+
+function InvoiceFacts({ invoice, search }: { invoice: PlatformInvoice; search: PlatformSearch }) {
+  return (
+    <dl className="border-border bg-card grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2 sm:p-5">
+      <div>
+        <dt className="text-muted-foreground">Empresa</dt>
+        <dd className="mt-1 font-medium">
+          <Link
+            to="/superadmin"
+            search={companyFromInvoice(search, invoice.tenant_id)}
+            className="text-primary underline"
+          >
+            {invoice.company_name}
+          </Link>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-muted-foreground">Estado de emisión y envío</dt>
+        <dd className="mt-1 font-medium">
+          {invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-muted-foreground">Fecha del cobro</dt>
+        <dd className="mt-1 font-medium">{formatPlatformDate(invoice.paid_at)}</dd>
+      </div>
+      <div>
+        <dt className="text-muted-foreground">Importe cobrado</dt>
+        <dd className="mt-1 font-medium tabular-nums">{formatEuros(invoice.amount_cents)}</dd>
+      </div>
+      <div>
+        <dt className="text-muted-foreground">Referencia bancaria</dt>
+        <dd className="mt-1 font-medium">{invoice.merchant_order}</dd>
+      </div>
+    </dl>
   )
 }

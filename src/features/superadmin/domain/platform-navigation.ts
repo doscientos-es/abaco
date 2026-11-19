@@ -38,16 +38,20 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
   const section = companySections.find((item) => item === raw.seccion)
   const pagination = Number.isInteger(page) && page > 1 && page <= platformMaxPage ? { page } : {}
   const factura = invoiceFilters.find((filter) => filter === raw.factura)
+  const reference =
+    typeof raw.referencia === 'string'
+      ? raw.referencia
+      : typeof raw.referencia === 'number' && Number.isSafeInteger(raw.referencia)
+        ? String(raw.referencia)
+        : ''
+  // Redsys orders start with four digits; the database enforces this format.
+  const referencia = /^[0-9]{4}[a-z0-9]{4,8}$/i.test(reference) ? reference : undefined
 
   if (raw.vista === 'planes') {
     const plan = paidPlans.find((item) => item === raw.plan)
     return plan ? planSearch(plan, raw.edicion === 'plan') : { vista: 'planes' }
   }
   if (raw.vista === 'facturas') {
-    const referencia =
-      typeof raw.referencia === 'string' && /^[a-z0-9-]{4,40}$/i.test(raw.referencia)
-        ? raw.referencia
-        : undefined
     return { ...invoiceSearch(q, factura, pagination.page), ...(referencia && { referencia }) }
   }
 
@@ -75,6 +79,7 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
       raw.origen === 'facturas' && {
         origen: 'facturas',
         ...(factura && { factura }),
+        ...(referencia && { referencia }),
       }),
   }
 }
@@ -118,7 +123,7 @@ export const invoiceSearch = (q: string, factura?: InvoiceFilter, page = 1): Pla
 })
 
 export function companyFromInvoice(search: PlatformSearch, tenantId: string): PlatformSearch {
-  const { q, page, factura } = search
+  const { q, page, factura, referencia } = search
   return {
     empresa: tenantId,
     seccion: 'pagos',
@@ -126,6 +131,15 @@ export function companyFromInvoice(search: PlatformSearch, tenantId: string): Pl
     ...(q && { q }),
     ...(page && { page }),
     ...(factura && { factura }),
+    ...(referencia && { referencia }),
+  }
+}
+
+export function companyBackSearch(search: PlatformSearch): PlatformSearch {
+  if (search.origen !== 'facturas') return directorySearch(search)
+  return {
+    ...invoiceNavigation(search),
+    ...(search.referencia && { referencia: search.referencia }),
   }
 }
 

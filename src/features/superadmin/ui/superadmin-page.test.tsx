@@ -15,6 +15,17 @@ const company = {
   billing_interval: 'year',
   is_complimentary: false,
 }
+const invoice = {
+  id: 'pay-1',
+  tenant_id: tenantId,
+  company_name: company.name,
+  invoice_number: 'FA-2030-01',
+  invoice_status: 'sent',
+  merchant_order: '0123AbCd',
+  amount_cents: 3400,
+  paid_at: '2030-07-15T12:00:00Z',
+  invoice_portal_url: 'https://example.test/factura',
+}
 const state = vi.hoisted(() => ({
   allowed: false,
   queries: [] as unknown[][],
@@ -98,22 +109,13 @@ vi.mock('@tanstack/react-query', () => ({
     if (queryKey[0] === 'platform-invoices') {
       return {
         data: {
-          rows: [
-            {
-              id: 'pay-1',
-              tenant_id: tenantId,
-              company_name: company.name,
-              invoice_number: 'FA-2030-01',
-              invoice_status: 'sent',
-              merchant_order: 'REF-2030',
-              amount_cents: 3400,
-              paid_at: '2030-07-15T12:00:00Z',
-              invoice_portal_url: 'https://example.test/factura',
-            },
-          ],
+          rows: [invoice],
           hasMore: true,
         },
       }
+    }
+    if (queryKey[0] === 'platform-invoice') {
+      return { data: queryKey[2] === invoice.merchant_order ? invoice : null }
     }
     if (queryKey[0] === 'billing-preview') return { data: { pending: state.pendingPayment } }
     if (queryKey[0] === 'platform-payment-summary') {
@@ -154,6 +156,7 @@ describe('platform administration navigation', () => {
   it.each<PlatformSearch>([
     { empresa: tenantId, seccion: 'pagos' },
     { vista: 'facturas' },
+    { vista: 'facturas', referencia: invoice.merchant_order },
     { vista: 'planes' },
   ])('does not request platform data without access: %j', (search) => {
     const html = renderToStaticMarkup(<SuperadminPage search={search} />)
@@ -210,7 +213,7 @@ describe('platform administration navigation', () => {
     ])
   })
 
-  it('loads a filtered invoice page for the platform user and links to the company and invoice', () => {
+  it('links a filtered invoice list to the read-only detail without opening the portal', () => {
     state.allowed = true
     const html = renderToStaticMarkup(
       <SuperadminPage search={{ vista: 'facturas', q: 'FA', factura: 'issued', page: 2 }} />,
@@ -220,10 +223,36 @@ describe('platform administration navigation', () => {
       ['platform-invoices', 'platform-user', 'FA', 2, 'issued'],
     ])
     expect(html).toContain('FA-2030-01')
-    expect(html).toContain('REF-2030')
     expect(html).toContain('Correo aceptado por el proveedor')
+    expect(html).toContain(
+      `vista=facturas&amp;q=FA&amp;factura=issued&amp;page=2&amp;referencia=${invoice.merchant_order}`,
+    )
+    expect(html).not.toContain('href="https://example.test/factura"')
+  })
+
+  it('opens an invoice detail directly and retains the original list and company links', () => {
+    state.allowed = true
+    const search = {
+      vista: 'facturas',
+      q: 'FA',
+      factura: 'issued',
+      page: 2,
+      referencia: invoice.merchant_order,
+    } as const
+    const html = renderToStaticMarkup(<SuperadminPage search={search} />)
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['platform-invoice', 'platform-user', invoice.merchant_order],
+    ])
+    expect(html).toContain('Referencia bancaria')
+    expect(html).toContain(invoice.merchant_order)
     expect(html).toContain(`empresa=${tenantId}&amp;seccion=pagos`)
-    expect(html).toContain('origen=facturas&amp;q=FA&amp;page=2&amp;factura=issued')
+    expect(html).toContain(
+      `origen=facturas&amp;q=FA&amp;page=2&amp;factura=issued&amp;referencia=${invoice.merchant_order}`,
+    )
+    expect(html).toContain(
+      'href="/superadmin?vista=facturas&amp;q=FA&amp;factura=issued&amp;page=2"',
+    )
     expect(html).toContain('href="https://example.test/factura"')
   })
 
@@ -240,11 +269,23 @@ describe('platform administration navigation', () => {
     expect(html).toContain('aria-label="Secciones de la empresa"')
   })
 
-  it('loads the editor with the same published catalog used in customer pricing', () => {
+  it('shows the published catalog as a list, then a plan detail, then an explicit editor', () => {
     state.allowed = true
-    const html = renderToStaticMarkup(<SuperadminPage search={{ vista: 'planes' }} />)
+    const list = renderToStaticMarkup(<SuperadminPage search={{ vista: 'planes' }} />)
     expect(state.queries).toEqual([['platform-access', 'platform-user'], ['billing-catalog']])
-    expect(html).toContain('Equipo Plus')
+    expect(list).toContain('Equipo Plus')
+    expect(list).toContain('href="/precios"')
+    expect(list).toContain('href="/superadmin?vista=planes&amp;plan=team"')
+    expect(list).not.toContain('<input')
+
+    const plan = { vista: 'planes', plan: 'team' } as const
+    const detail = renderToStaticMarkup(<SuperadminPage search={plan} />)
+    expect(detail).toContain('Coordina el equipo')
+    expect(detail).toMatch(/349,00\s*€ al año/)
+    expect(detail).toContain('href="/superadmin?vista=planes&amp;plan=team&amp;edicion=plan"')
+    expect(detail).not.toContain('<input')
+
+    const html = renderToStaticMarkup(<SuperadminPage search={{ ...plan, edicion: 'plan' }} />)
     expect(html).toContain('value="34,90"')
     expect(html).toMatch(/349,00\s*€ al año/)
     const priceId = /<label\b[^>]*for="([^"]+)"[^>]*>Hasta 5 personas · €\/mes<\/label>/.exec(
@@ -253,7 +294,7 @@ describe('platform administration navigation', () => {
     expect(priceId).toBeDefined()
     expect(html).toContain(`aria-describedby="${priceId}-hint"`)
     expect(html).toContain('placeholder="Ej. 34,90"')
-    expect(html).toContain('href="/precios"')
+    expect(html).toContain('Volver al plan')
   })
 
   it('handles a company that no longer exists without requesting its payments', () => {

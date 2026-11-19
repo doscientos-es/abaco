@@ -39,7 +39,7 @@ export function SuperadminPage({ search }: { search: PlatformSearch }) {
   return (
     <PlatformShell session={session} search={search}>
       {search.vista === 'planes' ? (
-        <PlatformCatalog />
+        <PlatformCatalog search={search} />
       ) : search.vista === 'facturas' && session ? (
         <PlatformInvoices search={search} userId={session.userId} />
       ) : search.empresa ? (

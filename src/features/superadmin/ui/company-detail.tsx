@@ -14,8 +14,7 @@ import { formatEuros } from '@/shared/domain/money'
 
 import type { PlatformCompany } from '../application/superadmin-queries'
 import {
-  directorySearch,
-  invoiceNavigation,
+  companyBackSearch,
   companySectionSearch,
   withoutEditor,
   type PlatformSearch,
@@ -38,8 +37,12 @@ import {
 export function CompanyBackLink({ search }: { search: PlatformSearch }) {
   const fromInvoices = search.origen === 'facturas'
   return (
-    <PlatformBackLink search={fromInvoices ? invoiceNavigation(search) : directorySearch(search)}>
-      {fromInvoices ? 'Volver a facturas' : 'Volver a empresas'}
+    <PlatformBackLink search={companyBackSearch(search)}>
+      {!fromInvoices
+        ? 'Volver a empresas'
+        : search.referencia
+          ? 'Volver a la factura'
+          : 'Volver a facturas'}
     </PlatformBackLink>
   )
 }
