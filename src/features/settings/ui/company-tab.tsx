@@ -171,8 +171,13 @@ export function OperatingDefaultsTab({ form, set }: FormProps) {
           onChange={set('autoReminders')}
         />
         <p className="text-muted-foreground text-xs sm:col-span-2">
-          Facturas vencidas: cada 7 días, máximo 3. Presupuestos: sin respuesta a los 4 días o que
-          caducan en 3 días.
+          Este ajuste activa o desactiva ambos tipos de recordatorio a la vez.
+        </p>
+        <p className="text-muted-foreground text-xs">
+          <strong>Presupuestos:</strong> sin respuesta a los 4 días o que caducan en 3 días.
+        </p>
+        <p className="text-muted-foreground text-xs">
+          <strong>Facturas vencidas:</strong> cada 7 días, máximo 3.
         </p>
       </Section>
     </>

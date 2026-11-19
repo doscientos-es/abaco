@@ -47,8 +47,12 @@ vi.mock('@/features/auth', async (importOriginal) => ({
 vi.mock('@/features/work-teams', () => ({ WorkTeamsSection: () => null }))
 vi.mock('@/features/vacations', () => ({ WorkerVacationAllowance: () => null }))
 vi.mock('./worker-personal-data', () => ({ WorkerPersonalDataSection: () => null }))
+vi.mock('./pending-team-activations', () => ({
+  PendingTeamActivations: () => <p>Invitaciones pendientes</p>,
+}))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
+  pendingTeamActivationsQuery: () => ({ queryKey: ['pending-team-activations'] }),
   inviteMember: vi.fn(),
   changeMemberRole: vi.fn(),
   removeMember: vi.fn(),
@@ -111,11 +115,13 @@ describe('TeamSection', () => {
     const html = renderToStaticMarkup(<TeamSection tenantId="company" showInviteLink />)
     expect(html).toContain('Invitar personas')
     expect(html).toContain('Importar personas')
+    expect(html).toContain('Invitaciones pendientes')
     expect(html).not.toContain('/ajustes?tab=equipo')
     const profile = renderToStaticMarkup(
       <TeamSection tenantId="company" personId="ana" showInviteLink />,
     )
     expect(profile).not.toContain('Invitar personas')
+    expect(profile).not.toContain('Invitaciones pendientes')
   })
 
   it('limits personnel management to the requested team or person', () => {

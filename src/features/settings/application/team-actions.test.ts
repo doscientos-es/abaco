@@ -1,16 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { changeMemberRole, inviteMember, removeMember, teamQuery } from './team-actions'
+import {
+  changeMemberRole,
+  inviteMember,
+  pendingTeamActivationsQuery,
+  removeMember,
+  teamQuery,
+} from './team-actions'
 
-const { invoke, from, update, remove, eq } = vi.hoisted(() => ({
+const { invoke, from, update, remove, eq, rpc } = vi.hoisted(() => ({
   invoke: vi.fn(),
   from: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   eq: vi.fn(),
+  rpc: vi.fn(),
 }))
 vi.mock('@/shared/lib/supabase/client', () => ({
-  createBrowserSupabaseClient: () => ({ functions: { invoke }, from }),
+  createBrowserSupabaseClient: () => ({ functions: { invoke }, from, rpc }),
 }))
 
 const input = {
@@ -50,6 +57,18 @@ it('includes legacy technicians when loading the team', async () => {
       calendarColor: null,
     },
   ])
+})
+
+it('loads pending activations only for the selected company and reports errors', async () => {
+  const queryFn = pendingTeamActivationsQuery('tenant').queryFn
+  if (typeof queryFn !== 'function') throw new Error('Missing pending activations query')
+  rpc.mockResolvedValueOnce({ data: [{ user_id: 'ana' }], error: null })
+  expect(await queryFn({} as never)).toEqual(['ana'])
+  expect(rpc).toHaveBeenCalledWith('pending_team_activations', { p_tenant_id: 'tenant' })
+  rpc.mockResolvedValueOnce({ data: null, error: { message: 'denied' } })
+  await expect(queryFn({} as never)).rejects.toThrow(
+    'No se pudieron cargar las invitaciones pendientes.',
+  )
 })
 
 describe('inviteMember', () => {

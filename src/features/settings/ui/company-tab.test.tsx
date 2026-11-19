@@ -49,6 +49,8 @@ describe('company settings tabs', () => {
     expect(html).toContain('IVA por defecto')
     expect(html).toContain('Señal por defecto')
     expect(html).toContain('Recordatorios por correo')
+    expect(html).toContain('activa o desactiva ambos tipos')
+    expect(html).toContain('Facturas vencidas:')
     expect(html).not.toContain('Nombre comercial')
   })
 })

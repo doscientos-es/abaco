@@ -65,8 +65,10 @@ vi.mock('@/shared/ui/form', () => ({ TextField: field, SelectField: field }))
 vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: dialog }))
 vi.mock('./team-import-dialog', () => ({ TeamImportDialog: () => null }))
 vi.mock('./worker-personal-data', () => ({ WorkerPersonalDataSection: () => null }))
+vi.mock('./pending-team-activations', () => ({ PendingTeamActivations: () => null }))
 vi.mock('../application/team-actions', () => ({
   teamQuery: () => ({ queryKey: ['team'] }),
+  pendingTeamActivationsQuery: () => ({ queryKey: ['pending-team-activations'] }),
   inviteMember: invite,
   changeMemberRole: changeRole,
   removeMember: remove,

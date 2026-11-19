@@ -51,6 +51,19 @@ describe('legacy settings links', () => {
     needsWelcome: false,
   })
 
+  it('redirects the old team settings link to workers for administrators', async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(sessionQuery.queryKey, session('admin'))
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Missing settings route guard')
+    await expect(
+      beforeLoad({ context: { queryClient }, search: { tab: 'equipo' } } as Parameters<
+        typeof beforeLoad
+      >[0]),
+    ).rejects.toMatchObject({ options: { to: '/trabajadores', replace: true } })
+    queryClient.clear()
+  })
+
   it.each(['documentos', 'listas'] as const)(
     'redirects admin links to the %s personalization section',
     async (tab) => {
