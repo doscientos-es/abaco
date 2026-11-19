@@ -3,7 +3,9 @@ import { SelectField } from './form'
 export const chartFormats = {
   bars: 'Barras',
   lines: 'Líneas',
+  area: 'Área',
   table: 'Tabla',
+  pie: 'Circular',
   donut: 'Anillo',
   radial: 'Anillos radiales',
   ranking: 'Barras horizontales',

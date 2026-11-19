@@ -1,12 +1,4 @@
-import {
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@doscientos/ui'
+import { Button } from '@doscientos/ui'
 import { DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
@@ -15,16 +7,18 @@ import {
   type CategoryChartFormat,
 } from '@/shared/domain/category-chart-format'
 import { formatEuros } from '@/shared/domain/money'
-import { categoryTotals, filterByRecentMonths, type MonthPoint } from '@/shared/domain/stats'
+import { resolveMonthlyChartFormat } from '@/shared/domain/monthly-chart-format'
+import { categoryTotals, filterByRecentMonths } from '@/shared/domain/stats'
+import { ChartCard, EmptyHint } from '@/shared/ui/chart-card'
 import {
   chartFormats,
   ChartOptionField,
   ChartPeriodField,
   chartPeriodLabels,
 } from '@/shared/ui/chart-settings'
-import { ChartCard, EmptyHint, ExpenseCategoryPlot, MonthlyBars } from '@/shared/ui/charts'
+import { ExpenseCategoryPlot } from '@/shared/ui/expense-category-plot'
 import { fieldIcons } from '@/shared/ui/field-icons'
-import { MonthlyLines } from '@/shared/ui/monthly-lines'
+import { MonthlyChart, MonthlyTable } from '@/shared/ui/monthly-chart'
 import { StatCard } from '@/shared/ui/stat-card'
 
 import type { ledgerSummaryData } from '../domain/ledger-summary-data'
@@ -152,12 +146,10 @@ export function LedgerSummaryWidget({
             ) : null
           }
         >
-          {module.chart === 'lines' ? (
-            <MonthlyLines data={months} />
-          ) : module.chart === 'table' ? (
+          {module.chart === 'table' ? (
             <MonthlyTable months={months} />
           ) : (
-            <MonthlyBars data={months} />
+            <MonthlyChart data={months} format={resolveMonthlyChartFormat(module.chart)} />
           )}
         </ChartCard>
       )
@@ -279,33 +271,4 @@ function LedgerExpensePlot({
     ? data.entries
     : filterByRecentMonths(data.entries, range, (entry) => entry.date)
   return <ExpenseCategoryPlot items={categoryTotals(entries, 'expense')} format={format} />
-}
-
-function MonthlyTable({ months }: { months: MonthPoint[] }) {
-  return (
-    <Table aria-label="Ingresos y gastos por mes">
-      <TableHeader>
-        <TableRow>
-          <TableHead scope="col">Mes</TableHead>
-          <TableHead scope="col" className="text-right">
-            Ingresos
-          </TableHead>
-          <TableHead scope="col" className="text-right">
-            Gastos
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {months.map((month) => (
-          <TableRow key={month.key}>
-            <TableHead scope="row">
-              {month.label} {month.key.slice(0, 4)}
-            </TableHead>
-            <TableCell className="text-right tabular-nums">{formatEuros(month.income)}</TableCell>
-            <TableCell className="text-right tabular-nums">{formatEuros(month.expense)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
 }

@@ -1,5 +1,6 @@
 import { resolveCategoryChartFormat } from '@/shared/domain/category-chart-format'
 import { snapDashboardWidth } from '@/shared/domain/dashboard-layout'
+import { resolveMonthlyChartFormat } from '@/shared/domain/monthly-chart-format'
 import type { DashboardConfig } from '@/shared/domain/types'
 
 export const dashboardWidgets = [
@@ -90,7 +91,7 @@ const knownIds = new Set<string>(dashboardWidgets.map((widget) => widget.id))
 
 export function resolveDashboardChart(config?: DashboardConfig) {
   return {
-    incomeChart: config?.incomeChart === 'lines' ? 'lines' : 'bars',
+    incomeChart: resolveMonthlyChartFormat(config?.incomeChart),
     incomeMonths: config?.incomeMonths === 12 ? 12 : 6,
   } as const
 }

@@ -1,17 +1,18 @@
 import { Link } from '@tanstack/react-router'
 
 import { categoryChartFormats } from '@/shared/domain/category-chart-format'
+import { monthlyChartFormats } from '@/shared/domain/monthly-chart-format'
 import { categoryTotals, filterByRecentMonths, monthlySeries } from '@/shared/domain/stats'
 import type { Estimate, LedgerEntry } from '@/shared/domain/types'
+import { ChartCard } from '@/shared/ui/chart-card'
 import {
   chartFormats,
   ChartOptionField,
   ChartPeriodField,
   chartPeriodLabels,
 } from '@/shared/ui/chart-settings'
-import { ChartCard, ExpenseCategoryPlot, MonthlyBars } from '@/shared/ui/charts'
-import { fieldIcons } from '@/shared/ui/field-icons'
-import { MonthlyLines } from '@/shared/ui/monthly-lines'
+import { ExpenseCategoryPlot } from '@/shared/ui/expense-category-plot'
+import { MonthlyChart } from '@/shared/ui/monthly-chart'
 
 import type { DashboardCharts } from '../domain/dashboard-config'
 import { EstimateStatusSummary } from './estimate-status-summary'
@@ -31,7 +32,7 @@ export function DashboardIncomeChart({
   return (
     <ChartCard
       title={title}
-      description={`${chartPeriodLabels[chart.incomeMonths]}. Enfoca un mes para ver el detalle.`}
+      description={chartPeriodLabels[chart.incomeMonths]}
       settings={
         onChange ? (
           <>
@@ -40,7 +41,7 @@ export function DashboardIncomeChart({
               names={chartFormats}
               option={{
                 value: chart.incomeChart,
-                choices: ['bars', 'lines'],
+                choices: monthlyChartFormats,
                 onChange: (incomeChart) => onChange({ incomeChart }),
               }}
             />
@@ -56,27 +57,8 @@ export function DashboardIncomeChart({
         ) : null
       }
     >
-      <IncomePlot ledger={ledger} chart={chart} />
+      <MonthlyChart data={monthlySeries(ledger, chart.incomeMonths)} format={chart.incomeChart} />
     </ChartCard>
-  )
-}
-
-function IncomePlot({
-  ledger,
-  chart,
-}: {
-  ledger: LedgerEntry[]
-  chart: Pick<DashboardCharts, 'incomeChart' | 'incomeMonths'>
-}) {
-  const data = monthlySeries(ledger, chart.incomeMonths)
-  return chart.incomeChart === 'lines' ? (
-    <MonthlyLines data={data} />
-  ) : (
-    <MonthlyBars
-      data={data}
-      emptyIcon={fieldIcons.bank}
-      emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
-    />
   )
 }
 

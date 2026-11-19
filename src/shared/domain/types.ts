@@ -5,6 +5,7 @@ import type { EstimateAgreement } from './estimate-agreement'
 import type { EstimateDesign } from './estimate-design'
 import type { EstimateFormat, EstimateSection } from './estimate-document'
 import type { InvoiceDesign } from './invoice-design'
+import type { MonthlyChartFormat } from './monthly-chart-format'
 
 /** Money is always stored as integer cents to avoid floating point drift. */
 export type Cents = number
@@ -14,7 +15,7 @@ export type DashboardConfig = {
   version: 1
   widgets: string[]
   widths?: Record<string, number>
-  incomeChart?: 'bars' | 'lines'
+  incomeChart?: MonthlyChartFormat
   incomeMonths?: 6 | 12
   charts?: {
     'expense-categories'?: { format: CategoryChartFormat; months: 1 | 6 | 12 }

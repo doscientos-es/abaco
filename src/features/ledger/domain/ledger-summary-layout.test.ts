@@ -36,11 +36,12 @@ describe('accounting summary layout', () => {
     expect(resolveLedgerSummary({ version: 2, modules: [] }, false)).toEqual(defaultLedgerSummary())
   })
 
-  it('restores the selected radial chart and its period', () => {
-    const category = { id: 'categories', width: 6, chart: 'radial', months: 12 }
-    expect(resolveLedgerSummary({ version: 1, modules: [category] }, false).modules).toEqual([
-      category,
-    ])
+  it.each(['radial', 'pie'] as const)('restores area and %s with independent periods', (chart) => {
+    const category = { id: 'categories', width: 6, chart, months: 12 }
+    const monthly = { id: 'monthly', width: 6, chart: 'area', months: 6 }
+    expect(
+      resolveLedgerSummary({ version: 1, modules: [category, monthly] }, false).modules,
+    ).toEqual([category, monthly])
   })
 
   it('makes imports available without changing saved dashboards or exposing restricted exports', () => {

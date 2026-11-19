@@ -3,6 +3,7 @@ import {
   type CategoryChartFormat,
 } from '@/shared/domain/category-chart-format'
 import { snapDashboardWidth } from '@/shared/domain/dashboard-layout'
+import { monthlyChartFormats, type MonthlyChartFormat } from '@/shared/domain/monthly-chart-format'
 
 export const accountingDatasetLabels = {
   clients: 'Exportar clientes',
@@ -13,7 +14,7 @@ export const accountingDatasetLabels = {
 
 export type AccountingDataset = keyof typeof accountingDatasetLabels
 export type LedgerExport = 'book' | 'vat' | AccountingDataset
-export type LedgerChart = 'bars' | 'lines' | 'table' | CategoryChartFormat
+export type LedgerChart = MonthlyChartFormat | 'table' | CategoryChartFormat
 
 type ModuleDefinition = {
   title: string
@@ -29,7 +30,11 @@ const modules = {
   expenses: { title: 'Gastos', width: 3 },
   result: { title: 'Resultado', width: 3 },
   vat: { title: 'IVA a ingresar', width: 3 },
-  monthly: { title: 'Ingresos y gastos por mes', width: 6, charts: ['bars', 'lines', 'table'] },
+  monthly: {
+    title: 'Ingresos y gastos por mes',
+    width: 6,
+    charts: [...monthlyChartFormats, 'table'],
+  },
   categories: { title: 'Gastos por categoría', width: 6, charts: categoryChartFormats },
   recent: { title: 'Últimos apuntes', width: 6 },
   'import-entries': {

@@ -5,7 +5,7 @@ import { use } from 'react'
 import { renderToPipeableStream } from 'react-dom/server'
 import { expect, it } from 'vitest'
 
-import { ChartCard } from './charts'
+import { ChartCard } from './chart-card'
 
 function deferred<T>() {
   let resolve!: (value: T) => void

@@ -1,4 +1,4 @@
-export const categoryChartFormats = ['donut', 'radial', 'ranking'] as const
+export const categoryChartFormats = ['donut', 'radial', 'ranking', 'pie'] as const
 
 export type CategoryChartFormat = (typeof categoryChartFormats)[number]
 
