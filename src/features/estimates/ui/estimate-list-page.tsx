@@ -6,7 +6,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
   toast,
@@ -31,11 +30,20 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { deleteEstimate } from '../application/estimate-actions'
 import { EstimateFormatPicker } from './estimate-format-picker'
+
+const estimateColumns = [
+  { id: 'number', label: 'Nº' },
+  { id: 'title', label: 'Obra', required: true },
+  { id: 'client', label: 'Cliente' },
+  { id: 'status', label: 'Estado' },
+  { id: 'total', label: 'Total', headClassName: 'text-right' },
+] as const
 
 function EstimateActions({
   estimate,
@@ -69,6 +77,7 @@ function EstimateActions({
 
 export function EstimateListPage() {
   const { estimates, clients, invoices } = useTenantData()
+  const columns = useTableColumns('presupuestos', estimateColumns)
   const session = useSession()
   const activeClients = clients.filter((client) => !client.archivedAt)
   const navigate = useNavigate()
@@ -228,12 +237,7 @@ export function EstimateListPage() {
           <Table containerClassName="max-md:hidden">
             <TableHeader>
               <TableRow>
-                <TableHead>Nº</TableHead>
-                <TableHead>Obra</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableColumnsHeader columns={columns} tableName="presupuestos" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -247,25 +251,40 @@ export function EstimateListPage() {
                     })
                   }
                 >
-                  <TableCell className="text-muted-foreground">{estimate.number}</TableCell>
-                  <TableCell className="font-medium">
-                    <Link
-                      to="/presupuestos/$estimateId"
-                      params={{ estimateId: estimate.id }}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {estimate.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={estimate.status} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatEuros(estimateTotalCents(estimate))}
-                  </TableCell>
+                  <TableColumnsCells
+                    columns={columns}
+                    cells={{
+                      number: (
+                        <TableCell className="text-muted-foreground">{estimate.number}</TableCell>
+                      ),
+                      title: (
+                        <TableCell className="font-medium">
+                          <Link
+                            to="/presupuestos/$estimateId"
+                            params={{ estimateId: estimate.id }}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {estimate.title}
+                          </Link>
+                        </TableCell>
+                      ),
+                      client: (
+                        <TableCell>
+                          {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                        </TableCell>
+                      ),
+                      status: (
+                        <TableCell>
+                          <StatusBadge status={estimate.status} />
+                        </TableCell>
+                      ),
+                      total: (
+                        <TableCell className="text-right tabular-nums">
+                          {formatEuros(estimateTotalCents(estimate))}
+                        </TableCell>
+                      ),
+                    }}
+                  />
                   <TableCell className="text-right whitespace-nowrap">
                     <EstimateActions
                       estimate={estimate}

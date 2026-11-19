@@ -6,7 +6,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
@@ -23,11 +22,18 @@ import { fieldIcons } from '@/shared/ui/field-icons'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
 import { clientTypesQuery } from '../application/client-types'
+
+const clientColumns = [
+  { id: 'name', label: 'Cliente', required: true },
+  { id: 'contact', label: 'Contacto' },
+  { id: 'address', label: 'Obra' },
+] as const
 
 function ClientActions({
   client,
@@ -60,6 +66,7 @@ function ClientActions({
 
 export function ClientsPage() {
   const { clients, tenant } = useTenantData()
+  const columns = useTableColumns('clientes', clientColumns)
   const types = useQuery(clientTypesQuery(tenant.id))
   const navigate = useNavigate()
   const [importOpen, setImportOpen] = useState(false)
@@ -224,12 +231,7 @@ export function ClientsPage() {
           <Table containerClassName="max-md:hidden">
             <TableHeader>
               <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Obra</TableHead>
-                <TableHead>
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
+                <TableColumnsHeader columns={columns} tableName="clientes" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -240,20 +242,31 @@ export function ClientsPage() {
                     void navigate({ to: '/clientes/$clientId', params: { clientId: client.id } })
                   }
                 >
-                  <TableCell className="font-medium break-words">
-                    <Link
-                      to="/clientes/$clientId"
-                      params={{ clientId: client.id }}
-                      className="text-primary hover:underline"
-                    >
-                      {client.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {client.phone}
-                    <div className="text-muted-foreground text-xs break-all">{client.email}</div>
-                  </TableCell>
-                  <TableCell className="break-words">{client.address}</TableCell>
+                  <TableColumnsCells
+                    columns={columns}
+                    cells={{
+                      name: (
+                        <TableCell className="font-medium break-words">
+                          <Link
+                            to="/clientes/$clientId"
+                            params={{ clientId: client.id }}
+                            className="text-primary hover:underline"
+                          >
+                            {client.name}
+                          </Link>
+                        </TableCell>
+                      ),
+                      contact: (
+                        <TableCell>
+                          {client.phone}
+                          <div className="text-muted-foreground text-xs break-all">
+                            {client.email}
+                          </div>
+                        </TableCell>
+                      ),
+                      address: <TableCell className="break-words">{client.address}</TableCell>,
+                    }}
+                  />
                   <TableCell className="text-right whitespace-nowrap">
                     <div className="inline-flex items-center gap-1">
                       <ClientActions

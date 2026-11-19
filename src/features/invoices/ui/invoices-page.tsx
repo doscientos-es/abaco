@@ -8,7 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
   Tabs,
@@ -33,6 +32,7 @@ import { SelectField } from '@/shared/ui/form'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatCard } from '@/shared/ui/stat-card'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
@@ -50,8 +50,19 @@ const statusConfig: Record<
   paid: { label: 'Cobrada', variant: 'success' },
 }
 
+const invoiceColumns = [
+  { id: 'number', label: 'Nº', required: true },
+  { id: 'concept', label: 'Concepto' },
+  { id: 'client', label: 'Cliente' },
+  { id: 'origin', label: 'Origen' },
+  { id: 'due', label: 'Vence' },
+  { id: 'status', label: 'Estado' },
+  { id: 'total', label: 'Total', headClassName: 'text-right' },
+] as const
+
 export function InvoicesPage() {
   const session = useSession()
+  const columns = useTableColumns('facturas', invoiceColumns)
   const { invoices, clients, estimates } = useTenantData()
   const navigate = useNavigate()
   const requestedTab = useSearch({ from: '/facturas/' }).tab
@@ -341,14 +352,7 @@ export function InvoicesPage() {
               <Table containerClassName="max-xl:hidden">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nº</TableHead>
-                    <TableHead>Concepto</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Vence</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableColumnsHeader columns={columns} tableName="facturas" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -356,51 +360,74 @@ export function InvoicesPage() {
                     const { label, variant } = statusConfig[invoice.status]
                     return (
                       <NavigableTableRow key={invoice.id} onOpen={() => openInvoice(invoice.id)}>
-                        <TableCell className="whitespace-nowrap">
-                          <Link
-                            to="/facturas/$invoiceId"
-                            params={{ invoiceId: invoice.id }}
-                            className="text-muted-foreground underline-offset-4 hover:underline"
-                          >
-                            {invoice.number}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="max-w-64 truncate font-medium">
-                          <Link
-                            to="/facturas/$invoiceId"
-                            params={{ invoiceId: invoice.id }}
-                            className="underline-offset-4 hover:underline"
-                          >
-                            {invoice.concept}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link to="/clientes" className="underline-offset-4 hover:underline">
-                            {clientName(invoice.clientId)}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {invoice.estimateId ? (
-                            <Link
-                              to="/presupuestos/$estimateId"
-                              params={{ estimateId: invoice.estimateId }}
-                              className="underline-offset-4 hover:underline"
-                            >
-                              {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
-                            </Link>
-                          ) : invoice.contractPeriodId ? (
-                            <span>Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}</span>
-                          ) : (
-                            <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{dueLabel(invoice)}</TableCell>
-                        <TableCell>
-                          <Badge variant={variant}>{label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {formatEuros(invoice.totalCents)}
-                        </TableCell>
+                        <TableColumnsCells
+                          columns={columns}
+                          cells={{
+                            number: (
+                              <TableCell className="whitespace-nowrap">
+                                <Link
+                                  to="/facturas/$invoiceId"
+                                  params={{ invoiceId: invoice.id }}
+                                  className="text-muted-foreground underline-offset-4 hover:underline"
+                                >
+                                  {invoice.number}
+                                </Link>
+                              </TableCell>
+                            ),
+                            concept: (
+                              <TableCell className="max-w-64 truncate font-medium">
+                                <Link
+                                  to="/facturas/$invoiceId"
+                                  params={{ invoiceId: invoice.id }}
+                                  className="underline-offset-4 hover:underline"
+                                >
+                                  {invoice.concept}
+                                </Link>
+                              </TableCell>
+                            ),
+                            client: (
+                              <TableCell>
+                                <Link to="/clientes" className="underline-offset-4 hover:underline">
+                                  {clientName(invoice.clientId)}
+                                </Link>
+                              </TableCell>
+                            ),
+                            origin: (
+                              <TableCell className="whitespace-nowrap">
+                                {invoice.estimateId ? (
+                                  <Link
+                                    to="/presupuestos/$estimateId"
+                                    params={{ estimateId: invoice.estimateId }}
+                                    className="underline-offset-4 hover:underline"
+                                  >
+                                    {estimateOf(invoice.estimateId)?.number ?? 'Ver'}
+                                  </Link>
+                                ) : invoice.contractPeriodId ? (
+                                  <span>
+                                    Contrato · {invoice.snapshot?.contractTitle ?? 'Periodo'}
+                                  </span>
+                                ) : (
+                                  <span>Extra · {invoice.snapshot?.workTitle ?? 'Trabajo'}</span>
+                                )}
+                              </TableCell>
+                            ),
+                            due: (
+                              <TableCell className="whitespace-nowrap">
+                                {dueLabel(invoice)}
+                              </TableCell>
+                            ),
+                            status: (
+                              <TableCell>
+                                <Badge variant={variant}>{label}</Badge>
+                              </TableCell>
+                            ),
+                            total: (
+                              <TableCell className="text-right font-medium tabular-nums">
+                                {formatEuros(invoice.totalCents)}
+                              </TableCell>
+                            ),
+                          }}
+                        />
                         <TableCell>{actions(invoice)}</TableCell>
                       </NavigableTableRow>
                     )

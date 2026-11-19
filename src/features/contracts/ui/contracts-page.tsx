@@ -4,7 +4,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
   Tabs,
@@ -24,6 +23,7 @@ import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField } from '@/shared/ui/form'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { listServiceContracts } from '../application/contract-actions'
@@ -33,6 +33,16 @@ import { ContractJobsPage } from './contract-jobs-page'
 import { ContractNextCollectionCell } from './contract-next-collection'
 import { ContractStatusBadge } from './contract-status-badge'
 import { ContractTemplateLibrary } from './contract-template-library'
+
+const contractColumns = [
+  { id: 'title', label: 'Contrato', required: true },
+  { id: 'client', label: 'Cliente' },
+  { id: 'status', label: 'Estado' },
+  { id: 'signature', label: 'Firma' },
+  { id: 'amount', label: 'Importe', headClassName: 'text-right' },
+  { id: 'billing', label: 'Facturación' },
+  { id: 'collection', label: 'Próximo cobro' },
+] as const
 
 export function ContractsPage() {
   const { tab } = useSearch({ from: '/contratos/' })
@@ -89,6 +99,7 @@ function ContractTemplates() {
 
 function ContractsList() {
   const { tenant, clients } = useTenantData()
+  const columns = useTableColumns('contratos', contractColumns)
   const navigate = useNavigate()
   const [page, setPage] = useState(0)
   const [status, setStatus] = useState<ContractStatusFilter>('all')
@@ -150,14 +161,7 @@ function ContractsList() {
         <Table aria-label="Contratos de servicio">
           <TableHeader>
             <TableRow>
-              <TableHead>Contrato</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Firma</TableHead>
-              <TableHead className="text-right">Importe</TableHead>
-              <TableHead>Facturación</TableHead>
-              <TableHead>Próximo cobro</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableColumnsHeader columns={columns} tableName="contratos" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -171,35 +175,55 @@ function ContractsList() {
                   })
                 }
               >
-                <TableCell className="min-w-48 font-medium">
-                  <Link
-                    to="/contratos/$contractId"
-                    params={{ contractId: contract.id }}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {contract.title}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
-                </TableCell>
-                <TableCell>
-                  <ContractStatusBadge status={contract.status} />
-                </TableCell>
-                <TableCell>
-                  <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
-                    {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
-                  {formatEuros(contract.price_cents)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {contractBillingLabels[contract.billing_frequency]}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <ContractNextCollectionCell collection={contract.next_collection} />
-                </TableCell>
+                <TableColumnsCells
+                  columns={columns}
+                  cells={{
+                    title: (
+                      <TableCell className="min-w-48 font-medium">
+                        <Link
+                          to="/contratos/$contractId"
+                          params={{ contractId: contract.id }}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {contract.title}
+                        </Link>
+                      </TableCell>
+                    ),
+                    client: (
+                      <TableCell>
+                        {clients.find((client) => client.id === contract.client_id)?.name ??
+                          'Cliente'}
+                      </TableCell>
+                    ),
+                    status: (
+                      <TableCell>
+                        <ContractStatusBadge status={contract.status} />
+                      </TableCell>
+                    ),
+                    signature: (
+                      <TableCell>
+                        <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
+                          {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
+                        </Badge>
+                      </TableCell>
+                    ),
+                    amount: (
+                      <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
+                        {formatEuros(contract.price_cents)}
+                      </TableCell>
+                    ),
+                    billing: (
+                      <TableCell className="whitespace-nowrap">
+                        {contractBillingLabels[contract.billing_frequency]}
+                      </TableCell>
+                    ),
+                    collection: (
+                      <TableCell className="whitespace-nowrap">
+                        <ContractNextCollectionCell collection={contract.next_collection} />
+                      </TableCell>
+                    ),
+                  }}
+                />
                 <TableCell className="text-right">
                   <ContractActions contract={contract} />
                 </TableCell>

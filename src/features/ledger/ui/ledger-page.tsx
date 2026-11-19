@@ -46,6 +46,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { StatCard } from '@/shared/ui/stat-card'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
@@ -67,6 +68,14 @@ const ledgerTabLabels: Record<LedgerTab, string> = {
   iva: 'IVA trimestral',
   calendario: 'Cobros y pagos',
 }
+
+const ledgerColumns = [
+  { id: 'date', label: 'Fecha' },
+  { id: 'concept', label: 'Concepto', required: true },
+  { id: 'kind', label: 'Tipo' },
+  { id: 'net', label: 'Base', headClassName: 'text-right' },
+  { id: 'total', label: 'Total', headClassName: 'text-right' },
+] as const
 
 function MonthFilter({
   month,
@@ -101,6 +110,7 @@ function MonthFilter({
 
 export function LedgerPage() {
   const session = useSession()
+  const columns = useTableColumns('apuntes', ledgerColumns)
   const { ledger, tenant } = useTenantData()
   const navigate = useNavigate()
   const search = useSearch({ from: '/contabilidad' })
@@ -661,43 +671,51 @@ export function LedgerPage() {
             <Table containerClassName="max-md:hidden">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Concepto</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Base</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Acciones</span>
-                  </TableHead>
+                  <TableColumnsHeader columns={columns} tableName="apuntes" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pager.pageItems.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="tabular-nums">{entry.date}</TableCell>
-                    <TableCell>
-                      {entry.concept}
-                      <div className="text-muted-foreground text-xs">{entry.category}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          entry.kind === 'income' && entry.amountCents > 0 ? 'success' : 'danger'
-                        }
-                      >
-                        {entry.kind === 'income'
-                          ? entry.amountCents < 0
-                            ? 'Reembolso'
-                            : 'Ingreso'
-                          : 'Gasto'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatEuros(ledgerNetCents(entry))}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatEuros(entry.amountCents)}
-                    </TableCell>
+                    <TableColumnsCells
+                      columns={columns}
+                      cells={{
+                        date: <TableCell className="tabular-nums">{entry.date}</TableCell>,
+                        concept: (
+                          <TableCell>
+                            {entry.concept}
+                            <div className="text-muted-foreground text-xs">{entry.category}</div>
+                          </TableCell>
+                        ),
+                        kind: (
+                          <TableCell>
+                            <Badge
+                              variant={
+                                entry.kind === 'income' && entry.amountCents > 0
+                                  ? 'success'
+                                  : 'danger'
+                              }
+                            >
+                              {entry.kind === 'income'
+                                ? entry.amountCents < 0
+                                  ? 'Reembolso'
+                                  : 'Ingreso'
+                                : 'Gasto'}
+                            </Badge>
+                          </TableCell>
+                        ),
+                        net: (
+                          <TableCell className="text-right tabular-nums">
+                            {formatEuros(ledgerNetCents(entry))}
+                          </TableCell>
+                        ),
+                        total: (
+                          <TableCell className="text-right font-medium tabular-nums">
+                            {formatEuros(entry.amountCents)}
+                          </TableCell>
+                        ),
+                      }}
+                    />
                     <TableCell className="text-right">
                       {entry.kind === 'expense' && session?.role === 'admin' ? (
                         <Button

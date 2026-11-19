@@ -3,16 +3,16 @@ import { isSortable } from '@dnd-kit/react/sortable'
 import { Button, Card, CardContent, CardHeader, CardTitle, IconButton } from '@doscientos/ui'
 import { ArrowCounterClockwise, Check, Plus, SlidersHorizontal, X } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
-import { useMemo, useState, type ComponentProps } from 'react'
+import { useMemo, useState, type ComponentProps, type ReactNode } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { saveDashboardConfig } from '@/features/dashboard/application/dashboard-actions'
 import { estimateTotalCents, paidForEstimate } from '@/shared/domain/estimate'
 import { formatEuros } from '@/shared/domain/money'
-import { monthlySeries } from '@/shared/domain/stats'
+import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
 import type { DashboardConfig, TenantData } from '@/shared/domain/types'
 import { useSaveStatus, useTenantData } from '@/shared/store/store'
-import { ChartCard, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
+import { ChartCard, Donut, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge } from '@/shared/ui/status-badge'
@@ -22,10 +22,12 @@ import {
   dashboardWidgets,
   defaultDashboardWidgets,
   moveDashboardWidget,
+  resolveDashboardChart,
   resolveDashboardWidgets,
   type DashboardWidgetId,
 } from '../domain/dashboard-config'
 import { EstimateStatusSummary } from './estimate-status-summary'
+import { MonthlyLines } from './monthly-lines'
 import { SortableDashboardWidget } from './sortable-dashboard-widget'
 
 export function DashboardPage() {
@@ -37,8 +39,10 @@ export function DashboardPage() {
     () => resolveDashboardWidgets(tenant.dashboardConfig),
     [tenant.dashboardConfig],
   )
+  const savedChart = resolveDashboardChart(tenant.dashboardConfig)
   const [editing, setEditing] = useState(false)
   const [draftWidgets, setDraftWidgets] = useState<DashboardWidgetId[]>([])
+  const [draftChart, setDraftChart] = useState(savedChart)
   const [justSaved, setJustSaved] = useState(false)
 
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -61,7 +65,8 @@ export function DashboardPage() {
     (estimate) => estimate.status === 'accepted' || estimate.status === 'rejected',
   )
   const winRate = decided.length ? Math.round((accepted.length / decided.length) * 100) : 0
-  const months = monthlySeries(ledger)
+  const chart = editing ? draftChart : savedChart
+  const months = monthlySeries(ledger, chart.incomeMonths)
   const data = {
     estimates,
     ledger,
@@ -77,26 +82,28 @@ export function DashboardPage() {
     winRate,
     decided,
   }
-  const savedConfig = JSON.stringify(savedWidgets)
-  const draftConfig = JSON.stringify(draftWidgets)
+  const savedConfig = JSON.stringify({ widgets: savedWidgets, ...savedChart })
+  const draftConfig = JSON.stringify({ widgets: draftWidgets, ...draftChart })
   const dirty = savedConfig !== draftConfig
   const availableWidgets = dashboardWidgets.filter((widget) => !draftWidgets.includes(widget.id))
   const visibleWidgets = editing ? draftWidgets : savedWidgets
 
   function startEditing() {
     setDraftWidgets(savedWidgets)
+    setDraftChart(savedChart)
     setJustSaved(false)
     setEditing(true)
   }
 
   function cancelEditing() {
     setDraftWidgets(savedWidgets)
+    setDraftChart(savedChart)
     setJustSaved(false)
     setEditing(false)
   }
 
   function saveLayout() {
-    const config: DashboardConfig = { version: 1, widgets: draftWidgets }
+    const config: DashboardConfig = { version: 1, widgets: draftWidgets, ...draftChart }
     saveDashboardConfig(config)
     setEditing(false)
     setJustSaved(true)
@@ -171,9 +178,13 @@ export function DashboardPage() {
             </div>
             <Button
               variant="ghost"
-              isDisabled={JSON.stringify(draftWidgets) === JSON.stringify(defaultDashboardWidgets)}
+              isDisabled={
+                JSON.stringify({ widgets: draftWidgets, ...draftChart }) ===
+                JSON.stringify({ widgets: defaultDashboardWidgets, ...resolveDashboardChart() })
+              }
               onPress={() => {
                 setDraftWidgets([...defaultDashboardWidgets])
+                setDraftChart(resolveDashboardChart())
                 setJustSaved(false)
               }}
             >
@@ -202,6 +213,42 @@ export function DashboardPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          ) : null}
+          {draftWidgets.includes('income-expenses') ? (
+            <div className="flex flex-wrap gap-4">
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Gráfico de ingresos y gastos
+                <select
+                  className="border-border bg-background rounded-lg border px-3 py-2 text-sm"
+                  value={draftChart.incomeChart}
+                  onChange={(event) =>
+                    setDraftChart((current) => ({
+                      ...current,
+                      incomeChart: event.target.value === 'lines' ? 'lines' : 'bars',
+                    }))
+                  }
+                >
+                  <option value="bars">Barras</option>
+                  <option value="lines">Líneas</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Periodo
+                <select
+                  className="border-border bg-background rounded-lg border px-3 py-2 text-sm"
+                  value={draftChart.incomeMonths}
+                  onChange={(event) =>
+                    setDraftChart((current) => ({
+                      ...current,
+                      incomeMonths: event.target.value === '12' ? 12 : 6,
+                    }))
+                  }
+                >
+                  <option value="6">Últimos 6 meses</option>
+                  <option value="12">Últimos 12 meses</option>
+                </select>
+              </label>
             </div>
           ) : null}
         </section>
@@ -234,7 +281,7 @@ export function DashboardPage() {
                   editing={editing}
                   onRemove={removeWidget}
                 >
-                  <DashboardWidget id={id} data={data} />
+                  <DashboardWidget id={id} data={data} chart={chart} editing={editing} />
                 </SortableDashboardWidget>
               )
             })}
@@ -275,52 +322,114 @@ type DashboardData = {
   decided: TenantData['estimates']
 }
 
-function DashboardWidget({ id, data }: { id: DashboardWidgetId; data: DashboardData }) {
+function DashboardMetric({
+  to,
+  detail,
+  editing,
+  children,
+}: {
+  to: '/presupuestos' | '/contabilidad'
+  detail: string
+  editing: boolean
+  children: ReactNode
+}) {
+  if (editing) return <div>{children}</div>
+  return (
+    <Link
+      to={to}
+      title={detail}
+      className="focus-visible:ring-ring block rounded-xl transition-shadow outline-none hover:shadow-md focus-visible:ring-2"
+    >
+      {children}
+      <span className="sr-only">{detail}</span>
+    </Link>
+  )
+}
+
+function DashboardWidget({
+  id,
+  data,
+  chart,
+  editing,
+}: {
+  id: DashboardWidgetId
+  data: DashboardData
+  chart: ReturnType<typeof resolveDashboardChart>
+  editing: boolean
+}) {
   switch (id) {
     case 'key-metrics':
       return (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Pendiente de respuesta"
-            value={formatEuros(data.sentTotal)}
-            hint={`${data.open.length} presupuestos enviados`}
-            tone="info"
-            icon={fieldIcons.file}
-          />
-          <StatCard
-            label="Pendiente de cobro"
-            value={formatEuros(data.pendingCollection)}
-            hint="De presupuestos aceptados"
-            tone="warning"
-            icon={fieldIcons.euro}
-          />
-          <StatCard
-            label="Cobrado este mes"
-            value={formatEuros(data.months.at(-1)?.income ?? 0)}
-            hint={`Gastos ${formatEuros(data.months.at(-1)?.expense ?? 0)}`}
-            tone="success"
-            icon={fieldIcons.bank}
-            trend={data.months.map((month) => month.income)}
-          />
-          <StatCard
-            label="Tasa de aceptación"
-            value={`${data.winRate}%`}
-            hint={`${data.decided.length} resueltos · ${data.clients.length} clientes`}
-            icon={fieldIcons.percent}
-          />
+          <DashboardMetric
+            to="/presupuestos"
+            editing={editing}
+            detail="Pendiente de respuesta: importe de presupuestos enviados. Ver presupuestos"
+          >
+            <StatCard
+              label="Pendiente de respuesta"
+              value={formatEuros(data.sentTotal)}
+              hint={`${data.open.length} presupuestos enviados`}
+              tone="info"
+              icon={fieldIcons.file}
+            />
+          </DashboardMetric>
+          <DashboardMetric
+            to="/presupuestos"
+            editing={editing}
+            detail="Pendiente de cobro: importe restante de presupuestos aceptados. Ver presupuestos"
+          >
+            <StatCard
+              label="Pendiente de cobro"
+              value={formatEuros(data.pendingCollection)}
+              hint="De presupuestos aceptados"
+              tone="warning"
+              icon={fieldIcons.euro}
+            />
+          </DashboardMetric>
+          <DashboardMetric
+            to="/contabilidad"
+            editing={editing}
+            detail="Cobrado este mes: ingresos registrados en contabilidad. Ver contabilidad"
+          >
+            <StatCard
+              label="Cobrado este mes"
+              value={formatEuros(data.months.at(-1)?.income ?? 0)}
+              hint={`Gastos ${formatEuros(data.months.at(-1)?.expense ?? 0)}`}
+              tone="success"
+              icon={fieldIcons.bank}
+              trend={data.months.map((month) => month.income)}
+            />
+          </DashboardMetric>
+          <DashboardMetric
+            to="/presupuestos"
+            editing={editing}
+            detail="Tasa de aceptación: aceptados entre presupuestos aceptados o rechazados. Ver presupuestos"
+          >
+            <StatCard
+              label="Tasa de aceptación"
+              value={`${data.winRate}%`}
+              hint={`${data.decided.length} resueltos · ${data.clients.length} clientes`}
+              icon={fieldIcons.percent}
+            />
+          </DashboardMetric>
         </div>
       )
     case 'income-expenses':
       return (
         <ChartCard
           title="Ingresos y gastos"
-          description="Últimos 6 meses. Pasa el ratón por un mes para ver el detalle."
+          description={`Últimos ${chart.incomeMonths} meses. Pasa el ratón o enfoca un mes para ver el detalle.`}
         >
-          <MonthlyBars
-            data={data.months}
-            emptyIcon={fieldIcons.bank}
-            emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
-          />
+          {chart.incomeChart === 'lines' ? (
+            <MonthlyLines data={data.months} />
+          ) : (
+            <MonthlyBars
+              data={data.months}
+              emptyIcon={fieldIcons.bank}
+              emptyDescription="Cuando registres cobros y gastos verás aquí su evolución mes a mes."
+            />
+          )}
         </ChartCard>
       )
     case 'estimate-status':
@@ -459,6 +568,70 @@ function DashboardWidget({ id, data }: { id: DashboardWidgetId; data: DashboardD
             <Link to="/clientes" className="text-primary text-sm font-medium hover:underline">
               Ver clientes →
             </Link>
+          </CardContent>
+        </Card>
+      )
+    }
+    case 'expense-categories': {
+      const currentMonth = data.months.at(-1)?.key ?? ''
+      const expenses = data.ledger.filter((entry) => entry.date.startsWith(currentMonth))
+      return (
+        <ChartCard title="Gastos por categoría" description="Gastos registrados este mes.">
+          <Donut
+            data={categoryTotals(expenses, 'expense')}
+            centerLabel="Gastos"
+            empty="Aún no hay gastos este mes"
+            emptyDescription="Registra gastos en contabilidad para ver su distribución."
+            emptyIcon={fieldIcons.euro}
+          />
+          <Link
+            to="/contabilidad"
+            className="text-primary mt-3 inline-block text-sm font-medium hover:underline"
+          >
+            Ver contabilidad →
+          </Link>
+        </ChartCard>
+      )
+    }
+    case 'recent-movements': {
+      const recent = [...data.ledger].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+      return (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Últimos movimientos</CardTitle>
+            <Link
+              to="/contabilidad"
+              search={{ tab: 'apuntes' }}
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              Ver apuntes →
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recent.length ? (
+              <ul className="space-y-3">
+                {recent.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{entry.concept}</span>
+                      <span className="text-muted-foreground block text-xs">
+                        {entry.date} · {entry.kind === 'income' ? 'Ingreso' : 'Gasto'}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {entry.kind === 'income' ? '+' : '−'}
+                      {formatEuros(entry.amountCents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyHint
+                icon={fieldIcons.bank}
+                title="Aún no hay movimientos"
+                description="Los últimos cobros y gastos aparecerán aquí."
+              />
+            )}
           </CardContent>
         </Card>
       )

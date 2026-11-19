@@ -31,6 +31,16 @@ export const dashboardWidgets = [
     title: 'Clientes',
     description: 'Resumen de tu cartera de clientes activa.',
   },
+  {
+    id: 'expense-categories',
+    title: 'Gastos por categoría',
+    description: 'Distribución de los gastos de este mes.',
+  },
+  {
+    id: 'recent-movements',
+    title: 'Últimos movimientos',
+    description: 'Cobros y gastos recientes de contabilidad.',
+  },
 ] as const
 
 export type DashboardWidgetId = (typeof dashboardWidgets)[number]['id']
@@ -45,6 +55,13 @@ export const defaultDashboardWidgets: DashboardWidgetId[] = [
 ]
 
 const knownIds = new Set<string>(dashboardWidgets.map((widget) => widget.id))
+
+export function resolveDashboardChart(config?: DashboardConfig) {
+  return {
+    incomeChart: config?.incomeChart === 'lines' ? 'lines' : 'bars',
+    incomeMonths: config?.incomeMonths === 12 ? 12 : 6,
+  } as const
+}
 
 export function resolveDashboardWidgets(config?: DashboardConfig): DashboardWidgetId[] {
   if (!config || config.version !== 1) return [...defaultDashboardWidgets]

@@ -46,7 +46,7 @@ function repository() {
   mkdirSync(join(cwd, 'bin'))
   writeFileSync(
     join(cwd, 'bin', 'pnpm'),
-    '#!/bin/sh\nprintf "%s\\n" "$*" > pnpm-called\n[ "$1" = "quality" ]\n',
+    '#!/bin/sh\nprintf "%s\\n" "$*" >> pnpm-called\n[ "$1" = "typecheck" ]\n',
   )
   chmodSync(join(cwd, 'bin', 'pnpm'), 0o755)
   for (const file of ['pre-commit', 'pre-commit.mjs', 'pre-push']) {
@@ -136,10 +136,33 @@ describe('pre-commit automatic fixes', () => {
     expect(readFileSync(join(cwd, '[item].js'), 'utf8')).toBe('const value=1;\n')
   }, 30000)
 
-  it('runs the full quality gate before pushing', () => {
+  it('runs typecheck once when pushing multiple commits', () => {
     const cwd = repository()
-    const result = command(cwd, 'git', ['hook', 'run', 'pre-push'])
+    git(cwd, 'init', '--bare', '-q', 'remote.git')
+    git(cwd, 'remote', 'add', 'origin', join(cwd, 'remote.git'))
+    for (const value of [1, 2]) {
+      writeFileSync(join(cwd, 'source.js'), `console.log(${value})\n`)
+      git(cwd, 'add', 'source.js')
+      git(cwd, '-c', 'core.hooksPath=.git/hooks', 'commit', '-qm', `change ${value}`)
+    }
+    const result = command(cwd, 'git', ['push', 'origin', 'HEAD:refs/heads/main'])
     expect(result.status, result.stderr + result.stdout).toBe(0)
-    expect(readFileSync(join(cwd, 'pnpm-called'), 'utf8').trim()).toBe('quality')
+    expect(readFileSync(join(cwd, 'pnpm-called'), 'utf8').trim()).toBe('typecheck')
+    expect(git(cwd, '--git-dir', 'remote.git', 'rev-parse', 'refs/heads/main').trim()).toBe(
+      git(cwd, 'rev-parse', 'HEAD').trim(),
+    )
+  }, 30000)
+
+  it('blocks the push if typecheck fails', () => {
+    const cwd = repository()
+    git(cwd, 'init', '--bare', '-q', 'remote.git')
+    git(cwd, 'remote', 'add', 'origin', join(cwd, 'remote.git'))
+    writeFileSync(join(cwd, 'bin', 'pnpm'), '#!/bin/sh\nexit 7\n')
+    const result = command(cwd, 'git', ['push', 'origin', 'HEAD:refs/heads/main'])
+    expect(result.status).not.toBe(0)
+    expect(
+      command(cwd, 'git', ['--git-dir', 'remote.git', 'rev-parse', '--verify', 'refs/heads/main'])
+        .status,
+    ).not.toBe(0)
   }, 30000)
 })

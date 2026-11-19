@@ -196,7 +196,9 @@ El contrato completo para la aplicación es `pnpm quality`, también para agente
 
 Revisa `.githooks/` y ejecuta `pnpm hooks:install` una vez por clon: el pre-commit
 aplica correcciones de lint y formato solo a los archivos preparados; el pre-push
-ejecuta `pnpm quality` en todo el proyecto. Para proteger cambios
+ejecuta `pnpm typecheck` una vez por push, sin ejecutar la batería de pruebas. CI
+ejecuta `pnpm quality` completo en `main` y en pull requests; también puedes
+ejecutarlo manualmente. Para proteger cambios
 parciales, el pre-commit se detiene si un archivo preparado también tiene cambios
 sin preparar. Los nombres con caracteres de glob tampoco admiten corrección
 automática. La instalación rehúsa reemplazar hooks existentes.

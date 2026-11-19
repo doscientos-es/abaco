@@ -8,7 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
@@ -29,6 +28,7 @@ import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
+import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { RowActions, TableRowActions } from '@/shared/ui/table-row-actions'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
@@ -58,6 +58,13 @@ const empty = {
 export function CatalogPage() {
   const { catalog, tenant } = useTenantData()
   const procurement = useModuleEnabled(tenant.id, 'procurement')
+  const columns = useTableColumns('catalogo', [
+    { id: 'sku', label: 'Ref.' },
+    { id: 'name', label: 'Artículo', required: true },
+    { id: 'kind', label: 'Tipo' },
+    { id: 'stock', label: 'Stock', available: procurement },
+    { id: 'price', label: 'Precio', headClassName: 'text-right' },
+  ])
   const inventory = useQuery({
     queryKey: ['inventory', tenant.id],
     queryFn: () => listInventory(tenant.id),
@@ -381,46 +388,50 @@ export function CatalogPage() {
           <Table containerClassName="max-md:hidden">
             <TableHeader>
               <TableRow>
-                <TableHead>Ref.</TableHead>
-                <TableHead>Artículo</TableHead>
-                <TableHead>Tipo</TableHead>
-                {procurement ? <TableHead>Stock</TableHead> : null}
-                <TableHead className="text-right">Precio</TableHead>
-                <TableHead>
-                  <span className="sr-only">Acciones</span>
-                </TableHead>
+                <TableColumnsHeader columns={columns} tableName="catálogo" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {pager.pageItems.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="text-muted-foreground">{item.sku}</TableCell>
-                  <TableCell className="font-medium">
-                    {item.name}
-                    <div className="text-muted-foreground text-xs">{item.category}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
-                  </TableCell>
-                  {procurement ? (
-                    <TableCell>
-                      {item.kind === 'material' ? (
-                        <Button
-                          variant="outline"
-                          isDisabled={!inventory.isSuccess}
-                          onPress={() => setStockItem(item)}
-                        >
-                          {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
-                            ?.quantity ?? 'Sin controlar'}
-                        </Button>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                  ) : null}
-                  <TableCell className="text-right tabular-nums">
-                    {formatEuros(item.unitPriceCents)} / {item.unit}
-                  </TableCell>
+                  <TableColumnsCells
+                    columns={columns}
+                    cells={{
+                      sku: <TableCell className="text-muted-foreground">{item.sku}</TableCell>,
+                      name: (
+                        <TableCell className="font-medium">
+                          {item.name}
+                          <div className="text-muted-foreground text-xs">{item.category}</div>
+                        </TableCell>
+                      ),
+                      kind: (
+                        <TableCell>
+                          <Badge variant="neutral">{kindLabels[item.kind]}</Badge>
+                        </TableCell>
+                      ),
+                      stock: (
+                        <TableCell>
+                          {item.kind === 'material' ? (
+                            <Button
+                              variant="outline"
+                              isDisabled={!inventory.isSuccess}
+                              onPress={() => setStockItem(item)}
+                            >
+                              {inventory.data?.find((stock) => stock.catalog_item_id === item.id)
+                                ?.quantity ?? 'Sin controlar'}
+                            </Button>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                      ),
+                      price: (
+                        <TableCell className="text-right tabular-nums">
+                          {formatEuros(item.unitPriceCents)} / {item.unit}
+                        </TableCell>
+                      ),
+                    }}
+                  />
                   <TableRowActions
                     name={item.name}
                     onEdit={() => edit(item)}

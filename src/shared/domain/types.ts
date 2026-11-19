@@ -10,6 +10,8 @@ export type Cents = number
 export type DashboardConfig = {
   version: 1
   widgets: string[]
+  incomeChart?: 'bars' | 'lines'
+  incomeMonths?: 6 | 12
 }
 
 export type Tenant = {

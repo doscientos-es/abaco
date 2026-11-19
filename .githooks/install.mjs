@@ -37,7 +37,7 @@ try {
     throw new Error('Cannot configure local Git hooks.')
   }
   process.stdout.write(
-    'Pre-commit installed: fix and lint staged files. Pre-push installed: pnpm quality.\n',
+    'Pre-commit installed: fix and lint staged files. Pre-push installed: pnpm typecheck.\n',
   )
 } catch (error) {
   process.stderr.write(
