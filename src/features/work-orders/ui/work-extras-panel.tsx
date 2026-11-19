@@ -3,7 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
-import { createWorkExtraInvoiceDraft } from '@/features/invoices/application/invoice-draft-actions'
+import {
+  createWorkExtraInvoiceDraft,
+  invoiceDraftsQueryKey,
+} from '@/features/invoices/application/invoice-draft-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { TextField } from '@/shared/ui/form'
 
@@ -152,7 +155,7 @@ export function WorkExtrasPanel({
       await createWorkExtraInvoiceDraft({ tenantId, extraId })
       await Promise.all([
         refresh(),
-        queryClient.invalidateQueries({ queryKey: ['invoice-work-extra-drafts', tenantId] }),
+        queryClient.invalidateQueries({ queryKey: invoiceDraftsQueryKey('work_extra', tenantId) }),
       ])
       toast.success('Borrador del extra preparado. Revísalo en Facturas.')
     } catch (error) {

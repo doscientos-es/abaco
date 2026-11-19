@@ -1,14 +1,13 @@
+import type { InvoiceDraftSource } from '../domain/invoice-draft'
+
 export {
-  issueInvoiceDraft,
-  listOpenContractPeriodInvoiceDrafts,
-  updateContractPeriodInvoiceDraft,
   createMilestoneInvoiceDraft,
   createWorkExtraInvoiceDraft,
+  issueInvoiceDraft,
   listOpenInvoiceDrafts,
-  listOpenWorkExtraInvoiceDrafts,
-  updateMilestoneInvoiceDraft,
-  updateWorkExtraInvoiceDraft,
-  type InvoiceContractPeriodDraft,
-  type InvoiceMilestoneDraft,
-  type InvoiceWorkExtraDraft,
+  updateInvoiceDraft,
 } from '../infrastructure/invoice-draft-repository'
+
+export function invoiceDraftsQueryKey(source: InvoiceDraftSource, tenantId: string) {
+  return [`invoice-${source.replaceAll('_', '-')}-drafts`, tenantId] as const
+}

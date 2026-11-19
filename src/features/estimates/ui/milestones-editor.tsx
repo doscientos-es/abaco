@@ -4,7 +4,10 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
-import { createMilestoneInvoiceDraft } from '@/features/invoices/application/invoice-draft-actions'
+import {
+  createMilestoneInvoiceDraft,
+  invoiceDraftsQueryKey,
+} from '@/features/invoices/application/invoice-draft-actions'
 import type { MilestoneAmount } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros } from '@/shared/domain/money'
@@ -49,7 +52,7 @@ export function MilestonesEditor({
         milestoneId,
       })
       await queryClient.invalidateQueries({
-        queryKey: ['invoice-milestone-drafts', estimate.tenantId],
+        queryKey: invoiceDraftsQueryKey('milestone', estimate.tenantId),
       })
       toast.success('Borrador preparado. Revísalo en Facturas antes de emitirlo.')
     } catch (error) {

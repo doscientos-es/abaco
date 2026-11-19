@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { invoiceDraftsQueryKey } from '@/features/invoices/application/invoice-draft-actions'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { EmptyPanel } from '@/shared/ui/page-states'
@@ -107,7 +108,9 @@ export function ContractBillingPanel({
       await createContractPeriodInvoiceDraft(tenantId, periodId)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey }),
-        queryClient.invalidateQueries({ queryKey: ['invoice-contract-period-drafts', tenantId] }),
+        queryClient.invalidateQueries({
+          queryKey: invoiceDraftsQueryKey('contract_period', tenantId),
+        }),
       ])
       toast.success('Borrador preparado; revísalo en Facturas')
     } catch (error) {
