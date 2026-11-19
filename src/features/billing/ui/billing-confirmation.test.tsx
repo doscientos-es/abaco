@@ -49,13 +49,16 @@ vi.mock('@tanstack/react-query', () => ({
               module_yearly_cents: fixtures.moduleYearly,
               vat_percent: fixtures.vatPercent,
             }
-          : fixtures.members,
+          : queryKey[0] === 'billing-catalog'
+            ? undefined
+            : fixtures.members,
   }),
 }))
 vi.mock('../application/billing-actions', () => ({
   acceptBillingTerms: fixtures.accept,
   submitToRedsys: fixtures.submit,
   billingPreviewQuery: () => ({ queryKey: ['billing-preview'] }),
+  billingCatalogQuery: { queryKey: ['billing-catalog'] },
   subscriptionQuery: () => ({ queryKey: ['subscription'] }),
   memberCountQuery: () => ({ queryKey: ['member-count'] }),
 }))

@@ -10,11 +10,15 @@ import { ArrowLeft } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 
-import { billingPreviewQuery } from '@/features/billing'
+import { billingCatalogQuery, billingPreviewQuery, planLabel } from '@/features/billing'
 import { ModuleSubscriptions } from '@/features/product-modules'
 
 import type { PlatformCompany } from '../application/superadmin-queries'
-import { directorySearch, type PlatformSearch } from '../domain/platform-navigation'
+import {
+  directorySearch,
+  invoiceNavigation,
+  type PlatformSearch,
+} from '../domain/platform-navigation'
 import { CompanyBillingAgreement } from './company-billing-agreement'
 import { CompanyPayments } from './company-payments'
 import { CompanyNavigation } from './platform-shell'
@@ -23,18 +27,19 @@ import {
   CompanyStatus,
   formatPlatformDate,
   PlatformMessage,
-  platformPlanLabel,
 } from './platform-ui'
 
-export function DirectoryBackLink({ search }: { search: PlatformSearch }) {
+export function CompanyBackLink({ search }: { search: PlatformSearch }) {
+  const fromInvoices = search.origen === 'facturas'
   return (
     <Link
       to="/superadmin"
-      search={directorySearch(search)}
+      search={fromInvoices ? invoiceNavigation(search) : directorySearch(search)}
       activeOptions={{ exact: true, includeSearch: true }}
       className="text-primary focus-visible:outline-ring inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:outline-2"
     >
-      <ArrowLeft aria-hidden="true" className="size-4" /> Volver a empresas
+      <ArrowLeft aria-hidden="true" className="size-4" />
+      {fromInvoices ? 'Volver a facturas' : 'Volver a empresas'}
     </Link>
   )
 }
@@ -46,10 +51,11 @@ export function CompanyDetail({
   company: PlatformCompany
   search: PlatformSearch
 }) {
+  const { data: rates } = useQuery(billingCatalogQuery)
   return (
     <PageStack>
       <div>
-        <DirectoryBackLink search={search} />
+        <CompanyBackLink search={search} />
         <PageHeader>
           <PageHeaderHeading>
             <PageHeaderTitle className="break-words whitespace-normal">
@@ -65,7 +71,7 @@ export function CompanyDetail({
           </div>
         </PageHeader>
         <dl className="border-border bg-card grid grid-cols-2 gap-4 rounded-xl border p-4 text-sm sm:grid-cols-4">
-          <CompanyFact label="Plan" value={platformPlanLabel(company.plan)} />
+          <CompanyFact label="Plan" value={planLabel(company.plan, rates)} />
           <CompanyFact label="Personas" value={company.member_count} />
           <CompanyFact label="Periodicidad" value={billingPeriodLabel(company.billing_interval)} />
           <CompanyFact
@@ -74,13 +80,13 @@ export function CompanyDetail({
           />
         </dl>
       </div>
-      <nav aria-label="Secciones de la empresa" className="md:hidden">
-        <CompanyNavigation search={search} layout="mobile" />
+      <nav aria-label="Secciones de la empresa">
+        <CompanyNavigation search={search} />
       </nav>
       {search.seccion === 'modulos' ? (
         <CompanyModules company={company} />
       ) : search.seccion === 'pagos' ? (
-        <CompanyPayments tenantId={company.id} />
+        <CompanyPayments tenantId={company.id} rates={rates} />
       ) : (
         <section aria-labelledby="platform-subscription" className="space-y-3">
           <h2 id="platform-subscription" className="text-lg font-semibold">

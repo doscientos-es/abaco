@@ -120,10 +120,13 @@ export const billingCatalogQuery = queryOptions({
   queryFn: async (): Promise<CatalogRate[]> => {
     const { data, error } = await createBrowserSupabaseClient()
       .from('billing_catalog')
-      .select('plan,seats,monthly_cents,yearly_cents,vat_percent')
+      .select(
+        'plan,seats,monthly_cents,yearly_cents,vat_percent,plan_info:billing_plan_display(name,audience,benefit,revision)',
+      )
       .order('seats')
+      .overrideTypes<CatalogRate[], { merge: false }>()
     if (error || !data.length) throw new Error('No se pudieron cargar los precios.')
-    return data as CatalogRate[]
+    return data
   },
 })
 

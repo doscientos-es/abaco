@@ -1,7 +1,5 @@
 import {
   Badge,
-  Button,
-  Input,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
@@ -14,9 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { Buildings, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
+import { Buildings, CaretRight } from '@phosphor-icons/react'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+
+import { billingCatalogQuery, planLabel } from '@/features/billing'
 
 import type { PlatformCompany } from '../application/superadmin-queries'
 import { directorySearch, type PlatformSearch } from '../domain/platform-navigation'
@@ -26,7 +26,7 @@ import {
   formatPlatformDate,
   PlatformMessage,
   PlatformPagination,
-  platformPlanLabel,
+  PlatformSearchForm,
 } from './platform-ui'
 
 export function CompanyDirectory({
@@ -59,9 +59,11 @@ export function CompanyDirectory({
         className="border-border bg-card rounded-xl border"
       >
         <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b px-4 py-4 sm:px-5">
-          <CompanySearch
+          <PlatformSearchForm
             key={q ?? ''}
             query={q ?? ''}
+            label="Buscar empresa"
+            placeholder="Nombre de la empresa"
             onSearch={(value) => void navigate({ search: value ? { q: value } : {} })}
           />
           {q ? (
@@ -113,38 +115,6 @@ export function CompanyDirectory({
   )
 }
 
-function CompanySearch({ query, onSearch }: { query: string; onSearch: (value: string) => void }) {
-  const [draft, setDraft] = useState(query)
-  return (
-    <search className="w-full sm:w-auto">
-      <form
-        className="flex flex-wrap items-end gap-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          onSearch(draft.trim())
-        }}
-      >
-        <div className="min-w-36 flex-1 sm:w-64">
-          <label htmlFor="platform-search" className="mb-1.5 block text-sm font-medium">
-            Buscar empresa
-          </label>
-          <Input
-            id="platform-search"
-            type="search"
-            placeholder="Nombre de la empresa"
-            maxLength={120}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-        </div>
-        <Button type="submit" variant="outline">
-          <MagnifyingGlass aria-hidden="true" /> Buscar
-        </Button>
-      </form>
-    </search>
-  )
-}
-
 function CompanyTable({
   companies,
   search,
@@ -152,6 +122,7 @@ function CompanyTable({
   companies: PlatformCompany[]
   search: PlatformSearch
 }) {
+  const { data: rates } = useQuery(billingCatalogQuery)
   return (
     <Table aria-label="Empresas de Ábaco">
       <TableHeader className="bg-muted/40">
@@ -187,7 +158,7 @@ function CompanyTable({
                   </span>
                   <span className="text-muted-foreground block text-xs">
                     {company.member_count} {company.member_count === 1 ? 'persona' : 'personas'}
-                    <span className="lg:hidden"> · {platformPlanLabel(company.plan)}</span>
+                    <span className="lg:hidden"> · {planLabel(company.plan, rates)}</span>
                   </span>
                 </span>
                 <CaretRight
@@ -203,7 +174,7 @@ function CompanyTable({
               </div>
             </TableCell>
             <TableCell className="hidden lg:table-cell">
-              <p className="font-medium">{platformPlanLabel(company.plan)}</p>
+              <p className="font-medium">{planLabel(company.plan, rates)}</p>
               <p className="text-muted-foreground text-xs">
                 {billingPeriodLabel(company.billing_interval)}
               </p>

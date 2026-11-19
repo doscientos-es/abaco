@@ -8,8 +8,10 @@ import {
   platformCompanyQuery,
 } from '../application/superadmin-queries'
 import { platformPageSize, type PlatformSearch } from '../domain/platform-navigation'
-import { CompanyDetail, DirectoryBackLink } from './company-detail'
+import { CompanyBackLink, CompanyDetail } from './company-detail'
 import { CompanyDirectory } from './company-directory'
+import { PlatformCatalog } from './platform-catalog'
+import { PlatformInvoices } from './platform-invoices'
 import { PlatformShell } from './platform-shell'
 import { PlatformMessage } from './platform-ui'
 
@@ -36,7 +38,11 @@ export function SuperadminPage({ search }: { search: PlatformSearch }) {
 
   return (
     <PlatformShell session={session} search={search}>
-      {search.empresa ? (
+      {search.vista === 'planes' ? (
+        <PlatformCatalog />
+      ) : search.vista === 'facturas' && session ? (
+        <PlatformInvoices search={search} userId={session.userId} />
+      ) : search.empresa ? (
         <CompanyPage search={search} tenantId={search.empresa} />
       ) : (
         <DirectoryPage search={search} />
@@ -68,7 +74,7 @@ function CompanyPage({ search, tenantId }: { search: PlatformSearch; tenantId: s
 
   return (
     <div className="space-y-4">
-      <DirectoryBackLink search={search} />
+      <CompanyBackLink search={search} />
       {company.isPending ? (
         <output>Cargando empresa…</output>
       ) : company.isError ? (
@@ -78,7 +84,7 @@ function CompanyPage({ search, tenantId }: { search: PlatformSearch; tenantId: s
         />
       ) : (
         <PlatformMessage title="No se ha encontrado la empresa.">
-          Vuelve al directorio para elegir otra.
+          Vuelve al listado para elegir otra.
         </PlatformMessage>
       )}
     </div>

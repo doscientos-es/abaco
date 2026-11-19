@@ -7,7 +7,7 @@ import {
   billingPreviewQuery,
   billingVatLabel,
   catalogQuote,
-  planInfo,
+  planLabel,
   smallestRateFor,
   subscriptionQuery,
   type BillingTerms,
@@ -57,8 +57,12 @@ export function CompanyBillingAgreement({
         <p role="alert">No se pudieron consultar las condiciones.</p>
       ) : null}
       <dl className="grid gap-1 text-sm sm:grid-cols-2">
-        <AgreementSummary label="Condiciones vigentes" terms={preview.data?.current ?? null} />
-        <AgreementSummary label="Próximo cobro u oferta" terms={next} />
+        <AgreementSummary
+          label="Condiciones vigentes"
+          terms={preview.data?.current ?? null}
+          rates={catalog.data}
+        />
+        <AgreementSummary label="Próximo cobro u oferta" terms={next} rates={catalog.data} />
       </dl>
       {preview.isSuccess ? (
         <CompanyBillingVat
@@ -94,13 +98,21 @@ export function CompanyBillingAgreement({
   )
 }
 
-function AgreementSummary({ label, terms }: { label: string; terms: BillingTerms | null }) {
+function AgreementSummary({
+  label,
+  terms,
+  rates,
+}: {
+  label: string
+  terms: BillingTerms | null
+  rates: CatalogRate[] | undefined
+}) {
   return (
     <div>
       <dt>{label}</dt>
       <dd>
         {terms
-          ? `${planInfo(terms.plan)?.name ?? terms.plan} · ${terms.seats} personas · ${formatEuros(terms.amount_cents)} ${billingVatLabel(terms.vat_percent)} / ${periodUnit(terms.period)}`
+          ? `${planLabel(terms.plan, rates)} · ${terms.seats} personas · ${formatEuros(terms.amount_cents)} ${billingVatLabel(terms.vat_percent)} / ${periodUnit(terms.period)}`
           : '—'}
       </dd>
     </div>
@@ -171,7 +183,7 @@ function AgreementForm({
               <option value={0}>Seleccionar</option>
               {rates.map((entry) => (
                 <option key={entry.seats} value={entry.seats} disabled={entry.seats < members}>
-                  {planInfo(entry.plan)?.name ?? entry.plan} · {entry.seats}
+                  {planLabel(entry.plan, rates)} · {entry.seats}
                 </option>
               ))}
             </select>

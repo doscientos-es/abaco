@@ -16,4 +16,22 @@ describe('platform search parameters', () => {
     ).toEqual({})
     expect(parsePlatformSearch({ seccion: 'modulos', page: 1.5 })).toEqual({})
   })
+
+  it('keeps invoice filters and pagination separate from the company directory and catalog', () => {
+    const result = parsePlatformSearch({
+      vista: 'facturas',
+      q: ' AB-24 ',
+      factura: 'issued',
+      page: 2,
+    })
+    expect(result).toEqual({ vista: 'facturas', q: 'AB-24', factura: 'issued', page: 2 })
+    expect(directorySearch(result)).toEqual({})
+    expect(
+      parsePlatformSearch({ ...result, factura: 'unknown', page: platformMaxPage + 1 }),
+    ).toEqual({
+      vista: 'facturas',
+      q: 'AB-24',
+    })
+    expect(parsePlatformSearch({ ...result, vista: 'planes' })).toEqual({ vista: 'planes' })
+  })
 })

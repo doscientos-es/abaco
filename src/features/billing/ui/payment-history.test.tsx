@@ -13,6 +13,7 @@ const { query, button, download } = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: { queryKey: string[] }) => {
+    if (options.queryKey[0] === 'billing-catalog') return { data: [] }
     if (options.queryKey[0] !== 'billing-preview') return query(options)
     const terms = {
       plan: 'solo',
@@ -29,6 +30,7 @@ vi.mock('@doscientos/ui', () => ({ Button: button }))
 vi.mock('@/shared/domain/csv', () => ({ downloadTextFile: download }))
 vi.mock('../application/billing-actions', () => ({
   paymentsQuery: (tenantId: string) => ({ queryKey: ['billing-payments', tenantId] }),
+  billingCatalogQuery: { queryKey: ['billing-catalog'] },
   billingPreviewQuery: (tenantId: string) => ({ queryKey: ['billing-preview', tenantId] }),
 }))
 

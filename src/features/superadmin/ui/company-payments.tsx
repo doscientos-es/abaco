@@ -2,6 +2,7 @@ import { Badge, MetricCard } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { planLabel, type CatalogRate } from '@/features/billing'
 import { formatEuros } from '@/shared/domain/money'
 
 import {
@@ -10,24 +11,14 @@ import {
   type PlatformPayment,
 } from '../application/superadmin-queries'
 import { platformPageSize } from '../domain/platform-navigation'
+import { PlatformField, PlatformSelect } from './platform-form-field'
 import {
   billingPeriodLabel,
   formatPlatformDate,
+  invoiceStatusLabel,
   PlatformMessage,
   PlatformPagination,
-  platformPlanLabel,
 } from './platform-ui'
-
-const invoiceStatus: Record<string, string> = {
-  pending: 'Pendiente de emisión',
-  retrying: 'Error de integración · reintento programado',
-  fiscal_pending: 'Pendiente de respuesta de AEAT',
-  fiscal_review: 'Revisar rechazo fiscal en Backoffice',
-  invoice_review: 'Revisar factura en Backoffice',
-  email_pending: 'Correo pendiente · reintento programado',
-  email_review: 'Comprobar entrega antes de reenviar',
-  sent: 'Correo aceptado por el proveedor',
-}
 
 const paymentStatus = {
   succeeded: { label: 'Cobrado', variant: 'success' },
@@ -35,7 +26,13 @@ const paymentStatus = {
   pending: { label: 'Pendiente', variant: 'warning' },
 } as const
 
-export function CompanyPayments({ tenantId }: { tenantId: string }) {
+export function CompanyPayments({
+  tenantId,
+  rates,
+}: {
+  tenantId: string
+  rates: CatalogRate[] | undefined
+}) {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const payments = useQuery(platformPaymentsQuery(tenantId, (page - 1) * platformPageSize, status))
@@ -76,27 +73,25 @@ export function CompanyPayments({ tenantId }: { tenantId: string }) {
       <div className="border-border bg-card rounded-xl border">
         <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <h3 className="font-semibold">Historial de cobros</h3>
-          <div className="flex items-center gap-2">
-            <label htmlFor="platform-payment-status" className="text-muted-foreground text-sm">
-              Estado
-            </label>
-            <select
-              id="platform-payment-status"
-              className="border-border bg-background focus-visible:outline-ring min-h-10 rounded-md border px-2 text-sm focus-visible:outline-2"
-              value={status}
-              onChange={(event) => {
-                setStatus(event.currentTarget.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              {Object.entries(paymentStatus).map(([value, { label }]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <PlatformField label="Estado del pago" className="min-w-32">
+            {(control) => (
+              <PlatformSelect
+                {...control}
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.currentTarget.value)
+                  setPage(1)
+                }}
+              >
+                <option value="">Todos</option>
+                {Object.entries(paymentStatus).map(([value, { label }]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </PlatformSelect>
+            )}
+          </PlatformField>
         </div>
         {payments.isPending ? (
           <output className="text-muted-foreground block p-4 text-sm">Cargando pagos…</output>
@@ -110,7 +105,11 @@ export function CompanyPayments({ tenantId }: { tenantId: string }) {
         {payments.data?.length ? (
           <ul className="divide-border divide-y">
             {payments.data.map((payment) => (
-              <PaymentRow key={payment.id} payment={payment} />
+              <PaymentRow
+                key={payment.id}
+                payment={payment}
+                planName={planLabel(payment.plan, rates)}
+              />
             ))}
           </ul>
         ) : payments.data ? (
@@ -130,7 +129,7 @@ export function CompanyPayments({ tenantId }: { tenantId: string }) {
   )
 }
 
-function PaymentRow({ payment }: { payment: PlatformPayment }) {
+function PaymentRow({ payment, planName }: { payment: PlatformPayment; planName: string }) {
   const { label, variant } = paymentStatus[payment.status]
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-4 py-3 text-sm">
@@ -140,12 +139,12 @@ function PaymentRow({ payment }: { payment: PlatformPayment }) {
           {formatPlatformDate(payment.created_at)}
         </p>
         <p className="text-muted-foreground">
-          {platformPlanLabel(payment.plan)} · {billingPeriodLabel(payment.period)}
+          {planName} · {billingPeriodLabel(payment.period)}
         </p>
         {payment.status === 'succeeded' ? (
           <p className="text-muted-foreground text-xs">
             {payment.invoice_number ? `Factura ${payment.invoice_number}` : 'Factura'} ·{' '}
-            {invoiceStatus[payment.invoice_status ?? ''] ?? 'Sin solicitud de factura'}
+            {invoiceStatusLabel(payment.invoice_status, payment.invoice_number)}
           </p>
         ) : null}
       </div>

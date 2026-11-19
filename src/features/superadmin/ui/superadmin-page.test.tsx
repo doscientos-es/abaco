@@ -70,11 +70,51 @@ vi.mock('@/features/product-modules', () => ({
 vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
   useQueryClient: () => ({}),
+  useMutation: () => ({}),
   useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
     state.queries.push(queryKey)
     if (queryKey[0] === 'platform-access') return { data: state.allowed }
     if (queryKey[0] === 'platform-companies') return { data: [company] }
     if (queryKey[0] === 'platform-company') return { data: state.missingCompany ? null : company }
+    if (queryKey[0] === 'billing-catalog') {
+      return {
+        data: [
+          {
+            plan: 'team',
+            seats: 5,
+            monthly_cents: 3490,
+            yearly_cents: 34900,
+            vat_percent: 21,
+            plan_info: {
+              name: 'Equipo Plus',
+              audience: 'Para cuadrillas',
+              benefit: 'Coordina el equipo',
+              revision: 2,
+            },
+          },
+        ],
+      }
+    }
+    if (queryKey[0] === 'platform-invoices') {
+      return {
+        data: {
+          rows: [
+            {
+              id: 'pay-1',
+              tenant_id: tenantId,
+              company_name: company.name,
+              invoice_number: 'FA-2030-01',
+              invoice_status: 'sent',
+              merchant_order: 'REF-2030',
+              amount_cents: 3400,
+              paid_at: '2030-07-15T12:00:00Z',
+              invoice_portal_url: 'https://example.test/factura',
+            },
+          ],
+          hasMore: true,
+        },
+      }
+    }
     if (queryKey[0] === 'billing-preview') return { data: { pending: state.pendingPayment } }
     if (queryKey[0] === 'platform-payment-summary') {
       return {
@@ -111,10 +151,12 @@ describe('platform administration navigation', () => {
     state.pendingPayment = false
   })
 
-  it('does not request company data even with a direct link when the user lacks platform access', () => {
-    const html = renderToStaticMarkup(
-      <SuperadminPage search={{ empresa: tenantId, seccion: 'pagos' }} />,
-    )
+  it.each<PlatformSearch>([
+    { empresa: tenantId, seccion: 'pagos' },
+    { vista: 'facturas' },
+    { vista: 'planes' },
+  ])('does not request platform data without access: %j', (search) => {
+    const html = renderToStaticMarkup(<SuperadminPage search={search} />)
     expect(html).toContain('No tienes acceso')
     expect(state.queries).toEqual([['platform-access', 'platform-user']])
   })
@@ -128,6 +170,7 @@ describe('platform administration navigation', () => {
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
       ['platform-companies', 'prueba', 100],
+      ['billing-catalog'],
     ])
   })
 
@@ -144,6 +187,7 @@ describe('platform administration navigation', () => {
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
       ['platform-company', tenantId],
+      ['billing-catalog'],
       ['platform-payments', tenantId, 0, ''],
       ['platform-payment-summary', tenantId],
     ])
@@ -161,8 +205,35 @@ describe('platform administration navigation', () => {
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
       ['platform-company', tenantId],
+      ['billing-catalog'],
       ['billing-preview', tenantId],
     ])
+  })
+
+  it('loads a filtered invoice page for the platform user and links to the company and invoice', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(
+      <SuperadminPage search={{ vista: 'facturas', q: 'FA', factura: 'issued', page: 2 }} />,
+    )
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['platform-invoices', 'platform-user', 'FA', 2, 'issued'],
+    ])
+    expect(html).toContain('FA-2030-01')
+    expect(html).toContain('REF-2030')
+    expect(html).toContain('Correo aceptado por el proveedor')
+    expect(html).toContain(`empresa=${tenantId}&amp;seccion=pagos`)
+    expect(html).toContain('href="https://example.test/factura"')
+  })
+
+  it('loads the editor with the same published catalog used in customer pricing', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(<SuperadminPage search={{ vista: 'planes' }} />)
+    expect(state.queries).toEqual([['platform-access', 'platform-user'], ['billing-catalog']])
+    expect(html).toContain('Equipo Plus')
+    expect(html).toContain('value="34,90"')
+    expect(html).toMatch(/349,00\s*€ al año/)
+    expect(html).toContain('href="/precios"')
   })
 
   it('handles a company that no longer exists without requesting its payments', () => {

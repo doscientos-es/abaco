@@ -10,6 +10,7 @@ import {
 
 import {
   acceptBillingTerms,
+  billingCatalogQuery,
   billingPreviewQuery,
   cancelPlan,
   resumePlan,
@@ -23,7 +24,7 @@ import {
 import {
   billingVatLabel,
   formatEuros,
-  planInfo,
+  planLabel,
   STANDARD_BILLING_VAT,
   withModulePrice,
   type BillingTerms,
@@ -38,8 +39,7 @@ const dateFormat = new Intl.DateTimeFormat('es-ES', {
   year: 'numeric',
 })
 
-function currentLine(sub: Subscription): string {
-  const plan = planInfo(sub.plan)
+function currentLine(sub: Subscription, name: string): string {
   const until = sub.currentPeriodEnd ? dateFormat.format(sub.currentPeriodEnd) : ''
   if (sub.status === 'trialing' && sub.canWrite) {
     return `Prueba gratuita: te quedan ${sub.trialDaysLeft} ${sub.trialDaysLeft === 1 ? 'día' : 'días'}.`
@@ -48,10 +48,10 @@ function currentLine(sub: Subscription): string {
     return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'canceled') return 'Sin plan activo. Tus datos están a salvo, solo en lectura.'
   if (sub.status === 'past_due')
-    return `Plan ${plan?.name ?? ''}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
+    return `Plan ${name}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
   if (sub.cancelAtPeriodEnd)
-    return `Plan ${plan?.name ?? ''}: se cancela el ${until}. Hasta entonces sigue todo igual.`
-  return `Plan ${plan?.name ?? ''}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
+    return `Plan ${name}: se cancela el ${until}. Hasta entonces sigue todo igual.`
+  return `Plan ${name}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
 }
 
 /** Plan and payment. Only rendered for admins. */
@@ -65,6 +65,7 @@ export function BillingSection({
   const subscriptionState = useQuery(subscriptionQuery(tenantId))
   const subscription = subscriptionState.data
   const preview = useQuery(billingPreviewQuery(tenantId))
+  const { data: rates } = useQuery(billingCatalogQuery)
   const team = useQuery(memberCountQuery(tenantId))
   const [selection, setSelection] = useState<{
     terms: BillingTerms
@@ -166,7 +167,9 @@ export function BillingSection({
       <div className="border-border border-b px-5 py-4">
         <h2 className="text-sm font-semibold">Plan y facturación</h2>
         <p className="text-muted-foreground text-xs">
-          {subscription ? currentLine(subscription) : 'Cargando…'}
+          {subscription
+            ? currentLine(subscription, planLabel(subscription.plan, rates))
+            : 'Cargando…'}
         </p>
       </div>
 
@@ -300,7 +303,7 @@ export function BillingSection({
             aria-live="polite"
           >
             <h3 className="font-semibold">
-              Confirmar {planInfo(selection.terms.plan)?.name} · hasta {selection.terms.seats}{' '}
+              Confirmar {planLabel(selection.terms.plan, rates)} · hasta {selection.terms.seats}{' '}
               personas
             </h3>
             <p>

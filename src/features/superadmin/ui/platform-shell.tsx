@@ -12,6 +12,7 @@ import {
   Buildings,
   CreditCard,
   Package,
+  Receipt,
   ShieldCheck,
   Wallet,
 } from '@phosphor-icons/react'
@@ -20,10 +21,14 @@ import { useEffect, useRef, type ReactNode } from 'react'
 
 import type { AuthSession } from '@/features/auth'
 
-import { directorySearch, type PlatformSearch } from '../domain/platform-navigation'
+import {
+  directorySearch,
+  invoiceNavigation,
+  type PlatformSearch,
+} from '../domain/platform-navigation'
 
 const navLink =
-  'flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring data-[current=true]:bg-primary/10 data-[current=true]:text-primary'
+  'flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring data-[current=true]:bg-primary/10 data-[current=true]:font-semibold data-[current=true]:text-primary'
 
 const sections = [
   { id: 'suscripcion', label: 'Suscripción', icon: Wallet },
@@ -31,22 +36,10 @@ const sections = [
   { id: 'pagos', label: 'Pagos', icon: CreditCard },
 ] as const
 
-export function CompanyNavigation({
-  search,
-  layout,
-}: {
-  search: PlatformSearch
-  layout: 'sidebar' | 'mobile'
-}) {
+export function CompanyNavigation({ search }: { search: PlatformSearch }) {
   const { seccion: section = 'suscripcion', ...companySearch } = search
   return (
-    <ul
-      className={
-        layout === 'sidebar'
-          ? 'space-y-1'
-          : 'border-border bg-card grid grid-cols-3 gap-1 rounded-lg border p-1'
-      }
-    >
+    <ul className="border-border bg-card grid grid-cols-3 gap-1 rounded-lg border p-1 sm:flex">
       {sections.map(({ id, label, icon: Icon }) => (
         <li key={id} className="min-w-0">
           <Link
@@ -55,7 +48,7 @@ export function CompanyNavigation({
             activeOptions={{ exact: true, includeSearch: true, explicitUndefined: true }}
             data-current={id === section}
             aria-current={id === section ? 'page' : undefined}
-            className={layout === 'sidebar' ? navLink : `${navLink} justify-center px-1`}
+            className={`${navLink} justify-center px-1 text-xs sm:px-4 sm:text-sm`}
           >
             <Icon aria-hidden="true" className="hidden size-4 shrink-0 min-[380px]:block" />
             {label}
@@ -73,7 +66,7 @@ function ReturnToWorkspace({ session }: { session: AuthSession | null }) {
     <Link
       to={session?.role === 'user' ? '/mi-jornada' : '/'}
       activeOptions={{ exact: true }}
-      className={navLink}
+      className={`${navLink} min-w-0`}
       title={label}
     >
       <ArrowLeft aria-hidden="true" className="size-4 shrink-0" />
@@ -91,21 +84,23 @@ export function PlatformShell({
   search: PlatformSearch
   children: ReactNode
 }) {
-  const listSearch = directorySearch(search)
   const main = useRef<HTMLElement>(null)
-  const previousCompany = useRef(search.empresa)
+  const location = search.empresa
+    ? `${search.empresa}:${search.seccion ?? 'suscripcion'}`
+    : (search.vista ?? 'empresas')
+  const previousLocation = useRef(location)
   useEffect(() => {
-    if (previousCompany.current === search.empresa) return
-    previousCompany.current = search.empresa
+    if (previousLocation.current === location) return
+    previousLocation.current = location
     main.current?.focus({ preventScroll: true })
-  }, [search.empresa])
+  }, [location])
 
   return (
     <AppShell className="flex min-h-dvh">
       <a href="#platform-content" className="skip-link">
         Saltar al contenido
       </a>
-      <AppShellSidebar className="sticky top-0 hidden h-dvh w-60 flex-col md:flex">
+      <AppShellSidebar className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col md:flex">
         <AppShellSidebarHeader>
           <div className="flex items-center gap-3">
             <span className="bg-primary/10 text-primary grid size-9 shrink-0 place-items-center rounded-lg">
@@ -119,23 +114,7 @@ export function PlatformShell({
         </AppShellSidebarHeader>
         <AppShellSidebarContent aria-label="Navegación de plataforma">
           <p className="text-muted-foreground px-3 pb-2 text-xs font-semibold">Plataforma</p>
-          <Link
-            to="/superadmin"
-            search={listSearch}
-            activeOptions={{ exact: true, includeSearch: true }}
-            data-current={!search.empresa}
-            className={navLink}
-          >
-            <Buildings aria-hidden="true" className="size-4" /> Empresas
-          </Link>
-          {search.empresa ? (
-            <div className="border-border mt-5 border-t pt-4">
-              <p className="text-muted-foreground px-3 pb-2 text-xs font-semibold">
-                Ficha de empresa
-              </p>
-              <CompanyNavigation search={search} layout="sidebar" />
-            </div>
-          ) : null}
+          <PlatformNavigation search={search} />
         </AppShellSidebarContent>
         <AppShellSidebarFooter>
           {session?.email ? (
@@ -147,18 +126,19 @@ export function PlatformShell({
         </AppShellSidebarFooter>
       </AppShellSidebar>
       <div className="bg-canvas min-w-0 flex-1">
-        <AppShellMobileHeader className="sticky top-0 z-10 flex justify-between md:hidden">
-          <Link
-            to="/superadmin"
-            search={listSearch}
-            activeOptions={{ exact: true, includeSearch: true }}
-            className="focus-visible:outline-ring flex min-h-11 shrink-0 items-center gap-2 rounded-md font-semibold focus-visible:outline-2"
-          >
-            <ShieldCheck aria-hidden="true" className="text-primary size-5" /> Empresas
-          </Link>
-          <div className="min-w-0">
+        <AppShellMobileHeader className="sticky top-0 z-10 flex flex-col items-stretch gap-1 md:hidden">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="flex shrink-0 items-center gap-2 font-semibold">
+              <ShieldCheck aria-hidden="true" className="text-primary size-5" />{' '}
+              <span>
+                Ábaco <span className="text-muted-foreground block text-xs">Superadmin</span>
+              </span>
+            </span>
             <ReturnToWorkspace session={session} />
           </div>
+          <nav aria-label="Navegación de plataforma">
+            <PlatformNavigation search={search} mobile />
+          </nav>
         </AppShellMobileHeader>
         <AppShellMain
           ref={main}
@@ -170,5 +150,50 @@ export function PlatformShell({
         </AppShellMain>
       </div>
     </AppShell>
+  )
+}
+
+const platformSections = [
+  { id: undefined, label: 'Empresas', description: 'Suscripciones y módulos', icon: Buildings },
+  { id: 'facturas', label: 'Facturas', description: 'Emisión y estado del envío', icon: Receipt },
+  { id: 'planes', label: 'Planes y precios', description: 'Catálogo de Ábaco', icon: Wallet },
+] as const
+
+function PlatformNavigation({ search, mobile }: { search: PlatformSearch; mobile?: boolean }) {
+  return (
+    <ul className={mobile ? 'grid grid-cols-[1fr_1fr_1.3fr] gap-1' : 'space-y-1'}>
+      {platformSections.map(({ id, label, description, icon: Icon }) => (
+        <li key={label} className="min-w-0">
+          <Link
+            to="/superadmin"
+            search={
+              id === 'facturas'
+                ? invoiceNavigation(search)
+                : id
+                  ? { vista: id }
+                  : directorySearch(search)
+            }
+            activeOptions={{ exact: true, includeSearch: true, explicitUndefined: true }}
+            aria-current={search.vista === id && !search.empresa ? 'page' : undefined}
+            data-current={search.empresa ? id === undefined : search.vista === id}
+            className={
+              mobile
+                ? `${navLink} flex-col justify-center gap-1 px-1 py-2 text-center text-xs`
+                : `${navLink} py-2.5`
+            }
+          >
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            <span>
+              {label}
+              {!mobile ? (
+                <span className="text-muted-foreground block text-xs font-normal">
+                  {description}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

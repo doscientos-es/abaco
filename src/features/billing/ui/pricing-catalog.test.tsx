@@ -23,7 +23,19 @@ vi.mock('./plan-option-card', () => ({
 it('lists the pilot surcharge separately from the amount sent to plan checkout', () => {
   const queryClient = new QueryClient()
   queryClient.setQueryData(billingCatalogQuery.queryKey, [
-    { plan: 'team', seats: 5, monthly_cents: 3400, yearly_cents: 34000, vat_percent: 21 },
+    {
+      plan: 'team',
+      seats: 5,
+      monthly_cents: 3490,
+      yearly_cents: 34900,
+      vat_percent: 21,
+      plan_info: {
+        name: 'Equipo Plus',
+        audience: 'Para cuadrillas',
+        benefit: 'Coordina el equipo',
+        revision: 2,
+      },
+    },
   ])
   queryClient.setQueryData(moduleCatalogQuery.queryKey, [
     { code: 'procurement', monthly_cents: 1900, yearly_cents: 19000 },
@@ -41,7 +53,7 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(html).toMatch(/\+19,00\s*€ al mes/)
   expect(html).toContain('Ajustes → Plan y facturación')
   expect(action).toHaveBeenCalledWith(
-    expect.objectContaining({ net_cents: 3400, amount_cents: 4114 }),
-    expect.objectContaining({ id: 'team' }),
+    expect.objectContaining({ net_cents: 3490, amount_cents: 4223 }),
+    expect.objectContaining({ id: 'team', name: 'Equipo Plus', benefit: 'Coordina el equipo' }),
   )
 })

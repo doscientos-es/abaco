@@ -9,7 +9,8 @@ import {
   catalogQuote,
   formatEuros,
   MAX_SCALE_PLAN_MEMBERS,
-  planCatalog,
+  paidPlans,
+  planInfo,
   smallestRateFor,
   type BillingTerms,
   type Interval,
@@ -85,12 +86,11 @@ export function PricingCatalog({
         <CustomPlanCard />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {planCatalog.map((plan) => {
+          {paidPlans.map((id) => {
             const rate =
-              plan.id === 'scale'
-                ? scaleRate
-                : catalog.data.find((option) => option.plan === plan.id)
-            if (!rate) return null
+              id === 'scale' ? scaleRate : catalog.data.find((option) => option.plan === id)
+            const plan = planInfo(id, catalog.data)
+            if (!rate || !plan) return null
             const terms = catalogQuote(rate, period, vatPercent)
             return (
               <PlanOptionCard

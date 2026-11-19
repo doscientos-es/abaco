@@ -1,21 +1,32 @@
-import { Badge, Button } from '@doscientos/ui'
-import { CaretLeft, CaretRight } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
-
-import { planCatalog } from '@/features/billing'
+import { Badge, Button, Input } from '@doscientos/ui'
+import { CaretLeft, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 import { platformMaxPage, platformPageSize } from '../domain/platform-navigation'
+import { PlatformField } from './platform-form-field'
 
 const date = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' })
 export const formatPlatformDate = (value: string | null) =>
   value ? date.format(new Date(value)) : '—'
-export const platformPlanLabel = (plan: string) =>
-  plan === 'trial' ? 'Prueba' : (planCatalog.find((item) => item.id === plan)?.name ?? plan)
 export const billingPeriodLabel = (period: string | null) => {
   if (period === 'month') return 'Mensual'
   if (period === 'year') return 'Anual'
   return 'Sin periodo'
 }
+
+const invoiceStatuses = new Map([
+  ['pending', 'Pendiente de emisión'],
+  ['retrying', 'Error de integración · reintento programado'],
+  ['fiscal_pending', 'Pendiente de respuesta de AEAT'],
+  ['fiscal_review', 'Revisar rechazo fiscal en Backoffice'],
+  ['invoice_review', 'Revisar factura en Backoffice'],
+  ['email_pending', 'Correo pendiente · reintento programado'],
+  ['email_review', 'Comprobar entrega antes de reenviar'],
+  ['sent', 'Correo aceptado por el proveedor'],
+])
+
+export const invoiceStatusLabel = (status: string | null | undefined, number?: string | null) =>
+  invoiceStatuses.get(status ?? '') ?? (number ? 'Factura numerada' : 'Sin solicitud de factura')
 
 const companyStatuses = {
   trialing: { label: 'En prueba', variant: 'info' },
@@ -60,13 +71,15 @@ export function PlatformMessage({
 export function PlatformPagination({
   page,
   count,
+  hasMore = count >= platformPageSize,
   onChange,
 }: {
   page: number
   count: number
+  hasMore?: boolean
   onChange: (page: number) => void
 }) {
-  if (page === 1 && count < platformPageSize) return null
+  if (page === 1 && !hasMore) return null
   return (
     <nav
       aria-label="Paginación"
@@ -85,12 +98,61 @@ export function PlatformPagination({
         <Button
           size="sm"
           variant="outline"
-          isDisabled={count < platformPageSize || page >= platformMaxPage}
+          isDisabled={!hasMore || page >= platformMaxPage}
           onPress={() => onChange(page + 1)}
         >
           Siguiente <CaretRight aria-hidden="true" />
         </Button>
       </div>
     </nav>
+  )
+}
+
+export function PlatformSearchForm({
+  query,
+  label,
+  placeholder,
+  onSearch,
+}: {
+  query: string
+  label: string
+  placeholder: string
+  onSearch: (value: string) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.value = query
+  }, [query])
+  return (
+    <search aria-label={label} className="w-full sm:w-auto">
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const input = inputRef.current
+          if (!input) return
+          const normalized = input.value.trim()
+          input.value = normalized
+          onSearch(normalized)
+        }}
+      >
+        <PlatformField label={label} className="flex-1 sm:w-64">
+          {(control) => (
+            <Input
+              {...control}
+              ref={inputRef}
+              type="search"
+              className="h-11"
+              placeholder={placeholder}
+              maxLength={120}
+              defaultValue={query}
+            />
+          )}
+        </PlatformField>
+        <Button type="submit" variant="outline" className="min-h-11 shrink-0">
+          <MagnifyingGlass aria-hidden="true" /> Buscar
+        </Button>
+      </form>
+    </search>
   )
 }

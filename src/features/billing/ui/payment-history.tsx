@@ -4,12 +4,13 @@ import { useQuery } from '@tanstack/react-query'
 import { downloadTextFile } from '@/shared/domain/csv'
 
 import {
+  billingCatalogQuery,
   billingPreviewQuery,
   paymentsQuery,
   type Payment,
   type Subscription,
 } from '../application/billing-actions'
-import { billingVatLabel, formatEuros, planInfo } from '../domain/plans'
+import { billingVatLabel, formatEuros, planLabel, type CatalogRate } from '../domain/plans'
 
 const day = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 const cents = (value: number) => formatEuros(value / 100)
@@ -23,14 +24,14 @@ const statusStyle = {
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-function concept(payment: Payment) {
-  const name = planInfo(payment.plan)?.name ?? payment.plan
+function concept(payment: Payment, rates: CatalogRate[] | undefined) {
+  const name = planLabel(payment.plan, rates)
   const kind = payment.kind === 'first' ? 'Alta' : 'Renovación'
   return `${kind} · plan ${name} ${payment.period === 'year' ? 'anual' : 'mensual'}`
 }
 
 /** A printable receipt (open the file and print it to PDF). VAT is already inside the charged amount. */
-function downloadReceipt(payment: Payment, companyName: string) {
+function downloadReceipt(payment: Payment, companyName: string, description: string) {
   const base =
     payment.netCents ?? Math.round((payment.amountCents * 100) / (100 + payment.vatPercent))
   const date = day.format(payment.settledAt ?? payment.createdAt)
@@ -38,7 +39,7 @@ function downloadReceipt(payment: Payment, companyName: string) {
 <body style="font-family:Arial,sans-serif;max-width:560px;margin:40px auto;color:#1a1a1a">
 <h1 style="font-size:20px">Justificante de pago · Ábaco</h1>
 <p>Cliente: <strong>${escapeHtml(companyName)}</strong><br>Fecha: ${date}<br>Referencia de la operación: ${escapeHtml(payment.order)}</p>
-<table style="width:100%;border-collapse:collapse"><tr><td>${escapeHtml(concept(payment))}</td><td style="text-align:right">${cents(base)}</td></tr>
+<table style="width:100%;border-collapse:collapse"><tr><td>${escapeHtml(description)}</td><td style="text-align:right">${cents(base)}</td></tr>
 <tr><td>IVA (${payment.vatPercent} %)</td><td style="text-align:right">${cents(payment.amountCents - base)}</td></tr>
 <tr><td style="border-top:1px solid #999"><strong>Total pagado con tarjeta</strong></td><td style="border-top:1px solid #999;text-align:right"><strong>${cents(payment.amountCents)}</strong></td></tr></table>
 </body></html>`
@@ -63,6 +64,7 @@ export function PaymentHistory({
     refetch,
   } = useQuery(paymentsQuery(tenantId))
   const preview = useQuery(billingPreviewQuery(tenantId))
+  const { data: rates } = useQuery(billingCatalogQuery)
   const onTrial = !subscription?.isComplimentary && subscription?.status === 'trialing'
   const active =
     subscription &&
@@ -82,7 +84,7 @@ export function PaymentHistory({
             {subscription?.isComplimentary
               ? 'Cortesía'
               : active && current
-                ? `${planInfo(current.plan)?.name} · hasta ${current.seats} · ${current.period === 'year' ? 'anual' : 'mensual'}`
+                ? `${planLabel(current.plan, rates)} · hasta ${current.seats} · ${current.period === 'year' ? 'anual' : 'mensual'}`
                 : active
                   ? 'Pendiente de verificar'
                   : 'Ninguno todavía'}
@@ -118,7 +120,7 @@ export function PaymentHistory({
       </dl>
       {subscription?.nextPlan && next ? (
         <p className="text-muted-foreground text-xs">
-          {active ? 'Cambio programado' : 'Oferta acordada'}: {planInfo(next.plan)?.name} · hasta{' '}
+          {active ? 'Cambio programado' : 'Oferta acordada'}: {planLabel(next.plan, rates)} · hasta{' '}
           {next.seats} · {cents(next.amount_cents)} {billingVatLabel(next.vat_percent)}{' '}
           {next.period === 'year' ? 'al año' : 'al mes'}.
         </p>
@@ -151,7 +153,7 @@ export function PaymentHistory({
                 className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
               >
                 <div>
-                  <p className="font-medium">{concept(p)}</p>
+                  <p className="font-medium">{concept(p, rates)}</p>
                   <p className="text-muted-foreground text-xs">
                     {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
                   </p>
@@ -178,7 +180,7 @@ export function PaymentHistory({
                     <Button
                       variant="outline"
                       size="sm"
-                      onPress={() => downloadReceipt(p, companyName)}
+                      onPress={() => downloadReceipt(p, companyName, concept(p, rates))}
                     >
                       Justificante
                     </Button>

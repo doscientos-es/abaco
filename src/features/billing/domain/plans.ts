@@ -48,8 +48,15 @@ export const planCatalog: readonly PlanInfo[] = [
   },
 ]
 
-export function planInfo(plan: Plan): PlanInfo | null {
-  return planCatalog.find((p) => p.id === plan) ?? null
+export function planInfo(plan: string, rates?: readonly CatalogRate[]): PlanInfo | null {
+  const fallback = planCatalog.find((p) => p.id === plan)
+  if (!fallback) return null
+  const display = rates?.find((rate) => rate.plan === plan)?.plan_info
+  return display ? { ...display, id: fallback.id } : fallback
+}
+
+export function planLabel(plan: string, rates?: readonly CatalogRate[]): string {
+  return plan === 'trial' ? 'Prueba' : (planInfo(plan, rates)?.name ?? plan)
 }
 
 export type CatalogRate = {
@@ -58,6 +65,7 @@ export type CatalogRate = {
   monthly_cents: number
   yearly_cents: number
   vat_percent: number
+  plan_info?: (Omit<PlanInfo, 'id'> & { revision: number }) | null
 }
 
 export type BillingTerms = {

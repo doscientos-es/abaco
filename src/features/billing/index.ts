@@ -10,11 +10,12 @@ export {
   catalogQuote,
   planCatalog,
   planInfo,
+  planLabel,
   smallestRateFor,
   STANDARD_BILLING_VAT,
   TRIAL_DAYS,
 } from './domain/plans'
-export type { BillingTerms, CatalogRate, Interval } from './domain/plans'
+export type { BillingTerms, CatalogRate, Interval, PaidPlan } from './domain/plans'
 export { BillingSection } from './ui/billing-section'
 export { PlanBanner } from './ui/plan-banner'
 export { PricingCatalog } from './ui/pricing-catalog'
