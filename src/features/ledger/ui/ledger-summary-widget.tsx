@@ -10,6 +10,10 @@ import {
 import { DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
+import {
+  resolveCategoryChartFormat,
+  type CategoryChartFormat,
+} from '@/shared/domain/category-chart-format'
 import { formatEuros } from '@/shared/domain/money'
 import { categoryTotals, filterByRecentMonths, type MonthPoint } from '@/shared/domain/stats'
 import {
@@ -190,7 +194,7 @@ export function LedgerSummaryWidget({
           <LedgerExpensePlot
             data={data}
             range={range}
-            format={module.chart === 'ranking' ? 'ranking' : 'donut'}
+            format={resolveCategoryChartFormat(module.chart)}
           />
         </ChartCard>
       )
@@ -269,7 +273,7 @@ function LedgerExpensePlot({
 }: {
   data: ReturnType<typeof ledgerSummaryData>
   range: 'all' | 6 | 12
-  format: 'donut' | 'ranking'
+  format: CategoryChartFormat
 }) {
   const entries = data.quarter
     ? data.entries

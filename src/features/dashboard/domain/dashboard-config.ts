@@ -1,3 +1,4 @@
+import { resolveCategoryChartFormat } from '@/shared/domain/category-chart-format'
 import { snapDashboardWidth } from '@/shared/domain/dashboard-layout'
 import type { DashboardConfig } from '@/shared/domain/types'
 
@@ -103,7 +104,7 @@ export function resolveDashboardCharts(config?: DashboardConfig): DashboardChart
   return {
     ...resolveDashboardChart(config),
     'expense-categories': {
-      format: expenses?.format === 'ranking' ? 'ranking' : 'donut',
+      format: resolveCategoryChartFormat(expenses?.format),
       months: expenses?.months === 6 || expenses?.months === 12 ? expenses.months : 1,
     },
     'estimate-status': {

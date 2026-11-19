@@ -1,3 +1,7 @@
+import {
+  categoryChartFormats,
+  type CategoryChartFormat,
+} from '@/shared/domain/category-chart-format'
 import { snapDashboardWidth } from '@/shared/domain/dashboard-layout'
 
 export const accountingDatasetLabels = {
@@ -9,7 +13,7 @@ export const accountingDatasetLabels = {
 
 export type AccountingDataset = keyof typeof accountingDatasetLabels
 export type LedgerExport = 'book' | 'vat' | AccountingDataset
-export type LedgerChart = 'bars' | 'lines' | 'table' | 'donut' | 'ranking'
+export type LedgerChart = 'bars' | 'lines' | 'table' | CategoryChartFormat
 
 type ModuleDefinition = {
   title: string
@@ -26,7 +30,7 @@ const modules = {
   result: { title: 'Resultado', width: 3 },
   vat: { title: 'IVA a ingresar', width: 3 },
   monthly: { title: 'Ingresos y gastos por mes', width: 6, charts: ['bars', 'lines', 'table'] },
-  categories: { title: 'Gastos por categoría', width: 6, charts: ['donut', 'ranking'] },
+  categories: { title: 'Gastos por categoría', width: 6, charts: categoryChartFormats },
   recent: { title: 'Últimos apuntes', width: 6 },
   'import-entries': {
     title: 'Importar apuntes',

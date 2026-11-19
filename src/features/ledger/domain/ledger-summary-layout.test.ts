@@ -36,6 +36,13 @@ describe('accounting summary layout', () => {
     expect(resolveLedgerSummary({ version: 2, modules: [] }, false)).toEqual(defaultLedgerSummary())
   })
 
+  it('restores the selected radial chart and its period', () => {
+    const category = { id: 'categories', width: 6, chart: 'radial', months: 12 }
+    expect(resolveLedgerSummary({ version: 1, modules: [category] }, false).modules).toEqual([
+      category,
+    ])
+  })
+
   it('makes imports available without changing saved dashboards or exposing restricted exports', () => {
     expect(defaultLedgerSummary().modules.map(({ id }) => id)).toContain('import-entries')
     expect(

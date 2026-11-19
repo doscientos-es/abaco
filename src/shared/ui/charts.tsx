@@ -1,8 +1,10 @@
 import { IconContext } from '@phosphor-icons/react'
 import { useState, type ReactNode } from 'react'
 
+import type { CategoryChartFormat } from '@/shared/domain/category-chart-format'
 import { formatEuros } from '@/shared/domain/money'
 
+import { CategoryRings } from './category-rings'
 import { ChartContent } from './chart-content'
 import { fieldIcons } from './field-icons'
 
@@ -59,13 +61,14 @@ export function ExpenseCategoryPlot({
   format,
 }: {
   items: CategoryData
-  format: 'donut' | 'ranking'
+  format: CategoryChartFormat
 }) {
   return format === 'ranking' ? (
     <CategoryRanking items={items} />
   ) : (
     <Donut
       data={items}
+      variant={format}
       centerLabel="Gastos"
       empty="Aún no hay gastos en este periodo"
       emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
@@ -254,6 +257,7 @@ export type DonutDatum = { label: string; value: number; tone?: ChartTone }
 /** Donut with a legend. Hover a slice or a legend row to highlight it and read its amount. */
 export function Donut({
   data,
+  variant = 'donut',
   format = formatEuros,
   centerLabel = 'Total',
   empty = 'Sin datos todavía',
@@ -262,6 +266,7 @@ export function Donut({
   emptyAction,
 }: {
   data: DonutDatum[]
+  variant?: Exclude<CategoryChartFormat, 'ranking'>
   format?: (value: number) => string
   centerLabel?: string
   empty?: string
@@ -283,6 +288,7 @@ export function Donut({
     )
   }
   const shown = active === null ? null : items[active]
+  const radial = variant === 'radial'
   const slices = items.map((d, index) => {
     const before = items.slice(0, index).reduce((sum, item) => sum + item.value, 0)
     return {
@@ -293,65 +299,85 @@ export function Donut({
     }
   })
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row">
-      <div className="relative size-36 shrink-0">
-        <svg viewBox="0 0 42 42" className="size-full -rotate-90" aria-hidden="true">
-          <circle
-            cx="21"
-            cy="21"
-            r="15.9155"
-            fill="none"
-            strokeWidth="5"
-            className="stroke-muted"
-          />
-          {slices.map((d, index) => (
-            <circle
-              key={d.label}
-              cx="21"
-              cy="21"
-              r="15.9155"
-              fill="none"
-              strokeWidth={active === index ? 6 : 5}
-              strokeDasharray={`${Math.max(d.share - (slices.length > 1 ? 0.8 : 0), 0.1)} ${100 - d.share}`}
-              strokeDashoffset={-d.start}
-              className={`${d.tone.stroke} cursor-pointer transition-all ${active !== null && active !== index ? 'opacity-40' : ''}`}
-              onMouseEnter={() => setActive(index)}
-              onMouseLeave={() => setActive(null)}
-            />
-          ))}
-        </svg>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-muted-foreground max-w-20 truncate text-xs">
-            {shown ? shown.label : centerLabel}
-          </span>
-          <span className="text-sm font-semibold tabular-nums">
-            {format(shown ? shown.value : total)}
-          </span>
-          {shown ? (
-            <span className="text-muted-foreground text-xs">
-              {Math.round((shown.value / total) * 100)}%
+    <div className="@container">
+      <div className="flex flex-col items-center gap-4 @min-[26rem]:flex-row">
+        <div className={`relative shrink-0 ${radial ? 'size-40' : 'size-36'}`}>
+          {radial ? (
+            <CategoryRings rings={slices} active={active} onHighlight={setActive} />
+          ) : (
+            <svg viewBox="0 0 42 42" className="size-full -rotate-90" aria-hidden="true">
+              <circle
+                cx="21"
+                cy="21"
+                r="15.9155"
+                fill="none"
+                strokeWidth="5"
+                className="stroke-muted"
+              />
+              {slices.map((d, index) => (
+                <circle
+                  key={`${d.label}-${index}`}
+                  cx="21"
+                  cy="21"
+                  r="15.9155"
+                  fill="none"
+                  strokeWidth={active === index ? 6 : 5}
+                  strokeDasharray={`${Math.max(d.share - (slices.length > 1 ? 0.8 : 0), 0.1)} ${100 - d.share}`}
+                  strokeDashoffset={-d.start}
+                  className={`${d.tone.stroke} cursor-pointer transition-all ${active !== null && active !== index ? 'opacity-40' : ''}`}
+                  onMouseEnter={() => setActive(index)}
+                  onMouseLeave={() => setActive(null)}
+                />
+              ))}
+            </svg>
+          )}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-muted-foreground max-w-20 truncate text-xs">
+              {shown ? shown.label : centerLabel}
             </span>
-          ) : null}
-        </div>
-      </div>
-      <ul className="w-full min-w-0 flex-1 space-y-1">
-        {slices.map((d, index) => (
-          <li key={d.label}>
-            <button
-              type="button"
-              onMouseEnter={() => setActive(index)}
-              onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(index)}
-              onBlur={() => setActive(null)}
-              className={`focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs transition-colors outline-none focus-visible:ring-2 ${active === index ? 'bg-muted' : ''}`}
+            <span
+              className={
+                radial
+                  ? 'max-w-[5rem] truncate text-xs font-semibold tabular-nums'
+                  : 'text-sm font-semibold tabular-nums'
+              }
             >
-              <i className={`${d.tone.bg} size-2 shrink-0 rounded-full`} />
-              <span className="min-w-0 flex-1 truncate">{d.label}</span>
-              <span className="text-muted-foreground tabular-nums">{format(d.value)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+              {format(shown ? shown.value : total)}
+            </span>
+            {shown ? (
+              <span className="text-muted-foreground text-xs">
+                {Math.round((shown.value / total) * 100)}%
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <ul className="w-full min-w-0 flex-1 space-y-1">
+          {slices.map((d, index) => (
+            <li key={`${d.label}-${index}`}>
+              <button
+                type="button"
+                onMouseEnter={() => setActive(index)}
+                onMouseLeave={() => setActive(null)}
+                onFocus={() => setActive(index)}
+                onBlur={() => setActive(null)}
+                className={`focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs transition-colors outline-none focus-visible:ring-2 ${active === index ? 'bg-muted' : ''}`}
+              >
+                <i className={`${d.tone.bg} size-2 shrink-0 rounded-full`} />
+                <span className="min-w-0 flex-1 truncate">{d.label}</span>
+                <span className="text-muted-foreground tabular-nums">{format(d.value)}</span>
+                {radial ? (
+                  <span
+                    className="text-muted-foreground w-12 shrink-0 text-right tabular-nums"
+                    title="Porcentaje del total"
+                  >
+                    {Math.round(d.share)} %
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

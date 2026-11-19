@@ -5,6 +5,7 @@ export const chartFormats = {
   lines: 'Líneas',
   table: 'Tabla',
   donut: 'Anillo',
+  radial: 'Anillos radiales',
   ranking: 'Barras horizontales',
 } as const
 

@@ -1,3 +1,4 @@
+import type { CategoryChartFormat } from './category-chart-format'
 import type { InvoiceAppearance } from './document-appearance'
 import type { DocumentLibrary } from './document-library'
 import type { EstimateAgreement } from './estimate-agreement'
@@ -16,7 +17,7 @@ export type DashboardConfig = {
   incomeChart?: 'bars' | 'lines'
   incomeMonths?: 6 | 12
   charts?: {
-    'expense-categories'?: { format: 'donut' | 'ranking'; months: 1 | 6 | 12 }
+    'expense-categories'?: { format: CategoryChartFormat; months: 1 | 6 | 12 }
     'estimate-status'?: { metric: 'amount' | 'count'; months: 'all' | 6 | 12 }
   }
 }

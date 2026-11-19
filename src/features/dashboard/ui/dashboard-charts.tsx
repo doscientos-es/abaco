@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 
+import { categoryChartFormats } from '@/shared/domain/category-chart-format'
 import { categoryTotals, filterByRecentMonths, monthlySeries } from '@/shared/domain/stats'
 import type { Estimate, LedgerEntry } from '@/shared/domain/types'
 import {
@@ -143,7 +144,7 @@ export function DashboardExpenseChart({
               names={chartFormats}
               option={{
                 value: chart.format,
-                choices: ['donut', 'ranking'],
+                choices: categoryChartFormats,
                 onChange: (format) => onChange({ 'expense-categories': { ...chart, format } }),
               }}
             />
