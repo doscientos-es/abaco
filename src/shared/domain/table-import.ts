@@ -39,45 +39,6 @@ export function normalizeHeader(value: string): string {
     .replace(/[^a-z0-9]/g, '')
 }
 
-function detectDelimiter(firstLine: string): string {
-  const counts = [';', ',', '\t'].map((d) => [d, firstLine.split(d).length] as const)
-  return counts.reduce((best, c) => (c[1] > best[1] ? c : best))[0]
-}
-
-/** Reads CSV text (quotes, `;` `,` or tab separators, BOM) into rows of cells. */
-export function parseDelimited(input: string): string[][] {
-  const text = input.replace(/^\uFEFF/, '')
-  const delimiter = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? '')
-  const rows: string[][] = []
-  let row: string[] = []
-  let cell = ''
-  let quoted = false
-  const endCell = () => {
-    row.push(cell)
-    cell = ''
-  }
-  const endRow = () => {
-    endCell()
-    rows.push(row)
-    row = []
-  }
-  for (let i = 0; i < text.length; i++) {
-    const char = text.charAt(i)
-    if (quoted) {
-      if (char !== '"') cell += char
-      else if (text[i + 1] === '"') {
-        cell += '"'
-        i++
-      } else quoted = false
-    } else if (char === '"' && cell === '') quoted = true
-    else if (char === delimiter) endCell()
-    else if (char === '\n') endRow()
-    else if (char !== '\r') cell += char
-  }
-  if (cell !== '' || row.length > 0) endRow()
-  return rows
-}
-
 export function planImport<T>(
   table: string[][],
   schema: ImportSchema<T>,

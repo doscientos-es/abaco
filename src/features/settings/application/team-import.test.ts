@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { parseDelimited, planImport } from '@/shared/domain/table-import'
+import { planImport } from '@/shared/domain/table-import'
+import { readSpreadsheet } from '@/shared/lib/read-spreadsheet'
 
 import { sendTeamInvitations, teamImportSchema } from './team-import'
 
 describe('importación de personas', () => {
-  it('valida roles y correos y omite duplicados sin elevar permisos por defecto', () => {
+  const readCsv = (text: string) => readSpreadsheet(new File([text], 'personas.csv'))
+
+  it('valida roles y correos y omite duplicados sin elevar permisos por defecto', async () => {
     const csv =
       'Correo;Nombre;Rol;DNI;Teléfono\nANA@example.com;Ana;;12345678Z;\nana@example.com;Ana;Administrador;12345678Z;\nbad;X;Usuario;1;\nluis@example.com;Luis;Administrador;2;\nother@example.com;Eva;owner;3;'
-    const plan = planImport(parseDelimited(csv), teamImportSchema, new Set(['luis@example.com']))
+    const plan = planImport(await readCsv(csv), teamImportSchema, new Set(['luis@example.com']))
     expect(plan).toEqual({
       valid: [
         { email: 'ana@example.com', fullName: 'Ana', role: 'user', dni: '12345678Z', phone: '' },
@@ -21,14 +24,14 @@ describe('importación de personas', () => {
     })
   })
 
-  it('requires a DNI column and rejects rows without a DNI while accepting an empty phone', () => {
-    expect(
-      planImport(parseDelimited('Correo\na@example.com'), teamImportSchema, new Set()),
-    ).toEqual({
-      fatal: 'Faltan columnas obligatorias: DNI. La primera fila debe tener las cabeceras.',
-    })
+  it('requires a DNI column and rejects rows without a DNI while accepting an empty phone', async () => {
+    expect(planImport(await readCsv('Correo\na@example.com'), teamImportSchema, new Set())).toEqual(
+      {
+        fatal: 'Faltan columnas obligatorias: DNI. La primera fila debe tener las cabeceras.',
+      },
+    )
     const plan = planImport(
-      parseDelimited('Correo;DNI;Teléfono\na@example.com; ;\nb@example.com; B123 ;'),
+      await readCsv('Correo;DNI;Teléfono\na@example.com; ;\nb@example.com; B123 ;'),
       teamImportSchema,
       new Set(),
     )
