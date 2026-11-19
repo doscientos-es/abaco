@@ -151,7 +151,7 @@ function ScheduleView({
   }
 
   return (
-    <div className={admin ? 'space-y-5' : 'worker-page space-y-6'}>
+    <div className={admin ? 'space-y-5' : 'worker-page staff-schedule-page space-y-6'}>
       <header className={admin || embedded ? undefined : 'worker-hero'}>
         {embedded ? (
           <h2 className="sr-only">{title ?? 'Horarios'}</h2>
@@ -257,6 +257,7 @@ function ScheduleView({
               />
               <EventCalendar
                 key={`${view}:${from}`}
+                compactEmptyHours
                 value={date}
                 view={view}
                 items={events}

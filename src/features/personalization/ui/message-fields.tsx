@@ -21,8 +21,8 @@ export function MessageFields({
 }) {
   return (
     <Section
-      title="Documentos y correos"
-      description="Personaliza lo que reciben tus clientes en presupuestos y facturas."
+      title="Correos"
+      description="Personaliza los correos con los que envías presupuestos y facturas."
     >
       <TextField
         label="Nombre del remitente"
@@ -58,15 +58,6 @@ export function MessageFields({
         helper="Se añade antes de los datos de la factura."
         value={form.invoiceEmailIntro}
         onChange={set('invoiceEmailIntro')}
-      />
-      <TextareaField
-        className="sm:col-span-2"
-        label="Pie de página de los documentos"
-        maxLength={500}
-        placeholder="Inscrita en el Registro Mercantil de Barcelona, tomo 1234…"
-        helper="Aparece al final de presupuestos y facturas."
-        value={form.documentFooter}
-        onChange={set('documentFooter')}
       />
     </Section>
   )

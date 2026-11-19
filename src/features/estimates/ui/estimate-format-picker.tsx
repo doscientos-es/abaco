@@ -1,11 +1,16 @@
-import { useId } from 'react'
-
 import { estimateFormatLabels, type EstimateFormat } from '@/shared/domain/estimate-document'
+import { VisualRadioGroup } from '@/shared/ui/visual-radio-group'
 
 const formats = [
   { value: 'table', description: 'Partidas, cantidades y precios en una tabla.' },
   { value: 'sections', description: 'Una propuesta con títulos, textos, precios y servicios.' },
 ] as const
+
+const formatOptions = formats.map((format) => ({
+  ...format,
+  label: estimateFormatLabels[format.value],
+  illustration: <EstimateFormatIllustration format={format.value} />,
+}))
 
 export function EstimateFormatPicker({
   value,
@@ -14,56 +19,14 @@ export function EstimateFormatPicker({
   value: EstimateFormat
   onChange: (value: EstimateFormat) => void
 }) {
-  const id = useId()
   return (
-    <fieldset className="min-w-0 sm:col-span-2">
-      <legend className="text-muted-foreground mb-2 text-xs font-medium">
-        Tipo de presupuesto
-      </legend>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {formats.map((format) => (
-          <label key={format.value} className="relative min-w-0 cursor-pointer">
-            <input
-              type="radio"
-              name={`${id}-format`}
-              value={format.value}
-              checked={value === format.value}
-              onChange={() => onChange(format.value)}
-              aria-labelledby={`${id}-${format.value}-label`}
-              aria-describedby={`${id}-${format.value}-description`}
-              className="peer sr-only"
-            />
-            <span className="border-border bg-card peer-checked:border-primary peer-checked:ring-primary/20 peer-focus-visible:ring-ring hover:border-primary/50 block h-full overflow-hidden rounded-xl border peer-checked:ring-2 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2">
-              <span className="bg-muted/40 block border-b p-3">
-                <EstimateFormatIllustration format={format.value} />
-              </span>
-              <span className="block space-y-1 p-3">
-                <span
-                  id={`${id}-${format.value}-label`}
-                  className="flex items-center justify-between gap-2 text-sm font-semibold"
-                >
-                  {estimateFormatLabels[format.value]}
-                  <span
-                    aria-hidden="true"
-                    className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${value === format.value ? 'border-primary bg-primary' : 'border-border'}`}
-                  >
-                    {value === format.value ? (
-                      <span className="bg-primary-foreground size-1.5 rounded-full" />
-                    ) : null}
-                  </span>
-                </span>
-                <span
-                  id={`${id}-${format.value}-description`}
-                  className="text-muted-foreground block text-xs leading-relaxed"
-                >
-                  {format.description}
-                </span>
-              </span>
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <VisualRadioGroup
+      label="Tipo de presupuesto"
+      className="min-w-0 sm:col-span-2"
+      options={formatOptions}
+      value={value}
+      onChange={onChange}
+    />
   )
 }
 

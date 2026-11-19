@@ -63,6 +63,7 @@ import {
 import { recordManualApproval } from '../application/record-manual-approval'
 import { requiredEstimateSectionsError } from '../domain/estimate-sections'
 import { EstimateAutoSaveStatus } from './estimate-auto-save-status'
+import { EstimateDesignWorkspace } from './estimate-design-workspace'
 import { EstimateDocument } from './estimate-document'
 import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 import { EstimatePricingEditor } from './estimate-pricing-editor'
@@ -313,40 +314,41 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </Button>
           <Button onPress={print}>Imprimir o guardar PDF</Button>
         </div>
-        {can(session?.role, 'estimates:write') && !creation?.submitted ? (
-          <Card className="print:hidden">
-            <CardHeader>
-              <CardTitle>Diseño del presupuesto</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-muted-foreground text-sm">
-                Los cambios solo afectan a este presupuesto. Al publicarlo, se conserva este diseño.
-              </p>
-              <EstimateDesignFields
-                value={design}
-                onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
-              />
-              {!sameEstimateDesign(design, companyDesign) ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onPress={() => patchEstimate(estimate.id, { documentDesign: companyDesign })}
-                >
-                  Usar diseño de la empresa
-                </Button>
-              ) : null}
-              {!creation ? <EstimateAutoSaveStatus /> : null}
-            </CardContent>
-          </Card>
-        ) : null}
-        <DocumentPreview label="del presupuesto">
-          <EstimateDocument
-            estimate={estimate}
-            client={client}
-            tenant={tenant}
-            documentRef={documentRef}
-          />
-        </DocumentPreview>
+        <EstimateDesignWorkspace
+          estimate={estimate}
+          client={client}
+          tenant={tenant}
+          documentRef={documentRef}
+          controls={
+            can(session?.role, 'estimates:write') && !creation?.submitted ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Diseño del presupuesto</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground text-xs">
+                    Los cambios solo afectan a este presupuesto. Al publicarlo, se conserva este
+                    diseño.
+                  </p>
+                  <EstimateDesignFields
+                    value={design}
+                    onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
+                  />
+                  {!sameEstimateDesign(design, companyDesign) ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onPress={() => patchEstimate(estimate.id, { documentDesign: companyDesign })}
+                    >
+                      Usar diseño de la empresa
+                    </Button>
+                  ) : null}
+                  {!creation ? <EstimateAutoSaveStatus /> : null}
+                </CardContent>
+              </Card>
+            ) : null
+          }
+        />
       </div>
     )
   }

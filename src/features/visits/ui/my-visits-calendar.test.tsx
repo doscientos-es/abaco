@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   query: null as null | (() => Promise<unknown>),
   items: [] as CalendarEvent[],
   click: null as null | ((item: CalendarEvent) => void),
+  selectDay: null as null | ((day: Date) => void),
   data: [] as Array<Record<string, unknown>>,
 }))
 
@@ -28,12 +29,15 @@ vi.mock('@/shared/ui/event-calendar', () => ({
   EventCalendar: ({
     items,
     onItemClick,
+    onDayClick,
   }: {
     items: CalendarEvent[]
     onItemClick: (item: CalendarEvent) => void
+    onDayClick: (day: Date) => void
   }) => {
     mocks.items = items
     mocks.click = onItemClick
+    mocks.selectDay = onDayClick
     return <div>Calendario</div>
   },
 }))
@@ -45,7 +49,25 @@ describe('calendario de trabajos del usuario', () => {
     mocks.query = null
     mocks.items = []
     mocks.click = null
+    mocks.selectDay = null
     mocks.list.mockResolvedValue([])
+  })
+
+  it('opens the selected day without changing the calendar month navigation', () => {
+    const selectDay = vi.fn()
+    const navigateMonth = vi.fn()
+    renderToStaticMarkup(
+      <MyVisitsCalendar
+        tenantId="tenant"
+        date="2026-11-13"
+        onDateChange={navigateMonth}
+        onSelectDay={selectDay}
+        onOpenGroup={vi.fn()}
+      />,
+    )
+    mocks.selectDay?.(new Date(2026, 10, 17, 12))
+    expect(selectDay).toHaveBeenCalledWith('2026-11-17')
+    expect(navigateMonth).not.toHaveBeenCalled()
   })
 
   it('loads the complete month grid in ranges accepted by the assigned-visits API', async () => {
@@ -54,6 +76,7 @@ describe('calendario de trabajos del usuario', () => {
         tenantId="tenant"
         date="2026-11-13"
         onDateChange={vi.fn()}
+        onSelectDay={vi.fn()}
         onOpenGroup={vi.fn()}
       />,
     )
@@ -81,6 +104,7 @@ describe('calendario de trabajos del usuario', () => {
         tenantId="tenant"
         date="2026-11-13"
         onDateChange={vi.fn()}
+        onSelectDay={vi.fn()}
         onOpenGroup={open}
       />,
     )

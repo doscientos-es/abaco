@@ -139,7 +139,7 @@ describe('navegación por días', () => {
       },
     ]
     const html = renderToStaticMarkup(<MyDayPage />)
-    expect(html).toContain('Ver calendario')
+    expect(html).toContain('Calendario')
     expect(html).toContain('Oficina')
     expect(html).toContain('2 trabajos')
     expect(html).toContain('Fregar')

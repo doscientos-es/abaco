@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 import { dateValue } from '@/shared/lib/date-range'
 import {
   calendarDays,
+  atCalendarMinutes,
   eventIntersectsDay,
   timedEventLayout,
   type CalendarEvent,
@@ -34,6 +35,7 @@ export function EventCalendar({
   onRangeSelect,
   showAllDay = true,
   showToday = true,
+  compactEmptyHours = false,
   renderDayLabel,
   onDayClick,
   renderItem,
@@ -51,6 +53,7 @@ export function EventCalendar({
   onRangeSelect?: ((range: { start: Date; end: Date }) => void) | undefined
   showAllDay?: boolean
   showToday?: boolean
+  compactEmptyHours?: boolean
   renderDayLabel?: ((day: Date) => ReactNode) | undefined
   onDayClick?: ((day: Date) => void) | undefined
   renderItem?: ((item: CalendarEvent) => ReactNode) | undefined
@@ -63,10 +66,27 @@ export function EventCalendar({
   const now = useCalendarNow()
   const today = dateValue(now)
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const [earlyExpanded, setEarlyExpanded] = useState(false)
+  const [lateExpanded, setLateExpanded] = useState(false)
+  const days = calendarDays(value, view)
+  const hasEventsIn = (start: number, end: number) =>
+    items.some(
+      (item) =>
+        !item.allDay &&
+        days.some(
+          (day) =>
+            item.start < atCalendarMinutes(day, end) && item.end > atCalendarMinutes(day, start),
+        ),
+    )
+  const compact = compactEmptyHours && view === 'week' && !allDayOnly
+  const canCollapseEarly = compact && !hasEventsIn(0, 360)
+  const canCollapseLate = compact && !hasEventsIn(1320, 1440)
+  const startMinute = canCollapseEarly && !earlyExpanded ? 360 : 0
+  const endMinute = canCollapseLate && !lateExpanded ? 1320 : 1440
   useEffect(() => {
     const scroller = root.current?.querySelector<HTMLElement>('.event-calendar__time-scroll')
-    if (scroller) scroller.scrollTop = 7 * 60
-  }, [view, dateKey])
+    if (scroller) scroller.scrollTop = compact ? 0 : 7 * 60
+  }, [view, dateKey, compact])
   const interaction = useCalendarInteraction({
     root,
     view,
@@ -74,7 +94,6 @@ export function EventCalendar({
     onChange: onItemChange,
     onCreate: onRangeSelect,
   })
-  const days = calendarDays(value, view)
   const previewId = '__calendar-preview__'
   const previewSource = interaction.preview
     ? items.find((item) => item.id === interaction.preview?.item.id)
@@ -212,58 +231,90 @@ export function EventCalendar({
                   tabIndex={0}
                   aria-label="Horario de 00:00 a 24:00, desplazar para ver todas las horas"
                 >
-                  <div className="event-calendar__time-grid">
-                    <div className="event-calendar__time-axis">
-                      {Array.from({ length: 24 }, (_, hour) => (
-                        <span key={hour} style={{ top: `${(hour / 24) * 100}%` }}>
-                          {String(hour).padStart(2, '0')}:00
-                        </span>
+                  {canCollapseEarly ? (
+                    <button
+                      type="button"
+                      className="event-calendar__collapsed-hours"
+                      aria-expanded={earlyExpanded}
+                      onClick={() => setEarlyExpanded((expanded) => !expanded)}
+                    >
+                      {earlyExpanded
+                        ? 'Ocultar horas sin actividad'
+                        : 'Mostrar horas sin actividad'}{' '}
+                      · 00:00–06:00 <span aria-hidden="true">{earlyExpanded ? '⌃' : '⌄'}</span>
+                    </button>
+                  ) : null}
+                  <div
+                    className="event-calendar__time-window"
+                    style={{ height: `${endMinute - startMinute}px` }}
+                  >
+                    <div
+                      className="event-calendar__time-grid"
+                      style={{ transform: `translateY(-${startMinute}px)` }}
+                    >
+                      <div className="event-calendar__time-axis">
+                        {Array.from({ length: 24 }, (_, hour) => (
+                          <span key={hour} style={{ top: `${(hour / 24) * 100}%` }}>
+                            {String(hour).padStart(2, '0')}:00
+                          </span>
+                        ))}
+                      </div>
+                      {days.map((day) => (
+                        <div
+                          key={dateValue(day)}
+                          className="event-calendar__time-column"
+                          data-calendar-day={dateValue(day)}
+                          data-calendar-timed="true"
+                          style={
+                            onRangeSelect ? { touchAction: 'none', cursor: 'crosshair' } : undefined
+                          }
+                        >
+                          {showToday && dateValue(day) === today ? (
+                            <>
+                              <span
+                                className="event-calendar__now"
+                                style={{ top: `${(currentMinutes / 1440) * 100}%` }}
+                                aria-hidden="true"
+                              />
+                              <span className="sr-only">
+                                Hora actual: {String(now.getHours()).padStart(2, '0')}:
+                                {String(now.getMinutes()).padStart(2, '0')}
+                              </span>
+                            </>
+                          ) : null}
+                          {[
+                            ...timedEventLayout(
+                              displayItems.filter((item) => item.id !== previewSource?.id),
+                              day,
+                            ),
+                            ...(previewSource &&
+                            !previewSource.allDay &&
+                            eventIntersectsDay(previewSource, day)
+                              ? [{ item: previewSource, top: 0, height: 0, lane: 0, lanes: 1 }]
+                              : []),
+                          ].map(({ item, top, height, lane, lanes }) =>
+                            eventButton(item, true, {
+                              top: `${top}%`,
+                              height: `${height}%`,
+                              left: `calc(${(lane / lanes) * 100}% + 2px)`,
+                              width: `calc(${100 / lanes}% - 4px)`,
+                            }),
+                          )}
+                        </div>
                       ))}
                     </div>
-                    {days.map((day) => (
-                      <div
-                        key={dateValue(day)}
-                        className="event-calendar__time-column"
-                        data-calendar-day={dateValue(day)}
-                        data-calendar-timed="true"
-                        style={
-                          onRangeSelect ? { touchAction: 'none', cursor: 'crosshair' } : undefined
-                        }
-                      >
-                        {showToday && dateValue(day) === today ? (
-                          <>
-                            <span
-                              className="event-calendar__now"
-                              style={{ top: `${(currentMinutes / 1440) * 100}%` }}
-                              aria-hidden="true"
-                            />
-                            <span className="sr-only">
-                              Hora actual: {String(now.getHours()).padStart(2, '0')}:
-                              {String(now.getMinutes()).padStart(2, '0')}
-                            </span>
-                          </>
-                        ) : null}
-                        {[
-                          ...timedEventLayout(
-                            displayItems.filter((item) => item.id !== previewSource?.id),
-                            day,
-                          ),
-                          ...(previewSource &&
-                          !previewSource.allDay &&
-                          eventIntersectsDay(previewSource, day)
-                            ? [{ item: previewSource, top: 0, height: 0, lane: 0, lanes: 1 }]
-                            : []),
-                        ].map(({ item, top, height, lane, lanes }) =>
-                          eventButton(item, true, {
-                            top: `${top}%`,
-                            height: `${height}%`,
-                            left: `calc(${(lane / lanes) * 100}% + 2px)`,
-                            width: `calc(${100 / lanes}% - 4px)`,
-                          }),
-                        )}
-                      </div>
-                    ))}
                   </div>
+                  {canCollapseLate ? (
+                    <button
+                      type="button"
+                      className="event-calendar__collapsed-hours"
+                      aria-expanded={lateExpanded}
+                      onClick={() => setLateExpanded((expanded) => !expanded)}
+                    >
+                      {lateExpanded ? 'Ocultar horas sin actividad' : 'Mostrar horas sin actividad'}{' '}
+                      · 22:00–24:00 <span aria-hidden="true">{lateExpanded ? '⌄' : '⌃'}</span>
+                    </button>
+                  ) : null}
                 </section>
                 {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
               </>

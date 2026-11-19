@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { ClientTypesSection } from '@/features/clients'
+import { EstimateDesignExample } from '@/features/estimates'
 import { patchTenant } from '@/features/settings/application/settings-actions'
 import {
   defaultBrandColor,
@@ -15,7 +16,7 @@ import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estim
 import type { Tenant } from '@/shared/domain/types'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
-import { TextField } from '@/shared/ui/form'
+import { TextareaField, TextField } from '@/shared/ui/form'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { MessageFields, type MessageForm } from './message-fields'
@@ -76,7 +77,7 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className={tab === 'documentos' ? 'max-w-6xl space-y-6' : 'max-w-4xl space-y-6'}>
       <WorkspacePageHeading title="Personalizar" />
 
       <WorkspacePageTabs>
@@ -251,20 +252,34 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
 
       {tab === 'documentos' ? (
         <>
-          <Section
-            title="Diseño de presupuestos"
-            description="Estos ajustes se copian al crear un presupuesto. No cambian los documentos que ya existen."
-          >
-            <div className="sm:col-span-2">
-              <EstimateDesignFields
-                value={design}
-                onChange={(next) => {
-                  setDesign(next)
-                  setSaved(false)
-                }}
-              />
-            </div>
-          </Section>
+          <EstimateDesignExample
+            design={design}
+            tenant={{ ...tenant, documentFooter: messages.documentFooter.trim() }}
+            controls={
+              <Section
+                title="Diseño de presupuestos"
+                description="El diseño se copia al crear un presupuesto. No modifica los ya publicados."
+              >
+                <div className="min-w-0 space-y-5 sm:col-span-2">
+                  <EstimateDesignFields
+                    value={design}
+                    onChange={(next) => {
+                      setDesign(next)
+                      setSaved(false)
+                    }}
+                  />
+                  <TextareaField
+                    label="Pie de página de los documentos"
+                    maxLength={500}
+                    placeholder="Añade tus datos registrales o una nota para el cliente."
+                    helper="También se usa en facturas. En el presupuesto se ve al final si está activado."
+                    value={messages.documentFooter}
+                    onChange={setMessage('documentFooter')}
+                  />
+                </div>
+              </Section>
+            }
+          />
           <MessageFields form={messages} set={setMessage} companyName={tenant.name} />
         </>
       ) : null}

@@ -42,6 +42,64 @@ describe('event calendar presentation', () => {
     expect(html.match(/data-calendar-event="test"/g)).toHaveLength(2)
     expect(html).not.toContain('Cambiar duración')
   })
+  it('compacts empty early and late hours in the weekly schedule', () => {
+    const html = renderToStaticMarkup(
+      <EventCalendar
+        value={value}
+        view="week"
+        items={[item]}
+        onItemClick={vi.fn()}
+        compactEmptyHours
+      />,
+    )
+    expect(html).toContain('Mostrar horas sin actividad · 00:00–06:00')
+    expect(html).toContain('Mostrar horas sin actividad · 22:00–24:00')
+    expect(html).toContain('height:960px')
+    expect(html).toContain('translateY(-360px)')
+  })
+
+  it('keeps hours visible when a shift crosses midnight', () => {
+    const night = { ...item, start: new Date(2026, 10, 13, 23), end: new Date(2026, 10, 14, 1) }
+    const html = renderToStaticMarkup(
+      <EventCalendar
+        value={value}
+        view="week"
+        items={[night]}
+        onItemClick={vi.fn()}
+        compactEmptyHours
+      />,
+    )
+    expect(html).not.toContain('Mostrar horas sin actividad')
+    expect(html).toContain('height:1440px')
+    expect(html.match(/data-calendar-event="test"/g)).toHaveLength(2)
+  })
+
+  it('does not collapse hours touched by a shift, but ignores all-day events', () => {
+    const early = {
+      ...item,
+      start: new Date(2026, 10, 13, 5, 30),
+      end: new Date(2026, 10, 13, 6, 30),
+    }
+    const allDay = {
+      ...item,
+      id: 'absence',
+      start: new Date(2026, 10, 13),
+      end: new Date(2026, 10, 14),
+      allDay: true,
+    }
+    const html = renderToStaticMarkup(
+      <EventCalendar
+        value={value}
+        view="week"
+        items={[early, allDay]}
+        onItemClick={vi.fn()}
+        compactEmptyHours
+      />,
+    )
+    expect(html).not.toContain('Mostrar horas sin actividad · 00:00–06:00')
+    expect(html).toContain('Mostrar horas sin actividad · 22:00–24:00')
+    expect(html).toContain('height:1320px')
+  })
   it('renders multi-day all-day events without invented hours or resize controls for non-duration records', () => {
     const absence = {
       ...item,

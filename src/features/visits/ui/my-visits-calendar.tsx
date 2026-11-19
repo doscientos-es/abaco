@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { dateValue, moveDays } from '@/shared/lib/date-range'
 import { calendarDays, type CalendarEvent } from '@/shared/lib/event-calendar'
 import { EventCalendar } from '@/shared/ui/event-calendar'
+import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import { listMyVisits } from '../application/visit-actions'
 import { calendarDateValue, moveCalendarMonth } from './agenda-calendar'
@@ -14,11 +15,13 @@ export function MyVisitsCalendar({
   tenantId,
   date,
   onDateChange,
+  onSelectDay,
   onOpenGroup,
 }: {
   tenantId: string
   date: string
   onDateChange: (date: string) => void
+  onSelectDay: (date: string) => void
   onOpenGroup: (date: string, contractId: string | null) => void
 }) {
   const value = calendarDateValue(date)
@@ -69,35 +72,40 @@ export function MyVisitsCalendar({
           <CaretRightIcon aria-hidden="true" />
         </Button>
       </div>
-      {visits.isPending ? <p>Cargando calendario…</p> : null}
+      {visits.isPending ? <WorkerLoading label="Cargando calendario…" /> : null}
       {visits.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          No se pudo cargar el calendario: {visits.error.message}
-        </p>
+        <WorkerState
+          error
+          title="No se pudo cargar el calendario"
+          description="Comprueba tu conexión y vuelve a intentarlo."
+          onRetry={() => void visits.refetch()}
+        />
       ) : null}
-      <EventCalendar
-        aria-label="Calendario de mis trabajos"
-        view="month"
-        value={value}
-        items={items}
-        showInstructions={false}
-        onDayClick={(day) => onDateChange(dateValue(day))}
-        onItemClick={(item) => {
-          const group = byId.get(item.id)
-          if (group) onOpenGroup(dateValue(group.start), group.visits[0]?.contract_id ?? null)
-        }}
-        renderItem={(item) => {
-          const group = byId.get(item.id)
-          return group ? (
-            <span>
-              {group.title} · {group.visits.length}{' '}
-              {group.visits.length === 1 ? 'trabajo' : 'trabajos'}
-            </span>
-          ) : (
-            item.title
-          )
-        }}
-      />
+      {!visits.isPending && !visits.isError ? (
+        <EventCalendar
+          aria-label="Calendario de mis trabajos"
+          view="month"
+          value={value}
+          items={items}
+          showInstructions={false}
+          onDayClick={(day) => onSelectDay(dateValue(day))}
+          onItemClick={(item) => {
+            const group = byId.get(item.id)
+            if (group) onOpenGroup(dateValue(group.start), group.visits[0]?.contract_id ?? null)
+          }}
+          renderItem={(item) => {
+            const group = byId.get(item.id)
+            return group ? (
+              <span>
+                {group.title} · {group.visits.length}{' '}
+                {group.visits.length === 1 ? 'trabajo' : 'trabajos'}
+              </span>
+            ) : (
+              item.title
+            )
+          }}
+        />
+      ) : null}
     </section>
   )
 }

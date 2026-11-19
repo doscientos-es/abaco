@@ -88,6 +88,27 @@
 .event-calendar__time-grid {
   height: 1440px;
 }
+.event-calendar__time-window {
+  overflow: hidden;
+}
+.event-calendar__collapsed-hours {
+  display: flex;
+  width: 100%;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.event-calendar__collapsed-hours:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
 .event-calendar__time-axis {
   position: relative;
 }
