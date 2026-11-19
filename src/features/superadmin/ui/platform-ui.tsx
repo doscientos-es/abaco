@@ -1,9 +1,85 @@
 import { Badge, Button, Input } from '@doscientos/ui'
-import { CaretLeft, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
+import {
+  ArrowLeft,
+  CaretLeft,
+  CaretRight,
+  MagnifyingGlass,
+  PencilSimple,
+} from '@phosphor-icons/react'
+import { Link } from '@tanstack/react-router'
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { platformMaxPage, platformPageSize } from '../domain/platform-navigation'
+import {
+  platformMaxPage,
+  platformPageSize,
+  type PlatformSearch,
+} from '../domain/platform-navigation'
 import { PlatformField } from './platform-form-field'
+
+export const platformActionClass =
+  'inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring'
+
+export function PlatformBackLink({
+  search,
+  children,
+}: {
+  search: PlatformSearch
+  children: ReactNode
+}) {
+  return (
+    <Link
+      to="/superadmin"
+      search={search}
+      className="text-muted-foreground hover:text-foreground focus-visible:outline-ring inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium focus-visible:outline-2"
+    >
+      <ArrowLeft aria-hidden="true" className="size-4 shrink-0" />
+      {children}
+    </Link>
+  )
+}
+
+export function PlatformEditLink({
+  search,
+  children,
+}: {
+  search: PlatformSearch
+  children: ReactNode
+}) {
+  return (
+    <Link to="/superadmin" search={search} className={platformActionClass}>
+      <PencilSimple aria-hidden="true" className="size-4 shrink-0" />
+      {children}
+    </Link>
+  )
+}
+
+export function PlatformRowLink({
+  search,
+  children,
+  aside,
+}: {
+  search: PlatformSearch
+  children: ReactNode
+  aside?: ReactNode
+}) {
+  return (
+    <Link
+      to="/superadmin"
+      search={search}
+      className="focus-visible:outline-ring hover:bg-muted/60 group flex min-h-16 items-center gap-3 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 sm:px-5"
+    >
+      <span className="min-w-0 flex-1 break-words">{children}</span>
+      {aside ? <span className="shrink-0 text-right">{aside}</span> : null}
+      <CaretRight
+        aria-hidden="true"
+        className="text-muted-foreground group-hover:text-foreground size-4 shrink-0"
+      />
+    </Link>
+  )
+}
+
+export const platformRowTitleClass = 'group-hover:text-primary block font-semibold'
+export const platformRowMetaClass = 'text-muted-foreground mt-0.5 block text-xs'
 
 const date = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' })
 export const formatPlatformDate = (value: string | null) =>

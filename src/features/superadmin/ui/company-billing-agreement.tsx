@@ -21,9 +21,10 @@ import {
   scheduleBillingAgreement,
   type BillingAgreement,
 } from '../application/superadmin-queries'
+import { withoutEditor, type PlatformSearch } from '../domain/platform-navigation'
 import { CompanyBillingVat } from './company-billing-vat'
 import { PlatformField, PlatformSelect } from './platform-form-field'
-import { PlatformMessage } from './platform-ui'
+import { PlatformBackLink, PlatformEditLink, PlatformMessage } from './platform-ui'
 
 const periodUnit = (period: Interval) => (period === 'year' ? 'año' : 'mes')
 
@@ -31,10 +32,12 @@ export function CompanyBillingAgreement({
   tenantId,
   members,
   subscriptionStatus,
+  search,
 }: {
   tenantId: string
   members: number
   subscriptionStatus: string
+  search: PlatformSearch
 }) {
   const catalog = useQuery(billingCatalogQuery)
   const previewOptions = billingPreviewQuery(tenantId)
@@ -59,23 +62,37 @@ export function CompanyBillingAgreement({
   })
   const next = preview.data?.next ?? null
   const fixedNet = preview.data?.fixed_net_cents ?? null
+  const editing = search.edicion
+  const vatBlocked = preview.data?.pending || subscriptionStatus === 'past_due'
   const catalogRate =
     next && catalog.data?.find((rate) => rate.plan === next.plan && rate.seats === next.seats)
   const catalogNet = next && catalogRate ? catalogQuote(catalogRate, next.period).net_cents : null
   const blocked = preview.data?.cancel_at_period_end
     ? 'Retira la cancelación antes de cambiar las condiciones.'
-    : preview.data?.pending || subscriptionStatus === 'past_due'
+    : vatBlocked
       ? 'Resuelve el pago pendiente antes de cambiar las condiciones.'
       : null
 
   return (
     <div className="border-border bg-card space-y-4 rounded-lg border p-4 sm:p-5">
-      <div className="space-y-1">
-        <h3 className="font-semibold">Condiciones de facturación</h3>
-        <p className="text-muted-foreground text-sm">
-          Consulta la cuota actual y prepara las condiciones de la próxima contratación o
-          renovación.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="font-semibold">
+            {editing === 'cuota'
+              ? 'Editar cuota'
+              : editing === 'iva'
+                ? 'Editar IVA'
+                : 'Condiciones de facturación'}
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            Los cambios se aplican al próximo cobro u oferta, sin cargo inmediato.
+          </p>
+        </div>
+        {editing ? (
+          <PlatformBackLink search={withoutEditor(search)}>Volver a suscripción</PlatformBackLink>
+        ) : preview.isSuccess && catalog.isSuccess && !blocked ? (
+          <PlatformEditLink search={{ ...search, edicion: 'cuota' }}>Editar cuota</PlatformEditLink>
+        ) : null}
       </div>
       {preview.isPending || catalog.isPending ? <output>Cargando condiciones…</output> : null}
       {preview.isError || catalog.isError ? (
@@ -87,15 +104,17 @@ export function CompanyBillingAgreement({
           }}
         />
       ) : null}
-      <dl className="border-border bg-muted/40 grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
-        <AgreementSummary
-          label="Condiciones vigentes"
-          terms={preview.data?.current ?? null}
-          rates={catalog.data}
-        />
-        <AgreementSummary label="Próximo cobro u oferta" terms={next} rates={catalog.data} />
-      </dl>
-      {next && fixedNet !== null ? (
+      {preview.data && editing !== 'iva' ? (
+        <dl className="border-border bg-muted/40 grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
+          <AgreementSummary
+            label="Condiciones vigentes"
+            terms={preview.data?.current ?? null}
+            rates={catalog.data}
+          />
+          <AgreementSummary label="Próximo cobro u oferta" terms={next} rates={catalog.data} />
+        </dl>
+      ) : null}
+      {editing !== 'iva' && next && fixedNet !== null ? (
         <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
           <div className="space-y-1 text-sm">
             <p className="font-medium">
@@ -108,36 +127,49 @@ export function CompanyBillingAgreement({
               </p>
             ) : null}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11"
-            isDisabled={
-              Boolean(blocked) ||
-              catalogNet === null ||
-              !catalog.isSuccess ||
-              !preview.isSuccess ||
-              mutation.isPending
-            }
-            onPress={() => {
-              if (catalogNet !== null) mutation.mutate({ restoreCatalog: catalogNet })
-            }}
-          >
-            Volver a tarifa de catálogo
-          </Button>
+          {editing === 'cuota' ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              isDisabled={
+                Boolean(blocked) ||
+                catalogNet === null ||
+                !catalog.isSuccess ||
+                !preview.isSuccess ||
+                mutation.isPending
+              }
+              onPress={() => {
+                if (catalogNet !== null) mutation.mutate({ restoreCatalog: catalogNet })
+              }}
+            >
+              Volver a tarifa de catálogo
+            </Button>
+          ) : null}
         </div>
       ) : null}
-      {preview.isSuccess ? (
+      {preview.isSuccess && editing === 'iva' ? (
         <CompanyBillingVat
           tenantId={tenantId}
           vatPercent={preview.data.vat_percent}
-          blocked={preview.data.pending || subscriptionStatus === 'past_due'}
+          blocked={vatBlocked}
         />
+      ) : null}
+      {preview.isSuccess && !editing ? (
+        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <dl className="text-sm">
+            <dt className="text-muted-foreground">IVA del próximo cobro</dt>
+            <dd className="mt-0.5 font-semibold">{preview.data.vat_percent} %</dd>
+          </dl>
+          {!vatBlocked ? (
+            <PlatformEditLink search={{ ...search, edicion: 'iva' }}>Editar IVA</PlatformEditLink>
+          ) : null}
+        </div>
       ) : null}
       {blocked ? (
         <output className="bg-muted block rounded-md p-3 text-sm">{blocked}</output>
       ) : null}
-      {preview.isSuccess && catalog.isSuccess && !blocked ? (
+      {editing === 'cuota' && preview.isSuccess && catalog.isSuccess && !blocked ? (
         <AgreementForm
           key={
             next
@@ -158,14 +190,16 @@ export function CompanyBillingAgreement({
           onSave={mutation.mutate}
         />
       ) : null}
-      {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
-      {mutation.error ? (
+      {editing === 'cuota' && mutation.isPending ? (
+        <FormFeedback state={{ status: 'pending' }} />
+      ) : null}
+      {editing === 'cuota' && mutation.error ? (
         <FormFeedback
           className="h-auto"
           state={{ status: 'error', message: mutation.error.message }}
         />
       ) : null}
-      {mutation.isSuccess ? (
+      {editing === 'cuota' && mutation.isSuccess ? (
         <FormFeedback
           className="h-auto"
           state={{

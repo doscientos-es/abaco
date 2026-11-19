@@ -8,6 +8,7 @@ export type { Subscription } from './application/billing-actions'
 export {
   billingVatLabel,
   catalogQuote,
+  paidPlans,
   planCatalog,
   planInfo,
   planLabel,

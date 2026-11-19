@@ -6,9 +6,7 @@ import {
   PageHeaderTitle,
   PageStack,
 } from '@doscientos/ui'
-import { ArrowLeft } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
 
 import { billingCatalogQuery, billingPreviewQuery, planLabel } from '@/features/billing'
 import { ModuleSubscriptions } from '@/features/product-modules'
@@ -18,6 +16,8 @@ import type { PlatformCompany } from '../application/superadmin-queries'
 import {
   directorySearch,
   invoiceNavigation,
+  companySectionSearch,
+  withoutEditor,
   type PlatformSearch,
 } from '../domain/platform-navigation'
 import { CompanyBillingAgreement } from './company-billing-agreement'
@@ -27,21 +27,20 @@ import {
   billingPeriodLabel,
   CompanyStatus,
   formatPlatformDate,
+  PlatformBackLink,
+  PlatformEditLink,
   PlatformMessage,
+  PlatformRowLink,
+  platformRowMetaClass,
+  platformRowTitleClass,
 } from './platform-ui'
 
 export function CompanyBackLink({ search }: { search: PlatformSearch }) {
   const fromInvoices = search.origen === 'facturas'
   return (
-    <Link
-      to="/superadmin"
-      search={fromInvoices ? invoiceNavigation(search) : directorySearch(search)}
-      activeOptions={{ exact: true, includeSearch: true }}
-      className="text-primary focus-visible:outline-ring inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:outline-2"
-    >
-      <ArrowLeft aria-hidden="true" className="size-4" />
+    <PlatformBackLink search={fromInvoices ? invoiceNavigation(search) : directorySearch(search)}>
       {fromInvoices ? 'Volver a facturas' : 'Volver a empresas'}
-    </Link>
+    </PlatformBackLink>
   )
 }
 
@@ -85,7 +84,7 @@ export function CompanyDetail({
         <CompanyNavigation search={search} />
       </nav>
       {search.seccion === 'modulos' ? (
-        <CompanyModules company={company} />
+        <CompanyModules company={company} search={search} />
       ) : search.seccion === 'pagos' ? (
         <CompanyPayments tenantId={company.id} rates={rates} />
       ) : (
@@ -101,9 +100,11 @@ export function CompanyDetail({
             </div>
           ) : (
             <CompanyBillingAgreement
+              key={search.edicion ?? 'detail'}
               tenantId={company.id}
               members={company.member_count}
               subscriptionStatus={company.subscription_status}
+              search={search}
             />
           )}
         </section>
@@ -121,7 +122,7 @@ function CompanyFact({ label, value }: { label: string; value: string | number }
   )
 }
 
-function CompanyModules({ company }: { company: PlatformCompany }) {
+function CompanyModules({ company, search }: { company: PlatformCompany; search: PlatformSearch }) {
   const queryClient = useQueryClient()
   const previewOptions = billingPreviewQuery(company.id)
   const preview = useQuery({ ...previewOptions, enabled: !company.is_complimentary })
@@ -132,6 +133,17 @@ function CompanyModules({ company }: { company: PlatformCompany }) {
       <h2 id="platform-modules" className="text-lg font-semibold">
         Módulos
       </h2>
+      {search.modulo ? (
+        <PlatformBackLink
+          search={
+            search.edicion === 'modulo'
+              ? withoutEditor(search)
+              : companySectionSearch(search, 'modulos')
+          }
+        >
+          {search.edicion === 'modulo' ? 'Volver al módulo' : 'Volver a módulos'}
+        </PlatformBackLink>
+      ) : null}
       {!company.is_complimentary && !preview.isError && next ? (
         <p className="text-muted-foreground text-sm">
           Módulos en el próximo cobro u oferta: {formatEuros(next.module_net_cents ?? 0)} sin IVA /{' '}
@@ -151,6 +163,7 @@ function CompanyModules({ company }: { company: PlatformCompany }) {
         )
       ) : (
         <ModuleSubscriptions
+          key={`${search.modulo ?? 'list'}:${search.edicion ?? 'detail'}`}
           tenantId={company.id}
           active={company.subscription_status === 'active'}
           courtesy={company.is_complimentary}
@@ -162,6 +175,32 @@ function CompanyModules({ company }: { company: PlatformCompany }) {
               company.subscription_status === 'past_due')
           }
           onChanged={() => queryClient.invalidateQueries({ queryKey: previewOptions.queryKey })}
+          navigation={
+            search.modulo
+              ? {
+                  code: search.modulo,
+                  editing: search.edicion === 'modulo',
+                  editLink: (
+                    <PlatformEditLink search={{ ...search, edicion: 'modulo' }}>
+                      Editar módulo
+                    </PlatformEditLink>
+                  ),
+                }
+              : {
+                  renderRow: ({ code, name, status, surcharge }) => (
+                    <PlatformRowLink
+                      search={{ ...search, modulo: code }}
+                      aside={<span className="hidden text-xs sm:inline">{surcharge}</span>}
+                    >
+                      <span className={platformRowTitleClass}>{name}</span>
+                      <span className={platformRowMetaClass}>
+                        {status}
+                        <span className="sm:hidden"> · {surcharge}</span>
+                      </span>
+                    </PlatformRowLink>
+                  ),
+                }
+          }
         />
       )}
     </section>
