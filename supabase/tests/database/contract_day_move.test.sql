@@ -53,5 +53,3 @@ begin
   exception when sqlstate 'P0409' then null; end;
 end $$;
 rollback;
-
-
