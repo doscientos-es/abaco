@@ -1,4 +1,4 @@
-export const ledgerGridColumns = 12
+import { snapDashboardWidth } from '@/shared/domain/dashboard-layout'
 
 export const accountingDatasetLabels = {
   clients: 'Exportar clientes',
@@ -14,6 +14,7 @@ export type LedgerChart = 'bars' | 'lines' | 'table' | 'donut' | 'ranking'
 type ModuleDefinition = {
   title: string
   width: number
+  description?: string
   charts?: readonly LedgerChart[]
   export?: LedgerExport
   adminOnly?: boolean
@@ -27,30 +28,49 @@ const modules = {
   monthly: { title: 'Ingresos y gastos por mes', width: 6, charts: ['bars', 'lines', 'table'] },
   categories: { title: 'Gastos por categoría', width: 6, charts: ['donut', 'ranking'] },
   recent: { title: 'Últimos apuntes', width: 6 },
-  'csv-book': { title: 'CSV para la gestoría', width: 6, export: 'book' },
-  'csv-vat': { title: 'Exportar IVA trimestral', width: 6, export: 'vat' },
+  'import-entries': {
+    title: 'Importar apuntes',
+    width: 6,
+    description: 'Añade ingresos y gastos desde Excel.',
+  },
+  'csv-book': {
+    title: 'CSV para la gestoría',
+    width: 6,
+    export: 'book',
+    description: 'Libro de ingresos y gastos del periodo seleccionado.',
+  },
+  'csv-vat': {
+    title: 'Exportar IVA trimestral',
+    width: 6,
+    export: 'vat',
+    description: 'Resumen de IVA de todos los trimestres registrados.',
+  },
   'csv-clients': {
     title: accountingDatasetLabels.clients,
     width: 6,
     export: 'clients',
+    description: 'Todos los clientes autorizados, sin filtro de periodo.',
     adminOnly: true,
   },
   'csv-invoices': {
     title: accountingDatasetLabels.invoices,
     width: 6,
     export: 'invoices',
+    description: 'Todas las facturas autorizadas, sin filtro de periodo.',
     adminOnly: true,
   },
   'csv-payments': {
     title: accountingDatasetLabels.payments,
     width: 6,
     export: 'payments',
+    description: 'Todos los cobros y devoluciones autorizados, sin filtro de periodo.',
     adminOnly: true,
   },
   'csv-expenses': {
     title: accountingDatasetLabels.expenses,
     width: 6,
     export: 'expenses',
+    description: 'Todos los gastos autorizados, sin filtro de periodo.',
     adminOnly: true,
   },
 } as const satisfies Record<string, ModuleDefinition>
@@ -72,6 +92,7 @@ const defaultModules: LedgerModuleId[] = [
   'monthly',
   'categories',
   'csv-book',
+  'import-entries',
 ]
 const moduleIds = Object.keys(modules) as LedgerModuleId[]
 
@@ -83,28 +104,13 @@ export function availableLedgerModules(canExportDatasets: boolean): LedgerModule
   return moduleIds.filter((id) => canExportDatasets || !ledgerModuleDefinition(id).adminOnly)
 }
 
-export function ledgerModuleWidths(id: LedgerModuleId): number[] {
-  const minWidth = ledgerModuleDefinition(id).width
-  return [3, 4, 6, 8, 9, ledgerGridColumns].filter((width) => width >= minWidth)
-}
-
-export function snapLedgerModuleWidth(id: LedgerModuleId, width: number): number {
-  if (!Number.isFinite(width)) return ledgerModuleDefinition(id).width
-  return ledgerModuleWidths(id).reduce((closest, candidate) =>
-    Math.abs(candidate - width) < Math.abs(closest - width) ? candidate : closest,
-  )
-}
-
 function moduleFrom(id: LedgerModuleId, saved: Record<string, unknown>): LedgerModule {
   const definition = ledgerModuleDefinition(id)
   const chart =
     definition.charts?.find((option) => option === saved.chart) ?? definition.charts?.[0]
   return {
     id,
-    width: snapLedgerModuleWidth(
-      id,
-      typeof saved.width === 'number' ? saved.width : definition.width,
-    ),
+    width: snapDashboardWidth(saved.width, definition.width),
     ...(chart ? { chart } : {}),
     ...(id === 'monthly' ? { months: saved.months === 12 ? 12 : 6 } : {}),
     ...(id === 'categories'
@@ -147,20 +153,4 @@ export function resolveLedgerSummary(
     reconciled.push(moduleFrom(id, saved))
   }
   return { version: 1, modules: reconciled }
-}
-
-export function moveLedgerModule(
-  layout: LedgerSummaryLayout,
-  id: string | number,
-  to: number,
-): LedgerSummaryLayout {
-  const from = layout.modules.findIndex((module) => module.id === id)
-  if (from < 0 || !Number.isInteger(to) || to < 0 || to >= layout.modules.length || from === to)
-    return layout
-  const items = [...layout.modules]
-  const selected = items[from]
-  if (!selected) return layout
-  items.splice(from, 1)
-  items.splice(to, 0, selected)
-  return { ...layout, modules: items }
 }

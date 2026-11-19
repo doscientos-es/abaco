@@ -1,8 +1,10 @@
 import type { CSSProperties, Ref } from 'react'
 
+import { documentAccent, type InvoiceAppearance } from '@/shared/domain/document-appearance'
 import { defaultInvoiceDesign, type InvoiceDesign } from '@/shared/domain/invoice-design'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Invoice, Tenant } from '@/shared/domain/types'
+import { documentLogoStyle } from '@/shared/ui/document-logo-style'
 
 import './invoice-document.css'
 
@@ -20,6 +22,7 @@ export function InvoiceDocument({
   estimateNumber,
   documentRef,
   previewDesign,
+  previewAppearance,
 }: {
   invoice: Invoice
   client: Client | undefined
@@ -27,9 +30,11 @@ export function InvoiceDocument({
   estimateNumber?: string | undefined
   documentRef?: Ref<HTMLElement>
   previewDesign?: InvoiceDesign
+  previewAppearance?: InvoiceAppearance
 }) {
   const issuer = invoice.snapshot?.issuer ?? tenant
   const recipient = invoice.snapshot?.client ?? client
+  const appearance = previewAppearance ?? invoice.snapshot?.appearance
   const reference = invoice.contractPeriodId
     ? invoice.snapshot?.contractTitle
     : invoice.workExtraId
@@ -39,9 +44,8 @@ export function InvoiceDocument({
   const vatCents = invoice.totalCents - baseCents
   const locality = [issuer.postalCode, issuer.city].filter(Boolean).join(' ')
   const contact = [issuer.phone, issuer.email].filter(Boolean).join(' · ')
-  const brandColor = /^#[0-9a-f]{6}$/i.test(issuer.brandColor?.trim() ?? '')
-    ? issuer.brandColor?.trim()
-    : '#2a4227'
+  const brandColor =
+    documentAccent(appearance?.accentColor) ?? documentAccent(issuer.brandColor) ?? '#2a4227'
   const style = { '--invoice-brand': brandColor } as CSSProperties
 
   return (
@@ -54,16 +58,23 @@ export function InvoiceDocument({
     >
       <header className="invoice-sheet-header">
         <div className="invoice-sheet-identity">
-          {issuer.logoUrl?.trim() ? (
-            <img src={issuer.logoUrl.trim()} alt={issuer.name} className="invoice-sheet-logo" />
+          {appearance?.showLogo !== false && issuer.logoUrl?.trim() ? (
+            <img
+              src={issuer.logoUrl.trim()}
+              alt={issuer.name}
+              className="invoice-sheet-logo"
+              style={documentLogoStyle(appearance)}
+            />
           ) : null}
           <h2 className="invoice-sheet-company">{issuer.name}</h2>
           {issuer.legalName && issuer.legalName !== issuer.name ? <p>{issuer.legalName}</p> : null}
           {issuer.taxId ? <p>NIF / CIF: {issuer.taxId}</p> : null}
           {issuer.address ? <p className="invoice-sheet-address">{issuer.address}</p> : null}
           {locality ? <p>{locality}</p> : null}
-          {contact ? <p className="invoice-sheet-contact">{contact}</p> : null}
-          {issuer.website ? <p>{issuer.website}</p> : null}
+          {appearance?.showContact !== false && contact ? (
+            <p className="invoice-sheet-contact">{contact}</p>
+          ) : null}
+          {appearance?.showContact !== false && issuer.website ? <p>{issuer.website}</p> : null}
         </div>
         <div className="invoice-sheet-reference">
           <p className="invoice-sheet-label">Factura</p>
@@ -87,7 +98,7 @@ export function InvoiceDocument({
           <h3>{recipient?.name ?? 'Sin cliente'}</h3>
           {recipient?.taxId ? <p>NIF / CIF: {recipient.taxId}</p> : null}
           {recipient?.address ? <p className="invoice-sheet-address">{recipient.address}</p> : null}
-          {recipient?.email ? <p>{recipient.email}</p> : null}
+          {appearance?.showContact !== false && recipient?.email ? <p>{recipient.email}</p> : null}
         </div>
         {reference ? (
           <div className="invoice-sheet-origin">

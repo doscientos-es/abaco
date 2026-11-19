@@ -1,11 +1,9 @@
 export {
-  issueContractPeriodInvoiceDraft,
+  issueInvoiceDraft,
   listOpenContractPeriodInvoiceDrafts,
   updateContractPeriodInvoiceDraft,
   createMilestoneInvoiceDraft,
   createWorkExtraInvoiceDraft,
-  issueMilestoneInvoiceDraft,
-  issueWorkExtraInvoiceDraft,
   listOpenInvoiceDrafts,
   listOpenWorkExtraInvoiceDrafts,
   updateMilestoneInvoiceDraft,

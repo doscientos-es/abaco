@@ -1,13 +1,15 @@
 import { Checkbox } from '@doscientos/ui'
 
+import { defaultDocumentAppearance } from '@/shared/domain/document-appearance'
 import type { EstimateDesign } from '@/shared/domain/estimate-design'
 
+import { DocumentAppearanceFields } from './document-appearance-fields'
 import { VisualRadioGroup } from './visual-radio-group'
 
 const layouts = [
-  { value: 'compact', label: 'Compacto', description: 'Sin portada ni índice.' },
+  { value: 'compact', label: 'Compacto', description: 'Cabecera breve y filas ajustadas.' },
   { value: 'proposal', label: 'Propuesta', description: 'Portada e índice opcional.' },
-  { value: 'minimal', label: 'Minimalista', description: 'Limpio y discreto, sin portada.' },
+  { value: 'minimal', label: 'Minimalista', description: 'Título centrado y márgenes amplios.' },
   { value: 'editorial', label: 'Editorial', description: 'Cabecera destacada, sin portada.' },
 ] as const
 
@@ -19,14 +21,16 @@ const layoutOptions = layouts.map((layout) => ({
 export function EstimateDesignFields({
   value,
   onChange,
+  brandColor,
 }: {
   value: EstimateDesign
   onChange: (design: EstimateDesign) => void
+  brandColor?: string | undefined
 }) {
   return (
     <div className="space-y-4">
       <VisualRadioGroup
-        label="Plantilla"
+        label="Diseño base"
         value={value.layout}
         options={layoutOptions}
         onChange={(layout) => onChange({ ...value, layout })}
@@ -57,6 +61,12 @@ export function EstimateDesignFields({
           Mostrar texto de pie de página
         </Checkbox>
       </fieldset>
+      <DocumentAppearanceFields
+        value={value.appearance ?? defaultDocumentAppearance}
+        brandColor={brandColor}
+        showLogo={value.showLogo}
+        onChange={(appearance) => onChange({ ...value, appearance })}
+      />
     </div>
   )
 }
@@ -81,7 +91,25 @@ function LayoutThumbnail({ layout }: { layout: EstimateDesign['layout'] }) {
         rx="3"
         className="fill-card stroke-border"
       />
-      {layout !== 'proposal' ? (
+      {layout === 'minimal' ? (
+        <>
+          <path d="M44 20h8" className="stroke-muted-foreground/40" strokeLinecap="round" />
+          <path d="M36 25h24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M35 37h8m10 0h8m-26 5h26m-26 9h26" className="stroke-border" />
+          <path d="M54 58h7" stroke="currentColor" strokeLinecap="round" />
+        </>
+      ) : layout === 'compact' ? (
+        <>
+          <rect x="32" y="14" width="32" height="17" rx="1" className="fill-primary/15" />
+          <path d="M33 15h30m-26 6h16" stroke="currentColor" strokeWidth="2" />
+          <path d="M36 26h8m5 0h11" className="stroke-muted-foreground/40" />
+          <path
+            d="M33 36h30m-30 4h30m-30 4h30m-30 4h30m-30 4h30m-8-16v16"
+            className="stroke-border"
+          />
+          <path d="M53 58h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </>
+      ) : layout === 'editorial' ? (
         <>
           <path d="M33 18h21" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
           <path d="M33 24h13" className="stroke-muted-foreground/40" strokeLinecap="round" />

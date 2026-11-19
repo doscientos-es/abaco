@@ -35,6 +35,7 @@ import {
 import { listTechnicians } from '@/features/visits/application/visit-actions'
 import { convertAcceptedEstimate, findWorkOrderForEstimate } from '@/features/work-orders'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
+import { companyEstimateDesign } from '@/shared/domain/document-library'
 import {
   estimateTotals,
   milestoneAmounts,
@@ -62,10 +63,12 @@ import {
 import { recordManualApproval } from '../application/record-manual-approval'
 import { requiredEstimateSectionsError } from '../domain/estimate-sections'
 import { EstimateAutoSaveStatus } from './estimate-auto-save-status'
+import { EstimateBlockPicker } from './estimate-block-picker'
 import { EstimateDesignWorkspace } from './estimate-design-workspace'
 import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 import { EstimatePricingEditor } from './estimate-pricing-editor'
 import { EstimateSectionsEditor } from './estimate-sections-editor'
+import { EstimateTemplateField } from './estimate-template-field'
 import { MilestonesEditor } from './milestones-editor'
 import { ServiceProposalAssistant } from './service-proposal-assistant'
 import { useEstimatePrint } from './use-estimate-print'
@@ -303,7 +306,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
 
   if (preview && estimate.status === 'draft') {
     const design = estimate.documentDesign ?? defaultEstimateDesign
-    const companyDesign = tenant.defaultEstimateDesign ?? defaultEstimateDesign
+    const companyDesign = companyEstimateDesign(tenant)
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2 print:hidden">
@@ -328,8 +331,14 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
                     Los cambios solo afectan a este presupuesto. Al publicarlo, se conserva este
                     diseño.
                   </p>
+                  <EstimateTemplateField
+                    tenant={tenant}
+                    design={design}
+                    onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
+                  />
                   <EstimateDesignFields
                     value={design}
+                    brandColor={tenant.brandColor}
                     onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
                   />
                   {!sameEstimateDesign(design, companyDesign) ? (
@@ -785,8 +794,20 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
           </CardContent>
         </Card>
 
+        <EstimateTemplateField
+          tenant={tenant}
+          design={estimate.documentDesign}
+          onChange={(documentDesign) => patchEstimate(estimate.id, { documentDesign })}
+        />
+
         {estimate.documentFormat === 'sections' ? (
-          <EstimateSectionsEditor estimate={estimate} catalog={catalog} />
+          <>
+            <EstimateBlockPicker
+              estimate={estimate}
+              blocks={tenant.documentLibrary?.blocks ?? []}
+            />
+            <EstimateSectionsEditor estimate={estimate} catalog={catalog} />
+          </>
         ) : (
           <Card className="@container">
             <CardHeader>
@@ -825,6 +846,10 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
               <ServiceProposalAssistant
                 clauses={estimate.clauses}
                 onChange={(clauses) => patchEstimate(estimate.id, { clauses })}
+              />
+              <EstimateBlockPicker
+                estimate={estimate}
+                blocks={tenant.documentLibrary?.blocks ?? []}
               />
               <TextareaField
                 label="Condiciones"

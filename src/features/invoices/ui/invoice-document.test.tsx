@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { defaultInvoiceAppearance } from '@/shared/domain/document-appearance'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Invoice, Tenant } from '@/shared/domain/types'
 import { DocumentPreview } from '@/shared/ui/document-preview'
@@ -102,6 +103,45 @@ describe('InvoiceDocument', () => {
       expect(html).toContain(value)
     }
     expect(html).toContain('Indica F-2026-002 como concepto')
+  })
+
+  it('hides optional contact and branding without hiding fiscal or invoice details', () => {
+    const html = renderToStaticMarkup(
+      <InvoiceDocument
+        invoice={invoice}
+        client={client}
+        tenant={tenant}
+        previewAppearance={{
+          ...defaultInvoiceAppearance,
+          accentColor: '#123456',
+          showContact: false,
+          showLogo: false,
+        }}
+      />,
+    )
+
+    expect(html).toContain('--invoice-brand:#123456')
+    for (const optional of [
+      tenant.logoUrl,
+      tenant.email,
+      tenant.phone,
+      tenant.website,
+      client.email,
+    ]) {
+      expect(html).not.toContain(optional)
+    }
+    for (const required of [
+      tenant.legalName,
+      tenant.taxId,
+      tenant.address,
+      client.taxId,
+      client.address,
+      invoice.number,
+      invoice.concept,
+      tenant.documentFooter,
+    ]) {
+      expect(html).toContain(required)
+    }
   })
 
   it('shows the accepted extra and work reference without inventing an estimate', () => {
@@ -262,7 +302,7 @@ describe('InvoiceDocument', () => {
       snapshot: {
         source: 'issuance',
         capturedAt: '2026-10-13T09:00:00Z',
-        design: 'modern',
+        design: 'artistic',
         issuer: {
           name: 'Empresa original',
           legalName: '',
@@ -285,22 +325,22 @@ describe('InvoiceDocument', () => {
     const html = renderToStaticMarkup(
       <InvoiceDocument
         invoice={captured}
-        tenant={{ ...tenant, name: 'Empresa modificada' }}
+        tenant={{ ...tenant, name: 'Empresa modificada', defaultInvoiceDesign: 'modern' }}
         client={{ ...client, name: 'Cliente modificado' }}
         estimateNumber="P-2026-999"
       />,
     )
 
     expect(html).toContain('Empresa original')
-    expect(html).toContain('data-layout="modern"')
-    expect(render({ ...tenant, defaultInvoiceDesign: 'minimal' })).toContain(
+    expect(html).toContain('data-layout="artistic"')
+    expect(render({ ...tenant, defaultInvoiceDesign: 'artistic' })).toContain(
       'data-layout="classic"',
     )
     if (!captured.snapshot) throw new Error('Expected an invoice snapshot')
     const { design: _design, ...legacySnapshot } = captured.snapshot
     expect(
       render(
-        { ...tenant, defaultInvoiceDesign: 'minimal' },
+        { ...tenant, defaultInvoiceDesign: 'artistic' },
         { ...captured, snapshot: legacySnapshot },
       ),
     ).toContain('data-layout="classic"')

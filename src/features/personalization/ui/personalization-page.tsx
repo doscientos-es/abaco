@@ -6,6 +6,7 @@ import { ClientTypesSection } from '@/features/clients'
 import { patchTenant } from '@/features/settings/application/settings-actions'
 import { isLogoOk } from '@/features/settings/ui/settings-form'
 import { StaffFunctionsSection } from '@/features/staff-schedules'
+import { documentLibrarySchema, emptyDocumentLibrary } from '@/shared/domain/document-library'
 import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
 import { defaultInvoiceDesign } from '@/shared/domain/invoice-design'
 import type { Tenant } from '@/shared/domain/types'
@@ -45,6 +46,8 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   const [invoiceDesign, setInvoiceDesign] = useState(
     tenant.defaultInvoiceDesign ?? defaultInvoiceDesign,
   )
+  const savedLibrary = tenant.documentLibrary ?? emptyDocumentLibrary
+  const [library, setLibrary] = useState(savedLibrary)
   const [saved, setSaved] = useState(false)
   const saveStatus = useSaveStatus()
   const logoOk = isLogoOk(logoUrl)
@@ -59,9 +62,10 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   const footerChanged = messages.documentFooter !== (tenant.documentFooter ?? '')
   const invoiceDesignChanged =
     invoiceDesign !== (tenant.defaultInvoiceDesign ?? defaultInvoiceDesign)
+  const libraryChanged = JSON.stringify(library) !== JSON.stringify(savedLibrary)
   const dirty =
     tab === 'documentos'
-      ? designChanged || invoiceDesignChanged || footerChanged
+      ? designChanged || invoiceDesignChanged || footerChanged || libraryChanged
       : tab === 'correos'
         ? messagesChanged
         : !!logoDraft ||
@@ -69,7 +73,7 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
           logoUrl !== (tenant.logoUrl ?? '')
   const valid =
     tab === 'documentos'
-      ? messages.documentFooter.length <= 500
+      ? messages.documentFooter.length <= 500 && documentLibrarySchema.safeParse(library).success
       : tab === 'correos'
         ? messageFormValid(messages)
         : (brandColor === '' || hexColor.test(brandColor)) &&
@@ -109,6 +113,7 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
             ...(footerChanged ? { documentFooter: messages.documentFooter.trim() } : {}),
             ...(designChanged ? { defaultEstimateDesign: design } : {}),
             ...(invoiceDesignChanged ? { defaultInvoiceDesign: invoiceDesign } : {}),
+            ...(libraryChanged ? { documentLibrary: library } : {}),
           }
         : tab === 'correos'
           ? messagePatch(messages)
@@ -209,6 +214,11 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
           tenant={tenant}
           design={design}
           invoiceDesign={invoiceDesign}
+          library={library}
+          onLibraryChange={(next) => {
+            setLibrary(next)
+            setSaved(false)
+          }}
           footer={messages.documentFooter}
           saveActions={saveActions}
           onFooterChange={setMessage('documentFooter')}

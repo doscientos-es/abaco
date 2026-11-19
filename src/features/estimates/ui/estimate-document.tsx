@@ -1,9 +1,11 @@
-import { useState, type ReactNode, type Ref } from 'react'
+import { useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 
+import { documentAccent } from '@/shared/domain/document-appearance'
 import { estimateTotals, milestoneAmounts } from '@/shared/domain/estimate'
-import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
+import { defaultEstimateDesign, type EstimateDesign } from '@/shared/domain/estimate-design'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Estimate, Tenant } from '@/shared/domain/types'
+import { documentLogoStyle } from '@/shared/ui/document-logo-style'
 
 import {
   estimatePriceFrequency,
@@ -39,6 +41,7 @@ export function EstimateDocument({
   const paymentNumber = mainSectionCount + 1
   const conditionsNumber = mainSectionCount + (showPayment ? 2 : 1)
   const design = estimate.documentDesign ?? defaultEstimateDesign
+  const accentColor = documentAccent(design.appearance?.accentColor)
   const hasCover = design.layout === 'proposal'
   const hasIndex = hasCover && design.showIndex
   const Page = paginated ? EstimatePageFlow : Unpaginated
@@ -70,7 +73,7 @@ export function EstimateDocument({
       tenant={tenant}
       client={client}
       cover={hasCover}
-      showLogo={design.showLogo}
+      design={design}
     />
   )
 
@@ -78,6 +81,7 @@ export function EstimateDocument({
     <article
       ref={documentRef}
       data-layout={design.layout}
+      style={accentColor ? ({ '--estimate-accent': accentColor } as CSSProperties) : undefined}
       className={
         paginated
           ? 'estimate-document estimate-document--paged text-sm'
@@ -119,7 +123,7 @@ export function EstimateDocument({
 
       <Page {...pageProps(2)}>
         {hasCover ? null : header}
-        <div className="estimate-document__content space-y-8">
+        <div className="estimate-document__content">
           {estimate.documentFormat !== 'sections' ? (
             <section>
               <h3 className="mb-3 text-base font-semibold">1. {estimate.title}</h3>
@@ -191,29 +195,32 @@ function EstimateDocumentHeader({
   tenant,
   client,
   cover,
-  showLogo,
+  design,
 }: {
   estimate: Estimate
   tenant: Tenant
   client: Client | undefined
   cover: boolean
-  showLogo: boolean
+  design: EstimateDesign
 }) {
   return (
     <header
       className={cover ? 'estimate-document__cover space-y-8' : 'estimate-document__compact-header'}
     >
-      <div>
-        {showLogo && tenant.logoUrl ? (
+      <div className="estimate-document__issuer">
+        {design.showLogo && tenant.logoUrl ? (
           <img
             src={tenant.logoUrl}
             alt={tenant.name}
             className="mb-3 max-h-14 max-w-44 object-contain"
+            style={documentLogoStyle(design.appearance)}
           />
         ) : null}
         <h2
           className="text-xl font-semibold tracking-tight"
-          style={tenant.brandColor ? { color: tenant.brandColor } : undefined}
+          style={{
+            color: `var(--estimate-accent, ${documentAccent(tenant.brandColor) ?? 'inherit'})`,
+          }}
         >
           {tenant.name}
         </h2>
@@ -222,16 +229,24 @@ function EstimateDocumentHeader({
         </p>
       </div>
       <div className={cover ? 'space-y-2' : 'estimate-document__heading space-y-1'}>
-        <p className={cover ? 'text-lg font-semibold' : 'text-muted-foreground font-medium'}>
+        <p
+          className={
+            cover
+              ? 'text-lg font-semibold'
+              : 'estimate-document__reference text-muted-foreground font-medium'
+          }
+        >
           Presupuesto {estimate.number}
         </p>
         <h1 className={cover ? 'text-2xl font-semibold' : 'text-xl font-semibold'}>
           {estimate.title}
         </h1>
-        <p className="text-muted-foreground">Fecha: {estimate.createdAt}</p>
-        <p className="text-muted-foreground">Válido hasta: {estimate.validUntil}</p>
+        <div className="estimate-document__dates text-muted-foreground">
+          <p>Fecha: {estimate.createdAt}</p>
+          <p>Válido hasta: {estimate.validUntil}</p>
+        </div>
       </div>
-      <div>
+      <div className="estimate-document__recipient">
         <p className="text-muted-foreground text-xs tracking-wider uppercase">Cliente</p>
         <p className="font-medium">{client?.name ?? 'Sin cliente'}</p>
         <p className="text-muted-foreground">{client?.address}</p>

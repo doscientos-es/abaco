@@ -85,6 +85,8 @@ describe('customer-facing estimate', () => {
     expect(html).toMatch(/Página (?:<!-- -->)?1(?:<!-- -->)? de (?:<!-- -->)?1/)
     expect(html).toContain('Limpieza ordinaria')
     expect(html).toContain('Base imponible')
+    expect(html).toContain('Fecha: 2026-11-13')
+    expect(html).toContain('Válido hasta: 2027-01-01')
     expect(html).toContain('logo.svg')
     expect(html).toContain('Gracias')
   })

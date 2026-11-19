@@ -318,11 +318,15 @@ describe('personalization sections', () => {
     expect(initial).toContain('invoice-document invoice-sheet')
     expect(initial).toContain('data-layout="classic"')
     expect(initial).not.toContain('Documento de ejemplo')
-    mocks.layoutPicker.mock.lastCall?.[0].onChange('modern')
-    expect(render()).toContain('data-layout="modern"')
+    const picker = mocks.layoutPicker.mock.lastCall?.[0]
+    expect(picker.options).toContainEqual(
+      expect.objectContaining({ value: 'artistic', label: 'Artística' }),
+    )
+    picker.onChange('artistic')
+    expect(render()).toContain('data-layout="artistic"')
     mocks.button.mock.calls
       .find(([props]) => props.children === 'Guardar personalización')?.[0]
       .onPress()
-    expect(mocks.patch).toHaveBeenCalledWith({ defaultInvoiceDesign: 'modern' })
+    expect(mocks.patch).toHaveBeenCalledWith({ defaultInvoiceDesign: 'artistic' })
   })
 })

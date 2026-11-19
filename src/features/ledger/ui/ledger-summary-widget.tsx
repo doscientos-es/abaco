@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { DownloadSimple } from '@phosphor-icons/react'
+import { DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
 import { formatEuros } from '@/shared/domain/money'
@@ -31,40 +31,44 @@ import {
 } from '../domain/ledger-summary-layout'
 import type { LedgerExportAction } from './use-ledger-exports'
 
-const exportDescriptions: Record<LedgerExport, string> = {
-  book: 'Libro de ingresos y gastos del periodo seleccionado.',
-  vat: 'Resumen de IVA de todos los trimestres registrados.',
-  clients: 'Todos los clientes autorizados, sin filtro de mes.',
-  invoices: 'Todas las facturas autorizadas, sin filtro de mes.',
-  payments: 'Todos los cobros y devoluciones autorizados, sin filtro de mes.',
-  expenses: 'Todos los gastos autorizados, sin filtro de mes.',
-}
-
 export function LedgerSummaryWidget({
   module,
   data,
   exportAction,
+  onImport,
   onChange,
 }: {
   module: LedgerModule
   data: ReturnType<typeof ledgerSummaryData>
   exportAction: (id: LedgerExport) => LedgerExportAction
+  onImport: () => void
   onChange?: ((patch: Partial<Omit<LedgerModule, 'id'>>) => void) | undefined
 }) {
   const definition = ledgerModuleDefinition(module.id)
-  const { title } = definition
-  if (definition.export) {
-    const action = exportAction(definition.export)
+  const { title, description } = definition
+  const importing = module.id === 'import-entries'
+  if (importing || definition.export) {
+    const action = definition.export
+      ? exportAction(definition.export)
+      : { run: onImport, disabled: false }
     return (
-      <ChartCard title={title} description={exportDescriptions[definition.export]}>
+      <ChartCard title={title} {...(description ? { description } : {})}>
         <Button
           variant="outline"
           size="sm"
-          aria-label={`Descargar ${title}`}
+          aria-label={importing ? 'Importar de Excel' : `Descargar ${title}`}
           isDisabled={action.disabled}
           onPress={action.run}
         >
-          <DownloadSimple aria-hidden="true" className="size-4" /> Descargar CSV
+          {importing ? (
+            <>
+              <UploadSimple aria-hidden="true" className="size-4" /> Importar de Excel
+            </>
+          ) : (
+            <>
+              <DownloadSimple aria-hidden="true" className="size-4" /> Descargar CSV
+            </>
+          )}
         </Button>
       </ChartCard>
     )

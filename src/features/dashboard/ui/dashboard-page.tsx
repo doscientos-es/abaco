@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
 import { Link } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { saveDashboardConfig } from '@/features/dashboard/application/dashboard-actions'
@@ -10,24 +10,17 @@ import { monthlySeries } from '@/shared/domain/stats'
 import type { TenantData } from '@/shared/domain/types'
 import { useSaveStatus, useTenantData } from '@/shared/store/store'
 import { EmptyHint } from '@/shared/ui/charts'
-import {
-  DashboardCanvas,
-  DashboardLayoutActions,
-  DashboardLayoutHelp,
-  DashboardModule,
-} from '@/shared/ui/dashboard-layout-editor'
+import { DashboardLayoutEditor, DashboardPageHeading } from '@/shared/ui/dashboard-layout-editor'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { StatCard } from '@/shared/ui/stat-card'
 import { StatusBadge } from '@/shared/ui/status-badge'
-import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
+import { useDashboardLayout } from '@/shared/ui/use-dashboard-layout'
 
 import {
   dashboardConfigFrom,
   dashboardWidgets,
-  defaultDashboardWidgets,
-  moveDashboardWidget,
-  resolveDashboardCharts,
-  resolveDashboardWidgets,
+  newDashboardWidget,
+  resolveDashboardLayout,
   type DashboardCharts,
   type DashboardWidgetId,
 } from '../domain/dashboard-config'
@@ -42,8 +35,6 @@ export function DashboardPage() {
   return <DashboardContent key={data.tenant.id} tenantData={data} />
 }
 
-type Layout = { widgets: DashboardWidgetId[]; charts: DashboardCharts }
-
 function DashboardContent({
   tenantData: { estimates, ledger, clients, tenant, invoices },
 }: {
@@ -51,16 +42,13 @@ function DashboardContent({
 }) {
   const session = useSession()
   const saveStatus = useSaveStatus()
-  const canCustomize = can(session?.role, 'settings:write')
-  const saved: Layout = {
-    widgets: resolveDashboardWidgets(tenant.dashboardConfig),
-    charts: resolveDashboardCharts(tenant.dashboardConfig),
-  }
-  const [draft, setDraft] = useState<Layout | null>(null)
-  const [justSaved, setJustSaved] = useState(false)
-  const editing = canCustomize && draft !== null
-  const layout = editing ? draft : saved
-  const changed = editing && JSON.stringify(saved) !== JSON.stringify(draft)
+  const editor = useDashboardLayout({
+    saved: resolveDashboardLayout(tenant.dashboardConfig),
+    defaults: resolveDashboardLayout,
+    createModule: newDashboardWidget,
+    onSave: (layout) => saveDashboardConfig(dashboardConfigFrom(layout)),
+    enabled: can(session?.role, 'settings:write'),
+  })
 
   const todayIso = new Date().toISOString().slice(0, 10)
   const owed = invoices
@@ -96,136 +84,50 @@ function DashboardContent({
     decided,
   }
 
-  function updateDraft(update: (current: Layout) => Layout) {
-    if (canCustomize) setDraft((current) => (current ? update(current) : current))
-  }
-
-  function persist(next: Layout) {
-    if (!canCustomize) return
-    saveDashboardConfig(dashboardConfigFrom(next.widgets, next.charts))
-    setDraft(null)
-    setJustSaved(true)
-  }
-
-  function addWidget(id: DashboardWidgetId) {
-    const append = (current: Layout): Layout =>
-      current.widgets.includes(id) ? current : { ...current, widgets: [...current.widgets, id] }
-    if (editing) updateDraft(append)
-    else if (!saved.widgets.includes(id)) persist(append(saved))
-  }
-
   return (
     <div className="space-y-6">
-      <WorkspacePageHeading
+      <DashboardPageHeading
         title={<>Hola, {tenant.name}</>}
+        editor={editor}
         actions={
-          <>
-            <Link
-              to="/presupuestos"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
-            >
-              Ver presupuestos
-            </Link>
-            {canCustomize ? (
-              <DashboardLayoutActions
-                iconOnly
-                editing={editing}
-                changed={changed}
-                onEdit={() => {
-                  setJustSaved(false)
-                  setDraft(saved)
-                }}
-                onCancel={() => setDraft(null)}
-                onSave={() => {
-                  if (changed) persist(draft)
-                }}
-              />
-            ) : null}
-          </>
+          <Link
+            to="/presupuestos"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
+          >
+            Ver presupuestos
+          </Link>
         }
       />
 
-      {editing ? (
-        <DashboardLayoutHelp
-          onReset={() =>
-            setDraft({ widgets: [...defaultDashboardWidgets], charts: resolveDashboardCharts() })
-          }
-        />
-      ) : null}
-
-      {justSaved ? (
-        <output className="text-muted-foreground block text-xs" aria-live="polite">
-          {saveStatus.state === 'saving'
+      <DashboardLayoutEditor
+        label="Bloques del resumen"
+        editor={editor}
+        options={dashboardWidgets}
+        notice={
+          saveStatus.state === 'saving'
             ? 'Guardando tu resumen…'
             : saveStatus.state === 'error'
               ? 'No se pudo guardar el resumen. Revisa el aviso superior.'
-              : 'Resumen actualizado.'}
-        </output>
-      ) : null}
-
-      <DashboardCanvas
-        label="Bloques del resumen"
-        gridClassName="grid gap-4 md:grid-cols-2"
-        activeIds={layout.widgets}
-        options={canCustomize ? dashboardWidgets : []}
-        onAdd={addWidget}
-        onMove={(id, index) =>
-          updateDraft((current) => {
-            const from = current.widgets.findIndex((widget) => widget === id)
-            return { ...current, widgets: moveDashboardWidget(current.widgets, from, index) }
-          })
+              : 'Resumen actualizado.'
         }
-        empty={
-          <div className="border-border bg-card rounded-xl border border-dashed px-5 py-12 text-center">
-            <h2 className="text-base font-semibold">Tu resumen está vacío</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {canCustomize
-                ? 'Añade abajo los módulos que te interesen.'
-                : 'Pide a un administrador que configure los bloques del resumen.'}
-            </p>
-          </div>
-        }
-      >
-        {layout.widgets.map((id, index) => {
-          const widget = dashboardWidgets.find((item) => item.id === id)
-          if (!widget) return null
-          const fullWidth = ['key-metrics', 'receivables', 'recent-estimates'].includes(id)
-          return (
-            <DashboardModule
-              key={id}
-              id={id}
-              index={index}
-              title={widget.title}
-              className={fullWidth ? 'md:col-span-2' : ''}
-              onRemove={
-                editing
-                  ? () =>
-                      updateDraft((current) => ({
-                        ...current,
-                        widgets: current.widgets.filter((item) => item !== id),
-                      }))
-                  : undefined
-              }
-            >
-              <DashboardWidget
-                id={id}
-                data={data}
-                charts={layout.charts}
-                editing={editing}
-                onChartChange={
-                  editing
-                    ? (patch) =>
-                        updateDraft((current) => ({
-                          ...current,
-                          charts: { ...current.charts, ...patch },
-                        }))
-                    : undefined
-                }
-              />
-            </DashboardModule>
-          )
-        })}
-      </DashboardCanvas>
+        renderModule={({ id }) => (
+          <DashboardWidget
+            id={id}
+            data={data}
+            charts={editor.layout.charts}
+            editing={editor.editing}
+            onChartChange={
+              editor.editing
+                ? (patch) =>
+                    editor.update((current) => ({
+                      ...current,
+                      charts: { ...current.charts, ...patch },
+                    }))
+                : undefined
+            }
+          />
+        )}
+      />
     </div>
   )
 }
@@ -285,7 +187,7 @@ function DashboardWidget({
     case 'key-metrics': {
       const months = monthlySeries(data.ledger)
       return (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-4">
           <DashboardMetric
             to="/presupuestos"
             editing={editing}

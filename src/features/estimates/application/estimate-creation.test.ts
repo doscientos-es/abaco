@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { emptyDocumentLibrary } from '@/shared/domain/document-library'
 import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
 import type { Estimate, TenantData } from '@/shared/domain/types'
 import {
@@ -75,6 +76,28 @@ function completeDraft(): Estimate {
 const saved = () => vi.waitFor(() => expect(getSaveStatus().state).toBe('saved'))
 
 describe('explicit estimate creation', () => {
+  it('copies a named default from the company library into the new draft', () => {
+    const id = newId()
+    const design = {
+      ...defaultEstimateDesign,
+      layout: 'editorial',
+      appearance: { logoSize: 'large', logoPosition: 'right', accentColor: '#123456' },
+    } as const
+    const library = {
+      ...emptyDocumentLibrary,
+      defaultEstimateId: id,
+      estimates: [{ id, name: 'Mantenimiento', design }],
+    }
+    const tenant = tenantFromRow(tenantToRow({ ...data.tenant, documentLibrary: library }))
+
+    const draft = buildEstimateDraft(tenant, 'client', 'Servicio', 'sections', newId)
+    expect(tenant.documentLibrary).toEqual(library)
+    expect(draft.documentDesign).toEqual(design)
+    expect(
+      buildEstimateDraft(data.tenant, 'client', 'Servicio', 'sections', newId).documentDesign,
+    ).toEqual(defaultEstimateDesign)
+  })
+
   it('copies company defaults on creation and persists a later override only on that draft', async () => {
     const companyDesign = { ...defaultEstimateDesign, layout: 'compact' } as const
     const tenant = tenantFromRow(

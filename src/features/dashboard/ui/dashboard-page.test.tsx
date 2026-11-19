@@ -105,6 +105,7 @@ describe('dashboard customization', () => {
     mocks.config = {
       version: 1,
       widgets: ['income-expenses', 'expense-categories', 'recent-movements'],
+      widths: { 'income-expenses': 9 },
       incomeChart: 'lines',
       incomeMonths: 12,
     }
@@ -132,6 +133,7 @@ describe('dashboard customization', () => {
       entry('Anterior', '2000-01-01', 'expense', 'Antiguo', 9000),
     ]
     const html = renderToStaticMarkup(<DashboardPage />)
+    expect(html).toMatch(/data-dashboard-module="income-expenses"[^>]*--dashboard-span:9/)
     expect(html).toContain('Últimos 12 meses')
     expect(html).toContain('stroke-success')
     expect(html).toContain('Material')

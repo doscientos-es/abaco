@@ -1,5 +1,5 @@
+import { companyEstimateDesign } from '@/shared/domain/document-library'
 import { defaultMilestones, formatEstimateNumber } from '@/shared/domain/estimate'
-import { defaultEstimateDesign } from '@/shared/domain/estimate-design'
 import { estimateSectionsSchema, type EstimateFormat } from '@/shared/domain/estimate-document'
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Estimate, Tenant } from '@/shared/domain/types'
@@ -23,7 +23,7 @@ export function buildEstimateDraft(
     title: title.trim() || 'Nuevo servicio',
     status: 'draft',
     documentFormat,
-    documentDesign: { ...(tenant.defaultEstimateDesign ?? defaultEstimateDesign) },
+    documentDesign: companyEstimateDesign(tenant),
     sections:
       documentFormat === 'sections'
         ? [

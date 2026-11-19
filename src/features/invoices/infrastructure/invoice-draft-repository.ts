@@ -103,18 +103,25 @@ export async function updateMilestoneInvoiceDraft(input: {
   return data as number
 }
 
-export async function issueMilestoneInvoiceDraft(input: {
+export async function issueInvoiceDraft(input: {
+  source: 'milestone' | 'work_extra' | 'contract_period'
   tenantId: string
   draftId: string
   revision: number
   operationId: string
+  templateId: string | null
 }) {
-  const { data, error } = await createBrowserSupabaseClient().rpc('issue_invoice_milestone_draft', {
-    p_tenant_id: input.tenantId,
-    p_draft_id: input.draftId,
-    p_expected_revision: input.revision,
-    p_operation_id: input.operationId,
-  })
+  const { data, error } = await createBrowserSupabaseClient().rpc(
+    'issue_invoice_draft_with_template',
+    {
+      p_source: input.source,
+      p_tenant_id: input.tenantId,
+      p_draft_id: input.draftId,
+      p_expected_revision: input.revision,
+      p_operation_id: input.operationId,
+      p_template_id: input.templateId,
+    },
+  )
   if (error) throw new Error(error.message)
   return data as string
 }
@@ -167,25 +174,6 @@ export async function updateWorkExtraInvoiceDraft(input: {
   return data as number
 }
 
-export async function issueWorkExtraInvoiceDraft(input: {
-  tenantId: string
-  draftId: string
-  revision: number
-  operationId: string
-}) {
-  const { data, error } = await createBrowserSupabaseClient().rpc(
-    'issue_invoice_work_extra_draft',
-    {
-      p_tenant_id: input.tenantId,
-      p_draft_id: input.draftId,
-      p_expected_revision: input.revision,
-      p_operation_id: input.operationId,
-    },
-  )
-  if (error) throw new Error(error.message)
-  return data as string
-}
-
 export async function listOpenContractPeriodInvoiceDrafts(tenantId: string, page = 0) {
   const { data, error } = await createBrowserSupabaseClient()
     .from('invoice_contract_period_drafts')
@@ -223,23 +211,4 @@ export async function updateContractPeriodInvoiceDraft(input: {
   )
   if (error) throw new Error(error.message)
   return data as number
-}
-
-export async function issueContractPeriodInvoiceDraft(input: {
-  tenantId: string
-  draftId: string
-  revision: number
-  operationId: string
-}) {
-  const { data, error } = await createBrowserSupabaseClient().rpc(
-    'issue_invoice_contract_period_draft',
-    {
-      p_tenant_id: input.tenantId,
-      p_draft_id: input.draftId,
-      p_expected_revision: input.revision,
-      p_operation_id: input.operationId,
-    },
-  )
-  if (error) throw new Error(error.message)
-  return data as string
 }

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { LedgerEntry } from '@/shared/domain/types'
+import { DashboardPageHeading } from '@/shared/ui/dashboard-layout-editor'
 
 import {
   ledgerSummaryStorageKey,
@@ -11,7 +12,7 @@ import {
 } from '../application/ledger-summary-preferences'
 import { ledgerEntriesInQuarter, type LedgerQuarter } from '../domain/ledger-quarter'
 import { defaultLedgerSummary, newLedgerModule } from '../domain/ledger-summary-layout'
-import { LedgerSummary } from './ledger-summary'
+import { LedgerSummary, useLedgerSummaryEditor } from './ledger-summary'
 
 const key = ledgerSummaryStorageKey('empresa-a', 'usuario-a')
 const month = '2026-03'
@@ -26,6 +27,21 @@ const expense: LedgerEntry = {
   vatRate: 21,
   estimateId: null,
   milestoneId: null,
+}
+
+function Dashboard({
+  canExportDatasets,
+  ...props
+}: Omit<React.ComponentProps<typeof LedgerSummary>, 'layout' | 'onImport'> & {
+  canExportDatasets: boolean
+}) {
+  const layout = useLedgerSummaryEditor(key, canExportDatasets)
+  return (
+    <>
+      <DashboardPageHeading title="Contabilidad" editor={layout.editor} />
+      <LedgerSummary {...props} layout={layout} onImport={() => undefined} />
+    </>
+  )
 }
 
 describe('accounting summary preferences', () => {
@@ -55,8 +71,7 @@ describe('accounting summary preferences', () => {
     const exportAction = vi.fn(() => ({ run: vi.fn(), disabled: false }))
     const render = (canExportDatasets: boolean, quarter: LedgerQuarter | null = null) =>
       renderToStaticMarkup(
-        <LedgerSummary
-          storageKey={key}
+        <Dashboard
           canExportDatasets={canExportDatasets}
           entries={[expense]}
           quarter={quarter}
@@ -66,9 +81,14 @@ describe('accounting summary preferences', () => {
       )
 
     const html = render(true, { year: 2026, quarter: 1 })
-    expect(html).toContain('Personalizar resumen')
+    const header = html.split('aria-label="Resumen contable"')[0]
+    expect(header).toContain('<h1>Contabilidad</h1>')
+    expect(header).toMatch(
+      /<button(?=[^>]*aria-label="Personalizar resumen")(?=[^>]*data-slot="icon-button")/,
+    )
     expect(html).toContain('Descargar CSV')
-    expect(html).toContain('--ledger-span:9')
+    expect(html).toContain('--dashboard-span:9')
+    expect(html).toContain('aria-label="Añadir Importar apuntes"')
     expect(html).toContain('Los tres meses del trimestre seleccionado')
     expect(html).toContain('stroke-success')
     expect(html).toContain(`mar: Ingresos ${formatEuros(0)}, Gastos ${formatEuros(12100)}`)
@@ -100,8 +120,7 @@ describe('accounting summary preferences', () => {
       ],
     })
     const html = renderToStaticMarkup(
-      <LedgerSummary
-        storageKey={key}
+      <Dashboard
         canExportDatasets={false}
         entries={[{ ...expense, date: sevenMonthsAgo }]}
         quarter={null}
@@ -114,6 +133,23 @@ describe('accounting summary preferences', () => {
     expect(html).toContain(formatEuros(expense.amountCents))
     expect(html).toContain('Aún no hay gastos en este periodo')
     expect(html).not.toContain(expense.category)
+  })
+
+  it('renders import and book export as cards for a new dashboard, with admin exports available to add', () => {
+    const html = renderToStaticMarkup(
+      <Dashboard
+        canExportDatasets
+        entries={[expense]}
+        quarter={null}
+        periodFilter={null}
+        exportAction={() => ({ run: vi.fn(), disabled: false })}
+      />,
+    )
+    expect(html).toContain('data-dashboard-module="import-entries"')
+    expect(html).toContain('aria-label="Importar de Excel"')
+    expect(html).toContain('data-dashboard-module="csv-book"')
+    expect(html).toContain('aria-label="Descargar CSV para la gestoría"')
+    expect(html).toContain('aria-label="Añadir Exportar facturas"')
   })
 
   it('renders only the selected quarter in the monthly table, including months without movements', () => {
@@ -131,8 +167,7 @@ describe('accounting summary preferences', () => {
       quarter,
     )
     const html = renderToStaticMarkup(
-      <LedgerSummary
-        storageKey={key}
+      <Dashboard
         canExportDatasets={false}
         entries={entries}
         quarter={quarter}

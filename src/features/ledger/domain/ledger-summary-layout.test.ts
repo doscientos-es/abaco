@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  availableLedgerModules,
   defaultLedgerSummary,
-  moveLedgerModule,
   resolveLedgerSummary,
-  snapLedgerModuleWidth,
 } from './ledger-summary-layout'
 
 describe('accounting summary layout', () => {
@@ -37,30 +36,13 @@ describe('accounting summary layout', () => {
     expect(resolveLedgerSummary({ version: 2, modules: [] }, false)).toEqual(defaultLedgerSummary())
   })
 
-  it('moves a module to the new grid index without mutating the saved design', () => {
-    const saved = defaultLedgerSummary()
-    const original = saved.modules.map(({ id }) => id)
-    const reordered = moveLedgerModule(saved, 'monthly', 1)
-
-    expect(reordered.modules.map(({ id }) => id)).toEqual([
-      'income',
-      'monthly',
-      'expenses',
-      'result',
-      'vat',
-      'categories',
-      'csv-book',
-    ])
-    expect(reordered.modules[1]).toEqual(saved.modules[4])
-    expect(saved.modules.map(({ id }) => id)).toEqual(original)
-    expect(moveLedgerModule(saved, 'monthly', -1)).toBe(saved)
-    expect(moveLedgerModule(saved, 'removed', 0)).toBe(saved)
-  })
-
-  it('snaps pointer resizing to supported sizes and respects module limits', () => {
-    expect(snapLedgerModuleWidth('monthly', 7.6)).toBe(8)
-    expect(snapLedgerModuleWidth('monthly', 2)).toBe(6)
-    expect(snapLedgerModuleWidth('income', 4.1)).toBe(4)
-    expect(snapLedgerModuleWidth('income', 25)).toBe(12)
+  it('makes imports available without changing saved dashboards or exposing restricted exports', () => {
+    expect(defaultLedgerSummary().modules.map(({ id }) => id)).toContain('import-entries')
+    expect(
+      resolveLedgerSummary({ version: 1, modules: [{ id: 'csv-book' }] }, false).modules,
+    ).toEqual([{ id: 'csv-book', width: 6 }])
+    expect(availableLedgerModules(false)).toContain('import-entries')
+    expect(availableLedgerModules(false)).not.toContain('csv-clients')
+    expect(availableLedgerModules(true)).toContain('csv-clients')
   })
 })

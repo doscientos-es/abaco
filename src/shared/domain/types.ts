@@ -1,3 +1,5 @@
+import type { InvoiceAppearance } from './document-appearance'
+import type { DocumentLibrary } from './document-library'
 import type { EstimateAgreement } from './estimate-agreement'
 import type { EstimateDesign } from './estimate-design'
 import type { EstimateFormat, EstimateSection } from './estimate-document'
@@ -10,6 +12,7 @@ export type Cents = number
 export type DashboardConfig = {
   version: 1
   widgets: string[]
+  widths?: Record<string, number>
   incomeChart?: 'bars' | 'lines'
   incomeMonths?: 6 | 12
   charts?: {
@@ -45,6 +48,7 @@ export type Tenant = {
   defaultEstimateDesign?: EstimateDesign
   /** Captured when a new invoice is issued. */
   defaultInvoiceDesign?: InvoiceDesign
+  documentLibrary?: DocumentLibrary
   /** Opt-in: the daily job emails clients about overdue invoices and estimates about to expire. */
   autoReminders?: boolean
   defaultVatRate: number
@@ -158,6 +162,7 @@ export type InvoiceSnapshot = {
   source: 'issuance' | 'migration'
   capturedAt: string
   design?: InvoiceDesign
+  appearance?: InvoiceAppearance
   issuer: {
     name: string
     legalName: string

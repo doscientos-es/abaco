@@ -6,8 +6,10 @@ import { tenantFromRow, tenantToRow } from '@/shared/store/supabase-mappers'
 import {
   dashboardConfigFrom,
   defaultDashboardWidgets,
+  newDashboardWidget,
   resolveDashboardChart,
   resolveDashboardCharts,
+  resolveDashboardLayout,
   resolveDashboardWidgets,
 } from './dashboard-config'
 
@@ -28,12 +30,19 @@ describe('dashboard configuration', () => {
       } as unknown as DashboardConfig),
     ).toEqual({ incomeChart: 'bars', incomeMonths: 6 })
     expect(resolveDashboardWidgets()).toEqual(defaultDashboardWidgets)
+    expect(
+      resolveDashboardLayout({ version: 1, widgets: ['key-metrics', 'income-expenses'] }).modules,
+    ).toEqual([
+      { id: 'key-metrics', width: 12 },
+      { id: 'income-expenses', width: 6 },
+    ])
   })
 
   it('round-trips selected widgets and chart options through tenant persistence', () => {
     const config: DashboardConfig = {
       version: 1,
       widgets: ['recent-movements', 'expense-categories', 'income-expenses'],
+      widths: { 'recent-movements': 8, 'income-expenses': 9 },
       incomeChart: 'lines',
       incomeMonths: 12,
       charts: {
@@ -43,7 +52,7 @@ describe('dashboard configuration', () => {
     }
     const tenant = tenantFromRow({ id: 'test', dashboard_config: config })
     expect(resolveDashboardWidgets(tenant.dashboardConfig)).toEqual(config.widgets)
-    const widgets = resolveDashboardWidgets(tenant.dashboardConfig)
+    const { modules } = resolveDashboardLayout(tenant.dashboardConfig)
     const charts = resolveDashboardCharts(tenant.dashboardConfig)
     expect(charts).toEqual({
       incomeChart: 'lines',
@@ -53,11 +62,15 @@ describe('dashboard configuration', () => {
     expect(
       tenantToRow({
         ...tenant,
-        dashboardConfig: dashboardConfigFrom([...widgets, 'clients'], charts),
+        dashboardConfig: dashboardConfigFrom({
+          modules: [...modules, newDashboardWidget('clients')],
+          charts,
+        }),
       }).dashboard_config,
     ).toEqual({
       ...config,
       widgets: [...config.widgets, 'clients'],
+      widths: { ...config.widths, 'expense-categories': 6, clients: 6 },
     })
   })
 })

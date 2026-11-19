@@ -2,9 +2,6 @@ import {
   Badge,
   Button,
   ConfirmDialog,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   Input,
   Table,
   TableBody,
@@ -17,7 +14,7 @@ import {
   TabsTrigger,
   toast,
 } from '@doscientos/ui'
-import { DotsThree, DownloadSimple, Paperclip, Plus, UploadSimple } from '@phosphor-icons/react'
+import { Paperclip, Plus } from '@phosphor-icons/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
@@ -37,6 +34,7 @@ import {
   useSaveStatus,
   useTenantData,
 } from '@/shared/store/store'
+import { DashboardPageHeading } from '@/shared/ui/dashboard-layout-editor'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -44,7 +42,7 @@ import { ImportDialog } from '@/shared/ui/import-dialog'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
-import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
+import { WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { hasProtectedLedgerHistory } from '../application/expense-allocation-actions'
 import {
@@ -55,10 +53,9 @@ import {
 import { ledgerImportSchema, ledgerKeys } from '../application/ledger-import'
 import { ledgerSummaryStorageKey } from '../application/ledger-summary-preferences'
 import { ledgerEntriesInQuarter, ledgerQuarterOptions } from '../domain/ledger-quarter'
-import { accountingDatasetLabels, type AccountingDataset } from '../domain/ledger-summary-layout'
 import { ExpenseAllocationDialog } from './expense-allocation-dialog'
 import { LedgerAttachmentsDialog } from './ledger-attachments-dialog'
-import { LedgerSummary } from './ledger-summary'
+import { LedgerSummary, useLedgerSummaryEditor } from './ledger-summary'
 import { ledgerTabs, type LedgerTab } from './ledger-tabs'
 import { PaymentCalendar } from './payment-calendar'
 import { useLedgerExports } from './use-ledger-exports'
@@ -104,11 +101,26 @@ function MonthFilter({ month, onChange }: { month: string; onChange: (month: str
 
 export function LedgerPage() {
   const { ledger, tenant } = useTenantData()
-  return <LedgerContent key={tenant.id} ledger={ledger} tenant={tenant} />
+  const session = useSession()
+  const isAdmin = session?.tenantId === tenant.id && session?.role === 'admin'
+  const storageKey = ledgerSummaryStorageKey(tenant.id, session?.userId ?? 'anonymous')
+  return (
+    <LedgerContent
+      key={`${storageKey}:${isAdmin}`}
+      ledger={ledger}
+      tenant={tenant}
+      isAdmin={isAdmin}
+      storageKey={storageKey}
+    />
+  )
 }
 
-function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>) {
-  const session = useSession()
+function LedgerContent({
+  ledger,
+  tenant,
+  isAdmin,
+  storageKey,
+}: Pick<TenantData, 'ledger' | 'tenant'> & { isAdmin: boolean; storageKey: string }) {
   const columns = useTableColumns('apuntes', ledgerColumns)
   const navigate = useNavigate()
   const search = useSearch({ from: '/contabilidad' })
@@ -170,16 +182,14 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
     () => (quarter ? ledgerEntriesInQuarter(orderedEntries, quarter) : orderedEntries),
     [orderedEntries, quarter],
   )
-  const isAdmin = session?.tenantId === tenant.id && session?.role === 'admin'
-  const storageKey = ledgerSummaryStorageKey(tenant.id, session?.userId ?? 'anonymous')
+  const summary = useLedgerSummaryEditor(storageKey, isAdmin)
   const { exportAction, downloadBook } = useLedgerExports({
     tenant,
     canExportDatasets: isAdmin,
-    period: tab === 'resumen' ? (quarter?.value ?? '') : tab === 'apuntes' ? month : '',
-    entries: tab === 'resumen' ? summaryEntries : tab === 'apuntes' ? monthEntries : orderedEntries,
+    period: quarter?.value ?? '',
+    entries: summaryEntries,
     quarters,
   })
-  const bookExport = exportAction('book')
   const vatExport = exportAction('vat')
 
   async function add() {
@@ -264,48 +274,14 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
 
   return (
     <div className="space-y-6">
-      <WorkspacePageHeading
+      <DashboardPageHeading
         title="Contabilidad"
+        editor={tab === 'resumen' ? summary.editor : undefined}
         actions={
-          <>
-            <Button onPress={() => setDialogOpen(true)}>
-              <Plus aria-hidden="true" className="size-4" />
-              Nuevo apunte
-            </Button>
-            <DropdownMenuTrigger>
-              <Button variant="outline" aria-label="Más opciones de contabilidad">
-                <DotsThree aria-hidden="true" weight="bold" className="size-5" />
-                Más opciones
-              </Button>
-              <DropdownMenuContent placement="bottom end" className="w-64">
-                <DropdownMenuItem onAction={() => setImportOpen(true)}>
-                  <UploadSimple aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="whitespace-nowrap">Importar de Excel</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onAction={bookExport.run} isDisabled={bookExport.disabled}>
-                  <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="whitespace-nowrap">Exportar CSV para la gestoría</span>
-                </DropdownMenuItem>
-                {isAdmin
-                  ? (Object.keys(accountingDatasetLabels) as AccountingDataset[]).map((dataset) => {
-                      const action = exportAction(dataset)
-                      return (
-                        <DropdownMenuItem
-                          key={dataset}
-                          isDisabled={action.disabled}
-                          onAction={action.run}
-                        >
-                          <DownloadSimple aria-hidden="true" className="size-4 shrink-0" />
-                          <span className="whitespace-nowrap">
-                            {accountingDatasetLabels[dataset]}
-                          </span>
-                        </DropdownMenuItem>
-                      )
-                    })
-                  : null}
-              </DropdownMenuContent>
-            </DropdownMenuTrigger>
-          </>
+          <Button onPress={() => setDialogOpen(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Nuevo apunte
+          </Button>
         }
       />
 
@@ -336,12 +312,11 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
 
       {tab === 'resumen' ? (
         <LedgerSummary
-          key={`${storageKey}:${isAdmin}`}
-          storageKey={storageKey}
-          canExportDatasets={isAdmin}
+          layout={summary}
           entries={summaryEntries}
           quarter={quarter}
           exportAction={exportAction}
+          onImport={() => setImportOpen(true)}
           periodFilter={
             <div className="border-border/70 bg-card flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
               <div className="min-w-0 flex-1 basis-56">
@@ -628,7 +603,7 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
                         : 'Gasto'}
                     </Badge>
                     {attachmentButton(entry)}
-                    {entry.kind === 'expense' && session?.role === 'admin' ? (
+                    {entry.kind === 'expense' && isAdmin ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -700,7 +675,7 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
                     />
                     <TableCell className="text-right">
                       {attachmentButton(entry)}{' '}
-                      {entry.kind === 'expense' && session?.role === 'admin' ? (
+                      {entry.kind === 'expense' && isAdmin ? (
                         <Button
                           size="sm"
                           variant="outline"

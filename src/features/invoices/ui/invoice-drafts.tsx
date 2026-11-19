@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
+import { namedDocumentOptions, type DocumentLibrary } from '@/shared/domain/document-library'
 import { formatEuros } from '@/shared/domain/money'
-import { refreshStore } from '@/shared/store/store'
+import { refreshStore, useTenantData } from '@/shared/store/store'
+import { SelectField } from '@/shared/ui/form'
 
 import {
-  issueContractPeriodInvoiceDraft,
-  issueMilestoneInvoiceDraft,
-  issueWorkExtraInvoiceDraft,
+  issueInvoiceDraft,
   listOpenContractPeriodInvoiceDrafts,
   listOpenInvoiceDrafts,
   listOpenWorkExtraInvoiceDrafts,
@@ -25,14 +25,39 @@ type DraftItemProps = (
   | { source: 'milestone'; draft: InvoiceMilestoneDraft }
   | { source: 'work_extra'; draft: InvoiceWorkExtraDraft }
   | { source: 'contract_period'; draft: InvoiceContractPeriodDraft }
-) & { refresh: () => Promise<void> }
+) & { refresh: () => Promise<void>; library: DocumentLibrary | undefined }
 
-function DraftItem({ source, draft, refresh }: DraftItemProps) {
+function DraftItem(props: DraftItemProps) {
+  const [templateId, setTemplateId] = useState('')
+  return (
+    <DraftItemFields
+      key={props.draft.revision}
+      {...props}
+      templateId={templateId}
+      onTemplateChange={setTemplateId}
+    />
+  )
+}
+
+function DraftItemFields({
+  source,
+  draft,
+  refresh,
+  library,
+  templateId,
+  onTemplateChange,
+}: DraftItemProps & {
+  templateId: string
+  onTemplateChange: (value: string) => void
+}) {
   const [concept, setConcept] = useState(draft.concept)
   const [dueDate, setDueDate] = useState(draft.due_date)
   const [busy, setBusy] = useState(false)
   const issueOperationId = useRef<string | null>(null)
   const changed = concept.trim() !== draft.concept || dueDate !== draft.due_date
+  const defaultTemplate = library?.invoices.find(({ id }) => id === library.defaultInvoiceId)
+  const availableTemplates = library?.invoices.filter(({ id }) => id !== defaultTemplate?.id) ?? []
+  const chosenTemplate = availableTemplates.find(({ id }) => id === templateId)
 
   async function save() {
     if (!changed || busy) return
@@ -64,15 +89,14 @@ function DraftItem({ source, draft, refresh }: DraftItemProps) {
     issueOperationId.current ??= crypto.randomUUID()
     setBusy(true)
     try {
-      const input = {
+      await issueInvoiceDraft({
+        source,
         tenantId: draft.tenant_id,
         draftId: draft.id,
         revision: draft.revision,
         operationId: issueOperationId.current,
-      }
-      if (source === 'milestone') await issueMilestoneInvoiceDraft(input)
-      else if (source === 'work_extra') await issueWorkExtraInvoiceDraft(input)
-      else await issueContractPeriodInvoiceDraft(input)
+        templateId: chosenTemplate?.id ?? null,
+      })
       await Promise.all([refresh(), refreshStore()])
       issueOperationId.current = null
       toast.success('Factura emitida con numeración del servidor')
@@ -146,6 +170,27 @@ function DraftItem({ source, draft, refresh }: DraftItemProps) {
           />
         </label>
       </div>
+      {availableTemplates.length ? (
+        <SelectField
+          label="Plantilla de factura"
+          value={chosenTemplate?.id ?? ''}
+          options={[
+            {
+              value: '',
+              label: defaultTemplate
+                ? `${defaultTemplate.name} · Por defecto`
+                : 'Diseño por defecto de la empresa',
+            },
+            ...namedDocumentOptions(availableTemplates),
+          ]}
+          onChange={onTemplateChange}
+          isDisabled={busy}
+        />
+      ) : defaultTemplate ? (
+        <p className="text-muted-foreground text-xs">
+          Plantilla por defecto: {defaultTemplate.name}
+        </p>
+      ) : null}
       <p className="text-muted-foreground text-xs">
         El importe y el IVA proceden del{' '}
         {source === 'milestone'
@@ -173,6 +218,8 @@ function DraftItem({ source, draft, refresh }: DraftItemProps) {
 }
 
 export function InvoiceDrafts({ tenantId }: { tenantId: string }) {
+  const { tenant } = useTenantData()
+  const library = tenant.id === tenantId ? tenant.documentLibrary : undefined
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const queryKey = ['invoice-milestone-drafts', tenantId, page]
@@ -227,10 +274,11 @@ export function InvoiceDrafts({ tenantId }: { tenantId: string }) {
         <ul className="space-y-3">
           {drafts.data.items.map((draft) => (
             <DraftItem
-              key={`${draft.id}:${draft.revision}`}
+              key={draft.id}
               source="milestone"
               draft={draft}
               refresh={refresh}
+              library={library}
             />
           ))}
         </ul>
@@ -245,10 +293,11 @@ export function InvoiceDrafts({ tenantId }: { tenantId: string }) {
         <ul className="space-y-3">
           {extraDrafts.data.items.map((draft) => (
             <DraftItem
-              key={`${draft.id}:${draft.revision}`}
+              key={draft.id}
               source="work_extra"
               draft={draft}
               refresh={refresh}
+              library={library}
             />
           ))}
         </ul>
@@ -257,10 +306,11 @@ export function InvoiceDrafts({ tenantId }: { tenantId: string }) {
         <ul className="space-y-3">
           {contractDrafts.data.items.map((draft) => (
             <DraftItem
-              key={`${draft.id}:${draft.revision}`}
+              key={draft.id}
               source="contract_period"
               draft={draft}
               refresh={refresh}
+              library={library}
             />
           ))}
         </ul>
