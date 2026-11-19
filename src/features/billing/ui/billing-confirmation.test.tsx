@@ -93,6 +93,7 @@ vi.mock('./subscription-billing-profile-form', () => ({
 vi.mock('@/features/product-modules', () => ({
   ModuleSubscriptions: () => null,
   moduleSubscriptionsQuery: () => ({ queryKey: ['module-subscriptions'] }),
+  staffModuleQuery: () => ({ queryKey: ['staff'] }),
   tenantModulesQuery: () => ({ queryKey: ['tenant-modules'] }),
 }))
 

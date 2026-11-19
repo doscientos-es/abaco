@@ -296,6 +296,14 @@ describe('InvoiceDocument', () => {
     expect(render({ ...tenant, defaultInvoiceDesign: 'minimal' })).toContain(
       'data-layout="classic"',
     )
+    if (!captured.snapshot) throw new Error('Expected an invoice snapshot')
+    const { design: _design, ...legacySnapshot } = captured.snapshot
+    expect(
+      render(
+        { ...tenant, defaultInvoiceDesign: 'minimal' },
+        { ...captured, snapshot: legacySnapshot },
+      ),
+    ).toContain('data-layout="classic"')
     expect(html).toContain('Cliente original')
     expect(html).toContain('P-2026-001')
     expect(html).not.toContain('Empresa modificada')

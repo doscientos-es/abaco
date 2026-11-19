@@ -49,7 +49,16 @@ describe('workers access and legacy links', () => {
 
   it('redirects an administrator without the staff module to the plan', async () => {
     const cache = new QueryClient()
-    cache.setQueryData(sessionQuery.queryKey, { tenantId: 'company', role: 'admin' })
+    const session: AuthSession = {
+      userId: 'person',
+      tenantId: 'company',
+      email: 'person@example.com',
+      fullName: 'Persona',
+      companies: [],
+      role: 'admin',
+      needsWelcome: false,
+    }
+    cache.setQueryData(sessionQuery.queryKey, session)
     cache.setQueryData(['staff-test', 'company'], false)
     const guard = WorkersRoute.options.beforeLoad
     if (!guard) throw new Error('Missing workers guard')

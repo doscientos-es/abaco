@@ -28,6 +28,9 @@ update public.tenants set plan = 'team', next_plan = 'solo' where id = 'ea000000
 set local role authenticated;
 select ok(public.can_use_staff('ea000000-0000-4000-8000-000000000001'), 'Team retains access until a scheduled downgrade takes effect');
 select is((select count(*) from public.staff_functions), 1::bigint, 'Existing data remains available after upgrading');
+select lives_ok($$select public.save_staff_schedule('ea000000-0000-4000-8000-000000000001',
+  'ea000000-0000-4000-8000-000000000002', null, '[]'::jsonb, array[]::uuid[])$$,
+  'Team administrators can use the existing schedule RPC');
 reset role;
 update public.tenants set plan = 'business' where id = 'ea000000-0000-4000-8000-000000000001';
 set local role authenticated;
