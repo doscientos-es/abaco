@@ -42,13 +42,10 @@ export function ChartCard({
         <div className="mb-3" />
       )}
       {settings ? (
-        <div
-          aria-label={`Personalizar ${title}`}
-          role="group"
-          className="border-border mb-3 flex flex-wrap gap-2 border-b pb-3"
-        >
+        <fieldset className="border-border mb-3 flex min-w-0 flex-wrap gap-2 border-b pb-3">
+          <legend className="sr-only">{`Personalizar ${title}`}</legend>
           {settings}
-        </div>
+        </fieldset>
       ) : null}
       <ChartContent title={title}>{children}</ChartContent>
     </section>

@@ -1,5 +1,5 @@
 import { ledgerVatSummary } from '@/shared/domain/csv'
-import { categoryTotals, monthlySeries } from '@/shared/domain/stats'
+import { monthlySeries } from '@/shared/domain/stats'
 import type { LedgerEntry } from '@/shared/domain/types'
 
 import { ledgerQuarterEnd, type LedgerQuarter } from './ledger-quarter'
@@ -20,6 +20,5 @@ export function ledgerSummaryData(entries: LedgerEntry[], quarter: LedgerQuarter
       0,
     ),
     vat: ledgerVatSummary(entries),
-    categories: categoryTotals(entries, 'expense'),
   }
 }

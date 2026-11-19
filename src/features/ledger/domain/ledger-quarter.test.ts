@@ -53,7 +53,6 @@ it('uses calendar quarter boundaries for totals, VAT, categories and the monthly
   expect(summary.income).toBe(24200)
   expect(summary.expenses).toBe(12100)
   expect(summary.vat).toEqual({ collected: 4200, paid: 2100 })
-  expect(summary.categories).toEqual([{ label: 'Materiales', value: 12100 }])
   expect(summary.series.map(({ key, income, expense }) => [key, income, expense])).toEqual([
     ['2026-04', 24200, 0],
     ['2026-05', 0, 0],

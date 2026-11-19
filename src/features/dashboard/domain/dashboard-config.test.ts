@@ -4,8 +4,10 @@ import type { DashboardConfig } from '@/shared/domain/types'
 import { tenantFromRow, tenantToRow } from '@/shared/store/supabase-mappers'
 
 import {
+  dashboardConfigFrom,
   defaultDashboardWidgets,
   resolveDashboardChart,
+  resolveDashboardCharts,
   resolveDashboardWidgets,
 } from './dashboard-config'
 
@@ -34,13 +36,28 @@ describe('dashboard configuration', () => {
       widgets: ['recent-movements', 'expense-categories', 'income-expenses'],
       incomeChart: 'lines',
       incomeMonths: 12,
+      charts: {
+        'expense-categories': { format: 'ranking', months: 6 },
+        'estimate-status': { metric: 'count', months: 'all' },
+      },
     }
     const tenant = tenantFromRow({ id: 'test', dashboard_config: config })
     expect(resolveDashboardWidgets(tenant.dashboardConfig)).toEqual(config.widgets)
-    expect(resolveDashboardChart(tenant.dashboardConfig)).toEqual({
+    const widgets = resolveDashboardWidgets(tenant.dashboardConfig)
+    const charts = resolveDashboardCharts(tenant.dashboardConfig)
+    expect(charts).toEqual({
       incomeChart: 'lines',
       incomeMonths: 12,
+      ...config.charts,
     })
-    expect(tenantToRow(tenant).dashboard_config).toEqual(config)
+    expect(
+      tenantToRow({
+        ...tenant,
+        dashboardConfig: dashboardConfigFrom([...widgets, 'clients'], charts),
+      }).dashboard_config,
+    ).toEqual({
+      ...config,
+      widgets: [...config.widgets, 'clients'],
+    })
   })
 })

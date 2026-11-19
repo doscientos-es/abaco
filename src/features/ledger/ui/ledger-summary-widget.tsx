@@ -11,8 +11,14 @@ import { DownloadSimple } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
 import { formatEuros } from '@/shared/domain/money'
-import type { MonthPoint } from '@/shared/domain/stats'
-import { ChartCard, Donut, EmptyHint, MonthlyBars } from '@/shared/ui/charts'
+import { categoryTotals, filterByRecentMonths, type MonthPoint } from '@/shared/domain/stats'
+import {
+  chartFormats,
+  ChartOptionField,
+  ChartPeriodField,
+  chartPeriodLabels,
+} from '@/shared/ui/chart-settings'
+import { ChartCard, EmptyHint, ExpenseCategoryPlot, MonthlyBars } from '@/shared/ui/charts'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { MonthlyLines } from '@/shared/ui/monthly-lines'
 import { StatCard } from '@/shared/ui/stat-card'
@@ -38,10 +44,12 @@ export function LedgerSummaryWidget({
   module,
   data,
   exportAction,
+  onChange,
 }: {
   module: LedgerModule
   data: ReturnType<typeof ledgerSummaryData>
   exportAction: (id: LedgerExport) => LedgerExportAction
+  onChange?: ((patch: Partial<Omit<LedgerModule, 'id'>>) => void) | undefined
 }) {
   const definition = ledgerModuleDefinition(module.id)
   const { title } = definition
@@ -62,7 +70,7 @@ export function LedgerSummaryWidget({
     )
   }
 
-  const months = data.series.slice(-(module.months ?? 6))
+  const trend = data.series.slice(-6)
   const result = data.income - data.expenses
   switch (module.id) {
     case 'income':
@@ -72,7 +80,7 @@ export function LedgerSummaryWidget({
           value={formatEuros(data.income)}
           tone="success"
           icon={fieldIcons.euro}
-          trend={months.map((m) => m.income)}
+          trend={trend.map((m) => m.income)}
         />
       )
     case 'expenses':
@@ -82,7 +90,7 @@ export function LedgerSummaryWidget({
           value={formatEuros(data.expenses)}
           tone="danger"
           icon={fieldIcons.tag}
-          trend={months.map((m) => m.expense)}
+          trend={trend.map((m) => m.expense)}
         />
       )
     case 'result':
@@ -92,7 +100,7 @@ export function LedgerSummaryWidget({
           value={formatEuros(result)}
           tone={result < 0 ? 'danger' : 'default'}
           icon={fieldIcons.bank}
-          trend={months.map((m) => m.income - m.expense)}
+          trend={trend.map((m) => m.income - m.expense)}
         />
       )
     case 'vat':
@@ -104,7 +112,9 @@ export function LedgerSummaryWidget({
           icon={fieldIcons.percent}
         />
       )
-    case 'monthly':
+    case 'monthly': {
+      const range = module.months === 12 ? 12 : 6
+      const months = data.series.slice(-range)
       return (
         <ChartCard
           title={title}
@@ -112,6 +122,26 @@ export function LedgerSummaryWidget({
             data.quarter
               ? 'Los tres meses del trimestre seleccionado.'
               : `Últimos ${months.length} meses.`
+          }
+          settings={
+            onChange ? (
+              <LedgerChartControls
+                module={module}
+                onChange={onChange}
+                period={
+                  data.quarter ? null : (
+                    <ChartPeriodField
+                      title={title}
+                      option={{
+                        value: range,
+                        choices: [6, 12],
+                        onChange: (months) => onChange({ months }),
+                      }}
+                    />
+                  )
+                }
+              />
+            ) : null
           }
         >
           {module.chart === 'lines' ? (
@@ -123,27 +153,44 @@ export function LedgerSummaryWidget({
           )}
         </ChartCard>
       )
-    case 'categories':
+    }
+    case 'categories': {
+      const range = module.months ?? 'all'
       return (
         <ChartCard
           title={title}
           description={
-            data.quarter ? 'Gastos del trimestre seleccionado.' : 'Gastos de todos los periodos.'
+            data.quarter ? 'Gastos del trimestre seleccionado.' : chartPeriodLabels[range]
+          }
+          settings={
+            onChange ? (
+              <LedgerChartControls
+                module={module}
+                onChange={onChange}
+                period={
+                  data.quarter ? null : (
+                    <ChartPeriodField
+                      title={title}
+                      option={{
+                        value: range,
+                        choices: ['all', 6, 12],
+                        onChange: (months) => onChange({ months }),
+                      }}
+                    />
+                  )
+                }
+              />
+            ) : null
           }
         >
-          {module.chart === 'ranking' ? (
-            <CategoryRanking items={data.categories} />
-          ) : (
-            <Donut
-              data={data.categories}
-              centerLabel="Gastos"
-              empty="Aún no hay gastos"
-              emptyDescription="Al registrar gastos verás cuánto se va en cada categoría."
-              emptyIcon={fieldIcons.euro}
-            />
-          )}
+          <LedgerExpensePlot
+            data={data}
+            range={range}
+            format={module.chart === 'ranking' ? 'ranking' : 'donut'}
+          />
         </ChartCard>
       )
+    }
     case 'recent':
       return (
         <ChartCard title={title} description="Últimos cinco movimientos del periodo.">
@@ -183,6 +230,49 @@ export function LedgerSummaryWidget({
   }
 }
 
+function LedgerChartControls({
+  module,
+  period,
+  onChange,
+}: {
+  module: LedgerModule
+  period: React.ReactNode
+  onChange: (patch: Partial<Omit<LedgerModule, 'id'>>) => void
+}) {
+  const { charts, title } = ledgerModuleDefinition(module.id)
+  return (
+    <>
+      {charts && module.chart ? (
+        <ChartOptionField
+          label={`Formato de ${title}`}
+          names={chartFormats}
+          option={{
+            value: module.chart,
+            choices: charts,
+            onChange: (chart) => onChange({ chart }),
+          }}
+        />
+      ) : null}
+      {period}
+    </>
+  )
+}
+
+function LedgerExpensePlot({
+  data,
+  range,
+  format,
+}: {
+  data: ReturnType<typeof ledgerSummaryData>
+  range: 'all' | 6 | 12
+  format: 'donut' | 'ranking'
+}) {
+  const entries = data.quarter
+    ? data.entries
+    : filterByRecentMonths(data.entries, range, (entry) => entry.date)
+  return <ExpenseCategoryPlot items={categoryTotals(entries, 'expense')} format={format} />
+}
+
 function MonthlyTable({ months }: { months: MonthPoint[] }) {
   return (
     <Table aria-label="Ingresos y gastos por mes">
@@ -209,28 +299,5 @@ function MonthlyTable({ months }: { months: MonthPoint[] }) {
         ))}
       </TableBody>
     </Table>
-  )
-}
-
-function CategoryRanking({ items }: { items: ReturnType<typeof ledgerSummaryData>['categories'] }) {
-  if (!items.length) return <EmptyHint title="Aún no hay gastos" />
-  const max = Math.max(1, ...items.map(({ value }) => Math.abs(value)))
-  return (
-    <ul className="space-y-2">
-      {items.map(({ label, value }, index) => (
-        <li key={`${label}-${index}`} className="space-y-1">
-          <div className="flex justify-between gap-2 text-sm">
-            <span className="min-w-0 break-words">{label}</span>
-            <span className="shrink-0 tabular-nums">{formatEuros(value)}</span>
-          </div>
-          <div aria-hidden="true" className="bg-muted h-2 rounded-full">
-            <div
-              className="bg-primary h-full rounded-full"
-              style={{ width: `${(Math.abs(value) / max) * 100}%` }}
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
   )
 }

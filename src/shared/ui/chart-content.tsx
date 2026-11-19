@@ -4,8 +4,8 @@ import { Component, Suspense, type ReactNode } from 'react'
 
 function ChartLoading({ title }: { title: string }) {
   return (
-    <div role="status" className="space-y-3">
-      <span className="sr-only">Cargando {title}…</span>
+    <div className="space-y-3">
+      <output className="sr-only">{`Cargando ${title}…`}</output>
       <div aria-hidden="true" className="border-border flex h-36 items-end gap-3 border-b px-3">
         {['h-1/3', 'h-2/3', 'h-1/2', 'h-4/5', 'h-3/5', 'h-full'].map((height) => (
           <Skeleton
@@ -27,13 +27,13 @@ class ChartErrorBoundary extends Component<
   },
   { failed: boolean }
 > {
-  state = { failed: false }
+  override state = { failed: false }
 
   static getDerivedStateFromError() {
     return { failed: true }
   }
 
-  render() {
+  override render() {
     if (!this.state.failed) return this.props.children
     return (
       <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center text-sm">

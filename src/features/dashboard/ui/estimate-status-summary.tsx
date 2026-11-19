@@ -30,14 +30,15 @@ export function EstimateStatusSummary({
   metric?: StatusChart['metric']
   settings?: ReactNode
 }) {
+  const period =
+    months === 'all'
+      ? chartPeriodLabels.all
+      : `Creados en los ${chartPeriodLabels[months].toLowerCase()}`
+  const measure = metric === 'count' ? 'Por cantidad' : 'Por importe'
   return (
     <ChartCard
       title="Presupuestos por estado"
-      description={
-        months === 'all'
-          ? 'Todo el historial'
-          : `Creados en los ${chartPeriodLabels[months].toLowerCase()}.`
-      }
+      description={`${period} · ${measure}`}
       settings={settings}
     >
       <EstimateStatusPlot estimates={estimates} months={months} metric={metric} />

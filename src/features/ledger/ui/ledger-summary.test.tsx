@@ -80,8 +80,40 @@ describe('accounting summary preferences', () => {
     exportAction.mockClear()
     const history = render(false)
     expect(history).not.toContain('Descargar CSV')
+    expect(history).not.toContain('aria-label="Añadir Exportar cobros"')
+    expect(history).toContain('aria-label="Añadir Últimos apuntes"')
     expect(history).toContain('Últimos 12 meses')
     expect(exportAction).not.toHaveBeenCalled()
+  })
+
+  it('uses independent history per chart without changing the scope of totals', () => {
+    const now = new Date()
+    const sevenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 7, 15, 12)
+      .toISOString()
+      .slice(0, 10)
+    writeLedgerSummary(key, {
+      version: 1,
+      modules: [
+        newLedgerModule('expenses'),
+        { ...newLedgerModule('monthly'), chart: 'table', months: 12 },
+        { ...newLedgerModule('categories'), chart: 'ranking', months: 6 },
+      ],
+    })
+    const html = renderToStaticMarkup(
+      <LedgerSummary
+        storageKey={key}
+        canExportDatasets={false}
+        entries={[{ ...expense, date: sevenMonthsAgo }]}
+        quarter={null}
+        periodFilter={null}
+        exportAction={() => ({ run: vi.fn(), disabled: true })}
+      />,
+    )
+    expect(html).toContain('Últimos 12 meses')
+    expect(html).toContain('Últimos 6 meses')
+    expect(html).toContain(formatEuros(expense.amountCents))
+    expect(html).toContain('Aún no hay gastos en este periodo')
+    expect(html).not.toContain(expense.category)
   })
 
   it('renders only the selected quarter in the monthly table, including months without movements', () => {

@@ -77,4 +77,23 @@ describe('EstimateStatusSummary', () => {
     expect(rows[2]).toContain(formatEuros(12100))
     expect(html.match(/width:50%/g)).toHaveLength(2)
   })
+
+  it('filters by creation month and can size the segments by counts instead of amount', () => {
+    const now = new Date()
+    const timestamp = new Date(now.getFullYear(), now.getMonth(), 15, 12).toISOString()
+    const html = renderToStaticMarkup(
+      <EstimateStatusSummary
+        months={6}
+        metric="count"
+        estimates={[
+          { ...estimate('1', 'accepted', 10000), createdAt: timestamp },
+          { ...estimate('2', 'sent', 0), createdAt: timestamp },
+          { ...estimate('3', 'draft', 45678), createdAt: '2000-01-01T00:00:00Z' },
+        ]}
+      />,
+    )
+    expect(html).toContain('2 presupuestos')
+    expect(html).not.toContain(formatEuros(45678))
+    expect(html.match(/width:50%/g)).toHaveLength(2)
+  })
 })

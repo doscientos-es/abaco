@@ -347,7 +347,8 @@ function LedgerContent({ ledger, tenant }: Pick<TenantData, 'ledger' | 'tenant'>
               <div className="min-w-0 flex-1 basis-56">
                 <p className="text-sm font-medium">Periodo del resumen</p>
                 <p className="text-muted-foreground text-xs">
-                  Filtra los importes, los gráficos y el CSV para la gestoría.
+                  Limita el resumen y el CSV al trimestre elegido. Sin trimestre, cada gráfico puede
+                  tener su propio periodo.
                 </p>
               </div>
               <SelectField

@@ -34,7 +34,7 @@ export const dashboardWidgets = [
   {
     id: 'expense-categories',
     title: 'Gastos por categoría',
-    description: 'Distribución de los gastos de este mes.',
+    description: 'Distribución de tus gastos por categoría.',
   },
   {
     id: 'recent-movements',

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DashboardConfig, LedgerEntry } from '@/shared/domain/types'
 
+import { DashboardExpenseChart, DashboardIncomeChart } from './dashboard-charts'
 import { DashboardPage } from './dashboard-page'
 
 const mocks = vi.hoisted(() => ({
@@ -23,7 +24,7 @@ vi.mock('@/shared/store/store', () => ({
     invoices: [],
     tenant: { name: 'Empresa', dashboardConfig: mocks.config },
   }),
-  useSaveStatus: () => 'idle',
+  useSaveStatus: () => ({ state: 'saved' }),
   updateTenantData: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({
@@ -52,6 +53,42 @@ describe('dashboard customization', () => {
     const html = renderToStaticMarkup(<DashboardPage />)
     expect(html).not.toContain('aria-label="Personalizar resumen"')
     expect(html).not.toContain('Personalizar resumen</button>')
+    expect(html).not.toContain('Módulos disponibles')
+  })
+
+  it('lists only missing modules below the active grid', () => {
+    mocks.config.widgets = ['income-expenses']
+    const html = renderToStaticMarkup(<DashboardPage />)
+    expect(html).not.toContain('aria-label="Añadir Ingresos y gastos"')
+    expect(html).toContain('aria-label="Añadir Gastos por categoría"')
+    expect(html.indexOf('data-dashboard-module="income-expenses"')).toBeLessThan(
+      html.indexOf('aria-label="Módulos disponibles"'),
+    )
+  })
+
+  it('renders each chart’s own format and period controls in its card', () => {
+    const html = renderToStaticMarkup(
+      <>
+        <DashboardIncomeChart
+          ledger={[]}
+          chart={{ incomeChart: 'lines', incomeMonths: 12 }}
+          onChange={vi.fn()}
+        />
+        <DashboardExpenseChart
+          ledger={[]}
+          chart={{ format: 'ranking', months: 6 }}
+          onChange={vi.fn()}
+        />
+      </>,
+    )
+    const settings = html.match(/<fieldset[^>]*>.*?<\/fieldset>/g) ?? []
+    expect(settings).toHaveLength(2)
+    expect(settings[0]).toContain('Personalizar Ingresos y gastos')
+    expect(settings[0]).toContain('Periodo de Ingresos y gastos')
+    expect(settings[0]).toContain('Últimos 12 meses')
+    expect(settings[1]).toContain('Personalizar Gastos por categoría')
+    expect(settings[1]).toContain('Periodo de Gastos por categoría')
+    expect(settings[1]).toContain('Últimos 6 meses')
   })
 
   it('links the metrics to their source sections and explains their meaning', () => {

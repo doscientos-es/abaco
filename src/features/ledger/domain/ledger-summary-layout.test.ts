@@ -24,7 +24,7 @@ describe('accounting summary layout', () => {
     expect(resolveLedgerSummary(saved, true).modules).toEqual([
       { id: 'monthly', width: 12, chart: 'lines', months: 12 },
       { id: 'csv-payments', width: 6 },
-      { id: 'categories', width: 6, chart: 'donut' },
+      { id: 'categories', width: 6, chart: 'donut', months: 'all' },
     ])
     expect(resolveLedgerSummary(saved, false).modules.map(({ id }) => id)).toEqual([
       'monthly',

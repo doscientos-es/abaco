@@ -60,7 +60,7 @@ export type LedgerModule = {
   id: LedgerModuleId
   width: number
   chart?: LedgerChart
-  months?: 6 | 12
+  months?: 'all' | 6 | 12
 }
 export type LedgerSummaryLayout = { version: 1; modules: LedgerModule[] }
 
@@ -107,6 +107,9 @@ function moduleFrom(id: LedgerModuleId, saved: Record<string, unknown>): LedgerM
     ),
     ...(chart ? { chart } : {}),
     ...(id === 'monthly' ? { months: saved.months === 12 ? 12 : 6 } : {}),
+    ...(id === 'categories'
+      ? { months: saved.months === 6 || saved.months === 12 ? saved.months : 'all' }
+      : {}),
   }
 }
 
