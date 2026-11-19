@@ -17,6 +17,12 @@ const tabs = [
 export const Route = createFileRoute('/ajustes')({
   beforeLoad: async ({ context, search }) => {
     await requirePermission('settings:personal')({ context })
+    if (search.tab === 'equipo') {
+      const session = await context.queryClient.ensureQueryData(sessionQuery)
+      if (can(session?.role, 'team:manage')) {
+        throw redirect({ to: '/trabajadores', replace: true })
+      }
+    }
     if (search.tab === 'documentos' || search.tab === 'listas') {
       const session = await context.queryClient.ensureQueryData(sessionQuery)
       if (can(session?.role, 'settings:write')) {

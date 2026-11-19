@@ -104,9 +104,12 @@ describe('estado de guardado en la aplicación', () => {
     expect(html).not.toContain('href="/agenda"')
     expect(html).not.toContain('>Agenda<')
     expect(html).toContain('href="/trabajadores"')
+    const general = html.slice(html.indexOf('>General<'), html.indexOf('>Ventas<'))
     const sales = html.slice(html.indexOf('>Ventas<'), html.indexOf('>Operaciones<'))
+    const operations = html.slice(html.indexOf('>Operaciones<'), html.indexOf('>Finanzas<'))
     expect(sales).toContain('href="/contratos"')
-    expect(html).not.toContain('href="/horarios"')
+    expect(general).toContain('href="/horarios"')
+    expect(operations).not.toContain('href="/horarios"')
     expect(html).not.toContain('href="/vacaciones"')
   })
 

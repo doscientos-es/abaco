@@ -208,8 +208,8 @@ export function WorkPlanForm({
               </p>
               {can(session?.role, 'team:manage') ? (
                 <Link
-                  to="/ajustes"
-                  search={{ tab: 'equipo' }}
+                  to="/trabajadores"
+                  search={{ vista: 'equipos' }}
                   className="text-primary text-xs underline"
                 >
                   Gestionar equipos

@@ -156,7 +156,7 @@ export function PricingCatalog({
             <>
               <p className="text-muted-foreground text-sm">
                 El precio del módulo se suma al plan base, por empresa. Puedes contratarlo desde
-                Ajustes → Plan y facturación.
+                Ajustes → Suscripción de Ábaco.
               </p>
               <ul className="space-y-2 text-sm">
                 {addons.data.map((addon) => (

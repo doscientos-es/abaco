@@ -103,14 +103,15 @@ describe('TeamSection', () => {
     expect(html).not.toContain('Editar funciones')
   })
 
-  it('places the invitation link beside the directory count when requested', () => {
+  it('places invitation and import actions beside the directory count when requested', () => {
     query.mockReturnValue({
       isSuccess: true,
       data: [{ userId: 'ana', fullName: 'Ana', email: 'ana@example.com', role: 'user' }],
     })
     const html = renderToStaticMarkup(<TeamSection tenantId="company" showInviteLink />)
-    expect(html).toMatch(/1 persona<\/span>.*href="\/ajustes\?tab=equipo">Invitar personas<\/a>/)
-    expect(html).toMatch(/class="[^"]*bg-primary[^"]*" href="\/ajustes\?tab=equipo"/)
+    expect(html).toContain('Invitar personas')
+    expect(html).toContain('Importar personas')
+    expect(html).not.toContain('/ajustes?tab=equipo')
     const profile = renderToStaticMarkup(
       <TeamSection tenantId="company" personId="ana" showInviteLink />,
     )

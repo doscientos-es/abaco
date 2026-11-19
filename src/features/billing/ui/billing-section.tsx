@@ -151,7 +151,7 @@ export function BillingSection({
   if (subscription?.isComplimentary) {
     return (
       <section className="border-border bg-card rounded-xl border px-5 py-4">
-        <h2 className="text-sm font-semibold">Plan y facturación</h2>
+        <h2 className="text-sm font-semibold">Suscripción de Ábaco</h2>
         <p className="text-muted-foreground text-sm">
           Acceso de cortesía: sin caducidad ni renovaciones automáticas.
         </p>
@@ -169,7 +169,7 @@ export function BillingSection({
   return (
     <section className="border-border bg-card rounded-xl border">
       <div className="border-border border-b px-5 py-4">
-        <h2 className="text-sm font-semibold">Plan y facturación</h2>
+        <h2 className="text-sm font-semibold">Suscripción de Ábaco</h2>
         <p className="text-muted-foreground text-xs">
           {subscription
             ? currentLine(subscription, planLabel(subscription.plan, rates))

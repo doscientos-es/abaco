@@ -130,7 +130,7 @@ export function CompanyTab({ form, set }: FormProps) {
 export function OperatingDefaultsTab({ form, set }: FormProps) {
   return (
     <>
-      <Section title="Valores por defecto" description="Se aplican a los presupuestos nuevos.">
+      <Section title="Presupuestos" description="Valores por defecto para nuevos presupuestos.">
         <TextField
           label="IVA por defecto (%)"
           type="number"
@@ -156,7 +156,10 @@ export function OperatingDefaultsTab({ form, set }: FormProps) {
           onChange={set('defaultDepositPercent')}
         />
       </Section>
-      <Section title="Recordatorios automáticos" description="Avisos por correo a tus clientes.">
+      <Section
+        title="Recordatorios de presupuestos y facturas"
+        description="Avisos por correo a tus clientes."
+      >
         <SelectField
           className="sm:col-span-2"
           label="Recordatorios por correo"

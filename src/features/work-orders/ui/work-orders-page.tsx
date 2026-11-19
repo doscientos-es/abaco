@@ -141,7 +141,11 @@ function LegacyWorkOrdersPage() {
             </Button>
           ) : null}
           {can(session?.role, 'team:manage') ? (
-            <Link to="/ajustes" search={{ tab: 'equipo' }} className="text-primary underline">
+            <Link
+              to="/trabajadores"
+              search={{ vista: 'equipos' }}
+              className="text-primary underline"
+            >
               Gestionar equipos
             </Link>
           ) : null}

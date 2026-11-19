@@ -1,8 +1,8 @@
 import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { can, useSession } from '@/features/auth'
+import { useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
 import doscientosLogo from '@/shared/assets/logo.svg'
 import type { Tenant } from '@/shared/domain/types'
@@ -24,17 +24,15 @@ import {
   toForm,
   type Form,
 } from './settings-form'
-import { TeamSection } from './team-section'
 import { AccountSettings } from './user-settings-page'
 
-export type SettingsTab = 'empresa' | 'operativa' | 'cuenta' | 'equipo' | 'plan' | 'novedades'
+export type SettingsTab = 'empresa' | 'operativa' | 'cuenta' | 'plan' | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
-  operativa: 'Cobros y avisos',
+  operativa: 'Presupuestos y facturas',
   cuenta: 'Mi cuenta',
-  equipo: 'Invitaciones',
-  plan: 'Plan y facturación',
+  plan: 'Suscripción de Ábaco',
   novedades: 'Novedades',
 }
 
@@ -50,10 +48,8 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
   const [form, setForm] = useState<Form>(() => toForm(tenant))
   const [saved, setSaved] = useState(false)
 
-  const canTeam = Boolean(session?.tenantId && can(session.role, 'team:manage'))
   const canPlan = Boolean(session?.tenantId && session.role === 'admin')
   const allowed: SettingsTab[] = ['empresa', 'operativa', 'cuenta']
-  if (canTeam) allowed.push('equipo')
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
   const tab = allowed.find((id) => id === requested) ?? 'empresa'
@@ -80,30 +76,35 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
     <div className="max-w-3xl space-y-6">
       <WorkspacePageHeading title="Ajustes" />
 
-      <WorkspacePageTabs>
-        <Tabs
-          selectedKey={tab}
-          onSelectionChange={(key) => {
-            setSaved(false)
-            void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })
-          }}
-        >
-          <TabsList aria-label="Secciones de ajustes">
-            {allowed.map((id) => (
-              <TabsTrigger key={id} id={id}>
-                {labels[id]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </WorkspacePageTabs>
+      {tab !== 'novedades' ? (
+        <WorkspacePageTabs>
+          <Tabs
+            selectedKey={tab}
+            onSelectionChange={(key) => {
+              setSaved(false)
+              void navigate({ to: '/ajustes', search: { tab: key as SettingsTab } })
+            }}
+          >
+            <TabsList aria-label="Secciones de ajustes">
+              {allowed
+                .filter((id) => id !== 'novedades')
+                .map((id) => (
+                  <TabsTrigger key={id} id={id}>
+                    {labels[id]}
+                  </TabsTrigger>
+                ))}
+            </TabsList>
+          </Tabs>
+        </WorkspacePageTabs>
+      ) : (
+        <Link to="/ajustes" search={{ tab: 'empresa' }} className="text-primary text-sm underline">
+          Volver a Ajustes
+        </Link>
+      )}
 
       {tab === 'empresa' ? <CompanyTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'cuenta' ? <AccountSettings /> : null}
-      {tab === 'equipo' && session?.tenantId ? (
-        <TeamSection tenantId={session.tenantId} mode="invite" />
-      ) : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}
@@ -127,6 +128,13 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <h2 className="text-sm font-semibold">{brand.name}</h2>
               <span className="text-muted-foreground text-xs">v{version}</span>
+              <Link
+                to="/ajustes"
+                search={{ tab: 'novedades' }}
+                className="text-muted-foreground hover:text-foreground text-xs underline"
+              >
+                Novedades
+              </Link>
             </div>
             <p className="text-muted-foreground text-xs">{brand.tagline}</p>
           </div>
