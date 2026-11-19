@@ -1,4 +1,15 @@
-import { Badge, Button, Input } from '@doscientos/ui'
+import {
+  Alert,
+  AlertAction,
+  AlertTitle,
+  Badge,
+  Button,
+  buttonVariants,
+  FormFeedback,
+  type FormFeedbackState,
+  Input,
+  Spinner,
+} from '@doscientos/ui'
 import {
   ArrowLeft,
   CaretLeft,
@@ -16,8 +27,9 @@ import {
 } from '../domain/platform-navigation'
 import { PlatformField } from './platform-form-field'
 
-export const platformActionClass =
-  'inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring'
+export const platformActionClass = buttonVariants({ variant: 'outline', size: 'sm' })
+export const platformTextActionClass = buttonVariants({ variant: 'ghost', size: 'sm' })
+export const platformPanelClass = 'border-border bg-card overflow-hidden rounded-lg border'
 
 export function PlatformBackLink({
   search,
@@ -27,11 +39,7 @@ export function PlatformBackLink({
   children: ReactNode
 }) {
   return (
-    <Link
-      to="/superadmin"
-      search={search}
-      className="text-muted-foreground hover:text-foreground focus-visible:outline-ring inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium focus-visible:outline-2"
-    >
+    <Link to="/superadmin" search={search} className={`${platformTextActionClass} w-fit`}>
       <ArrowLeft aria-hidden="true" className="size-4 shrink-0" />
       {children}
     </Link>
@@ -66,7 +74,7 @@ export function PlatformRowLink({
     <Link
       to="/superadmin"
       search={search}
-      className="focus-visible:outline-ring hover:bg-muted/60 group flex min-h-16 items-center gap-3 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 sm:px-5"
+      className="focus-visible:outline-ring hover:bg-muted/60 group flex items-center gap-2 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2"
     >
       <span className="min-w-0 flex-1 break-words">{children}</span>
       {aside ? <span className="shrink-0 text-right">{aside}</span> : null}
@@ -78,8 +86,26 @@ export function PlatformRowLink({
   )
 }
 
-export const platformRowTitleClass = 'group-hover:text-primary block font-semibold'
-export const platformRowMetaClass = 'text-muted-foreground mt-0.5 block text-xs'
+export const platformRowTitleClass = 'group-hover:text-primary block font-medium'
+export const platformRowMetaClass = 'text-muted-foreground block text-xs'
+
+export function PlatformRecordLink({
+  search,
+  children,
+}: {
+  search: PlatformSearch
+  children: ReactNode
+}) {
+  return (
+    <Link
+      to="/superadmin"
+      search={search}
+      className="focus-visible:outline-ring hover:text-primary inline-block max-w-full rounded-sm font-medium break-words hover:underline focus-visible:outline-2"
+    >
+      {children}
+    </Link>
+  )
+}
 
 const date = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' })
 export const formatPlatformDate = (value: string | null) =>
@@ -129,19 +155,51 @@ export function PlatformMessage({
   children?: ReactNode
   onRetry?: () => void
 }) {
+  if (onRetry)
+    return (
+      <div className="p-3">
+        <Alert variant="destructive">
+          <AlertTitle>{title}</AlertTitle>
+          <AlertAction>
+            <Button size="xs" variant="outline" onPress={onRetry}>
+              Reintentar
+            </Button>
+          </AlertAction>
+        </Alert>
+      </div>
+    )
   return (
-    <div className="space-y-2 px-4 py-8 text-center">
-      <p role={onRetry ? 'alert' : undefined} className="font-medium">
-        {title}
-      </p>
+    <div className="space-y-1 px-3 py-5 text-center text-sm">
+      <p className="font-medium">{title}</p>
       {children ? <p className="text-muted-foreground text-sm">{children}</p> : null}
-      {onRetry ? (
-        <Button size="sm" variant="outline" onPress={onRetry}>
-          Reintentar
-        </Button>
-      ) : null}
     </div>
   )
+}
+
+export function PlatformLoading({ children }: { children: string }) {
+  return (
+    <div className="text-muted-foreground flex items-center gap-2 px-3 py-4 text-sm">
+      <Spinner size="sm" label={children} />
+      <span aria-hidden="true">{children}</span>
+    </div>
+  )
+}
+
+export function PlatformFeedback({
+  action,
+  success,
+}: {
+  action: { isPending: boolean; isSuccess: boolean; error: Error | null }
+  success: string
+}) {
+  const state: FormFeedbackState = action.isPending
+    ? { status: 'pending' }
+    : action.error
+      ? { status: 'error', message: action.error.message }
+      : action.isSuccess
+        ? { status: 'success', message: success }
+        : { status: 'idle' }
+  return <FormFeedback state={state} className="h-auto min-h-5" />
 }
 
 export function PlatformPagination({
@@ -159,9 +217,9 @@ export function PlatformPagination({
   return (
     <nav
       aria-label="Paginación"
-      className="border-border flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3"
+      className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2"
     >
-      <span className="text-muted-foreground text-sm">Página {page}</span>
+      <span className="text-muted-foreground text-xs tabular-nums">Página {page}</span>
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -218,14 +276,13 @@ export function PlatformSearchForm({
               {...control}
               ref={inputRef}
               type="search"
-              className="h-11"
               placeholder={placeholder}
               maxLength={120}
               defaultValue={query}
             />
           )}
         </PlatformField>
-        <Button type="submit" variant="outline" className="min-h-11 shrink-0">
+        <Button type="submit" variant="outline">
           <MagnifyingGlass aria-hidden="true" /> Buscar
         </Button>
       </form>

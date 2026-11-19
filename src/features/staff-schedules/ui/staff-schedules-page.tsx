@@ -9,6 +9,7 @@ import { dateValue } from '@/shared/lib/date-range'
 import { calendarDays, calendarTime, type EventCalendarView } from '@/shared/lib/event-calendar'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
 import { EventCalendar } from '@/shared/ui/event-calendar'
+import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
   staffAbsencesQuery,
@@ -150,12 +151,12 @@ function ScheduleView({
   }
 
   return (
-    <div className="space-y-5">
-      <header>
+    <div className={admin ? 'space-y-5' : 'worker-page space-y-6'}>
+      <header className={admin || embedded ? undefined : 'worker-hero'}>
         {embedded ? (
           <h2 className="sr-only">{title ?? 'Horarios'}</h2>
         ) : (
-          <h1 className="text-xl font-semibold">
+          <h1 className={admin ? 'text-xl font-semibold' : 'worker-title'}>
             {title ?? (admin ? 'Horarios del equipo' : 'Mi horario')}
           </h1>
         )}
@@ -170,25 +171,22 @@ function ScheduleView({
         ) : null}
       </header>
       {loading ? (
-        <p>Cargando horarios…</p>
+        <WorkerLoading label="Cargando horarios…" />
       ) : failed ? (
-        <div role="alert">
-          No se pudieron cargar los horarios, los equipos o las ausencias.{' '}
-          <Button
-            variant="outline"
-            onPress={() => {
-              void schedules.refetch()
-              void functions.refetch()
-              void absences.refetch()
-              if (admin) {
-                void team.refetch()
-                void workTeams.refetch()
-              }
-            }}
-          >
-            Reintentar
-          </Button>
-        </div>
+        <WorkerState
+          error
+          title="No se pudieron cargar los horarios"
+          description="Comprueba tu conexión y vuelve a intentarlo."
+          onRetry={() => {
+            void schedules.refetch()
+            void functions.refetch()
+            void absences.refetch()
+            if (admin) {
+              void team.refetch()
+              void workTeams.refetch()
+            }
+          }}
+        />
       ) : (
         <>
           <section aria-label={admin ? 'Filtrar trabajadores' : 'Horario'}>

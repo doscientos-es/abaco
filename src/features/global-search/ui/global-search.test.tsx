@@ -148,4 +148,15 @@ describe('global command palette', () => {
     mocks.presses.get('Abrir búsqueda')?.()
     expect(render()).toContain('role="combobox"')
   })
+
+  it('describes section-only search accurately for workers', () => {
+    mocks.cursor = 0
+    const trigger = renderToStaticMarkup(<GlobalSearch navigation={navigation} navigationOnly />)
+    expect(trigger).toContain('Buscar una sección…')
+    mocks.presses.get('Búsqueda global')?.()
+    mocks.cursor = 0
+    const html = renderToStaticMarkup(<GlobalSearch navigation={navigation} navigationOnly />)
+    expect(html).toContain('placeholder="Buscar una sección…"')
+    expect(html).not.toContain('Clientes, presupuestos, facturas, personas…')
+  })
 })

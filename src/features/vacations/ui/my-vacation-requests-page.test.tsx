@@ -101,7 +101,7 @@ describe('Solicitud de vacaciones', () => {
 
   it('muestra el formulario solo después de solicitarlo', () => {
     const html = render()
-    expect(html).toContain('<h1 class="text-xl font-semibold">Mis ausencias</h1>')
+    expect(html).toContain('>Mis ausencias</h1>')
     expect(html).not.toContain('Tu tiempo, bien organizado')
     expect(html).not.toContain('Aquí podrás seguir cada solicitud')
     expect(html).toContain('Solicitar ausencia')

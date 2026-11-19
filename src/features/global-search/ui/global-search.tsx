@@ -13,9 +13,11 @@ import type { SearchItem } from '../domain/search'
 export function GlobalSearch({
   data,
   navigation,
+  navigationOnly = false,
 }: {
   data?: TenantData | undefined
   navigation: SearchItem[]
+  navigationOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [help, setHelp] = useState(false)
@@ -69,7 +71,7 @@ export function GlobalSearch({
 
   return (
     <>
-      <div className="workspace-tools">
+      <div className={navigationOnly ? 'workspace-tools worker-search' : 'workspace-tools'}>
         <Button
           variant="ghost"
           onPress={showSearch}
@@ -78,7 +80,9 @@ export function GlobalSearch({
           className="workspace-search-trigger"
         >
           <MagnifyingGlass aria-hidden="true" className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-left">Buscar en Ábaco…</span>
+          <span className="min-w-0 flex-1 truncate text-left">
+            {navigationOnly ? 'Buscar una sección…' : 'Buscar en Ábaco…'}
+          </span>
           <Kbd className="hidden sm:inline-flex">Ctrl / ⌘ K</Kbd>
         </Button>
         <Button
@@ -108,7 +112,10 @@ export function GlobalSearch({
                 <h2 className="mb-5 text-lg font-semibold">Muévete sin soltar el teclado</h2>
                 <dl className="space-y-3 text-sm">
                   {[
-                    ['Buscar en toda la aplicación', 'Ctrl / ⌘ K'],
+                    [
+                      navigationOnly ? 'Buscar una sección' : 'Buscar en toda la aplicación',
+                      'Ctrl / ⌘ K',
+                    ],
                     ['Buscar en esta página', '/'],
                     ['Ver los atajos', '?'],
                     ...navigation
@@ -132,6 +139,7 @@ export function GlobalSearch({
               <SearchPanel
                 data={data}
                 navigation={navigation}
+                navigationOnly={navigationOnly}
                 onSelect={(item) => {
                   setOpen(false)
                   void navigate(item.target)
@@ -148,10 +156,12 @@ export function GlobalSearch({
 function SearchPanel({
   data,
   navigation,
+  navigationOnly,
   onSelect,
 }: {
   data?: TenantData | undefined
   navigation: SearchItem[]
+  navigationOnly: boolean
   onSelect: (item: SearchItem) => void
 }) {
   const [query, setQuery] = useState('')
@@ -178,7 +188,9 @@ function SearchPanel({
           aria-activedescendant={selected ? `${listId}-${selected.id}` : undefined}
           value={query}
           maxLength={120}
-          placeholder="Clientes, presupuestos, facturas, personas…"
+          placeholder={
+            navigationOnly ? 'Buscar una sección…' : 'Clientes, presupuestos, facturas, personas…'
+          }
           className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           onChange={(event) => {
             setQuery(event.target.value)
@@ -209,7 +221,9 @@ function SearchPanel({
             ? 'Buscando…'
             : query.trim()
               ? `${items.length} resultados`
-              : 'Ir a una sección o buscar un recurso'}
+              : navigationOnly
+                ? 'Ir a una sección'
+                : 'Ir a una sección o buscar un recurso'}
         </output>
         <div id={listId} role="listbox" aria-label="Resultados de búsqueda">
           {items.map((item) => (

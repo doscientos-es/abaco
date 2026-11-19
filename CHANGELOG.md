@@ -2,10 +2,23 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-16 — Sin publicar
+## 2026-11-19 — Sin publicar
 
 ### Nuevas funciones
 
+- Add invoice detail view and enhance invoice listing
+- Enhance billing agreement and navigation features
+- Add fixed billing price management and restoration feature
+- Enhance billing features with improved error handling
+- Add billing catalog and invoice management features
+- Implement subscription billing profiles and invoice handling
+- Add VAT management and update billing calculations
+- Implement new pricing catalog and billing management functions
+- Add tests for material shortages component
+- Add inventory and supplier management features
+- Add suppliers management and inventory features
+- Improve contract scheduling and visit workflows
+- Add mobile navigation component and update navigation items with mobile labels
 - Add mobile navigation component and update navigation items with mobile labels
 - Implement worker paper report functionality with PDF download and signed document management
 - Add contract general details update functionality and related UI adjustments
@@ -61,6 +74,7 @@
 
 ### Correcciones
 
+- Update git hooks messages to clarify pre-push behavior and local checks
 - Aislar pruebas del hook de Git
 
 ## 2026-11-12 — v0.0.20

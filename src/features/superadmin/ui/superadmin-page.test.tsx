@@ -167,6 +167,7 @@ describe('platform administration navigation', () => {
   it('queries the chosen directory page and carries it into the company link', () => {
     state.allowed = true
     const html = renderToStaticMarkup(<SuperadminPage search={{ q: 'prueba', page: 3 }} />)
+    expect(html).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Empresas de Ábaco"/)
     expect(html).toContain('Empresa de prueba')
     expect(html).toContain('3 personas')
     expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}`)
@@ -184,6 +185,7 @@ describe('platform administration navigation', () => {
     )
 
     expect(html).toContain('Factura PRUEBA-001')
+    expect(html).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Historial de cobros"/)
     expect(html).toContain('Correo aceptado por el proveedor')
     expect(html).toContain(`empresa=${tenantId}&amp;seccion=pagos" aria-current="page"`)
     expect(html).toMatch(/href="\/superadmin\?q=prueba&amp;page=3">[^<]*</)
@@ -223,6 +225,9 @@ describe('platform administration navigation', () => {
       ['platform-invoices', 'platform-user', 'FA', 2, 'issued'],
     ])
     expect(html).toContain('FA-2030-01')
+    expect(html).toMatch(
+      /<table[^>]*data-density="compact"[^>]*aria-label="Facturas de suscripción"/,
+    )
     expect(html).toContain('Correo aceptado por el proveedor')
     expect(html).toContain(
       `vista=facturas&amp;q=FA&amp;factura=issued&amp;page=2&amp;referencia=${invoice.merchant_order}`,
@@ -274,6 +279,7 @@ describe('platform administration navigation', () => {
     const list = renderToStaticMarkup(<SuperadminPage search={{ vista: 'planes' }} />)
     expect(state.queries).toEqual([['platform-access', 'platform-user'], ['billing-catalog']])
     expect(list).toContain('Equipo Plus')
+    expect(list).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Tarifas de catálogo"/)
     expect(list).toContain('href="/precios"')
     expect(list).toContain('href="/superadmin?vista=planes&amp;plan=team"')
     expect(list).not.toContain('<input')

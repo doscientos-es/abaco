@@ -1,4 +1,4 @@
-import { Button, FormFeedback, Input } from '@doscientos/ui'
+import { Alert, AlertTitle, Button, FieldLegend, FieldSet, Input } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 
@@ -24,7 +24,13 @@ import {
 import { withoutEditor, type PlatformSearch } from '../domain/platform-navigation'
 import { CompanyBillingVat } from './company-billing-vat'
 import { PlatformField, PlatformSelect } from './platform-form-field'
-import { PlatformBackLink, PlatformEditLink, PlatformMessage } from './platform-ui'
+import {
+  PlatformBackLink,
+  PlatformEditLink,
+  PlatformFeedback,
+  PlatformLoading,
+  PlatformMessage,
+} from './platform-ui'
 
 const periodUnit = (period: Interval) => (period === 'year' ? 'año' : 'mes')
 
@@ -72,12 +78,16 @@ export function CompanyBillingAgreement({
     : vatBlocked
       ? 'Resuelve el pago pendiente antes de cambiar las condiciones.'
       : null
+  const blockMessage =
+    editing === 'iva'
+      ? vatBlocked && 'Resuelve el pago pendiente antes de cambiar el IVA.'
+      : blocked
 
   return (
-    <div className="border-border bg-card space-y-4 rounded-lg border p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="border-border bg-card space-y-3 rounded-lg border p-3 sm:p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
-          <h3 className="font-semibold">
+          <h3 className="text-sm font-semibold">
             {editing === 'cuota'
               ? 'Editar cuota'
               : editing === 'iva'
@@ -94,7 +104,9 @@ export function CompanyBillingAgreement({
           <PlatformEditLink search={{ ...search, edicion: 'cuota' }}>Editar cuota</PlatformEditLink>
         ) : null}
       </div>
-      {preview.isPending || catalog.isPending ? <output>Cargando condiciones…</output> : null}
+      {preview.isPending || catalog.isPending ? (
+        <PlatformLoading>Cargando condiciones…</PlatformLoading>
+      ) : null}
       {preview.isError || catalog.isError ? (
         <PlatformMessage
           title="No se pudieron consultar las condiciones."
@@ -105,7 +117,7 @@ export function CompanyBillingAgreement({
         />
       ) : null}
       {preview.data && editing !== 'iva' ? (
-        <dl className="border-border bg-muted/40 grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
+        <dl className="border-border grid gap-3 border-y py-3 text-sm sm:grid-cols-2">
           <AgreementSummary
             label="Condiciones vigentes"
             terms={preview.data?.current ?? null}
@@ -115,15 +127,14 @@ export function CompanyBillingAgreement({
         </dl>
       ) : null}
       {editing !== 'iva' && next && fixedNet !== null ? (
-        <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="space-y-1 text-sm">
             <p className="font-medium">
               Precio pactado: {formatEuros(fixedNet)} sin IVA / {periodUnit(next.period)}
             </p>
             {catalogNet !== null ? (
               <p className="text-muted-foreground">
-                Catálogo: {formatEuros(catalogNet)} sin IVA / {periodUnit(next.period)}. Se aplica
-                al próximo cobro u oferta, sin cargo inmediato.
+                Catálogo: {formatEuros(catalogNet)} sin IVA / {periodUnit(next.period)}.
               </p>
             ) : null}
           </div>
@@ -131,7 +142,7 @@ export function CompanyBillingAgreement({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11"
+              size="sm"
               isDisabled={
                 Boolean(blocked) ||
                 catalogNet === null ||
@@ -156,7 +167,7 @@ export function CompanyBillingAgreement({
         />
       ) : null}
       {preview.isSuccess && !editing ? (
-        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <dl className="text-sm">
             <dt className="text-muted-foreground">IVA del próximo cobro</dt>
             <dd className="mt-0.5 font-semibold">{preview.data.vat_percent} %</dd>
@@ -166,8 +177,10 @@ export function CompanyBillingAgreement({
           ) : null}
         </div>
       ) : null}
-      {blocked ? (
-        <output className="bg-muted block rounded-md p-3 text-sm">{blocked}</output>
+      {blockMessage ? (
+        <Alert variant="warning">
+          <AlertTitle>{blockMessage}</AlertTitle>
+        </Alert>
       ) : null}
       {editing === 'cuota' && preview.isSuccess && catalog.isSuccess && !blocked ? (
         <AgreementForm
@@ -184,29 +197,22 @@ export function CompanyBillingAgreement({
           moduleYearly={preview.data.module_yearly_cents ?? 0}
           vatPercent={preview.data.vat_percent}
           saving={mutation.isPending}
+          feedback={
+            <PlatformFeedback
+              action={mutation}
+              success="Condiciones guardadas. No se ha realizado ningún cobro."
+            />
+          }
           onEdit={() => {
             if (mutation.isSuccess || mutation.isError) mutation.reset()
           }}
           onSave={mutation.mutate}
         />
       ) : null}
-      {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
-      {mutation.error ? (
-        <FormFeedback
-          className="h-auto"
-          state={{ status: 'error', message: mutation.error.message }}
-        />
-      ) : null}
-      {mutation.isSuccess ? (
-        <FormFeedback
-          className="h-auto"
-          state={{
-            status: 'success',
-            message:
-              'restoreCatalog' in mutation.variables
-                ? 'Tarifa de catálogo restaurada para el próximo cobro. No se ha realizado ningún cobro.'
-                : 'Condiciones guardadas. No se ha realizado ningún cobro.',
-          }}
+      {!editing && !mutation.isIdle ? (
+        <PlatformFeedback
+          action={mutation}
+          success="Tarifa de catálogo restaurada para el próximo cobro. No se ha realizado ningún cobro."
         />
       ) : null}
     </div>
@@ -243,6 +249,7 @@ function AgreementForm({
   moduleYearly,
   vatPercent,
   saving,
+  feedback,
   onEdit,
   onSave,
 }: {
@@ -254,6 +261,7 @@ function AgreementForm({
   moduleYearly: number
   vatPercent: number
   saving: boolean
+  feedback: React.ReactNode
   onEdit: () => void
   onSave: (agreement: BillingAgreement) => void
 }) {
@@ -286,18 +294,18 @@ function AgreementForm({
   return (
     <form
       aria-labelledby={titleId}
-      className="border-border space-y-3 border-t pt-4"
+      className="border-border border-t pt-3"
       onChange={onEdit}
       onSubmit={(event) => {
         event.preventDefault()
         if (canSave && rate) onSave({ plan: rate.plan, period, seats: rate.seats, netCents })
       }}
     >
-      <fieldset disabled={saving} className="min-w-0 space-y-4">
-        <legend id={titleId} className="pb-2 font-semibold">
-          Editar próximas condiciones
-        </legend>
-        <div className="grid items-start gap-4 sm:grid-cols-2">
+      <FieldSet disabled={saving} className="min-w-0 gap-3">
+        <FieldLegend id={titleId} variant="label">
+          Próximas condiciones
+        </FieldLegend>
+        <div className="grid items-start gap-x-4 gap-y-3 sm:grid-cols-2">
           <PlatformField
             label="Plan y capacidad"
             hint={`El tramo debe cubrir el equipo actual (${members}).`}
@@ -306,20 +314,19 @@ function AgreementForm({
             {(control) => (
               <PlatformSelect
                 {...control}
-                required
-                value={seats || ''}
-                onChange={(event) => setSeats(Number(event.currentTarget.value))}
-              >
-                <option value="" disabled>
-                  Selecciona un tramo
-                </option>
-                {rates.map((entry) => (
-                  <option key={entry.seats} value={entry.seats} disabled={entry.seats < members}>
-                    {planLabel(entry.plan, rates)} · {entry.seats}{' '}
-                    {entry.seats === 1 ? 'persona' : 'personas'}
-                  </option>
-                ))}
-              </PlatformSelect>
+                isDisabled={saving}
+                placeholder="Selecciona un tramo"
+                value={seats ? String(seats) : null}
+                options={rates.map((entry) => ({
+                  id: String(entry.seats),
+                  label: `${planLabel(entry.plan, rates)} · ${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
+                  isDisabled: entry.seats < members,
+                }))}
+                onChange={(value) => {
+                  onEdit()
+                  setSeats(Number(value))
+                }}
+              />
             )}
           </PlatformField>
           <PlatformField label="Periodo de facturación">
@@ -327,14 +334,17 @@ function AgreementForm({
               <PlatformSelect
                 {...control}
                 value={period}
-                onChange={(event) => {
-                  setPeriod(event.currentTarget.value === 'year' ? 'year' : 'month')
+                isDisabled={saving}
+                options={[
+                  { id: 'month', label: 'Mensual' },
+                  { id: 'year', label: 'Anual' },
+                ]}
+                onChange={(value) => {
+                  onEdit()
+                  setPeriod(value === 'year' ? 'year' : 'month')
                   setPrice('')
                 }}
-              >
-                <option value="month">Mensual</option>
-                <option value="year">Anual</option>
-              </PlatformSelect>
+              />
             )}
           </PlatformField>
           <PlatformField label="Tipo de tarifa">
@@ -342,11 +352,16 @@ function AgreementForm({
               <PlatformSelect
                 {...control}
                 value={mode}
-                onChange={(event) => setMode(event.currentTarget.value)}
-              >
-                <option value="catalog">Tarifa de catálogo</option>
-                <option value="agreed">Precio pactado</option>
-              </PlatformSelect>
+                isDisabled={saving}
+                options={[
+                  { id: 'catalog', label: 'Tarifa de catálogo' },
+                  { id: 'agreed', label: 'Precio pactado' },
+                ]}
+                onChange={(value) => {
+                  onEdit()
+                  setMode(value)
+                }}
+              />
             )}
           </PlatformField>
           {agreed ? (
@@ -358,7 +373,6 @@ function AgreementForm({
               {(control) => (
                 <Input
                   {...control}
-                  className="h-11"
                   required
                   inputMode="decimal"
                   placeholder={period === 'year' ? 'Ej. 349,00' : 'Ej. 34,90'}
@@ -369,7 +383,7 @@ function AgreementForm({
             </PlatformField>
           ) : null}
         </div>
-        <output className="bg-muted/40 block rounded-lg p-3 text-sm">
+        <output className="bg-muted/40 block rounded-md px-3 py-2 text-sm tabular-nums">
           {amount !== null ? (
             <>
               Total previsto: {formatEuros(amount)} {billingVatLabel(vatPercent)} /{' '}
@@ -380,14 +394,17 @@ function AgreementForm({
             'Completa las condiciones para ver el importe previsto.'
           )}
         </output>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-xs">
           Los módulos se añaden al precio base. Si pactas un precio, se mantiene al cambiar de
           capacidad. Los cambios se aplican al contratar o renovar, sin cobro inmediato.
         </p>
-        <Button type="submit" className="min-h-11" isDisabled={!canSave}>
+      </FieldSet>
+      <div className="border-border mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+        <Button type="submit" isDisabled={!canSave}>
           Guardar condiciones
         </Button>
-      </fieldset>
+        {feedback}
+      </div>
     </form>
   )
 }

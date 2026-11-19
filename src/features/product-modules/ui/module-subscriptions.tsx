@@ -1,4 +1,4 @@
-import { Button } from '@doscientos/ui'
+import { Alert, AlertAction, AlertTitle, Button, FormFeedback, Spinner } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 
@@ -97,36 +97,58 @@ export function ModuleSubscriptions({
       aria-label="Módulos opcionales"
       className={
         navigation
-          ? 'border-border bg-card space-y-3 overflow-hidden rounded-xl border p-4'
+          ? 'border-border bg-card space-y-3 overflow-hidden rounded-lg border p-3'
           : 'border-border space-y-3 rounded-lg border p-4'
       }
     >
-      <h3 className="font-semibold">{detail ? modules[detail.code].name : 'Módulos opcionales'}</h3>
+      <h3 className="text-sm font-semibold">
+        {detail ? modules[detail.code].name : 'Módulos opcionales'}
+      </h3>
       <p className="text-muted-foreground text-sm">
         {courtesy
           ? 'Los cambios de cortesía son inmediatos y no generan cobros.'
           : `El suplemento se añade a la cuota de la empresa. El acceso cambia ${timing}, tras confirmar el pago. No se borran datos.`}
       </p>
       {blocked ? (
-        <output className="block">Resuelve primero la cancelación o el pago pendiente.</output>
+        <Alert variant="warning">
+          <AlertTitle>Resuelve primero la cancelación o el pago pendiente.</AlertTitle>
+        </Alert>
       ) : null}
-      {catalog.isPending || subscriptions.isPending ? <output>Cargando módulos…</output> : null}
-      {catalog.isError || subscriptions.isError ? (
-        <div className="space-y-2">
-          <p role="alert">No se pudieron consultar los módulos.</p>
-          <Button
-            variant="outline"
-            onPress={() => void Promise.all([catalog.refetch(), subscriptions.refetch()])}
-          >
-            Reintentar
-          </Button>
+      {catalog.isPending || subscriptions.isPending ? (
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Spinner size="sm" label="Cargando módulos…" />
+          <span aria-hidden="true">Cargando módulos…</span>
         </div>
       ) : null}
-      {change.error ? <p role="alert">{change.error.message}</p> : null}
+      {catalog.isError || subscriptions.isError ? (
+        <Alert variant="destructive">
+          <AlertTitle>No se pudieron consultar los módulos.</AlertTitle>
+          <AlertAction>
+            <Button
+              size="xs"
+              variant="outline"
+              onPress={() => void Promise.all([catalog.refetch(), subscriptions.refetch()])}
+            >
+              Reintentar
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : null}
+      {change.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>{change.error.message}</AlertTitle>
+        </Alert>
+      ) : null}
       {change.isSuccess ? (
-        <output className="block">
-          {courtesy ? 'Acceso actualizado.' : 'Cambio guardado. No se ha realizado ningún cobro.'}
-        </output>
+        <FormFeedback
+          state={{
+            status: 'success',
+            message: courtesy
+              ? 'Acceso actualizado.'
+              : 'Cambio guardado. No se ha realizado ningún cobro.',
+          }}
+          className="h-auto"
+        />
       ) : null}
       {ready && rates.length === 0 ? (
         <p className="text-muted-foreground text-sm">
@@ -138,7 +160,7 @@ export function ModuleSubscriptions({
       {ready && rates.length > 0 ? (
         <ul
           className={
-            listing ? 'divide-border border-border -mx-4 -mb-4 divide-y border-t' : 'space-y-3'
+            listing ? 'divide-border border-border -mx-3 -mb-3 divide-y border-t' : 'space-y-3'
           }
         >
           {rates.map((rate) => {

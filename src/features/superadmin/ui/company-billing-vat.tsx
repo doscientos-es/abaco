@@ -1,4 +1,4 @@
-import { Button, FormFeedback } from '@doscientos/ui'
+import { Button } from '@doscientos/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 
@@ -6,6 +6,7 @@ import { billingPreviewQuery, STANDARD_BILLING_VAT } from '@/features/billing'
 
 import { setCompanyBillingVat } from '../application/superadmin-queries'
 import { PlatformField, PlatformSelect } from './platform-form-field'
+import { PlatformFeedback } from './platform-ui'
 
 export function CompanyBillingVat({
   tenantId,
@@ -32,13 +33,13 @@ export function CompanyBillingVat({
   return (
     <form
       aria-labelledby={titleId}
-      className="border-border space-y-3 border-t pt-4"
+      className="border-border space-y-3 border-t pt-3"
       onSubmit={(event) => {
         event.preventDefault()
         if (canSave) update.mutate(selectedVat)
       }}
     >
-      <h4 id={titleId} className="font-semibold">
+      <h4 id={titleId} className="sr-only">
         IVA de la suscripción
       </h4>
       <PlatformField
@@ -49,35 +50,24 @@ export function CompanyBillingVat({
         {(control) => (
           <PlatformSelect
             {...control}
-            value={selectedVat}
-            disabled={blocked || update.isPending}
-            onChange={(event) => {
+            value={String(selectedVat)}
+            isDisabled={blocked || update.isPending}
+            options={[
+              { id: String(STANDARD_BILLING_VAT), label: `${STANDARD_BILLING_VAT} % · General` },
+              { id: '0', label: '0 % · Sin IVA' },
+            ]}
+            onChange={(value) => {
               update.reset()
-              setDraft({ initial: vatPercent, value: Number(event.currentTarget.value) })
+              setDraft({ initial: vatPercent, value: Number(value) })
             }}
-          >
-            <option value={STANDARD_BILLING_VAT}>{STANDARD_BILLING_VAT} % · General</option>
-            <option value={0}>0 % · Sin IVA</option>
-          </PlatformSelect>
+          />
         )}
       </PlatformField>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" className="min-h-11" isDisabled={!canSave}>
+      <div className="border-border flex flex-wrap items-center gap-2 border-t pt-3">
+        <Button type="submit" isDisabled={!canSave}>
           Guardar IVA
         </Button>
-        {update.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
-        {update.error ? (
-          <FormFeedback
-            className="h-auto"
-            state={{ status: 'error', message: update.error.message }}
-          />
-        ) : null}
-        {update.isSuccess ? (
-          <FormFeedback
-            className="h-auto"
-            state={{ status: 'success', message: 'IVA guardado para el próximo cobro.' }}
-          />
-        ) : null}
+        <PlatformFeedback action={update} success="IVA guardado para el próximo cobro." />
       </div>
     </form>
   )

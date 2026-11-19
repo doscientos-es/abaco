@@ -28,6 +28,7 @@ import {
   formatPlatformDate,
   PlatformBackLink,
   PlatformEditLink,
+  PlatformLoading,
   PlatformMessage,
   PlatformRowLink,
   platformRowMetaClass,
@@ -73,7 +74,7 @@ export function CompanyDetail({
             {company.is_complimentary ? <Badge variant="outline">Cortesía</Badge> : null}
           </div>
         </PageHeader>
-        <dl className="border-border bg-card grid grid-cols-2 gap-4 rounded-xl border p-4 text-sm sm:grid-cols-4">
+        <dl className="border-border bg-card mt-3 grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm sm:grid-cols-4">
           <CompanyFact label="Plan" value={planLabel(company.plan, rates)} />
           <CompanyFact label="Personas" value={company.member_count} />
           <CompanyFact label="Periodicidad" value={billingPeriodLabel(company.billing_interval)} />
@@ -92,7 +93,7 @@ export function CompanyDetail({
         <CompanyPayments tenantId={company.id} rates={rates} />
       ) : (
         <section aria-labelledby="platform-subscription" className="space-y-3">
-          <h2 id="platform-subscription" className="text-lg font-semibold">
+          <h2 id="platform-subscription" className="text-base font-semibold">
             Suscripción
           </h2>
           {company.is_complimentary ? (
@@ -133,7 +134,7 @@ function CompanyModules({ company, search }: { company: PlatformCompany; search:
 
   return (
     <section aria-labelledby="platform-modules" className="space-y-3">
-      <h2 id="platform-modules" className="text-lg font-semibold">
+      <h2 id="platform-modules" className="text-base font-semibold">
         Módulos
       </h2>
       {search.modulo ? (
@@ -160,9 +161,7 @@ function CompanyModules({ company, search }: { company: PlatformCompany; search:
             onRetry={() => void preview.refetch()}
           />
         ) : (
-          <output className="text-muted-foreground block text-sm">
-            Comprobando las condiciones de suscripción…
-          </output>
+          <PlatformLoading>Comprobando las condiciones de suscripción…</PlatformLoading>
         )
       ) : (
         <ModuleSubscriptions

@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
-import { Buildings, CaretRight } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 
@@ -24,9 +23,13 @@ import {
   billingPeriodLabel,
   CompanyStatus,
   formatPlatformDate,
+  PlatformLoading,
   PlatformMessage,
+  platformPanelClass,
   PlatformPagination,
+  PlatformRecordLink,
   PlatformSearchForm,
+  platformTextActionClass,
 } from './platform-ui'
 
 export function CompanyDirectory({
@@ -47,18 +50,14 @@ export function CompanyDirectory({
     <PageStack>
       <PageHeader>
         <PageHeaderHeading>
-          <p className="text-primary mb-1 text-xs font-semibold">Administración de Ábaco</p>
           <PageHeaderTitle>Empresas</PageHeaderTitle>
           <PageHeaderDescription>
             Consulta suscripciones, configura módulos y revisa los cobros de cada empresa.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
-      <section
-        aria-label="Directorio de empresas"
-        className="border-border bg-card rounded-xl border"
-      >
-        <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b px-4 py-4 sm:px-5">
+      <section aria-label="Directorio de empresas" className={platformPanelClass}>
+        <div className="border-border flex flex-wrap items-end gap-2 border-b p-3">
           <PlatformSearchForm
             query={q ?? ''}
             label="Buscar empresa"
@@ -66,17 +65,13 @@ export function CompanyDirectory({
             onSearch={(value) => void navigate({ search: value ? { q: value } : {} })}
           />
           {q ? (
-            <Link
-              to="/superadmin"
-              search={{}}
-              className="text-primary focus-visible:outline-ring inline-flex min-h-10 items-center rounded-md text-sm font-medium hover:underline focus-visible:outline-2"
-            >
+            <Link to="/superadmin" search={{}} className={platformTextActionClass}>
               Limpiar búsqueda
             </Link>
           ) : null}
         </div>
         {loading ? (
-          <output className="text-muted-foreground block p-5 text-sm">Cargando empresas…</output>
+          <PlatformLoading>Cargando empresas…</PlatformLoading>
         ) : onRetry ? (
           <PlatformMessage title="No se pudieron cargar las empresas." onRetry={onRetry} />
         ) : (
@@ -123,12 +118,10 @@ function CompanyTable({
 }) {
   const { data: rates } = useQuery(billingCatalogQuery)
   return (
-    <Table aria-label="Empresas de Ábaco">
+    <Table aria-label="Empresas de Ábaco" density="compact">
       <TableHeader className="bg-muted/40">
         <TableRow>
-          <TableHead scope="col" className="pl-4 sm:pl-5">
-            Empresa
-          </TableHead>
+          <TableHead scope="col">Empresa</TableHead>
           <TableHead scope="col">Estado</TableHead>
           <TableHead scope="col" className="hidden lg:table-cell">
             Plan
@@ -141,30 +134,14 @@ function CompanyTable({
       <TableBody>
         {companies.map((company) => (
           <TableRow key={company.id}>
-            <TableCell className="py-1 pl-4 whitespace-normal sm:pl-5">
-              <Link
-                to="/superadmin"
-                search={{ ...directorySearch(search), empresa: company.id }}
-                activeOptions={{ exact: true, includeSearch: true }}
-                className="group focus-visible:outline-ring flex min-h-14 items-center gap-2 rounded-md py-2 focus-visible:outline-2 sm:gap-3"
-              >
-                <span className="bg-primary/10 text-primary hidden size-9 shrink-0 place-items-center rounded-lg sm:grid">
-                  <Buildings aria-hidden="true" className="size-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="group-hover:text-primary block font-semibold break-words">
-                    {company.name}
-                  </span>
-                  <span className="text-muted-foreground block text-xs">
-                    {company.member_count} {company.member_count === 1 ? 'persona' : 'personas'}
-                    <span className="lg:hidden"> · {planLabel(company.plan, rates)}</span>
-                  </span>
-                </span>
-                <CaretRight
-                  aria-hidden="true"
-                  className="text-muted-foreground ml-auto size-4 shrink-0 sm:mr-2"
-                />
-              </Link>
+            <TableCell className="whitespace-normal">
+              <PlatformRecordLink search={{ ...directorySearch(search), empresa: company.id }}>
+                {company.name}
+              </PlatformRecordLink>
+              <p className="text-muted-foreground text-xs">
+                {company.member_count} {company.member_count === 1 ? 'persona' : 'personas'}
+                <span className="lg:hidden"> · {planLabel(company.plan, rates)}</span>
+              </p>
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap items-center gap-1">

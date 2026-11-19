@@ -1,4 +1,12 @@
-import { Badge, MetricCard } from '@doscientos/ui'
+import {
+  Badge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
@@ -16,7 +24,9 @@ import {
   billingPeriodLabel,
   formatPlatformDate,
   invoiceStatusLabel,
+  PlatformLoading,
   PlatformMessage,
+  platformPanelClass,
   PlatformPagination,
 } from './platform-ui'
 
@@ -25,6 +35,11 @@ const paymentStatus = {
   failed: { label: 'Fallido', variant: 'danger' },
   pending: { label: 'Pendiente', variant: 'warning' },
 } as const
+
+const paymentOptions = [
+  { id: 'all', label: 'Todos' },
+  ...Object.entries(paymentStatus).map(([id, { label }]) => ({ id, label })),
+]
 
 export function CompanyPayments({
   tenantId,
@@ -39,8 +54,8 @@ export function CompanyPayments({
   const summary = useQuery(platformPaymentSummaryQuery(tenantId))
 
   return (
-    <section aria-labelledby="platform-payments" className="space-y-4">
-      <h2 id="platform-payments" className="text-lg font-semibold">
+    <section aria-labelledby="platform-payments" className="space-y-3">
+      <h2 id="platform-payments" className="text-base font-semibold">
         Pagos
       </h2>
       {summary.isError ? (
@@ -48,54 +63,36 @@ export function CompanyPayments({
           title="No se pudo cargar el resumen de pagos."
           onRetry={() => void summary.refetch()}
         />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <MetricCard
+      ) : summary.data ? (
+        <dl className="border-border flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-sm">
+          <PaymentSummary
             label="Cobrados"
-            value={summary.data?.succeeded_count}
-            description={
-              summary.data ? `${formatEuros(summary.data.succeeded_cents)} en total` : undefined
-            }
-            loading={summary.isPending}
+            value={`${summary.data.succeeded_count} · ${formatEuros(summary.data.succeeded_cents)}`}
           />
-          <MetricCard
-            label="Pendientes"
-            value={summary.data?.pending_count}
-            loading={summary.isPending}
-          />
-          <MetricCard
-            label="Fallidos"
-            value={summary.data?.failed_count}
-            loading={summary.isPending}
-          />
-        </div>
+          <PaymentSummary label="Pendientes" value={summary.data.pending_count} />
+          <PaymentSummary label="Fallidos" value={summary.data.failed_count} />
+        </dl>
+      ) : (
+        <PlatformLoading>Cargando resumen de pagos…</PlatformLoading>
       )}
-      <div className="border-border bg-card rounded-xl border">
-        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <h3 className="font-semibold">Historial de cobros</h3>
+      <div className={platformPanelClass}>
+        <div className="border-border flex flex-wrap items-end justify-between gap-2 border-b p-3">
+          <h3 className="self-center text-sm font-semibold">Historial de cobros</h3>
           <PlatformField label="Estado del pago" className="min-w-32">
             {(control) => (
               <PlatformSelect
                 {...control}
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.currentTarget.value)
+                value={status || 'all'}
+                options={paymentOptions}
+                onChange={(value) => {
+                  setStatus(value === 'all' ? '' : value)
                   setPage(1)
                 }}
-              >
-                <option value="">Todos</option>
-                {Object.entries(paymentStatus).map(([value, { label }]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </PlatformSelect>
+              />
             )}
           </PlatformField>
         </div>
-        {payments.isPending ? (
-          <output className="text-muted-foreground block p-4 text-sm">Cargando pagos…</output>
-        ) : null}
+        {payments.isPending ? <PlatformLoading>Cargando pagos…</PlatformLoading> : null}
         {payments.isError ? (
           <PlatformMessage
             title="No se pudieron cargar los pagos."
@@ -103,15 +100,26 @@ export function CompanyPayments({
           />
         ) : null}
         {payments.data?.length ? (
-          <ul className="divide-border divide-y">
-            {payments.data.map((payment) => (
-              <PaymentRow
-                key={payment.id}
-                payment={payment}
-                planName={planLabel(payment.plan, rates)}
-              />
-            ))}
-          </ul>
+          <Table density="compact" aria-label="Historial de cobros">
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Cobro</TableHead>
+                <TableHead scope="col">Estado</TableHead>
+                <TableHead scope="col" className="text-right">
+                  Importe
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.data.map((payment) => (
+                <PaymentRow
+                  key={payment.id}
+                  payment={payment}
+                  planName={planLabel(payment.plan, rates)}
+                />
+              ))}
+            </TableBody>
+          </Table>
         ) : payments.data ? (
           <PlatformMessage
             title={
@@ -129,16 +137,25 @@ export function CompanyPayments({
   )
 }
 
+function PaymentSummary({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
+    </div>
+  )
+}
+
 function PaymentRow({ payment, planName }: { payment: PlatformPayment; planName: string }) {
   const { label, variant } = paymentStatus[payment.status]
   return (
-    <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-4 py-3 text-sm">
-      <div className="min-w-0 space-y-1">
-        <p className="font-semibold">
+    <TableRow>
+      <TableCell className="whitespace-normal">
+        <p className="font-medium">
           {payment.kind === 'renewal' ? 'Renovación' : 'Primer cobro'} ·{' '}
           {formatPlatformDate(payment.created_at)}
         </p>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {planName} · {billingPeriodLabel(payment.period)}
         </p>
         {payment.status === 'succeeded' ? (
@@ -147,16 +164,16 @@ function PaymentRow({ payment, planName }: { payment: PlatformPayment; planName:
             {invoiceStatusLabel(payment.invoice_status, payment.invoice_number)}
           </p>
         ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-semibold tabular-nums">
-          {formatEuros(payment.amount_cents)}{' '}
-          <span className="text-muted-foreground text-xs font-normal">IVA incluido</span>
-        </span>
+      </TableCell>
+      <TableCell>
         <Badge variant={variant} icon={false}>
           {label}
         </Badge>
-      </div>
-    </li>
+      </TableCell>
+      <TableCell className="text-right">
+        <p className="font-medium tabular-nums">{formatEuros(payment.amount_cents)}</p>
+        <p className="text-muted-foreground text-xs">IVA incluido</p>
+      </TableCell>
+    </TableRow>
   )
 }

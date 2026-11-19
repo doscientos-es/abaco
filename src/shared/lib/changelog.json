@@ -2,12 +2,25 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-16",
+      "date": "2026-11-19",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add invoice detail view and enhance invoice listing",
+            "Enhance billing agreement and navigation features",
+            "Add fixed billing price management and restoration feature",
+            "Enhance billing features with improved error handling",
+            "Add billing catalog and invoice management features",
+            "Implement subscription billing profiles and invoice handling",
+            "Add VAT management and update billing calculations",
+            "Implement new pricing catalog and billing management functions",
+            "Add tests for material shortages component",
+            "Add inventory and supplier management features",
+            "Add suppliers management and inventory features",
+            "Improve contract scheduling and visit workflows",
+            "Add mobile navigation component and update navigation items with mobile labels",
             "Add mobile navigation component and update navigation items with mobile labels",
             "Implement worker paper report functionality with PDF download and signed document management",
             "Add contract general details update functionality and related UI adjustments",
@@ -65,11 +78,110 @@
         {
           "title": "Correcciones",
           "items": [
+            "Update git hooks messages to clarify pre-push behavior and local checks",
             "Aislar pruebas del hook de Git"
           ]
         }
       ],
       "changes": [
+        {
+          "sha": "ed153e4ee21e563fcd28ea7a48cdb26b1ff49b42",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add invoice detail view and enhance invoice listing"
+        },
+        {
+          "sha": "d514f5751eaa43bcc1af5a0818cd86c8592e172a",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Enhance billing agreement and navigation features"
+        },
+        {
+          "sha": "23b762e1374aff8f6325c6807344e9464481a3ae",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add fixed billing price management and restoration feature"
+        },
+        {
+          "sha": "f6ce718f08778566738c570e5230a38d54a065eb",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Enhance billing features with improved error handling"
+        },
+        {
+          "sha": "42117b788c665f131ccb5983ed5482fc6fc13a45",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add billing catalog and invoice management features"
+        },
+        {
+          "sha": "67a8afeef840c5368795b30f37f5b34188bfcc4f",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement subscription billing profiles and invoice handling"
+        },
+        {
+          "sha": "f9f1cf2fcf6d0ed23bd5c6d28834560d74ad66ba",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add VAT management and update billing calculations"
+        },
+        {
+          "sha": "509cf9f0f0a1ab753e8de7d01f90a5a0e3f742a9",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement new pricing catalog and billing management functions"
+        },
+        {
+          "sha": "fd89d122257895e1f3fd8392a33d67f3d08525f4",
+          "type": "feat",
+          "scope": "test",
+          "breaking": false,
+          "description": "Add tests for material shortages component"
+        },
+        {
+          "sha": "cf3ea5a4e6a81bbea0265854b76a98b5bcc95210",
+          "type": "feat",
+          "scope": "catalog",
+          "breaking": false,
+          "description": "Add inventory and supplier management features"
+        },
+        {
+          "sha": "0ccdf1cb805246dbabcdede908a5f2b570125024",
+          "type": "feat",
+          "scope": "catalog",
+          "breaking": false,
+          "description": "Add suppliers management and inventory features"
+        },
+        {
+          "sha": "7f6f2353f594aeff90fc8d9ae7f11a6f6ac6e0d6",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Update git hooks messages to clarify pre-push behavior and local checks"
+        },
+        {
+          "sha": "ab24246f415f1163b076850d65bc241e3d9ac770",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve contract scheduling and visit workflows"
+        },
+        {
+          "sha": "f15bc5e6fd6ef8006e1bde9f1f1321975fe5f163",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add mobile navigation component and update navigation items with mobile labels"
+        },
         {
           "sha": "c182ddef674984fc514e590d2afc0057b0dc33a3",
           "type": "feat",

@@ -4,6 +4,7 @@ import { useId, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { FormDialog } from '@/shared/ui/form-dialog'
+import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
   listVacationRequests,
@@ -83,9 +84,11 @@ export function MyVacationRequestsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <header className="bg-muted/30 flex flex-col gap-5 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <h1 className="text-xl font-semibold">Mis ausencias</h1>
+    <div className="worker-page mx-auto max-w-4xl space-y-6">
+      <header className="worker-hero flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="worker-title">Mis ausencias</h1>
+        </div>
         <Button onPress={() => setRequestOpen(true)}>Solicitar ausencia</Button>
       </header>
 
@@ -168,16 +171,20 @@ export function MyVacationRequestsPage() {
             </p>
           ) : null}
         </div>
-        {requests.isPending ? <output>Cargando solicitudes…</output> : null}
+        {requests.isPending ? <WorkerLoading label="Cargando solicitudes…" /> : null}
         {requests.isError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {requests.error.message}
-          </p>
+          <WorkerState
+            error
+            title="No se pudieron cargar tus solicitudes"
+            description="Comprueba tu conexión y vuelve a intentarlo."
+            onRetry={() => void requests.refetch()}
+          />
         ) : null}
         {requests.data?.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border p-4 text-sm">
-            Todavía no has enviado solicitudes.
-          </p>
+          <WorkerState
+            title="Todo listo por aquí"
+            description="Todavía no has enviado solicitudes."
+          />
         ) : null}
         {requests.data?.map((request) => (
           <div key={request.id} id={`vacation-request-${request.id}`}>

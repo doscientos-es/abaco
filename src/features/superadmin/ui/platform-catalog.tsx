@@ -1,12 +1,21 @@
 import {
+  Alert,
+  AlertDescription,
   Button,
-  FormFeedback,
+  FieldLegend,
+  FieldSet,
   Input,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
   PageHeaderTitle,
   PageStack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   Textarea,
 } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -29,10 +38,12 @@ import { PlatformField } from './platform-form-field'
 import {
   PlatformBackLink,
   PlatformEditLink,
+  PlatformFeedback,
+  PlatformLoading,
   PlatformMessage,
-  PlatformRowLink,
-  platformRowMetaClass,
-  platformRowTitleClass,
+  platformPanelClass,
+  PlatformRecordLink,
+  platformActionClass,
 } from './platform-ui'
 
 export function PlatformCatalog({ search }: { search: PlatformSearch }) {
@@ -71,12 +82,12 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
             <PlatformEditLink search={planSearch(plan, true)}>Editar plan</PlatformEditLink>
           ) : null
         ) : (
-          <Link to="/precios" className="text-primary text-sm font-medium underline">
+          <Link to="/precios" className={platformActionClass}>
             Ver precios públicos
           </Link>
         )}
       </PageHeader>
-      {catalog.isPending ? <output>Cargando catálogo…</output> : null}
+      {catalog.isPending ? <PlatformLoading>Cargando catálogo…</PlatformLoading> : null}
       {catalog.isError ? (
         <PlatformMessage
           title="No se pudo cargar el catálogo actualizado."
@@ -114,43 +125,42 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
         )
       ) : null}
       {!plan && !catalog.isPending && !catalog.isError ? (
-        <section
-          aria-label="Catálogo de planes"
-          className="border-border bg-card overflow-hidden rounded-xl border"
-        >
-          <div className="border-border space-y-1 border-b px-4 py-3 sm:px-5">
-            <h2 className="font-semibold">Catálogo de planes</h2>
-            <p className="text-muted-foreground text-sm">Precios sin IVA.</p>
-          </div>
+        <section aria-label="Catálogo de planes" className={platformPanelClass}>
           {plans.size ? (
-            <ul className="divide-border divide-y">
-              {[...plans].map(([id, planRates]) => {
-                const info = planRates[0]?.plan_info
-                const monthly = Math.min(...planRates.map((rate) => rate.monthly_cents))
-                return (
-                  <li key={id}>
-                    <PlatformRowLink
-                      search={planSearch(id)}
-                      aside={
-                        <>
-                          {planRates.length > 1 ? (
-                            <span className={platformRowMetaClass}>Desde</span>
-                          ) : null}
-                          <span className="font-semibold tabular-nums">
-                            {formatEuros(monthly)}/mes
-                          </span>
-                        </>
-                      }
-                    >
-                      <span className={platformRowTitleClass}>{info?.name ?? id}</span>
-                      <span className={platformRowMetaClass}>
-                        {info?.audience ?? 'Sin datos comerciales'}
-                      </span>
-                    </PlatformRowLink>
-                  </li>
-                )
-              })}
-            </ul>
+            <Table aria-label="Tarifas de catálogo" density="compact">
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Plan</TableHead>
+                  <TableHead scope="col" className="text-right">
+                    Mensual · sin IVA
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...plans].map(([id, planRates]) => {
+                  const info = planRates[0]?.plan_info
+                  const monthly = Math.min(...planRates.map((rate) => rate.monthly_cents))
+                  return (
+                    <TableRow key={id}>
+                      <TableCell className="whitespace-normal">
+                        <PlatformRecordLink search={planSearch(id)}>
+                          {info?.name ?? id}
+                        </PlatformRecordLink>
+                        <p className="text-muted-foreground text-xs">
+                          {info?.audience ?? 'Sin datos comerciales'}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {planRates.length > 1 ? (
+                          <span className="text-muted-foreground text-xs">Desde </span>
+                        ) : null}
+                        <span className="font-medium">{formatEuros(monthly)}</span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           ) : (
             <PlatformMessage title="No hay planes en el catálogo." />
           )}
@@ -170,20 +180,20 @@ function CatalogPlanDetail({
   return (
     <section
       aria-label="Detalle del plan"
-      className="border-border bg-card space-y-4 rounded-xl border p-4 sm:p-5"
+      className="border-border bg-card space-y-3 rounded-lg border p-3 sm:p-4"
     >
       <div className="space-y-1">
-        <h2 className="font-semibold">Información pública</h2>
+        <h2 className="text-sm font-semibold">Información pública</h2>
         <p className="text-muted-foreground text-sm">{display.audience}</p>
         <p className="text-sm">{display.benefit}</p>
       </div>
-      <div className="border-border border-t pt-4">
-        <h2 className="font-semibold">Tarifas sin IVA</h2>
+      <div className="border-border border-t pt-3">
+        <h2 className="text-sm font-semibold">Tarifas sin IVA</h2>
         <dl className="divide-border divide-y">
           {rates.map((rate) => (
             <div
               key={rate.seats}
-              className="flex flex-wrap items-baseline justify-between gap-2 py-3 text-sm"
+              className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
             >
               <dt className="font-medium">
                 {rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`}
@@ -270,13 +280,13 @@ function CatalogPlanForm({
       aria-labelledby={titleId}
       noValidate
       onSubmit={submit}
-      className="border-border bg-card space-y-5 rounded-xl border p-4 sm:p-5"
+      className="border-border bg-card space-y-3 rounded-lg border p-3 sm:p-4"
     >
-      <h2 id={titleId} className="text-lg font-semibold">
+      <h2 id={titleId} className="sr-only">
         Información y tarifas
       </h2>
-      <fieldset disabled={mutation.isPending} className="min-w-0 space-y-3">
-        <legend className="pb-2 text-sm font-semibold">Información pública</legend>
+      <FieldSet disabled={mutation.isPending} className="min-w-0 gap-3">
+        <FieldLegend variant="label">Información pública</FieldLegend>
         {catalogFields.map(({ name, label, maxLength, placeholder }) => {
           const Control = name === 'name' ? Input : Textarea
           return (
@@ -288,7 +298,6 @@ function CatalogPlanForm({
               {(control) => (
                 <Control
                   {...control}
-                  className={name === 'name' ? 'h-11' : 'min-h-16'}
                   name={name}
                   value={values[name] ?? ''}
                   onChange={(event) => change(name, event.currentTarget.value)}
@@ -300,12 +309,9 @@ function CatalogPlanForm({
             </PlatformField>
           )
         })}
-      </fieldset>
-      <fieldset
-        disabled={mutation.isPending}
-        className="border-border min-w-0 space-y-3 border-t pt-3"
-      >
-        <legend className="pr-2 text-sm font-semibold">Precios por capacidad</legend>
+      </FieldSet>
+      <FieldSet disabled={mutation.isPending} className="min-w-0 gap-3">
+        <FieldLegend variant="label">Precios por capacidad</FieldLegend>
         {rates.map((rate) => {
           const name = priceField(rate.seats)
           return (
@@ -318,13 +324,15 @@ function CatalogPlanForm({
             />
           )
         })}
-      </fieldset>
+      </FieldSet>
       <div className="border-border space-y-2 border-t pt-3">
         {stale ? (
-          <p role="alert" className="text-destructive text-sm">
-            El plan cambió desde que empezaste a editar. Tus cambios siguen visibles. Descártalos
-            para editar la versión actual.
-          </p>
+          <Alert variant="warning">
+            <AlertDescription>
+              El plan cambió desde que empezaste a editar. Tus cambios siguen visibles. Descártalos
+              para editar la versión actual.
+            </AlertDescription>
+          </Alert>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -349,21 +357,10 @@ function CatalogPlanForm({
             </Button>
           ) : null}
         </div>
-        {mutation.isPending ? <FormFeedback state={{ status: 'pending' }} /> : null}
-        {mutation.isSuccess ? (
-          <FormFeedback
-            state={{ status: 'success', message: 'Cambios publicados en la página de precios.' }}
-          />
-        ) : null}
-        {mutation.error || (validation && !fieldError) ? (
-          <FormFeedback
-            className="h-auto"
-            state={{
-              status: 'error',
-              message: (mutation.error ?? validation)?.message ?? 'No se pudo guardar el plan.',
-            }}
-          />
-        ) : null}
+        <PlatformFeedback
+          action={{ ...mutation, error: mutation.error ?? (fieldError ? null : validation) }}
+          success="Cambios publicados en la página de precios."
+        />
       </div>
     </form>
   )
@@ -394,7 +391,6 @@ function RateField({
       {(control) => (
         <Input
           {...control}
-          className="h-11"
           name={priceField(rate.seats)}
           inputMode="decimal"
           placeholder="Ej. 34,90"

@@ -6,6 +6,7 @@ Comprueba los entornos y las migraciones antes de reutilizar cualquier instrucci
 
 ## Producto
 
+- [Marca y experiencia de Ábaco](producto/BRANDING.md): posicionamiento, identidad, lenguaje y criterios para adaptar el producto a profesionales de distintos sectores.
 - [Flujo operativo](FLUJO_OPERATIVO.md): estado y pasos para completar el recorrido de presupuesto a parte cerrado.
 - [Plan comercial](producto/PLAN_COMERCIAL.md): cliente inicial, oferta, hipótesis y piloto.
 - [Catálogo público de precios](producto/CATALOGO_PUBLICO.md): publicación desde Superadmin e integración con la futura landing.

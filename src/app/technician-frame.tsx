@@ -99,9 +99,6 @@ export function UserFrame({ children }: { children: ReactNode }) {
           aria-label="Navegación de usuario"
           className="min-h-0 flex-1 overflow-y-auto px-3 py-1"
         >
-          <p className="text-muted-foreground/80 px-3 pb-1 text-[11px] font-medium tracking-wider uppercase">
-            Mi espacio
-          </p>
           {navigation.map((item) => (
             <SidebarLink key={item.to} {...item} />
           ))}
@@ -147,10 +144,10 @@ export function UserFrame({ children }: { children: ReactNode }) {
             {userMenu('bottom end')}
           </DropdownMenuTrigger>
         </AppShellMobileHeader>
-        <div className="workspace-topbar">
-          <span className="text-muted-foreground hidden text-xs md:block">Mi espacio</span>
+        <div className="user-frame__search">
           <GlobalSearch
             key={session?.tenantId}
+            navigationOnly
             navigation={navigation.map((item) => ({
               id: `page:${item.to}`,
               title: item.label,

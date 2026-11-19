@@ -4,6 +4,12 @@ import {
   PageHeaderHeading,
   PageHeaderTitle,
   PageStack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -28,12 +34,13 @@ import {
   invoiceStatusLabel,
   platformActionClass,
   PlatformBackLink,
+  PlatformLoading,
   PlatformMessage,
+  platformPanelClass,
   PlatformPagination,
-  PlatformRowLink,
-  platformRowMetaClass,
-  platformRowTitleClass,
+  PlatformRecordLink,
   PlatformSearchForm,
+  platformTextActionClass,
 } from './platform-ui'
 
 const invoiceLink = (value: string | null) => {
@@ -65,11 +72,8 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
-      <section
-        aria-label="Buscador de facturas"
-        className="border-border bg-card rounded-xl border"
-      >
-        <div className="border-border flex flex-wrap items-end gap-3 border-b p-4">
+      <section aria-label="Buscador de facturas" className={platformPanelClass}>
+        <div className="border-border flex flex-wrap items-end gap-2 border-b p-3">
           <PlatformSearchForm
             query={q}
             label="Buscar factura"
@@ -80,30 +84,30 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
             {(control) => (
               <PlatformSelect
                 {...control}
-                value={filter ?? ''}
-                onChange={(event) => {
-                  const value = event.currentTarget.value
+                value={filter ?? 'all'}
+                options={[
+                  { id: 'all', label: 'Todas' },
+                  { id: 'issued', label: 'Con número' },
+                  { id: 'in_progress', label: 'Sin número' },
+                ]}
+                onChange={(value) => {
                   const factura = invoiceFilters.find((item) => item === value)
                   void navigate({ search: invoiceSearch(q, factura) })
                 }}
-              >
-                <option value="">Todas</option>
-                <option value="issued">Con número</option>
-                <option value="in_progress">Sin número</option>
-              </PlatformSelect>
+              />
             )}
           </PlatformField>
           {q || filter ? (
             <Link
               to="/superadmin"
               search={{ vista: 'facturas' }}
-              className="text-primary py-2 text-sm underline"
+              className={platformTextActionClass}
             >
               Limpiar filtros
             </Link>
           ) : null}
         </div>
-        {invoices.isPending ? <output className="block p-4">Cargando facturas…</output> : null}
+        {invoices.isPending ? <PlatformLoading>Cargando facturas…</PlatformLoading> : null}
         {invoices.isError ? (
           <PlatformMessage
             title="No se pudieron cargar las facturas."
@@ -112,28 +116,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
         ) : invoices.data ? (
           <>
             {invoices.data.rows.length ? (
-              <ul className="divide-border divide-y">
-                {invoices.data.rows.map((invoice) => (
-                  <li key={invoice.id}>
-                    <PlatformRowLink
-                      search={{ ...search, referencia: invoice.merchant_order }}
-                      aside={
-                        <strong className="tabular-nums">
-                          {formatEuros(invoice.amount_cents)}
-                        </strong>
-                      }
-                    >
-                      <span className={platformRowTitleClass}>
-                        {invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`}
-                      </span>
-                      <span className={platformRowMetaClass}>
-                        {invoice.company_name} ·{' '}
-                        {invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)}
-                      </span>
-                    </PlatformRowLink>
-                  </li>
-                ))}
-              </ul>
+              <InvoiceTable invoices={invoices.data.rows} search={search} />
             ) : (
               <PlatformMessage title={page > 1 ? 'No hay más facturas' : 'No encontramos facturas'}>
                 {page > 1
@@ -151,6 +134,52 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
         ) : null}
       </section>
     </PageStack>
+  )
+}
+
+function InvoiceTable({
+  invoices,
+  search,
+}: {
+  invoices: PlatformInvoice[]
+  search: PlatformSearch
+}) {
+  return (
+    <Table density="compact" aria-label="Facturas de suscripción">
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col">Factura</TableHead>
+          <TableHead scope="col" className="hidden md:table-cell">
+            Estado
+          </TableHead>
+          <TableHead scope="col" className="text-right">
+            Importe
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {invoices.map((invoice) => {
+          const status = invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)
+          return (
+            <TableRow key={invoice.id}>
+              <TableCell className="whitespace-normal">
+                <PlatformRecordLink search={{ ...search, referencia: invoice.merchant_order }}>
+                  {invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`}
+                </PlatformRecordLink>
+                <p className="text-muted-foreground text-xs">{invoice.company_name}</p>
+                <p className="text-muted-foreground text-xs md:hidden">{status}</p>
+              </TableCell>
+              <TableCell className="text-muted-foreground hidden whitespace-normal md:table-cell">
+                {status}
+              </TableCell>
+              <TableCell className="text-right font-medium tabular-nums">
+                {formatEuros(invoice.amount_cents)}
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -190,7 +219,7 @@ function PlatformInvoiceDetail({
         ) : null}
       </PageHeader>
       {query.isPending ? (
-        <output>Cargando factura…</output>
+        <PlatformLoading>Cargando factura…</PlatformLoading>
       ) : query.isError ? (
         <PlatformMessage
           title="No se pudo cargar la factura."
@@ -207,7 +236,7 @@ function PlatformInvoiceDetail({
 
 function InvoiceFacts({ invoice, search }: { invoice: PlatformInvoice; search: PlatformSearch }) {
   return (
-    <dl className="border-border bg-card grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2 sm:p-5">
+    <dl className="border-border bg-card grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-2">
       <div>
         <dt className="text-muted-foreground">Empresa</dt>
         <dd className="mt-1 font-medium">

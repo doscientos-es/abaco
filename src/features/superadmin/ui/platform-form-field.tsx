@@ -1,5 +1,17 @@
-import { cn, Field, FieldDescription, FieldError, FieldLabel } from '@doscientos/ui'
-import { useId, type ComponentProps, type ReactNode } from 'react'
+import {
+  cn,
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectList,
+  SelectTrigger,
+  SelectValue,
+} from '@doscientos/ui'
+import { useId, type ReactNode } from 'react'
 
 type ControlProps = {
   id: string
@@ -24,7 +36,9 @@ export function PlatformField({
   const descriptions = [hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean)
   return (
     <Field className={cn('min-w-0 gap-1.5', className)} data-invalid={error ? true : undefined}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel id={`${id}-label`} htmlFor={id}>
+        {label}
+      </FieldLabel>
       {children({
         id,
         'aria-describedby': descriptions.join(' ') || undefined,
@@ -36,14 +50,47 @@ export function PlatformField({
   )
 }
 
-export function PlatformSelect({ className, ...props }: ComponentProps<'select'>) {
+export function PlatformSelect({
+  id,
+  'aria-describedby': describedBy,
+  'aria-invalid': invalid,
+  value,
+  options,
+  onChange,
+  isDisabled,
+  placeholder,
+}: ControlProps & {
+  value: string | null
+  options: readonly { id: string; label: string; isDisabled?: boolean }[]
+  onChange: (value: string) => void
+  isDisabled?: boolean
+  placeholder?: string
+}) {
   return (
-    <select
-      {...props}
-      className={cn(
-        'border-input bg-background focus-visible:outline-ring min-h-11 w-full min-w-0 rounded-md border px-3 text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
-    />
+    <Select
+      aria-labelledby={`${id}-label`}
+      {...(describedBy && { 'aria-describedby': describedBy })}
+      isInvalid={invalid ?? false}
+      isDisabled={isDisabled ?? false}
+      placeholder={placeholder ?? 'Selecciona una opción'}
+      disabledKeys={options.filter((option) => option.isDisabled).map((option) => option.id)}
+      selectedKey={value}
+      onSelectionChange={(key) => {
+        if (typeof key === 'string') onChange(key)
+      }}
+    >
+      <SelectTrigger id={id}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectList items={options}>
+          {(option) => (
+            <SelectItem id={option.id} textValue={option.label}>
+              {option.label}
+            </SelectItem>
+          )}
+        </SelectList>
+      </SelectContent>
+    </Select>
   )
 }

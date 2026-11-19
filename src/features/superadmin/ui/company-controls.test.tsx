@@ -101,7 +101,7 @@ describe('company billing controls', () => {
     const html = renderBilling(3, 'cuota')
     expect(html).toMatch(/41,14\s*€ con IVA \/ mes/)
     expect(html).toMatch(/Total previsto: 589,88\s*€ con IVA \/ año/)
-    expect(html).toContain('<option value="agreed" selected="">Precio pactado</option>')
+    expect(html).toMatch(/data-slot="select-value"[^>]*>Precio pactado<\/span>/)
     expect(html).toContain('value="297,50"')
     expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Guardar condiciones<\/button>/)
   })
@@ -113,7 +113,15 @@ describe('company billing controls', () => {
       insufficient,
     )?.[1]
     expect(capacityId).toBeDefined()
-    expect(insufficient).toContain(`aria-describedby="${capacityId}-hint ${capacityId}-error"`)
+    const trigger = insufficient
+      .match(/<button\b[^>]*>/g)
+      ?.find((tag) => tag.includes(`id="${capacityId}"`))
+    expect(trigger?.match(/aria-labelledby="([^"]+)"/)?.[1]?.split(' ')).toContain(
+      `${capacityId}-label`,
+    )
+    expect(trigger?.match(/aria-describedby="([^"]+)"/)?.[1]?.split(' ')).toEqual(
+      expect.arrayContaining([`${capacityId}-hint`, `${capacityId}-error`]),
+    )
     expect(insufficient).toContain(`id="${capacityId}-error">El tramo no cubre al equipo.`)
     client.setQueryData(billingPreviewQuery(tenantId).queryKey, { ...preview, pending: true })
     const html = renderBilling(3, 'cuota')
@@ -164,7 +172,7 @@ describe('company billing controls', () => {
       next: { ...next, vat_percent: 0, amount_cents: 48750 },
     })
     const vat = renderBilling(3, 'iva')
-    expect(vat).toContain('<option value="0" selected="">0 % · Sin IVA</option>')
+    expect(vat).toMatch(/data-slot="select-value"[^>]*>0 % · Sin IVA<\/span>/)
     expect(vat).not.toContain('Guardar condiciones')
     const agreement = renderBilling(3, 'cuota')
     expect(agreement).toMatch(/Total previsto: 487,50\s*€ sin IVA \(0 %\)/)

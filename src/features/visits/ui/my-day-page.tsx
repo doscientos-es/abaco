@@ -14,6 +14,7 @@ import {
 } from '@/features/incidents/application/incident-queue'
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
 import { moveDays } from '@/shared/lib/date-range'
+import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
   listMyVisits,
@@ -180,16 +181,12 @@ export function MyDayPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="worker-page space-y-6">
+      <div className="worker-hero flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="text-xl font-semibold">Mi jornada</h1>
-          <p className="text-muted-foreground text-sm">
-            Al iniciar una visita se guarda la hora y una ubicación puntual; no hay seguimiento
-            continuo.
-          </p>
+          <h1 className="worker-title">Mi jornada</h1>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="worker-day-controls">
           <Button variant="outline" onPress={() => setCalendarOpen(!calendarOpen)}>
             {calendarOpen ? 'Ocultar calendario' : 'Ver calendario'}
           </Button>
@@ -202,7 +199,7 @@ export function MyDayPage() {
           >
             Hoy
           </Button>
-          <div className="flex items-end gap-1">
+          <div className="worker-day-picker">
             <Button
               variant="outline"
               className="size-10 p-0"
@@ -214,8 +211,8 @@ export function MyDayPage() {
             >
               <CaretLeftIcon aria-hidden="true" />
             </Button>
-            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium">
-              Día
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
+              <span className="sr-only">Día</span>
               <input
                 type="date"
                 value={date}
@@ -225,7 +222,7 @@ export function MyDayPage() {
                     setDate(event.target.value)
                   }
                 }}
-                className="border-input bg-background rounded-lg border px-3 py-2"
+                className="border-input bg-background h-10 w-full min-w-0 rounded-lg border px-3 py-2"
               />
             </label>
             <Button
@@ -257,7 +254,7 @@ export function MyDayPage() {
           }}
         />
       ) : null}
-      {tenantId ? (
+      {visits.isSuccess && visits.data.length > 0 && tenantId ? (
         <WorkerBatchPaperReports
           key={`${tenantId}:${date}`}
           tenantId={tenantId}
@@ -265,20 +262,32 @@ export function MyDayPage() {
           disabled={!visits.isSuccess || visits.isFetching}
         />
       ) : null}
-      {visits.isPending ? <output>Cargando visitas…</output> : null}
+      <div className="worker-section-heading">
+        <h2>Visitas del día</h2>
+        {visits.isSuccess ? (
+          <span className="worker-count">
+            {visits.data.length} {visits.data.length === 1 ? 'visita' : 'visitas'}
+          </span>
+        ) : null}
+      </div>
+      {visits.isPending ? <WorkerLoading label="Cargando visitas…" /> : null}
       {visits.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          No se pudo cargar tu jornada: {visits.error.message}
-        </p>
+        <WorkerState
+          error
+          title="No se pudo cargar tu jornada"
+          description="Comprueba tu conexión y vuelve a intentarlo."
+          onRetry={() => void visits.refetch()}
+        />
       ) : null}
       {visits.data?.length === 0 ? (
-        <p className="text-muted-foreground bg-muted/40 rounded-lg p-5 text-sm">
-          No tienes visitas asignadas para este día. Usa las flechas para consultar otra jornada.
-        </p>
+        <WorkerState
+          title="Tu agenda está despejada"
+          description="No tienes visitas asignadas para este día. Usa las flechas para consultar otra jornada."
+        />
       ) : null}
       {groupVisitsByContractDay(visits.data ?? []).map((group) => {
         const cards = group.visits.map((visit) => (
-          <Card key={visit.id}>
+          <Card key={visit.id} className="worker-visit-card">
             <CardHeader className="gap-2 pb-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle>{visit.title}</CardTitle>
@@ -432,6 +441,10 @@ export function MyDayPage() {
           cards
         )
       })}
+      <p className="worker-privacy">
+        <MapPinIcon size={16} aria-hidden="true" /> Al iniciar una visita se guarda la hora y una
+        ubicación puntual; no hay seguimiento continuo.
+      </p>
     </div>
   )
 }
