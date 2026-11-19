@@ -1,6 +1,6 @@
 import { Badge, Button } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
@@ -23,7 +23,6 @@ export function WorkersPage() {
 function WorkersContent({ tenantId }: { tenantId: string }) {
   const session = useSession()
   const search = useSearch({ from: '/trabajadores' })
-  const navigate = useNavigate({ from: '/trabajadores' })
   const data = useWorkersData(tenantId)
   const cache = useQueryClient()
   const [editingTeam, setEditingTeam] = useState(false)
@@ -157,12 +156,10 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
       {view === 'equipos' ? (
         <WorkTeamsSection
           tenantId={tenantId}
-          peopleReady
           people={data.people.map((item) => ({
             id: item.userId,
             label: item.fullName || item.email,
           }))}
-          onOpenTeam={(id) => void navigate({ search: { equipo: id } })}
         />
       ) : null}
       {view === 'horarios' ? (

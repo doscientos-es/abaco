@@ -24,7 +24,7 @@ export function WorkersNavigation({
 }) {
   const views: WorkerView[] = scoped
     ? ['personas', 'horarios', 'vacaciones', ...(showDocuments ? (['documentos'] as const) : [])]
-    : ['personas', 'horarios', 'vacaciones', 'funciones']
+    : ['personas', 'equipos', 'horarios', 'vacaciones', 'funciones']
   return (
     <nav
       aria-label={scoped ? 'Secciones de la ficha' : 'Secciones de trabajadores'}

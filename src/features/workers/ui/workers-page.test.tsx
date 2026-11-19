@@ -7,7 +7,6 @@ import { WorkersPage } from './workers-page'
 
 const mocks = vi.hoisted(() => ({
   search: {} as WorkersSearch,
-  navigate: vi.fn(),
   schedule: vi.fn(),
   vacations: vi.fn(),
   directory: vi.fn(),
@@ -18,7 +17,6 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('@tanstack/react-router', () => ({
   useSearch: () => mocks.search,
-  useNavigate: () => mocks.navigate,
   Link: ({
     children,
     to,
@@ -90,22 +88,27 @@ describe('workers module navigation', () => {
     expect(html).not.toContain('Equipos activos')
     expect(html).not.toContain('Sin equipo')
     expect(html).not.toContain('<strong')
-    for (const view of ['horarios', 'vacaciones', 'funciones'])
+    for (const view of ['equipos', 'horarios', 'vacaciones', 'funciones'])
       expect(html).toContain(`vista=${view}`)
-    expect(html).not.toContain('vista=equipos')
     expect(html).not.toContain('Organigrama')
     expect(html).not.toContain('vista=organigrama')
     expect(mocks.directory.mock.calls[0]?.[0].memberIds).toBeUndefined()
     expect(mocks.directory.mock.calls[0]?.[0].showInviteLink).toBe(true)
   })
 
-  it('opens a team through real router navigation', () => {
+  it('shows the team directory instead of the people directory on the Equipos tab', () => {
     mocks.search = { vista: 'equipos' }
     const html = renderToStaticMarkup(<WorkersPage />)
-    expect(html).not.toContain('vista=equipos')
+    expect(html).toMatch(/aria-current="page"[^>]*>Equipos<\/a>/)
     expect(mocks.teams).toHaveBeenCalledOnce()
-    mocks.teams.mock.calls[0]?.[0].onOpenTeam('north')
-    expect(mocks.navigate).toHaveBeenCalledWith({ search: { equipo: 'north' } })
+    expect(mocks.teams.mock.calls[0]?.[0]).toMatchObject({
+      tenantId: 'company',
+      people: [
+        { id: 'ana', label: 'Ana' },
+        { id: 'bea', label: 'Bea' },
+      ],
+    })
+    expect(mocks.directory).not.toHaveBeenCalled()
   })
 
   it.each(['horarios', 'vacaciones'] as const)(
@@ -118,6 +121,7 @@ describe('workers module navigation', () => {
       expect(html).toContain('Equipo Norte')
       expect(html).toContain('Editar equipo')
       expect(html).toContain('equipo=north')
+      expect(html).toContain('href="/trabajadores?vista=equipos"')
       expect(html).not.toContain('vista=organigrama')
     },
   )
