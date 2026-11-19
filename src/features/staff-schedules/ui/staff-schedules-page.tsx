@@ -26,6 +26,7 @@ import { StaffPeopleFilterPopover } from './staff-people-filter-popover'
 import { StaffScheduleEditor } from './staff-schedule-editor'
 
 type ScheduleContext = {
+  personal?: boolean | undefined
   memberIds?: string[] | undefined
   title?: string | undefined
   embedded?: boolean | undefined
@@ -40,7 +41,7 @@ export function StaffSchedulesPage(props: ScheduleContext) {
       tenantId={session.tenantId}
       userId={session.userId}
       name={session.fullName || session.email || 'Mi horario'}
-      admin={session.role === 'admin'}
+      admin={session.role === 'admin' && !props.personal}
       {...props}
     />
   )
@@ -217,8 +218,10 @@ function ScheduleView({
               ) : (
                 <p className="min-w-0 flex-1 text-sm">
                   <strong>Mis funciones:</strong>{' '}
-                  {(functions.data ?? []).map((item) => item.name).join(', ') ||
-                    'Sin funciones asignadas'}
+                  {(functions.data ?? [])
+                    .filter((item) => schedulesByUser.get(userId)?.functionIds.includes(item.id))
+                    .map((item) => item.name)
+                    .join(', ') || 'Sin funciones asignadas'}
                 </p>
               )}
               {visible.length > 0 ? (

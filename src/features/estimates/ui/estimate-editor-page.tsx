@@ -47,7 +47,6 @@ import type { Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { whatsappLink } from '@/shared/lib/whatsapp'
 import { getSaveStatus, refreshStore, useTenantData } from '@/shared/store/store'
-import { DocumentPreview } from '@/shared/ui/document-preview'
 import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
@@ -64,7 +63,6 @@ import { recordManualApproval } from '../application/record-manual-approval'
 import { requiredEstimateSectionsError } from '../domain/estimate-sections'
 import { EstimateAutoSaveStatus } from './estimate-auto-save-status'
 import { EstimateDesignWorkspace } from './estimate-design-workspace'
-import { EstimateDocument } from './estimate-document'
 import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 import { EstimatePricingEditor } from './estimate-pricing-editor'
 import { EstimateSectionsEditor } from './estimate-sections-editor'
@@ -590,14 +588,12 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
             acredita el contenido exacto del envío original.
           </p>
         ) : null}
-        <DocumentPreview label="del presupuesto">
-          <EstimateDocument
-            estimate={publication.data.estimate}
-            client={publication.data.client}
-            tenant={publication.data.tenant}
-            documentRef={documentRef}
-          />
-        </DocumentPreview>
+        <EstimateDesignWorkspace
+          estimate={publication.data.estimate}
+          client={publication.data.client}
+          tenant={publication.data.tenant}
+          documentRef={documentRef}
+        />
         {publication.data.estimate.conversionDestination !== 'contract' ? (
           <Card>
             <CardHeader>

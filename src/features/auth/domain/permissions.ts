@@ -62,6 +62,7 @@ const everything: readonly Permission[] = [
   'team:manage',
   'visits:read',
   'visits:write',
+  'visits:assigned',
   'vacations:request',
   'vacations:manage',
 ]

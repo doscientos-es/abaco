@@ -7,7 +7,9 @@ import { PersonalizationPage } from './personalization-page'
 const mocks = vi.hoisted(() => ({
   state: vi.fn(),
   button: vi.fn(),
+  checkbox: vi.fn(),
   field: vi.fn(),
+  layoutPicker: vi.fn(),
   patch: vi.fn(),
   navigate: vi.fn(),
   search: vi.fn(),
@@ -24,7 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: mocks.button,
-  Checkbox: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
+  Checkbox: mocks.checkbox,
   PageHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
   PageHeaderHeading: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PageHeaderTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
@@ -38,11 +40,18 @@ vi.mock('@/shared/ui/form', () => ({
   TextField: mocks.field,
   TextareaField: mocks.field,
 }))
+vi.mock(import('@/shared/ui/visual-radio-group'), async (importOriginal) => {
+  const { VisualRadioGroup } = await importOriginal()
+  return { VisualRadioGroup: mocks.layoutPicker.mockImplementation(VisualRadioGroup) }
+})
+vi.mock('@/features/estimates', () => import('@/features/estimates/ui/estimate-design-workspace'))
 vi.mock('@/features/clients', () => ({ ClientTypesSection: () => <p>Tipos de cliente</p> }))
 vi.mock('@/features/staff-schedules', () => ({ StaffFunctionsSection: () => <p>Funciones</p> }))
 vi.mock('@/features/settings/application/settings-actions', () => ({ patchTenant: mocks.patch }))
 vi.mock('@/shared/store/store', () => ({
-  useTenantData: () => ({ tenant: { id: 'one', name: 'Empresa', emailFromName: 'Equipo' } }),
+  useTenantData: () => ({
+    tenant: { id: 'one', name: 'Empresa', defaultVatRate: 21, emailFromName: 'Equipo' },
+  }),
   useSaveStatus: () => ({ state: 'saved' }),
 }))
 
@@ -53,7 +62,9 @@ describe('personalization sections', () => {
   function render() {
     cursor = 0
     mocks.button.mockClear()
+    mocks.checkbox.mockClear()
     mocks.field.mockClear()
+    mocks.layoutPicker.mockClear()
     return renderToStaticMarkup(<PersonalizationPage />)
   }
   beforeEach(() => {
@@ -78,6 +89,9 @@ describe('personalization sections', () => {
       ),
     )
     mocks.field.mockImplementation(({ label }: { label: string }) => <span>{label}</span>)
+    mocks.checkbox.mockImplementation(({ children }: { children: React.ReactNode }) => (
+      <label>{children}</label>
+    ))
     mocks.tabs.mockImplementation(({ children }: { children: React.ReactNode }) => (
       <div>{children}</div>
     ))
@@ -98,11 +112,19 @@ describe('personalization sections', () => {
     expect(lists).not.toContain('Guardar personalización')
   })
 
-  it('saves company defaults independently of message templates', () => {
+  it('previews the selected template before saving company design defaults', () => {
     tab = 'documentos'
-    expect(render()).toContain('Mostrar índice')
-    mocks.field.mock.calls.find(([props]) => props.label === 'Plantilla')?.[0].onChange('compact')
-    expect(render()).not.toContain('Mostrar índice')
+    const proposal = render()
+    expect(proposal).toContain('Vista previa en directo · Documento de ejemplo')
+    expect(proposal).toContain('Mostrar índice')
+    expect(proposal).toContain('estimate-document__cover')
+    expect(proposal).toContain('estimate-document__index')
+    mocks.layoutPicker.mock.lastCall?.[0].onChange('compact')
+    const compact = render()
+    expect(compact).toContain('estimate-document__compact-header')
+    expect(compact).not.toContain('Mostrar índice')
+    expect(compact).not.toContain('estimate-document__index')
+    expect(mocks.patch).not.toHaveBeenCalled()
     const save = mocks.button.mock.calls.find(
       ([props]) => props.children === 'Guardar personalización',
     )?.[0]
@@ -116,6 +138,20 @@ describe('personalization sections', () => {
         showFooter: true,
       },
     })
+  })
+
+  it('previews the draft footer only when it is enabled', () => {
+    tab = 'documentos'
+    render()
+    mocks.field.mock.calls
+      .find(([props]) => props.label === 'Pie de página de los documentos')?.[0]
+      .onChange('  Gracias por confiar en nosotros  ')
+    expect(render()).toContain('>Gracias por confiar en nosotros</p>')
+    mocks.checkbox.mock.calls
+      .find(([props]) => props.children === 'Mostrar texto de pie de página')?.[0]
+      .onChange(false)
+    expect(render()).not.toContain('Gracias por confiar en nosotros')
+    expect(mocks.patch).not.toHaveBeenCalled()
   })
 
   it('preserves unsaved drafts across tabs and saves only the selected section', () => {

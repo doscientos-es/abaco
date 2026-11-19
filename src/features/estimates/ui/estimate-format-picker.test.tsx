@@ -2,6 +2,9 @@ import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { EstimateFormat } from '@/shared/domain/estimate-document'
+import { VisualRadioGroup } from '@/shared/ui/visual-radio-group'
+
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
   useId: () => 'estimate-format-test',
@@ -35,7 +38,8 @@ describe('estimate format cards', () => {
   it('keeps the controls in one native radio group and notifies the selected format', () => {
     const onChange = vi.fn()
     const picker = EstimateFormatPicker({ value: 'table', onChange })
-    const grid = picker.props.children[1]
+    const group = VisualRadioGroup<EstimateFormat>(picker.props)
+    const grid = group.props.children[1]
     const cards = grid.props.children as React.ReactElement<{
       children: [
         React.ReactElement<React.InputHTMLAttributes<HTMLInputElement>>,

@@ -91,20 +91,22 @@ function toVacationRequest(row: VacationRequestRow): VacationRequest {
   }
 }
 
-export async function listVacationRequests(tenantId: string): Promise<VacationRequest[]> {
-  const data = await fetchAllPages<VacationRequestRow>(
-    (from, to) =>
-      createBrowserSupabaseClient()
-        .from('absence_requests')
-        .select(
-          'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
-        )
-        .eq('tenant_id', tenantId)
-        .order('submitted_at', { ascending: false })
-        .order('id')
-        .range(from, to),
-    'No se pudieron cargar las solicitudes de vacaciones.',
-  )
+export async function listVacationRequests(
+  tenantId: string,
+  requesterId?: string,
+): Promise<VacationRequest[]> {
+  const data = await fetchAllPages<VacationRequestRow>((from, to) => {
+    const query = createBrowserSupabaseClient()
+      .from('absence_requests')
+      .select(
+        'id, requester_id, requester_name, absence_type, start_date, end_date, requester_comment, status, submitted_at, decision_comment, decided_at, decided_by_name, information_request_comment, requester_response_comment, updated_at',
+      )
+      .eq('tenant_id', tenantId)
+    return (requesterId ? query.eq('requester_id', requesterId) : query)
+      .order('submitted_at', { ascending: false })
+      .order('id')
+      .range(from, to)
+  }, 'No se pudieron cargar las solicitudes de vacaciones.')
   return data.map(toVacationRequest)
 }
 

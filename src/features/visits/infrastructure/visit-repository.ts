@@ -47,7 +47,7 @@ export async function listTechnicians(tenantId: string): Promise<TechnicianOptio
     .from('memberships')
     .select('user_id,profiles(email,full_name)')
     .eq('tenant_id', tenantId)
-    .eq('role', 'user')
+    .in('role', ['admin', 'user', 'technician'])
     .order('created_at')
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => {

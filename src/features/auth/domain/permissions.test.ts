@@ -15,6 +15,7 @@ describe('role permissions', () => {
   it('lets admins manage requests and hand out only admin/user roles', () => {
     expect(can('admin', 'vacations:manage')).toBe(true)
     expect(can('admin', 'work:read')).toBe(true)
+    expect(can('admin', 'visits:assigned')).toBe(true)
     expect(can('admin', 'settings:personal')).toBe(true)
     expect(assignableRoles('admin')).toEqual(['admin', 'user'])
     expect(assignableRoles('user')).toEqual([])

@@ -51,19 +51,7 @@ describe('workers access and legacy links', () => {
     }
   })
 
-  it('redirects admin schedules while preserving workers own schedule route', () => {
-    const loader = SchedulesRoute.options.loader
-    if (typeof loader !== 'function') throw new Error('Missing schedule redirect')
-    expect(
-      loader({ context: { session: { role: 'user' } } } as Parameters<typeof loader>[0]),
-    ).toBeUndefined()
-    try {
-      loader({ context: { session: { role: 'admin' } } } as Parameters<typeof loader>[0])
-      expect.unreachable('Administrative schedules must redirect')
-    } catch (error) {
-      expect(error).toMatchObject({
-        options: { to: '/trabajadores', search: { vista: 'horarios' }, replace: true },
-      })
-    }
+  it('keeps the personal schedule available without redirecting administrators', () => {
+    expect(SchedulesRoute.options.loader).toBeUndefined()
   })
 })

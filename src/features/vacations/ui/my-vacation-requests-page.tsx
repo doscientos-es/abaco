@@ -21,7 +21,10 @@ import { AbsenceDateRangePicker } from './absence-date-range-picker'
 import { VacationDecisionNotices } from './vacation-decision-notices'
 import { VacationRequestCard } from './vacation-request-card'
 
-const requestQueryKey = (tenantId: string | null | undefined) => ['vacation-requests', tenantId]
+const requestQueryKey = (
+  tenantId: string | null | undefined,
+  userId: string | null | undefined,
+) => ['vacation-requests', tenantId, userId]
 
 export function MyVacationRequestsPage() {
   const session = useSession()
@@ -33,11 +36,11 @@ export function MyVacationRequestsPage() {
   const [endDate, setEndDate] = useState('')
   const [comment, setComment] = useState('')
   const requests = useQuery({
-    queryKey: requestQueryKey(tenantId),
-    enabled: Boolean(tenantId),
+    queryKey: requestQueryKey(tenantId, session?.userId),
+    enabled: Boolean(tenantId && session?.userId),
     queryFn: () => {
-      if (!tenantId) throw new Error('Selecciona una empresa.')
-      return listVacationRequests(tenantId)
+      if (!tenantId || !session?.userId) throw new Error('Selecciona una empresa.')
+      return listVacationRequests(tenantId, session.userId)
     },
   })
   const submit = useMutation({
@@ -51,7 +54,7 @@ export function MyVacationRequestsPage() {
       setAbsenceType('vacation')
       setComment('')
       setRequestOpen(false)
-      await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
+      await queryClient.invalidateQueries({ queryKey: ['vacation-requests', tenantId] })
       toast.success('Solicitud enviada')
     },
     onError: (error: Error) =>
@@ -63,7 +66,8 @@ export function MyVacationRequestsPage() {
       return respondAbsenceInformation({ tenantId, ...input })
     },
     onSuccess: async () => {
-      if (tenantId) await queryClient.invalidateQueries({ queryKey: requestQueryKey(tenantId) })
+      if (tenantId)
+        await queryClient.invalidateQueries({ queryKey: ['vacation-requests', tenantId] })
       toast.success('Información enviada a administración')
     },
     onError: (error: Error) =>

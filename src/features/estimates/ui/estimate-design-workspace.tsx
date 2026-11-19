@@ -21,36 +21,31 @@ export function EstimateDesignWorkspace({
   documentRef?: Ref<HTMLElement>
   example?: boolean
 }) {
+  const liveLabel = example ? 'en directo · Documento de ejemplo' : 'en directo'
   const preview = (
-    <DocumentPreview label={example ? 'de ejemplo' : 'del presupuesto'}>
+    <DocumentPreview label={controls ? liveLabel : 'del presupuesto'}>
       <EstimateDocument
         estimate={estimate}
         client={client}
         tenant={tenant}
-        documentRef={documentRef}
+        documentRef={documentRef ?? null}
       />
     </DocumentPreview>
   )
   if (!controls) return preview
 
   return (
-    <div className="@container">
-      <div className="grid min-w-0 items-start gap-5 @min-[43rem]:grid-cols-[minmax(18rem,21rem)_minmax(0,1fr)] print:block">
+    <div className="@container print:[container-type:normal]">
+      <div className="grid min-w-0 items-start gap-5 @min-[43rem]:grid-cols-[minmax(17rem,30%)_minmax(0,1fr)] print:block">
         <div className="min-w-0 print:hidden">{controls}</div>
-        <div className="min-w-0 @min-[43rem]:sticky @min-[43rem]:top-4">
-          <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-medium print:hidden">
-            <span aria-hidden="true" className="bg-primary size-1.5 rounded-full" />
-            Vista previa en directo{example ? ' · Documento de ejemplo' : ''}
-          </div>
-          <div
-            role="region"
-            aria-label={example ? 'Páginas del presupuesto de ejemplo' : 'Páginas del presupuesto'}
-            tabIndex={0}
-            className="focus-visible:outline-ring min-w-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 @min-[43rem]:max-h-[min(72dvh,52rem)] @min-[43rem]:overflow-auto print:max-h-none print:overflow-visible"
-          >
-            {preview}
-          </div>
-        </div>
+        <section
+          aria-label={example ? 'Páginas del presupuesto de ejemplo' : 'Páginas del presupuesto'}
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrollable preview needs keyboard focus.
+          tabIndex={0}
+          className="focus-visible:outline-ring min-w-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 @min-[43rem]:sticky @min-[43rem]:top-4 @min-[43rem]:max-h-[min(72dvh,52rem)] @min-[43rem]:overflow-auto print:static print:max-h-none print:overflow-visible"
+        >
+          {preview}
+        </section>
       </div>
     </div>
   )

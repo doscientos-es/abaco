@@ -49,7 +49,12 @@ type NavGroup = { label: string; items: NavItem[] }
 const navGroups: NavGroup[] = [
   {
     label: 'General',
-    items: [{ to: '/', label: 'Resumen', icon: navIcons.home }],
+    items: [
+      { to: '/', label: 'Resumen', icon: navIcons.home },
+      { to: '/mi-jornada', label: 'Mi jornada', icon: navIcons.visits },
+      { to: '/horarios', label: 'Mi horario', icon: navIcons.visits },
+      { to: '/mis-vacaciones', label: 'Mis ausencias', icon: navIcons.visits },
+    ],
   },
   {
     label: 'Ventas',
@@ -111,7 +116,9 @@ const flatItems = bottomOrder.flatMap((to) =>
 const navPermission: Partial<Record<NavTo, Permission>> = {
   '/trabajadores': 'team:manage',
   '/trabajos': 'work:read',
-  '/horarios': 'team:manage',
+  '/horarios': 'settings:personal',
+  '/mi-jornada': 'visits:assigned',
+  '/mis-vacaciones': 'vacations:request',
   '/contratos': 'contracts:read',
   '/vacaciones': 'vacations:manage',
   '/facturas': 'invoices:read',
