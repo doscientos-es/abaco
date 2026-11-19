@@ -51,10 +51,6 @@
   .user-frame__page:has(.staff-schedule-page) {
     width: min(100%, 104rem);
   }
-
-  .staff-schedule-page .event-calendar__time-scroll {
-    max-height: max(24rem, calc(100dvh - 16rem));
-  }
 }
 
 @media (max-width: 47.999rem) {

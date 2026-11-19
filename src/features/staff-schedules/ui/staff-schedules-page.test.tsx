@@ -49,7 +49,12 @@ vi.mock('@doscientos/ui', async (original) => {
   return {
     ...actual,
     Popover: (props: React.ComponentProps<typeof actual.Popover>) => {
-      if ('trigger' in props && isValidElement<FilterProps>(props.children)) {
+      if (
+        'trigger' in props &&
+        isValidElement<FilterProps>(props.children) &&
+        Array.isArray(props.children.props.people) &&
+        Array.isArray(props.children.props.teams)
+      ) {
         mocks.filter = props.children.props
         mocks.popover = { open: props.isOpen, placement: props.placement }
       }
@@ -149,9 +154,7 @@ describe('staff schedule access and availability', () => {
     expect(html).not.toContain('>Calendario</h2>')
     expect(html).not.toContain('Selecciona personas o equipos en el buscador')
     expect(html).toContain('Descargar PDF')
-    expect(html).toMatch(
-      /<select[^>]*aria-label="Filtrar por función".*?<\/select><button[^>]*aria-label="Descargar PDF"/,
-    )
+    expect(html).toContain('aria-label="Descargar PDF"')
     expect(mocks.events).toHaveLength(1)
     expect(mocks.filter?.selected.personIds).toEqual(['ana', 'luis'])
     expect(mocks.filter?.teams).toEqual([
@@ -229,7 +232,7 @@ describe('staff schedule access and availability', () => {
     const html = renderToStaticMarkup(<StaffSchedulesPage />)
     expect(html).toContain('Mi horario')
     expect(html).toContain('Electricidad')
-    expect(html).toMatch(/Mis funciones:.*?<button[^>]*aria-label="Descargar PDF"[^>]*disabled/)
+    expect(html).toMatch(/<button[^>]*aria-label="Descargar PDF"[^>]*disabled/)
     expect(html).not.toContain('Luis')
     expect(
       mocks.query.mock.calls.find(([options]) => options.queryKey[0] === 'team')?.[0].enabled,

@@ -7,7 +7,11 @@ import { teamQuery } from '@/features/settings/application/team-actions'
 import { workTeamsQuery } from '@/features/work-teams'
 import { resolveCalendarColor } from '@/shared/domain/calendar-color'
 import { dateValue } from '@/shared/lib/date-range'
-import { calendarDays, calendarTime, type EventCalendarView } from '@/shared/lib/event-calendar'
+import {
+  calendarTime,
+  calendarVisibleRange,
+  type EventCalendarView,
+} from '@/shared/lib/event-calendar'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
 import { EventCalendar } from '@/shared/ui/event-calendar'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
@@ -71,9 +75,7 @@ function ScheduleView({
   const [itemId, setItemId] = useState<string | null>(null)
   const [pdfError, setPdfError] = useState('')
   const [exporting, setExporting] = useState(false)
-  const days = calendarDays(date, view)
-  const from = dateValue(days[0] ?? date)
-  const to = dateValue(days[days.length - 1] ?? date)
+  const { from, to } = calendarVisibleRange(date, view)
   const scheduleOptions = staffSchedulesQuery(tenantId)
   const functionOptions = staffFunctionsQuery(tenantId)
   const absenceOptions = staffAbsencesQuery(tenantId, from, to)
@@ -204,56 +206,71 @@ function ScheduleView({
         />
       ) : (
         <>
-          <section aria-label={admin ? 'Filtrar trabajadores' : 'Horario'}>
-            <div className="flex items-center gap-2">
-              {admin ? (
-                <>
-                  <StaffPeopleFilterPopover
-                    people={people}
-                    teams={availableTeams}
-                    selected={selected}
-                    onChange={setSelected}
-                    onEdit={setEditingId}
-                  />
-                  <select
-                    aria-label="Filtrar por función"
-                    className="border-border bg-background h-9 min-w-0 flex-1 rounded-lg border px-3 text-sm sm:flex-none"
-                    value={functionFilter}
-                    onChange={(event) => setFunctionFilter(event.target.value)}
-                  >
-                    <option value="">Todas las funciones</option>
-                    {(functions.data ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              ) : (
-                <p className="min-w-0 flex-1 text-sm">
-                  <strong>Mis funciones:</strong>{' '}
-                  {(functions.data ?? [])
-                    .filter((item) => schedulesByUser.get(userId)?.functionIds.includes(item.id))
-                    .map((item) => item.name)
-                    .join(', ') || 'Sin funciones asignadas'}
-                </p>
-              )}
-              {visible.length > 0 ? (
-                <Button
-                  variant="outline"
-                  className="ml-auto h-9 shrink-0 px-3"
-                  aria-label={exporting ? 'Generando PDF…' : 'Descargar PDF'}
-                  isDisabled={exporting || !occurrences.length}
-                  onPress={() => void download()}
-                >
-                  <span className="sm:hidden">PDF</span>
-                  <span className="hidden sm:inline">
-                    {exporting ? 'Generando PDF…' : 'Descargar PDF'}
-                  </span>
-                </Button>
-              ) : null}
-            </div>
-          </section>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <section
+              aria-label={admin ? 'Filtrar trabajadores' : 'Horario'}
+              className="max-w-full min-w-0"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {admin ? (
+                  <>
+                    <StaffPeopleFilterPopover
+                      people={people}
+                      teams={availableTeams}
+                      selected={selected}
+                      onChange={setSelected}
+                      onEdit={setEditingId}
+                    />
+                    <select
+                      aria-label="Filtrar por función"
+                      className="border-border bg-background h-9 max-w-full min-w-0 rounded-lg border px-3 text-sm"
+                      value={functionFilter}
+                      onChange={(event) => setFunctionFilter(event.target.value)}
+                    >
+                      <option value="">Todas las funciones</option>
+                      {(functions.data ?? []).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <p className="min-w-0 flex-1 text-sm">
+                    <strong>Mis funciones:</strong>{' '}
+                    {(functions.data ?? [])
+                      .filter((item) => schedulesByUser.get(userId)?.functionIds.includes(item.id))
+                      .map((item) => item.name)
+                      .join(', ') || 'Sin funciones asignadas'}
+                  </p>
+                )}
+              </div>
+            </section>
+            {visible.length > 0 ? (
+              <div className="min-w-0 flex-1 basis-full xl:basis-auto">
+                <CalendarToolbar
+                  value={date}
+                  view={view}
+                  onDateChange={setDate}
+                  onViewChange={setView}
+                />
+              </div>
+            ) : null}
+            {visible.length > 0 ? (
+              <Button
+                variant="outline"
+                className="h-9 shrink-0 px-3"
+                aria-label={exporting ? 'Generando PDF…' : 'Descargar PDF'}
+                isDisabled={exporting || !occurrences.length}
+                onPress={() => void download()}
+              >
+                <span className="sm:hidden">PDF</span>
+                <span className="hidden sm:inline">
+                  {exporting ? 'Generando PDF…' : 'Descargar PDF'}
+                </span>
+              </Button>
+            ) : null}
+          </div>
           {editing ? (
             <StaffScheduleEditor
               key={editing.userId}
@@ -266,12 +283,6 @@ function ScheduleView({
           {visible.length > 0 ? (
             <>
               {pdfError ? <p role="alert">{pdfError}</p> : null}
-              <CalendarToolbar
-                value={date}
-                view={view}
-                onDateChange={setDate}
-                onViewChange={setView}
-              />
               <EventCalendar
                 key={`${view}:${from}`}
                 compactEmptyHours

@@ -112,6 +112,11 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
+@media (min-width: 48rem) {
+  .event-calendar__time-scroll {
+    max-height: max(24rem, calc(100dvh - 16rem));
+  }
+}
 .event-calendar__time-grid {
   height: 1440px;
 }

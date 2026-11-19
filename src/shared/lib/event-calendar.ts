@@ -47,6 +47,12 @@ export function calendarStep(value: Date, view: EventCalendarView, direction: nu
   )
 }
 
+/** Inclusive date-only bounds for querying the cells actually rendered by the calendar. */
+export function calendarVisibleRange(value: Date, view: EventCalendarView) {
+  const days = calendarDays(value, view)
+  return { from: dateValue(days[0] ?? value), to: dateValue(days.at(-1) ?? value) }
+}
+
 export function eventIntersectsDay(item: CalendarEvent, day: Date) {
   return item.start < atCalendarMinutes(day, 1440) && item.end > atCalendarMinutes(day, 0)
 }

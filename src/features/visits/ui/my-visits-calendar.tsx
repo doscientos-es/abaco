@@ -1,14 +1,12 @@
-import { Button } from '@doscientos/ui'
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 
-import { dateValue, moveDays } from '@/shared/lib/date-range'
-import { calendarDays, type CalendarEvent } from '@/shared/lib/event-calendar'
+import { calendarDate, dateValue, moveDays, todayInMadrid } from '@/shared/lib/date-range'
+import { calendarVisibleRange, type CalendarEvent } from '@/shared/lib/event-calendar'
+import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
 import { EventCalendar } from '@/shared/ui/event-calendar'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import { listMyVisits } from '../application/visit-actions'
-import { calendarDateValue, moveCalendarMonth } from './agenda-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 
 export function MyVisitsCalendar({
@@ -24,10 +22,8 @@ export function MyVisitsCalendar({
   onSelectDay: (date: string) => void
   onOpenGroup: (date: string, contractId: string | null) => void
 }) {
-  const value = calendarDateValue(date)
-  const days = calendarDays(value, 'month')
-  const from = dateValue(days[0] ?? value)
-  const to = dateValue(days.at(-1) ?? value)
+  const value = calendarDate(date)
+  const { from, to } = calendarVisibleRange(value, 'month')
   const visits = useQuery({
     queryKey: ['my-visits', tenantId, 'calendar', from, to],
     queryFn: async () => {
@@ -51,27 +47,12 @@ export function MyVisitsCalendar({
   }))
   return (
     <section className="space-y-3" aria-label="Calendario de mis trabajos">
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="outline"
-          className="size-10 p-0"
-          aria-label="Mes anterior"
-          onPress={() => onDateChange(moveCalendarMonth(date, -1))}
-        >
-          <CaretLeftIcon aria-hidden="true" />
-        </Button>
-        <h2 className="font-semibold capitalize">
-          {value.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
-        </h2>
-        <Button
-          variant="outline"
-          className="size-10 p-0"
-          aria-label="Mes siguiente"
-          onPress={() => onDateChange(moveCalendarMonth(date, 1))}
-        >
-          <CaretRightIcon aria-hidden="true" />
-        </Button>
-      </div>
+      <CalendarToolbar
+        value={value}
+        view="month"
+        today={calendarDate(todayInMadrid())}
+        onDateChange={(day) => onDateChange(dateValue(day))}
+      />
       {visits.isPending ? <WorkerLoading label="Cargando calendario…" /> : null}
       {visits.isError ? (
         <WorkerState

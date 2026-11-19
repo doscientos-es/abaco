@@ -17,7 +17,10 @@ export function StaffPeopleFilterPopover(props: ComponentProps<typeof StaffPeopl
       aria-label="Seleccionar personas y equipos"
       className="max-h-[80dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto p-4"
       trigger={
-        <Button variant="outline" className="h-9 min-w-0 flex-1 justify-between px-3 sm:flex-none">
+        <Button
+          variant="outline"
+          className="h-9 max-w-full min-w-0 shrink-0 justify-between gap-3 px-3"
+        >
           <span className="truncate">
             Personas y equipos · {selectedCount} de {props.people.length}
           </span>

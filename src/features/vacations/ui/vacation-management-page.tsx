@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useState, type ReactNode } from 'react'
 
 import { useSession } from '@/features/auth'
+import { calendarDate } from '@/shared/lib/date-range'
 import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 
 import {
@@ -21,7 +22,6 @@ import {
   listVacationCoverage,
   requestAbsenceInformation,
 } from '../application/vacation-actions'
-import { calendarDate } from '../domain/absence-calendar'
 import type { AbsenceCalendarProposal } from '../domain/absence-events'
 import {
   absenceTypeLabels,

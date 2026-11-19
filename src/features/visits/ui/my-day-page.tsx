@@ -13,7 +13,7 @@ import {
   visitIncidentQueueKey,
 } from '@/features/incidents/application/incident-queue'
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
-import { moveDays } from '@/shared/lib/date-range'
+import { moveDays, todayInMadrid } from '@/shared/lib/date-range'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
@@ -31,14 +31,6 @@ import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerPaperReport } from './worker-paper-report'
-
-const todayInMadrid = () =>
-  new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Madrid',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
 
 const statusLabels = {
   scheduled: 'Planificada',

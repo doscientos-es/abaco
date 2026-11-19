@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -12,11 +11,15 @@ const mocks = vi.hoisted(() => ({
   items: [] as CalendarEvent[],
   click: null as null | ((item: CalendarEvent) => void),
   selectDay: null as null | ((day: Date) => void),
+  navigateMonth: null as null | ((day: Date) => void),
   data: [] as Array<Record<string, unknown>>,
 }))
 
-vi.mock('@doscientos/ui', () => ({
-  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
+vi.mock('@/shared/ui/calendar-toolbar', () => ({
+  CalendarToolbar: ({ onDateChange }: { onDateChange: (day: Date) => void }) => {
+    mocks.navigateMonth = onDateChange
+    return null
+  },
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryFn }: { queryFn: () => Promise<unknown> }) => {
@@ -50,6 +53,7 @@ describe('calendario de trabajos del usuario', () => {
     mocks.items = []
     mocks.click = null
     mocks.selectDay = null
+    mocks.navigateMonth = null
     mocks.list.mockResolvedValue([])
   })
 
@@ -68,6 +72,9 @@ describe('calendario de trabajos del usuario', () => {
     mocks.selectDay?.(new Date(2026, 10, 17, 12))
     expect(selectDay).toHaveBeenCalledWith('2026-11-17')
     expect(navigateMonth).not.toHaveBeenCalled()
+    mocks.navigateMonth?.(new Date(2026, 11, 13, 12))
+    expect(navigateMonth).toHaveBeenCalledWith('2026-12-13')
+    expect(selectDay).toHaveBeenCalledTimes(1)
   })
 
   it('loads the complete month grid in ranges accepted by the assigned-visits API', async () => {

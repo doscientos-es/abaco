@@ -14,6 +14,12 @@ export function dateValue(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+const madridDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' })
+
+export function todayInMadrid(now: Date = new Date()): string {
+  return madridDate.format(now)
+}
+
 export function moveDays(value: string, days: number): string {
   const date = calendarDate(value)
   date.setDate(date.getDate() + days)
@@ -35,8 +41,14 @@ export function selectRangeDay(start: string, end: string, day: string) {
   return day < start ? { start: day, end: start } : { start, end: day }
 }
 
+export function monthDateRange(value: string) {
+  const from = `${value.slice(0, 7)}-01`
+  return { from, to: moveDays(moveMonths(from, 1), -1) }
+}
+
 export function dateRangePresets(today: string) {
   const monday = moveDays(today, -((calendarDate(today).getDay() + 6) % 7))
+  const month = monthDateRange(today)
   return [
     { label: 'Hoy', start: today, end: today },
     { label: 'Ayer', start: moveDays(today, -1), end: moveDays(today, -1) },
@@ -44,8 +56,8 @@ export function dateRangePresets(today: string) {
     { label: 'La semana que viene', start: moveDays(monday, 7), end: moveDays(monday, 13) },
     {
       label: 'Este mes',
-      start: `${today.slice(0, 7)}-01`,
-      end: moveDays(moveMonths(`${today.slice(0, 7)}-01`, 1), -1),
+      start: month.from,
+      end: month.to,
     },
   ]
 }

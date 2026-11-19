@@ -28,8 +28,10 @@
 .planning-calendar .event-calendar__time-axis > span {
   font-variant-numeric: tabular-nums;
 }
-.planning-calendar .event-calendar__time-scroll {
-  max-height: clamp(24rem, 65dvh, 56rem);
+@media (width < 48rem) {
+  .planning-calendar .event-calendar__time-scroll {
+    max-height: clamp(24rem, 65dvh, 56rem);
+  }
 }
 .planning-calendar .event-calendar__event {
   border-left-width: 2px;

@@ -1,70 +1,118 @@
-import { Button, IconButton } from '@doscientos/ui'
-import { CaretLeft, CaretRight } from '@phosphor-icons/react'
+import { Button, Popover } from '@doscientos/ui'
+import { CaretDownIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
 
-import { dateValue } from '@/shared/lib/date-range'
-import { calendarStep, type EventCalendarView } from '@/shared/lib/event-calendar'
+import { calendarDate, dateValue } from '@/shared/lib/date-range'
+import { calendarDays, calendarStep, type EventCalendarView } from '@/shared/lib/event-calendar'
+
+import { TextField } from './form'
+
+const periods = ['day', 'week', 'month'] as const
+const periodLabels = { day: 'Día', week: 'Semana', month: 'Mes' }
+const dayLabel = new Intl.DateTimeFormat('es-ES', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+const monthLabel = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' })
+const weekLabel = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+function periodHeading(value: Date, view: EventCalendarView) {
+  if (view === 'day') return dayLabel.format(value)
+  if (view === 'month') return monthLabel.format(value)
+  const days = calendarDays(value, 'week')
+  return weekLabel.formatRange(days[0] ?? value, days.at(-1) ?? value)
+}
 
 export function CalendarToolbar({
   value,
   view,
+  today,
   onDateChange,
   onViewChange,
+  actions,
 }: {
   value: Date
   view: EventCalendarView
+  today?: Date
   onDateChange: (value: Date) => void
-  onViewChange: (view: EventCalendarView) => void
+  onViewChange?: (view: EventCalendarView) => void
+  actions?: ReactNode
 }) {
+  const heading = periodHeading(value, view)
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <IconButton
-          variant="outline"
-          label="Periodo anterior"
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="Periodo anterior"
           onPress={() => onDateChange(calendarStep(value, view, -1))}
         >
-          <CaretLeft aria-hidden="true" />
-        </IconButton>
-        <Button variant="outline" onPress={() => onDateChange(new Date())}>
-          Hoy
+          <CaretLeftIcon aria-hidden="true" />
         </Button>
-        <IconButton
-          variant="outline"
-          label="Periodo siguiente"
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="Periodo siguiente"
           onPress={() => onDateChange(calendarStep(value, view, 1))}
         >
-          <CaretRight aria-hidden="true" />
-        </IconButton>
-        <label className="text-sm">
-          <span className="sr-only">Fecha del calendario</span>
-          <input
-            className="bg-background rounded-md border px-2 py-1.5"
-            type="date"
-            value={dateValue(value)}
-            onChange={(event) => {
-              const date = event.target.valueAsDate
-              if (date)
-                onDateChange(
-                  new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12),
-                )
-            }}
-          />
-        </label>
+          <CaretRightIcon aria-hidden="true" />
+        </Button>
+        <Button variant="outline" size="sm" onPress={() => onDateChange(today ?? new Date())}>
+          Hoy
+        </Button>
       </div>
-      <fieldset className="flex rounded-lg border p-1">
-        <legend className="sr-only">Periodo del calendario</legend>
-        {(['day', 'week', 'month'] as const).map((period) => (
+      <Popover
+        placement="bottom start"
+        className="p-3"
+        trigger={
           <Button
-            key={period}
+            variant="ghost"
             size="sm"
-            variant={view === period ? 'default' : 'ghost'}
-            aria-pressed={view === period}
-            onPress={() => onViewChange(period)}
+            aria-label={`${heading}. Ir a una fecha`}
+            className="max-w-full min-w-0"
           >
-            {{ day: 'Día', week: 'Semana', month: 'Mes' }[period]}
+            <span className="truncate font-semibold first-letter:uppercase">{heading}</span>
+            <CaretDownIcon aria-hidden="true" />
           </Button>
-        ))}
-      </fieldset>
+        }
+      >
+        <TextField
+          label="Fecha de referencia"
+          placeholder="Fecha"
+          type="date"
+          value={dateValue(value)}
+          onChange={(date) => {
+            if (date) onDateChange(calendarDate(date))
+          }}
+        />
+      </Popover>
+      {onViewChange || actions ? (
+        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+          {onViewChange ? (
+            <fieldset className="bg-muted inline-flex items-center rounded-lg p-0.5">
+              <legend className="sr-only">Periodo del calendario</legend>
+              {periods.map((period) => (
+                <Button
+                  key={period}
+                  size="sm"
+                  variant={view === period ? 'outline' : 'ghost'}
+                  aria-pressed={view === period}
+                  onPress={() => onViewChange(period)}
+                >
+                  {periodLabels[period]}
+                </Button>
+              ))}
+            </fieldset>
+          ) : null}
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }

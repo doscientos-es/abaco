@@ -15,11 +15,11 @@ import {
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
 import type { WorkPlanningSearch } from '@/shared/domain/work-planning-search'
-import { dateValue } from '@/shared/lib/date-range'
+import { calendarDate, dateValue, monthDateRange, todayInMadrid } from '@/shared/lib/date-range'
 import {
-  calendarDays,
   calendarLocalInput,
   calendarTime,
+  calendarVisibleRange,
   wallTimeNumber,
   type CalendarEvent,
   type CalendarEventChange,
@@ -39,12 +39,7 @@ import {
   type VisitSummary,
   type VisitStatus,
 } from '../application/visit-actions'
-import {
-  calendarDateValue,
-  calendarWeekRange,
-  calendarMonthRange,
-  toCalendarWallTime,
-} from './agenda-calendar'
+import { toCalendarWallTime } from './agenda-calendar'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
@@ -53,14 +48,6 @@ import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
 import './planning-calendar.css'
-
-const todayInMadrid = () =>
-  new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Madrid',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
 
 const statusLabels = {
   scheduled: 'Planificada',
@@ -124,20 +111,11 @@ export function AgendaPage() {
     },
     onLocationCreated: setLocationId,
   })
-  const monthGrid =
-    view === 'calendar' && period === 'month'
-      ? calendarDays(calendarDateValue(date), 'month')
-      : null
-  const { from, to } = monthGrid
-    ? {
-        from: dateValue(monthGrid[0] ?? calendarDateValue(date)),
-        to: dateValue(monthGrid.at(-1) ?? calendarDateValue(date)),
-      }
-    : period === 'month'
-      ? calendarMonthRange(date)
-      : period === 'week'
-        ? calendarWeekRange(date)
-        : { from: date, to: date }
+  const calendarAnchor = calendarDate(date)
+  const { from, to } =
+    view === 'list' && period === 'month'
+      ? monthDateRange(date)
+      : calendarVisibleRange(calendarAnchor, period)
   const queryPage = 'all'
   const queryKey = ['office-visits', tenant.id, from, to, filterTechnicianId, queryPage]
   const visits = useQuery({
@@ -591,7 +569,7 @@ export function AgendaPage() {
                       : 'Calendario semanal de trabajos'
                 }
                 view={period}
-                value={calendarDateValue(date)}
+                value={calendarAnchor}
                 items={calendarItems}
                 minuteStep={15}
                 showInstructions={false}

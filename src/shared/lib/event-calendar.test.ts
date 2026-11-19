@@ -6,6 +6,7 @@ import {
   calendarDays,
   calendarLocalInput,
   calendarStep,
+  calendarVisibleRange,
   eventIntersectsDay,
   timedEventLayout,
   type CalendarEvent,
@@ -37,6 +38,14 @@ describe('shared event calendar dates and layout', () => {
     ])
     expect(calendarDays(anchor, 'day').map(dateValue)).toEqual(['2026-11-13'])
     expect(dateValue(anchor)).toBe('2026-11-13')
+  })
+
+  it.each([
+    ['day', '2026-11-13', '2026-11-13'],
+    ['week', '2026-11-09', '2026-11-15'],
+    ['month', '2026-10-26', '2026-12-06'],
+  ] as const)('uses the rendered %s grid bounds for queries', (view, from, to) => {
+    expect(calendarVisibleRange(calendarDate('2026-11-13'), view)).toEqual({ from, to })
   })
 
   it('steps by day/week/month and clamps month ends, including leap years', () => {
