@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   buttons: new Map<string, () => void>(),
   fields: new Map<string, string>(),
   reason: 'Cambio solicitado',
+  duration: undefined as string | undefined,
   index: 0,
 }))
 vi.mock('react', async (load) => {
@@ -21,7 +22,9 @@ vi.mock('react', async (load) => {
     ...actual,
     useState: (initial: unknown) => {
       const state = actual.useState(initial)
-      return mocks.index++ === 3 ? [mocks.reason, state[1]] : state
+      const index = mocks.index++
+      if (index === 1 && mocks.duration !== undefined) return [mocks.duration, state[1]]
+      return index === 3 ? [mocks.reason, state[1]] : state
     },
   }
 })
@@ -55,7 +58,7 @@ const visit: VisitSummary = {
   notes: '',
   updated_at: 'original-version',
 }
-function render(durationMinutes = 90, currentVisit = visit) {
+function render(currentVisit = visit) {
   mocks.index = 0
   return renderToStaticMarkup(
     <VisitReplanForm
@@ -64,24 +67,24 @@ function render(durationMinutes = 90, currentVisit = visit) {
       technicians={[]}
       onDone={mocks.done}
       onCancel={vi.fn()}
-      proposal={{ localStart: '2026-11-14T11:00', durationMinutes }}
     />,
   )
 }
-describe('calendar replan confirmation', () => {
+describe('manual visit replanning', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.reason = 'Cambio solicitado'
+    mocks.duration = undefined
     mocks.buttons.clear()
     mocks.fields.clear()
     mocks.save.mockResolvedValue(undefined)
     mocks.done.mockResolvedValue(undefined)
   })
-  it('prefills the proposed time and duration, requires confirmation, and retains the concurrency version and assignee', async () => {
-    expect(render()).toContain('Todavía no se ha modificado')
+  it('prefills the current local time and duration, then saves with the version and assignee', async () => {
+    render()
     expect(mocks.save).not.toHaveBeenCalled()
-    expect(mocks.fields.get('Nuevo inicio local')).toBe('2026-11-14T11:00')
-    expect(mocks.fields.get('Duración en minutos')).toBe('90')
+    expect(mocks.fields.get('Nuevo inicio local')).toBe('2026-11-13T09:00')
+    expect(mocks.fields.get('Duración en minutos')).toBe('60')
     mocks.buttons.get('Guardar cambio')?.()
     await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
     expect(mocks.save).toHaveBeenCalledWith(
@@ -89,8 +92,8 @@ describe('calendar replan confirmation', () => {
         expectedUpdatedAt: 'original-version',
         visitId: 'visit',
         assignedUserId: 'ana',
-        localStart: '2026-11-14T11:00',
-        durationMinutes: 90,
+        localStart: '2026-11-13T09:00',
+        durationMinutes: 60,
         reason: 'Cambio solicitado',
         operationId: expect.any(String),
       }),
@@ -101,12 +104,13 @@ describe('calendar replan confirmation', () => {
     render()
     mocks.buttons.get('Guardar cambio')?.()
     mocks.reason = 'Motivo'
-    render(735)
+    mocks.duration = '735'
+    render()
     mocks.buttons.get('Guardar cambio')?.()
     expect(mocks.save).not.toHaveBeenCalled()
   })
   it('retains a team assignment when replanning without selecting a technician', async () => {
-    const html = render(90, { ...visit, assigned_user_id: null, work_team_id: 'team' })
+    const html = render({ ...visit, assigned_user_id: null, work_team_id: 'team' })
     expect(html).toContain('Si seleccionas un técnico, sustituirá al equipo asignado')
     mocks.buttons.get('Guardar cambio')?.()
     await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
