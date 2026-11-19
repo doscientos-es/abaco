@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /** Visual preferences only. The estimate format still determines the commercial content. */
 export const estimateDesignSchema = z.strictObject({
-  layout: z.enum(['compact', 'proposal']),
+  layout: z.enum(['compact', 'proposal', 'minimal', 'editorial']),
   showIndex: z.boolean(),
   showLogo: z.boolean(),
   showFooter: z.boolean(),

@@ -21,6 +21,26 @@
   print-color-adjust: exact;
 }
 
+.invoice-document[data-layout='minimal'] {
+  border-top-color: transparent;
+}
+
+.invoice-document[data-layout='minimal'] .invoice-sheet-lines th {
+  background: transparent;
+}
+
+.invoice-document[data-layout='modern'] .invoice-sheet-reference {
+  border-radius: 2mm;
+  padding: 5mm;
+  background: #f2f4f7;
+}
+
+.invoice-document[data-layout='modern'] .invoice-sheet-client {
+  border-block: 0;
+  background: #f7f8fa;
+  padding: 6mm;
+}
+
 .invoice-sheet :is(p, h2, h3, dl, dd) {
   margin: 0;
 }

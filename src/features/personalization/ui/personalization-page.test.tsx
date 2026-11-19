@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: vi.fn(),
   tabs: vi.fn(),
+  setDocumentType: vi.fn(),
 }))
 
 vi.mock('react', async (importOriginal) => ({
@@ -45,6 +46,7 @@ vi.mock(import('@/shared/ui/visual-radio-group'), async (importOriginal) => {
   return { VisualRadioGroup: mocks.layoutPicker.mockImplementation(VisualRadioGroup) }
 })
 vi.mock('@/features/estimates', () => import('@/features/estimates/ui/estimate-design-workspace'))
+vi.mock('@/features/invoices', () => import('@/features/invoices/ui/invoice-document'))
 vi.mock('@/features/clients', () => ({ ClientTypesSection: () => <p>Tipos de cliente</p> }))
 vi.mock('@/features/staff-schedules', () => ({ StaffFunctionsSection: () => <p>Funciones</p> }))
 vi.mock('@/features/settings/application/settings-actions', () => ({ patchTenant: mocks.patch }))
@@ -58,7 +60,7 @@ vi.mock('@/shared/store/store', () => ({
 describe('personalization sections', () => {
   let values: unknown[]
   let cursor: number
-  let tab: 'marca' | 'documentos' | 'listas'
+  let tab: 'marca' | 'documentos' | 'correos' | 'listas'
   function render() {
     cursor = 0
     mocks.button.mockClear()
@@ -76,12 +78,11 @@ describe('personalization sections', () => {
     mocks.state.mockImplementation((initial: unknown) => {
       const index = cursor++
       if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial
-      return [
-        values[index],
-        (next: unknown) => {
-          values[index] = typeof next === 'function' ? next(values[index]) : next
-        },
-      ]
+      const set = (next: unknown) => {
+        values[index] = typeof next === 'function' ? next(values[index]) : next
+      }
+      if (initial === 'estimate') mocks.setDocumentType.mockImplementation(set)
+      return [values[index], set]
     })
     mocks.button.mockImplementation(
       ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
@@ -102,9 +103,13 @@ describe('personalization sections', () => {
     tab = 'documentos'
     const documents = render()
     expect(documents).toContain('Diseño de presupuestos')
-    expect(documents).toContain('Nombre del remitente')
+    expect(documents).not.toContain('Nombre del remitente')
     expect(documents).toContain('Pie de página de los documentos')
     expect(documents).not.toContain('Identidad de marca')
+    tab = 'correos'
+    const emails = render()
+    expect(emails).toContain('Nombre del remitente')
+    expect(emails).not.toContain('Pie de página de los documentos')
     tab = 'listas'
     const lists = render()
     expect(lists).toContain('Tipos de cliente')
@@ -155,7 +160,7 @@ describe('personalization sections', () => {
   })
 
   it('preserves unsaved drafts across tabs and saves only the selected section', () => {
-    tab = 'documentos'
+    tab = 'correos'
     render()
     mocks.field.mock.calls
       .find(([props]) => props.label === 'Nombre del remitente')?.[0]
@@ -165,7 +170,7 @@ describe('personalization sections', () => {
     mocks.field.mock.calls
       .find(([props]) => props.label === 'Logo de la empresa')?.[0]
       .onChange('https://example.test/logo.png')
-    tab = 'documentos'
+    tab = 'correos'
     render()
     const sender = mocks.field.mock.calls.find(
       ([props]) => props.label === 'Nombre del remitente',
@@ -181,7 +186,6 @@ describe('personalization sections', () => {
       emailSignature: '',
       estimateEmailIntro: '',
       invoiceEmailIntro: '',
-      documentFooter: '',
     })
     tab = 'marca'
     render()
@@ -192,5 +196,21 @@ describe('personalization sections', () => {
       brandColor: '',
       logoUrl: 'https://example.test/logo.png',
     })
+  })
+
+  it('switches to the real invoice preview and saves its selected layout', () => {
+    tab = 'documentos'
+    render()
+    mocks.setDocumentType('invoice')
+    const initial = render()
+    expect(initial).toContain('Diseño de facturas')
+    expect(initial).toContain('invoice-document invoice-sheet')
+    expect(initial).toContain('data-layout="classic"')
+    mocks.layoutPicker.mock.lastCall?.[0].onChange('modern')
+    expect(render()).toContain('data-layout="modern"')
+    mocks.button.mock.calls
+      .find(([props]) => props.children === 'Guardar personalización')?.[0]
+      .onPress()
+    expect(mocks.patch).toHaveBeenCalledWith({ defaultInvoiceDesign: 'modern' })
   })
 })

@@ -1,6 +1,7 @@
 import type { EstimateAgreement } from './estimate-agreement'
 import type { EstimateDesign } from './estimate-design'
 import type { EstimateFormat, EstimateSection } from './estimate-document'
+import type { InvoiceDesign } from './invoice-design'
 
 /** Money is always stored as integer cents to avoid floating point drift. */
 export type Cents = number
@@ -36,6 +37,8 @@ export type Tenant = {
   documentFooter?: string
   /** Copied to each new estimate; does not change existing drafts or publications. */
   defaultEstimateDesign?: EstimateDesign
+  /** Captured when a new invoice is issued. */
+  defaultInvoiceDesign?: InvoiceDesign
   /** Opt-in: the daily job emails clients about overdue invoices and estimates about to expire. */
   autoReminders?: boolean
   defaultVatRate: number
@@ -148,6 +151,7 @@ export type InvoiceStatus = 'issued' | 'sent' | 'paid'
 export type InvoiceSnapshot = {
   source: 'issuance' | 'migration'
   capturedAt: string
+  design?: InvoiceDesign
   issuer: {
     name: string
     legalName: string

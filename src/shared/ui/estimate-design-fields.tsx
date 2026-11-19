@@ -7,6 +7,8 @@ import { VisualRadioGroup } from './visual-radio-group'
 const layouts = [
   { value: 'compact', label: 'Compacto', description: 'Sin portada ni índice.' },
   { value: 'proposal', label: 'Propuesta', description: 'Portada e índice opcional.' },
+  { value: 'minimal', label: 'Minimalista', description: 'Limpio y discreto, sin portada.' },
+  { value: 'editorial', label: 'Editorial', description: 'Cabecera destacada, sin portada.' },
 ] as const
 
 const layoutOptions = layouts.map((layout) => ({
@@ -79,7 +81,7 @@ function LayoutThumbnail({ layout }: { layout: EstimateDesign['layout'] }) {
         rx="3"
         className="fill-card stroke-border"
       />
-      {layout === 'compact' ? (
+      {layout !== 'proposal' ? (
         <>
           <path d="M33 18h21" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
           <path d="M33 24h13" className="stroke-muted-foreground/40" strokeLinecap="round" />

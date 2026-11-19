@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import {
   copyFileSync,
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -45,17 +46,18 @@ function repository() {
   mkdirSync(join(cwd, 'bin'))
   writeFileSync(
     join(cwd, 'bin', 'pnpm'),
-    '#!/bin/sh\n[ "$1" = "quality:quick" ] || exit 1\ntouch quality-quick-called\n',
+    '#!/bin/sh\nprintf "%s\\n" "$*" > pnpm-called\n[ "$1" = "quality" ]\n',
   )
   chmodSync(join(cwd, 'bin', 'pnpm'), 0o755)
-  for (const file of ['pre-commit', 'pre-commit.mjs']) {
+  for (const file of ['pre-commit', 'pre-commit.mjs', 'pre-push']) {
     copyFileSync(join(root, '.githooks', file), join(cwd, '.githooks', file))
   }
   chmodSync(join(cwd, '.githooks', 'pre-commit'), 0o755)
+  chmodSync(join(cwd, '.githooks', 'pre-push'), 0o755)
   symlinkSync(resolve(root, 'node_modules'), join(cwd, 'node_modules'), 'junction')
   writeFileSync(
     join(cwd, 'package.json'),
-    JSON.stringify({ scripts: { 'quality:quick': 'node -e "process.exit(0)"' } }),
+    JSON.stringify({ scripts: { quality: 'node -e "process.exit(0)"' } }),
   )
   writeFileSync(
     join(cwd, '.oxlintrc.json'),
@@ -85,7 +87,7 @@ describe('pre-commit automatic fixes', () => {
 
     const result = command(cwd, 'git', ['commit', '-m', 'fix'])
     expect(result.status, result.stderr + result.stdout).toBe(0)
-    expect(readFileSync(join(cwd, 'quality-quick-called'), 'utf8')).toBe('')
+    expect(existsSync(join(cwd, 'pnpm-called'))).toBe(false)
     const committed = git(cwd, 'show', 'HEAD:source.js')
     expect(committed).not.toContain('debugger')
     expect(committed).toContain("const value = '#'")
@@ -132,5 +134,12 @@ describe('pre-commit automatic fixes', () => {
     expect(result.status).not.toBe(0)
     expect(result.stderr).toContain('glob-like filename')
     expect(readFileSync(join(cwd, '[item].js'), 'utf8')).toBe('const value=1;\n')
+  }, 30000)
+
+  it('runs the full quality gate before pushing', () => {
+    const cwd = repository()
+    const result = command(cwd, 'git', ['hook', 'run', 'pre-push'])
+    expect(result.status, result.stderr + result.stdout).toBe(0)
+    expect(readFileSync(join(cwd, 'pnpm-called'), 'utf8').trim()).toBe('quality')
   }, 30000)
 })

@@ -155,6 +155,20 @@ describe('event calendar presentation', () => {
     expect(html).toContain('aria-label="Limpieza, 09:00 – 10:30"')
     expect(html).toContain('data-outside="true"')
   })
+  it('renders every event when a month day has many jobs', () => {
+    const items = Array.from({ length: 8 }, (_, index) => ({
+      ...item,
+      id: `job-${index}`,
+      title: `Trabajo ${index}`,
+    }))
+    const html = renderToStaticMarkup(
+      <EventCalendar value={value} view="month" items={items} onItemClick={vi.fn()} />,
+    )
+    for (const event of items) {
+      expect(html).toContain(`data-calendar-event="${event.id}"`)
+      expect(html).toContain(`aria-label="${event.title}, 09:00 – 10:30"`)
+    }
+  })
   it('can visually hide instructions while retaining them for assistive technology', () => {
     const html = renderToStaticMarkup(
       <EventCalendar

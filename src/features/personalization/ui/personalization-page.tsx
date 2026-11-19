@@ -3,7 +3,6 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { ClientTypesSection } from '@/features/clients'
-import { EstimateDesignExample } from '@/features/estimates'
 import { patchTenant } from '@/features/settings/application/settings-actions'
 import {
   defaultBrandColor,
@@ -13,12 +12,13 @@ import {
 } from '@/features/settings/ui/settings-form'
 import { StaffFunctionsSection } from '@/features/staff-schedules'
 import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
+import { defaultInvoiceDesign } from '@/shared/domain/invoice-design'
 import type { Tenant } from '@/shared/domain/types'
 import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
-import { EstimateDesignFields } from '@/shared/ui/estimate-design-fields'
-import { TextareaField, TextField } from '@/shared/ui/form'
+import { TextField } from '@/shared/ui/form'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
+import { DocumentDesignWorkspace } from './document-design-workspace'
 import { MessageFields, type MessageForm } from './message-fields'
 import { messageForm, messageFormValid, messagePatch } from './message-form'
 
@@ -43,20 +43,32 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
   const [messages, setMessages] = useState(() => messageForm(tenant))
   const companyDesign = tenant.defaultEstimateDesign ?? defaultEstimateDesign
   const [design, setDesign] = useState(companyDesign)
+  const [invoiceDesign, setInvoiceDesign] = useState(
+    tenant.defaultInvoiceDesign ?? defaultInvoiceDesign,
+  )
   const [saved, setSaved] = useState(false)
   const saveStatus = useSaveStatus()
   const color = hexColor.test(brandColor) ? brandColor : defaultBrandColor
   const logoOk = isLogoOk(logoUrl)
   const designChanged = !sameEstimateDesign(design, companyDesign)
-  const messagesChanged = JSON.stringify(messages) !== JSON.stringify(messageForm(tenant))
+  const { documentFooter: _footer, ...emailMessages } = messages
+  const { documentFooter: _savedFooter, ...savedEmailMessages } = messageForm(tenant)
+  const messagesChanged = JSON.stringify(emailMessages) !== JSON.stringify(savedEmailMessages)
+  const footerChanged = messages.documentFooter !== (tenant.documentFooter ?? '')
+  const invoiceDesignChanged =
+    invoiceDesign !== (tenant.defaultInvoiceDesign ?? defaultInvoiceDesign)
   const dirty =
     tab === 'documentos'
-      ? designChanged || messagesChanged
-      : brandColor !== (tenant.brandColor ?? '') || logoUrl !== (tenant.logoUrl ?? '')
+      ? designChanged || invoiceDesignChanged || footerChanged
+      : tab === 'correos'
+        ? messagesChanged
+        : brandColor !== (tenant.brandColor ?? '') || logoUrl !== (tenant.logoUrl ?? '')
   const valid =
     tab === 'documentos'
-      ? messageFormValid(messages)
-      : (brandColor === '' || hexColor.test(brandColor)) && logoUrl.length <= 500 && logoOk
+      ? messages.documentFooter.length <= 500
+      : tab === 'correos'
+        ? messageFormValid({ ...messages, documentFooter: '' })
+        : (brandColor === '' || hexColor.test(brandColor)) && logoUrl.length <= 500 && logoOk
 
   const setMessage = (key: keyof MessageForm) => (value: string) => {
     setMessages((current) => ({ ...current, [key]: value }))
@@ -68,16 +80,19 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
     patchTenant(
       tab === 'documentos'
         ? {
-            ...(messagesChanged ? messagePatch(messages) : {}),
+            ...(footerChanged ? { documentFooter: messages.documentFooter.trim() } : {}),
             ...(designChanged ? { defaultEstimateDesign: design } : {}),
+            ...(invoiceDesignChanged ? { defaultInvoiceDesign: invoiceDesign } : {}),
           }
-        : { brandColor, logoUrl: logoUrl.trim() },
+        : tab === 'correos'
+          ? (({ documentFooter: _footer, ...email }) => email)(messagePatch(messages))
+          : { brandColor, logoUrl: logoUrl.trim() },
     )
     setSaved(true)
   }
 
   return (
-    <div className={tab === 'documentos' ? 'max-w-6xl space-y-6' : 'max-w-4xl space-y-6'}>
+    <div className={tab === 'documentos' ? 'w-full space-y-6' : 'max-w-4xl space-y-6'}>
       <WorkspacePageHeading title="Personalizar" />
 
       <WorkspacePageTabs>
@@ -87,13 +102,14 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
             setSaved(false)
             void navigate({
               to: '/personalizar',
-              search: { tab: key as 'marca' | 'documentos' | 'listas' },
+              search: { tab: key as 'marca' | 'documentos' | 'correos' | 'listas' },
             })
           }}
         >
           <TabsList aria-label="Secciones de personalización">
             <TabsTrigger id="marca">Identidad</TabsTrigger>
-            <TabsTrigger id="documentos">Documentos y correos</TabsTrigger>
+            <TabsTrigger id="documentos">Documentos</TabsTrigger>
+            <TabsTrigger id="correos">Correos</TabsTrigger>
             <TabsTrigger id="listas">Listas</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -251,37 +267,24 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
       ) : null}
 
       {tab === 'documentos' ? (
-        <>
-          <EstimateDesignExample
-            design={design}
-            tenant={{ ...tenant, documentFooter: messages.documentFooter.trim() }}
-            controls={
-              <Section
-                title="Diseño de presupuestos"
-                description="El diseño se copia al crear un presupuesto. No modifica los ya publicados."
-              >
-                <div className="min-w-0 space-y-5 sm:col-span-2">
-                  <EstimateDesignFields
-                    value={design}
-                    onChange={(next) => {
-                      setDesign(next)
-                      setSaved(false)
-                    }}
-                  />
-                  <TextareaField
-                    label="Pie de página de los documentos"
-                    maxLength={500}
-                    placeholder="Añade tus datos registrales o una nota para el cliente."
-                    helper="También se usa en facturas. En el presupuesto se ve al final si está activado."
-                    value={messages.documentFooter}
-                    onChange={setMessage('documentFooter')}
-                  />
-                </div>
-              </Section>
-            }
-          />
-          <MessageFields form={messages} set={setMessage} companyName={tenant.name} />
-        </>
+        <DocumentDesignWorkspace
+          tenant={tenant}
+          design={design}
+          invoiceDesign={invoiceDesign}
+          footer={messages.documentFooter}
+          onFooterChange={setMessage('documentFooter')}
+          onDesignChange={(next) => {
+            setDesign(next)
+            setSaved(false)
+          }}
+          onInvoiceDesignChange={(next) => {
+            setInvoiceDesign(next)
+            setSaved(false)
+          }}
+        />
+      ) : null}
+      {tab === 'correos' ? (
+        <MessageFields form={messages} set={setMessage} companyName={tenant.name} />
       ) : null}
       {tab === 'listas' ? (
         <div className="space-y-4">

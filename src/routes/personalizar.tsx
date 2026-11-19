@@ -7,9 +7,11 @@ export const Route = createFileRoute('/personalizar')({
   beforeLoad: requirePermission('settings:write'),
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab?: 'marca' | 'documentos' | 'listas' } => {
+  ): { tab?: 'marca' | 'documentos' | 'correos' | 'listas' } => {
     const tab = search.tab
-    return tab === 'marca' || tab === 'documentos' || tab === 'listas' ? { tab } : {}
+    return tab === 'marca' || tab === 'documentos' || tab === 'correos' || tab === 'listas'
+      ? { tab }
+      : {}
   },
   component: PersonalizationPage,
 })

@@ -1,6 +1,7 @@
 import { estimateAgreementSchema } from '../domain/estimate-agreement'
 import { estimateDesignSchema } from '../domain/estimate-design'
 import { estimateSectionsSchema } from '../domain/estimate-document'
+import { invoiceDesignSchema } from '../domain/invoice-design'
 import type {
   CatalogItem,
   Client,
@@ -39,6 +40,7 @@ function present<K extends string>(key: K, value: unknown): { [P in K]?: string 
 
 export function tenantFromRow(row: Row): Tenant {
   const design = estimateDesignSchema.safeParse(row.default_estimate_design)
+  const invoiceDesign = invoiceDesignSchema.safeParse(row.default_invoice_design)
   return {
     id: str(row.id),
     name: str(row.name),
@@ -63,6 +65,7 @@ export function tenantFromRow(row: Row): Tenant {
     ...present('estimateEmailIntro', row.estimate_email_intro),
     ...present('documentFooter', row.document_footer),
     ...(design.success ? { defaultEstimateDesign: design.data } : {}),
+    ...(invoiceDesign.success ? { defaultInvoiceDesign: invoiceDesign.data } : {}),
     autoReminders: row.auto_reminders === true,
   }
 }
@@ -90,6 +93,7 @@ export function tenantToRow(tenant: Tenant): Row {
     estimate_email_intro: tenant.estimateEmailIntro || null,
     document_footer: tenant.documentFooter || null,
     default_estimate_design: tenant.defaultEstimateDesign ?? null,
+    default_invoice_design: tenant.defaultInvoiceDesign ?? null,
     auto_reminders: tenant.autoReminders === true,
     default_vat_rate: tenant.defaultVatRate,
     default_deposit_percent: tenant.defaultDepositPercent,
@@ -293,11 +297,13 @@ export function invoiceFromRow(row: Row): Invoice {
   const snapshot = row.document_snapshot as Record<string, unknown> | null
   const issuer = snapshot?.issuer as Record<string, unknown> | undefined
   const client = snapshot?.client as Record<string, unknown> | undefined
+  const design = invoiceDesignSchema.safeParse(snapshot?.design)
   const documentSnapshot: InvoiceSnapshot | undefined =
     snapshot && issuer && client
       ? {
           source: snapshot.source === 'issuance' ? 'issuance' : 'migration',
           capturedAt: str(snapshot.capturedAt),
+          ...(design.success ? { design: design.data } : {}),
           issuer: {
             name: str(issuer.name),
             legalName: str(issuer.legalName),

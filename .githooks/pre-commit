@@ -1,8 +1,7 @@
 #!/bin/sh
 # Fix staged files without accidentally including unstaged changes.
-if ! command -v pnpm >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then
-  echo 'pre-commit: node and pnpm must be on PATH. Install dependencies and check your Git GUI PATH.' >&2
+if ! command -v node >/dev/null 2>&1; then
+  echo 'pre-commit: node must be on PATH. Install dependencies and check your Git GUI PATH.' >&2
   exit 1
 fi
-node .githooks/pre-commit.mjs || exit $?
-exec pnpm quality:quick
+exec node .githooks/pre-commit.mjs

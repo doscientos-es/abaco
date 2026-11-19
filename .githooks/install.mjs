@@ -14,8 +14,7 @@ try {
     )
   }
   const { scripts = {} } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-  if (!scripts['quality:quick'] || !scripts.quality)
-    throw new Error('Define quality:quick and quality before installing hooks.')
+  if (!scripts.quality) throw new Error('Define quality before installing hooks.')
 
   const current = git('config', '--get', 'core.hooksPath')
   if (current.status !== 0 && current.status !== 1)
@@ -38,7 +37,7 @@ try {
     throw new Error('Cannot configure local Git hooks.')
   }
   process.stdout.write(
-    'Pre-commit installed: fix staged files and run pnpm quality:quick. Pre-push installed: pnpm quality.\n',
+    'Pre-commit installed: fix and lint staged files. Pre-push installed: pnpm quality.\n',
   )
 } catch (error) {
   process.stderr.write(

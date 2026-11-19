@@ -1,5 +1,6 @@
 import type { CSSProperties, Ref } from 'react'
 
+import { defaultInvoiceDesign, type InvoiceDesign } from '@/shared/domain/invoice-design'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Invoice, Tenant } from '@/shared/domain/types'
 
@@ -18,12 +19,14 @@ export function InvoiceDocument({
   tenant,
   estimateNumber,
   documentRef,
+  previewDesign,
 }: {
   invoice: Invoice
   client: Client | undefined
   tenant: Tenant
   estimateNumber?: string | undefined
   documentRef?: Ref<HTMLElement>
+  previewDesign?: InvoiceDesign
 }) {
   const issuer = invoice.snapshot?.issuer ?? tenant
   const recipient = invoice.snapshot?.client ?? client
@@ -45,6 +48,7 @@ export function InvoiceDocument({
     <article
       ref={documentRef}
       aria-label={`Factura ${invoice.number}`}
+      data-layout={previewDesign ?? invoice.snapshot?.design ?? defaultInvoiceDesign}
       className="invoice-document invoice-sheet"
       style={style}
     >

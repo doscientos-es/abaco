@@ -17,6 +17,22 @@
   grid-row: 1;
 }
 
+.estimate-document[data-layout='minimal'] .estimate-document__compact-header {
+  border-bottom: 0;
+  border-left: 2px solid #a3a3a3;
+  padding-left: 1rem;
+}
+
+.estimate-document[data-layout='editorial'] .estimate-document__compact-header {
+  border-bottom: 3px solid currentColor;
+  padding-bottom: 1.5rem;
+}
+
+.estimate-document[data-layout='editorial'] .estimate-document__heading h1 {
+  font-family: Georgia, serif;
+  font-size: 2rem;
+}
+
 .estimate-document--paged {
   page: estimate;
   width: 210mm;
@@ -154,7 +170,7 @@
   }
 
   .estimate-document:not(.estimate-document--paged) .estimate-document__index,
-  .estimate-document:not(.estimate-document--paged, [data-layout='compact'])
+  .estimate-document:not(.estimate-document--paged):is([data-layout='proposal'])
     .estimate-document__content {
     break-before: page;
   }

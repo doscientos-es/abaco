@@ -262,6 +262,7 @@ describe('InvoiceDocument', () => {
       snapshot: {
         source: 'issuance',
         capturedAt: '2026-10-13T09:00:00Z',
+        design: 'modern',
         issuer: {
           name: 'Empresa original',
           legalName: '',
@@ -291,6 +292,10 @@ describe('InvoiceDocument', () => {
     )
 
     expect(html).toContain('Empresa original')
+    expect(html).toContain('data-layout="modern"')
+    expect(render({ ...tenant, defaultInvoiceDesign: 'minimal' })).toContain(
+      'data-layout="classic"',
+    )
     expect(html).toContain('Cliente original')
     expect(html).toContain('P-2026-001')
     expect(html).not.toContain('Empresa modificada')

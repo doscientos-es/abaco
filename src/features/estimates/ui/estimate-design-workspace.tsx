@@ -23,7 +23,7 @@ export function EstimateDesignWorkspace({
 }) {
   const liveLabel = example ? 'en directo · Documento de ejemplo' : 'en directo'
   const preview = (
-    <DocumentPreview label={controls ? liveLabel : 'del presupuesto'}>
+    <DocumentPreview label={controls || example ? liveLabel : 'del presupuesto'}>
       <EstimateDocument
         estimate={estimate}
         client={client}
@@ -105,7 +105,7 @@ export function EstimateDesignExample({
   design,
   tenant,
 }: {
-  controls: ReactNode
+  controls?: ReactNode
   design: EstimateDesign
   tenant: Tenant
 }) {
