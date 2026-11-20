@@ -315,6 +315,28 @@ revoke all on function public.save_google_calendar_connection_token(uuid, uuid, 
   from public, anon, authenticated;
 grant execute on function public.save_google_calendar_connection_token(uuid, uuid, text) to service_role;
 
+create function public.save_google_calendar_calendar_id(
+  p_tenant_id uuid, p_user_id uuid, p_calendar_id text
+) returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role' or p_calendar_id is null
+    or char_length(p_calendar_id) not between 1 and 1024 or p_calendar_id = 'primary'
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id) then
+    raise exception 'No se puede guardar el calendario de Calendar' using errcode = '42501';
+  end if;
+  update public.google_calendar_connections set calendar_id = p_calendar_id,
+    updated_at = clock_timestamp()
+    where tenant_id = p_tenant_id and user_id = p_user_id and status = 'provisioning'
+      and refresh_token_ciphertext is not null
+      and (calendar_id is null or calendar_id = p_calendar_id);
+  return found;
+end;
+$$;
+revoke all on function public.save_google_calendar_calendar_id(uuid, uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.save_google_calendar_calendar_id(uuid, uuid, text)
+  to service_role;
+
 create function public.complete_google_calendar_connection(
   p_tenant_id uuid, p_user_id uuid, p_calendar_id text
 ) returns boolean language plpgsql security definer set search_path = '' as $$
@@ -327,7 +349,8 @@ begin
   update public.google_calendar_connections set status = 'connected', calendar_id = p_calendar_id,
     last_error = null, updated_at = clock_timestamp()
     where tenant_id = p_tenant_id and user_id = p_user_id
-      and status = 'provisioning' and refresh_token_ciphertext is not null;
+      and status = 'provisioning' and refresh_token_ciphertext is not null
+      and calendar_id = p_calendar_id;
   return found;
 end;
 $$;
@@ -341,7 +364,8 @@ create function public.rotate_google_calendar_refresh_token(
 begin
   if auth.role() is distinct from 'service_role' or p_next is null
     or char_length(p_next) > 4096
-    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id) then
+    or not exists (select 1 from public.memberships m
+      where m.tenant_id = p_tenant_id and m.user_id = p_user_id) then
     raise exception 'No se puede renovar la conexión de Calendar' using errcode = '42501';
   end if;
   update public.google_calendar_connections set refresh_token_ciphertext = p_next,

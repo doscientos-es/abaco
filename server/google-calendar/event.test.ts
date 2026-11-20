@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { projectVisitEvent } from './event'
+import { projectVisitEvent } from '../../supabase/functions/_shared/google-calendar/event.ts'
 
 const input = {
   tenantId: '5c000000-0000-4000-8000-000000000001',

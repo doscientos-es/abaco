@@ -8,6 +8,7 @@ const tabs = [
   'operativa',
   'cuenta',
   'interfaz',
+  'integraciones',
   'documentos',
   'listas',
   'equipo',
@@ -34,10 +35,16 @@ export const Route = createFileRoute('/ajustes')({
   // `pago` lo añade Redsys al volver: lleva directo a la pestaña del plan.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab?: (typeof tabs)[number]; pago?: string } => {
+  ): { tab?: (typeof tabs)[number]; pago?: string; calendar?: 'connected' | 'error' } => {
     const pago = typeof search.pago === 'string' ? search.pago : undefined
     const tab = tabs.find((t) => t === search.tab) ?? (pago ? 'plan' : undefined)
-    return { ...(tab ? { tab } : {}), ...(pago ? { pago } : {}) }
+    const calendar =
+      search.calendar === 'connected' || search.calendar === 'error' ? search.calendar : undefined
+    return {
+      ...(tab ? { tab } : {}),
+      ...(pago ? { pago } : {}),
+      ...(calendar ? { calendar } : {}),
+    }
   },
   component: SettingsRoute,
 })

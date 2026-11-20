@@ -57,3 +57,10 @@ verify_jwt = false
 [functions.contract-invoice-worker]
 verify_jwt = false
 
+# OAuth callback and the queue worker authenticate requests in their handlers.
+[functions.google-calendar-oauth]
+verify_jwt = false
+
+[functions.google-calendar-sync-worker]
+verify_jwt = false
+

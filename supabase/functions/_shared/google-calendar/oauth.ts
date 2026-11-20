@@ -226,3 +226,25 @@ export async function refreshCalendarAccess(
   }
   return { accessToken: result.access_token, expiresAt: now + result.expires_in * 1000 }
 }
+
+/** Revocation can affect other grants for the same Google account and client. */
+export async function revokeCalendarAccess(
+  actor: CalendarActor,
+  encryptedRefreshToken: string,
+  config: OAuthConfig,
+  fetcher: typeof fetch = fetch,
+) {
+  validateConfig(config)
+  const refreshToken = decryptRefreshToken(encryptedRefreshToken, config.encryptionKey, actor)
+  let response: Response
+  try {
+    response = await fetcher('https://oauth2.googleapis.com/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: refreshToken }),
+    })
+  } catch {
+    throw new CalendarAuthorizationError('unavailable')
+  }
+  if (!response.ok) throw new CalendarAuthorizationError('unavailable')
+}

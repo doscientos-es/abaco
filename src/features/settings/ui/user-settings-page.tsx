@@ -14,26 +14,35 @@ import { useState } from 'react'
 import { useCompanyActions, useSession } from '@/features/auth'
 import { InterfaceSettings } from '@/features/interface-preferences'
 
+import { GoogleCalendarSettings } from './google-calendar-settings'
+
 export function UserSettingsPage() {
   const { tab } = useSearch({ from: '/ajustes' })
   const navigate = useNavigate()
-  const isInterface = tab === 'interfaz'
+  const selectedTab = tab === 'interfaz' || tab === 'integraciones' ? tab : 'cuenta'
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">Ajustes</h1>
       <Tabs
-        selectedKey={isInterface ? 'interfaz' : 'cuenta'}
+        selectedKey={selectedTab}
         onSelectionChange={(key) => {
-          if (key === 'interfaz' || key === 'cuenta')
+          if (key === 'cuenta' || key === 'interfaz' || key === 'integraciones')
             void navigate({ to: '/ajustes', search: { tab: key } })
         }}
       >
         <TabsList aria-label="Secciones de ajustes">
           <TabsTrigger id="cuenta">Mi cuenta</TabsTrigger>
           <TabsTrigger id="interfaz">Interfaz</TabsTrigger>
+          <TabsTrigger id="integraciones">Integraciones</TabsTrigger>
         </TabsList>
       </Tabs>
-      {isInterface ? <InterfaceSettings /> : <AccountSettings />}
+      {selectedTab === 'integraciones' ? (
+        <GoogleCalendarSettings />
+      ) : selectedTab === 'interfaz' ? (
+        <InterfaceSettings />
+      ) : (
+        <AccountSettings />
+      )}
     </div>
   )
 }

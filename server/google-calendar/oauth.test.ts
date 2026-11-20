@@ -12,7 +12,7 @@ import {
   revokeCalendarAccess,
   type CalendarActor,
   type OAuthStore,
-} from './oauth'
+} from '../../supabase/functions/_shared/google-calendar/oauth.ts'
 
 const actor = {
   tenantId: '5c000000-0000-4000-8000-000000000001',

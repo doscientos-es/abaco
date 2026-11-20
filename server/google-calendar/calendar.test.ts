@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { GoogleCalendarClient } from './calendar'
-import { projectVisitEvent } from './event'
+import { GoogleCalendarClient } from '../../supabase/functions/_shared/google-calendar/calendar.ts'
+import { projectVisitEvent } from '../../supabase/functions/_shared/google-calendar/event.ts'
 
 const input = {
   tenantId: '5c000000-0000-4000-8000-000000000001',

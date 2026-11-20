@@ -34,6 +34,16 @@ describe('settings route search', () => {
     expect(validate({ tab: 'interfaz' })).toEqual({ tab: 'interfaz' })
   })
 
+  it('preserves the integration callback result on its settings tab', () => {
+    expect(validate({ tab: 'integraciones', calendar: 'connected' })).toEqual({
+      tab: 'integraciones',
+      calendar: 'connected',
+    })
+    expect(validate({ tab: 'integraciones', calendar: 'invalid' })).toEqual({
+      tab: 'integraciones',
+    })
+  })
+
   it('rejects unknown tabs', () => {
     expect(validate({ tab: 'unknown' })).toEqual({})
   })

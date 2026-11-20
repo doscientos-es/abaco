@@ -5,7 +5,6 @@ import {
   beginCalendarAuthorization,
   completeCalendarAuthorization,
   refreshCalendarAccess,
-  type CalendarActor,
   type OAuthConfig,
 } from '../_shared/google-calendar/oauth.ts'
 import {
@@ -48,11 +47,8 @@ function decodeEncryptionKey(value: string): Buffer {
   }
 }
 
-function json(status: number, body: Record<string, unknown>, origin = '') {
-  return Response.json(body, {
-    status,
-    headers: { ...corsHeaders, 'Access-Control-Allow-Origin': origin },
-  })
+function json(status: number, body: Record<string, unknown>) {
+  return Response.json(body, { status, headers: corsHeaders })
 }
 
 function config(): OAuthConfig {
@@ -67,6 +63,7 @@ function adminClient(): SupabaseClient {
 }
 
 function callbackRedirect(result: 'connected' | 'error') {
+  if (!appOrigin) return new Response(null, { status: 503 })
   const url = new URL('/ajustes', `${appOrigin}/`)
   url.searchParams.set('tab', 'integraciones')
   url.searchParams.set('calendar', result)
@@ -77,8 +74,8 @@ async function handleCallback(request: Request) {
   const url = new URL(request.url)
   const state = url.searchParams.get('state') ?? ''
   const code = url.searchParams.get('code') ?? ''
-  if (url.searchParams.has('error') || !state || !code || !appOrigin)
-    return callbackRedirect('error')
+  if (!appOrigin) return new Response(null, { status: 503 })
+  if (url.searchParams.has('error') || !state || !code) return callbackRedirect('error')
   try {
     const admin = adminClient()
     const store = createCalendarOAuthStore(admin, appOrigin ?? '')
@@ -106,6 +103,13 @@ async function handleCallback(request: Request) {
     const calendar = new GoogleCalendarClient(accessToken)
     // Reuse an existing secondary calendar after reauthorization; never create one on every login.
     const calendarId = connection.calendar_id ?? (await calendar.createSecondaryCalendar())
+    if (!connection.calendar_id) {
+      const { data: saved, error: saveError } = await admin.rpc(
+        'save_google_calendar_calendar_id',
+        { p_tenant_id: actor.tenantId, p_user_id: actor.userId, p_calendar_id: calendarId },
+      )
+      if (saveError || saved !== true) throw new Error('Calendar ID was not persisted')
+    }
     const { data: completed, error: completeError } = await admin.rpc(
       'complete_google_calendar_connection',
       { p_tenant_id: actor.tenantId, p_user_id: actor.userId, p_calendar_id: calendarId },
@@ -119,15 +123,15 @@ async function handleCallback(request: Request) {
 
 async function handleAction(request: Request) {
   const origin = request.headers.get('origin') ?? ''
-  if (!appOrigin || origin !== appOrigin) return json(403, { error: 'origin_not_allowed' }, origin)
+  if (!appOrigin || origin !== appOrigin) return json(403, { error: 'origin_not_allowed' })
   const authorization = request.headers.get('authorization') ?? ''
   const token = /^Bearer ([^\s]{1,8192})$/.exec(authorization)?.[1]
-  if (!token) return json(401, { error: 'unauthorized' }, origin)
+  if (!token) return json(401, { error: 'unauthorized' })
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return json(400, { error: 'invalid_request' }, origin)
+    return json(400, { error: 'invalid_request' })
   }
   const input = body && typeof body === 'object' ? (body as Record<string, unknown>) : {}
   if (
@@ -135,32 +139,31 @@ async function handleAction(request: Request) {
     !uuidPattern.test(input.tenantId) ||
     !['start', 'status', 'disconnect'].includes(String(input.action))
   )
-    return json(400, { error: 'invalid_request' }, origin)
+    return json(400, { error: 'invalid_request' })
   try {
     const admin = adminClient()
     const { data: userData, error: userError } = await admin.auth.getUser(token)
     const userId = userData.user?.id
-    if (userError || !userId) return json(401, { error: 'unauthorized' }, origin)
+    if (userError || !userId) return json(401, { error: 'unauthorized' })
     const actor = { tenantId: input.tenantId, userId }
-    if (!(await authorizeCalendarActor(admin, actor)))
-      return json(403, { error: 'not_allowed' }, origin)
+    if (!(await authorizeCalendarActor(admin, actor))) return json(403, { error: 'not_allowed' })
 
     if (input.action === 'start') {
       const url = await beginCalendarAuthorization(
         actor,
         config(),
-        createCalendarOAuthStore(admin, appOrigin ?? ''),
+        createCalendarOAuthStore(admin, appOrigin),
         (pendingActor) => authorizeCalendarActor(admin, pendingActor),
       )
-      return json(200, { authorizationUrl: url }, origin)
+      return json(200, { authorizationUrl: url })
     }
     if (input.action === 'disconnect') {
       const { error } = await admin.rpc('disconnect_google_calendar_connection', {
         p_tenant_id: actor.tenantId,
         p_user_id: actor.userId,
       })
-      if (error) return json(503, { error: 'disconnect_failed' }, origin)
-      return json(200, { disconnected: true }, origin)
+      if (error) return json(503, { error: 'disconnect_failed' })
+      return json(200, { disconnected: true })
     }
     const { data, error } = await admin
       .from('google_calendar_connections')
@@ -168,18 +171,21 @@ async function handleAction(request: Request) {
       .eq('tenant_id', actor.tenantId)
       .eq('user_id', actor.userId)
       .maybeSingle()
-    if (error) return json(503, { error: 'status_unavailable' }, origin)
-    return json(
-      200,
-      {
-        status: data?.status ?? 'disconnected',
-        lastSyncedAt: data?.last_synced_at ?? null,
-        lastError: data?.last_error ?? null,
-      },
-      origin,
-    )
+    if (error) return json(503, { error: 'status_unavailable' })
+    const { count, error: jobsError } = await admin
+      .from('google_calendar_sync_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', actor.tenantId)
+      .eq('user_id', actor.userId)
+    if (jobsError) return json(503, { error: 'status_unavailable' })
+    return json(200, {
+      status: data?.status ?? 'disconnected',
+      lastSyncedAt: data?.last_synced_at ?? null,
+      lastError: data?.last_error ?? null,
+      pendingJobs: count ?? 0,
+    })
   } catch {
-    return json(503, { error: 'calendar_unavailable' }, origin)
+    return json(503, { error: 'calendar_unavailable' })
   }
 }
 

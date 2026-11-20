@@ -40,6 +40,9 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/features/interface-preferences', () => ({
   InterfaceSettings: () => <p>Preferencias de navegación</p>,
 }))
+vi.mock('./google-calendar-settings', () => ({
+  GoogleCalendarSettings: () => <p>Cuenta de Google Calendar</p>,
+}))
 
 describe('worker settings', () => {
   let values: unknown[]
@@ -88,6 +91,14 @@ describe('worker settings', () => {
     search.mockReturnValue({ tab: 'interfaz' })
     const html = render()
     expect(html).toContain('Preferencias de navegación')
+    expect(html).not.toContain('Cuenta y seguridad')
+  })
+
+  it('opens integrations without rendering account settings', () => {
+    search.mockReturnValue({ tab: 'integraciones' })
+    const html = render()
+    expect(html).toContain('Integraciones')
+    expect(html).toContain('Cuenta de Google Calendar')
     expect(html).not.toContain('Cuenta y seguridad')
   })
 
