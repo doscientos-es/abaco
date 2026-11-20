@@ -7,6 +7,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, EstimateLine } from '@/shared/domain/types'
 
+const mocks = vi.hoisted(() => ({
+  unitOptions: [] as Array<{ value: string; label: string }>,
+  setUnit: null as null | ((value: string) => void),
+}))
+
 vi.mock('@doscientos/ui', () => ({
   AutocompleteCombobox: () => null,
   Button: ({
@@ -28,6 +33,33 @@ vi.mock('@doscientos/ui', () => ({
   DropdownMenuTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   HighlightMatch: () => null,
   Input: (props: ComponentProps<'input'>) => <input {...props} />,
+}))
+vi.mock('@/shared/ui/form', () => ({
+  SelectField: ({
+    label,
+    value,
+    options,
+    onChange,
+  }: {
+    label: string
+    value: string
+    options: Array<{ value: string; label: string }>
+    onChange: (value: string) => void
+  }) => {
+    if (label === 'Unidad') {
+      mocks.unitOptions = options
+      mocks.setUnit = onChange
+    }
+    return (
+      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    )
+  },
 }))
 vi.mock('@phosphor-icons/react', () => {
   const Icon = () => <svg aria-hidden="true" />
@@ -61,6 +93,7 @@ describe('LinesEditor', () => {
     expect(markup).toContain('aria-label="Descripción"')
     expect(markup).toContain('aria-label="Cantidad"')
     expect(markup).toContain('aria-label="Unidad"')
+    expect(markup).toContain('<select aria-label="Unidad"')
     expect(markup).toContain('aria-label="Precio unitario"')
     expect(markup).toContain('aria-label="Descuento de la línea (%)"')
     expect(markup).toContain('aria-label="Más opciones de Pintura de paredes"')
@@ -68,6 +101,23 @@ describe('LinesEditor', () => {
     expect(markup).toContain('Eliminar partida')
     expect(markup).toContain('<svg')
     expect(markup).toContain('aria-hidden="true"')
+  })
+
+  it('selects a standard unit and retains existing custom units', () => {
+    const onChange = vi.fn()
+    const customLine = { ...line, unit: 'caja' }
+    renderToStaticMarkup(
+      <LinesEditor
+        estimate={{ ...estimate, lines: [customLine] }}
+        catalog={[]}
+        onChange={onChange}
+      />,
+    )
+
+    expect(mocks.unitOptions).toContainEqual({ value: 'h', label: 'h' })
+    expect(mocks.unitOptions[0]).toEqual({ value: 'caja', label: 'caja' })
+    mocks.setUnit?.('h')
+    expect(onChange).toHaveBeenCalledWith([{ ...customLine, unit: 'h' }])
   })
 
   it('uses a two-column mobile layout and a proportional single row in wide containers', () => {

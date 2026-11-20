@@ -17,6 +17,7 @@ import { formLimits } from '@/shared/domain/form-limits'
 import { formatEuros, lineTotal } from '@/shared/domain/money'
 import type { CatalogItem, Estimate, EstimateLine } from '@/shared/domain/types'
 import { newId } from '@/shared/store/store'
+import { SelectField } from '@/shared/ui/form'
 
 import { usePatchEstimate } from './estimate-draft-context'
 import { PriceInput } from './price-input'
@@ -25,6 +26,32 @@ import './lines-editor.css'
 
 const FREE_KEY = '__free__'
 const gridCols = 'estimate-line__grid items-end gap-2'
+const unitOptions = [
+  'ud',
+  'h',
+  'min',
+  'día',
+  'km',
+  'm',
+  'm²',
+  'm³',
+  'kg',
+  'g',
+  'L',
+  't',
+  'mes',
+  'viaje',
+  'servicio',
+  'visita',
+  'par',
+  '%',
+].map((value) => ({ value, label: value }))
+
+function lineUnitOptions(currentUnit: string) {
+  return currentUnit && !unitOptions.some(({ value }) => value === currentUnit)
+    ? [{ value: currentUnit, label: currentUnit }, ...unitOptions]
+    : unitOptions
+}
 
 /** Visible field label when there is not enough room for the column headers. */
 function MobileLabel({ children }: { children: string }) {
@@ -194,13 +221,14 @@ export function LinesEditor({
                 </div>
                 <div className="min-w-0">
                   <MobileLabel>Unidad</MobileLabel>
-                  <Input
-                    aria-label="Unidad"
-                    maxLength={formLimits.unit}
-                    placeholder="ud, m², h…"
-                    className="h-8 min-w-0 px-2"
+                  <SelectField
+                    label="Unidad"
+                    hideLabel
                     value={line.unit}
-                    onChange={(event) => updateLine(line.id, { unit: event.target.value })}
+                    options={lineUnitOptions(line.unit)}
+                    searchable={false}
+                    className="min-w-0"
+                    onChange={(unit) => updateLine(line.id, { unit })}
                   />
                 </div>
                 <div className="min-w-0">
