@@ -2,12 +2,30 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-19",
+      "date": "2026-11-20",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Update authorization logic for calendar sync jobs",
+            "Integrate Google Calendar OAuth and event management",
+            "Add role change trigger for Google Calendar visits",
+            "Update Google Calendar connection schema and constraints",
+            "Add integration for Google Calendar sync functionality",
+            "Implement writeCsv function for CSV generation",
+            "Add support for reading CSV and Excel files",
+            "Add monthly chart formats and update related components",
+            "Add estimate contract conversion and related UI components",
+            "Add artistic layout for estimates and update styles feat(invoices): introduce artistic design for invoices with new styles feat(personalization): add artistic invoice design option in settings feat(dashboard): implement dashboard layout management and resizing",
+            "Add ledger summary features and UI components",
+            "Enhance WorkTeamsSection with search and archived teams",
+            "Enhance column customization UI and add tests",
+            "Add pending team activations component and tests",
+            "Add pending team activations feature and related queries",
+            "Add staff module support and update related queries",
+            "Enhance month view to render multiple events correctly",
+            "Implement contract day replan functionality in calendar",
             "Add replan functionality for contract day moves",
             "Add calendar color selection for team members",
             "Enhance visit replan functionality and error handling",
@@ -86,6 +104,8 @@
         {
           "title": "Correcciones",
           "items": [
+            "Update pre-push hook to use pnpm typecheck instead of quality",
+            "Order stylesheet imports",
             "Adjust search width for better layout consistency",
             "Update git hooks messages to clarify pre-push behavior and local checks",
             "Aislar pruebas del hook de Git"
@@ -93,6 +113,146 @@
         }
       ],
       "changes": [
+        {
+          "sha": "35427d1e0a53abe788b9aa717a722c75a96566c9",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Update authorization logic for calendar sync jobs"
+        },
+        {
+          "sha": "1ac93ef425251eb017b77d5caaf32538805d0f87",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Integrate Google Calendar OAuth and event management"
+        },
+        {
+          "sha": "e65a589a4a2ea0bf137ee0e5541025af69b94627",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add role change trigger for Google Calendar visits"
+        },
+        {
+          "sha": "a7bb0f4e9ca32e49331b7603c8ee8b5b58950345",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Update Google Calendar connection schema and constraints"
+        },
+        {
+          "sha": "7d2b90081f473f51660da0296492d983a37b3ee2",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add integration for Google Calendar sync functionality"
+        },
+        {
+          "sha": "b690e19eca254c4e17d6336697927ca0a7b255db",
+          "type": "feat",
+          "scope": "csv",
+          "breaking": false,
+          "description": "Implement writeCsv function for CSV generation"
+        },
+        {
+          "sha": "88b8c8c22aa0d3f357a103e95fce62dcb628d853",
+          "type": "feat",
+          "scope": "read-spreadsheet",
+          "breaking": false,
+          "description": "Add support for reading CSV and Excel files"
+        },
+        {
+          "sha": "8d76da3b5bcf5847206e099a7c88414e2b7d453b",
+          "type": "feat",
+          "scope": "dashboard",
+          "breaking": false,
+          "description": "Add monthly chart formats and update related components"
+        },
+        {
+          "sha": "e47e829b7a279774c300173db19512f39ff117ce",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add estimate contract conversion and related UI components"
+        },
+        {
+          "sha": "04f16a2d9a95af77617ff03d55679ed34dbe1dae",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add artistic layout for estimates and update styles feat(invoices): introduce artistic design for invoices with new styles feat(personalization): add artistic invoice design option in settings feat(dashboard): implement dashboard layout management and resizing"
+        },
+        {
+          "sha": "ae57e0eeac5a2f0bc8652684178a43f67a7c353e",
+          "type": "feat",
+          "scope": "ledger",
+          "breaking": false,
+          "description": "Add ledger summary features and UI components"
+        },
+        {
+          "sha": "afb730cb2a890af52e40ef224cab83542dcbfe4a",
+          "type": "feat",
+          "scope": "work-teams",
+          "breaking": false,
+          "description": "Enhance WorkTeamsSection with search and archived teams"
+        },
+        {
+          "sha": "dd0c01e4710bf2ad11557d658bc9fda270e864f6",
+          "type": "feat",
+          "scope": "table-columns",
+          "breaking": false,
+          "description": "Enhance column customization UI and add tests"
+        },
+        {
+          "sha": "93f81228d109c75d4b57b04609420b934e77dd15",
+          "type": "fix",
+          "scope": "githooks",
+          "breaking": false,
+          "description": "Update pre-push hook to use pnpm typecheck instead of quality"
+        },
+        {
+          "sha": "14aefd7544b8726878926c477f6741ce1890bc45",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Add pending team activations component and tests"
+        },
+        {
+          "sha": "5acaee31a64027853af69dc55b6e6a346765e453",
+          "type": "feat",
+          "scope": "team",
+          "breaking": false,
+          "description": "Add pending team activations feature and related queries"
+        },
+        {
+          "sha": "78b1b21f60e67145561b7afa9f32e3bb3f641d9e",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add staff module support and update related queries"
+        },
+        {
+          "sha": "99e68abb8ef00fda51f6fd512e762d7d91a5fd78",
+          "type": "feat",
+          "scope": "calendar",
+          "breaking": false,
+          "description": "Enhance month view to render multiple events correctly"
+        },
+        {
+          "sha": "b0716a36e032cb54560b504d3eeef14e5e18e295",
+          "type": "fix",
+          "scope": "styles",
+          "breaking": false,
+          "description": "Order stylesheet imports"
+        },
+        {
+          "sha": "1e22d88d93145f9b2aa8f5f9eeb37bbfd109f48f",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Implement contract day replan functionality in calendar"
+        },
         {
           "sha": "5350da98a2904e7d8fada8de248beb1206f7c35f",
           "type": "feat",

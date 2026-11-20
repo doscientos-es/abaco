@@ -2,10 +2,28 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-19 — Sin publicar
+## 2026-11-20 — Sin publicar
 
 ### Nuevas funciones
 
+- Update authorization logic for calendar sync jobs
+- Integrate Google Calendar OAuth and event management
+- Add role change trigger for Google Calendar visits
+- Update Google Calendar connection schema and constraints
+- Add integration for Google Calendar sync functionality
+- Implement writeCsv function for CSV generation
+- Add support for reading CSV and Excel files
+- Add monthly chart formats and update related components
+- Add estimate contract conversion and related UI components
+- Add artistic layout for estimates and update styles feat(invoices): introduce artistic design for invoices with new styles feat(personalization): add artistic invoice design option in settings feat(dashboard): implement dashboard layout management and resizing
+- Add ledger summary features and UI components
+- Enhance WorkTeamsSection with search and archived teams
+- Enhance column customization UI and add tests
+- Add pending team activations component and tests
+- Add pending team activations feature and related queries
+- Add staff module support and update related queries
+- Enhance month view to render multiple events correctly
+- Implement contract day replan functionality in calendar
 - Add replan functionality for contract day moves
 - Add calendar color selection for team members
 - Enhance visit replan functionality and error handling
@@ -82,6 +100,8 @@
 
 ### Correcciones
 
+- Update pre-push hook to use pnpm typecheck instead of quality
+- Order stylesheet imports
 - Adjust search width for better layout consistency
 - Update git hooks messages to clarify pre-push behavior and local checks
 - Aislar pruebas del hook de Git
