@@ -6,11 +6,13 @@ revoke all on schema app_private from public, anon, authenticated;
 create table public.google_calendar_connections (
   tenant_id uuid not null,
   user_id uuid not null,
-  status text not null default 'connected'
+  status text not null default 'provisioning'
     check (status in ('connected', 'disconnected', 'reauthorize', 'provisioning')),
   calendar_id text,
   refresh_token_ciphertext text,
   last_synced_at timestamptz,
+  sync_lease_token uuid,
+  sync_lease_until timestamptz,
   last_error text check (last_error is null or last_error in (
     'google_unavailable', 'calendar_conflict', 'invalid_visit', 'reauthorize'
   )),
@@ -47,15 +49,16 @@ create table public.google_calendar_sync_events (
   tenant_id uuid not null,
   user_id uuid not null,
   visit_id uuid not null,
-  calendar_id text not null check (calendar_id <> 'primary'),
+  calendar_id text not null check (char_length(calendar_id) between 1 and 1024
+    and calendar_id <> 'primary'),
   event_id text not null check (event_id ~ '^[0-9a-v]{5,1024}$'),
   ownership_marker text not null check (ownership_marker ~ '^[0-9a-f]{64}$'),
   created_at timestamptz not null default clock_timestamp(),
   updated_at timestamptz not null default clock_timestamp(),
   primary key (tenant_id, user_id, visit_id),
   unique (calendar_id, event_id),
-  foreign key (tenant_id, user_id) references public.memberships(tenant_id, user_id)
-    on delete cascade
+  foreign key (tenant_id, user_id)
+    references public.google_calendar_connections(tenant_id, user_id) on delete cascade
 );
 
 create table public.google_calendar_sync_jobs (
@@ -71,13 +74,13 @@ create table public.google_calendar_sync_jobs (
     'google_unavailable', 'calendar_conflict', 'invalid_visit', 'reauthorize'
   )),
   created_at timestamptz not null default clock_timestamp(),
+  generation bigint not null default 0 check (generation >= 0),
   unique (tenant_id, user_id, visit_id),
-  foreign key (tenant_id, user_id) references public.memberships(tenant_id, user_id)
-    on delete cascade
+  foreign key (tenant_id, user_id)
+    references public.google_calendar_connections(tenant_id, user_id) on delete cascade
 );
 create index google_calendar_sync_jobs_claim_idx
-  on public.google_calendar_sync_jobs(available_at, created_at)
-  where lease_until is null;
+  on public.google_calendar_sync_jobs(available_at, lease_until, created_at);
 
 alter table public.google_calendar_connections enable row level security;
 alter table public.google_calendar_oauth_states enable row level security;
@@ -101,8 +104,16 @@ begin
       where c.tenant_id = p_tenant_id and c.user_id = p_user_id
         and c.status = 'connected'
     )
+      and (
+        exists (select 1 from public.memberships m
+          where m.tenant_id = p_tenant_id and m.user_id = p_user_id
+            and m.role in ('user', 'technician'))
+        or exists (select 1 from public.google_calendar_sync_events e
+          where e.tenant_id = p_tenant_id and e.user_id = p_user_id
+            and e.visit_id = p_visit_id)
+      )
     on conflict (tenant_id, user_id, visit_id) do update
-      set available_at = clock_timestamp(), lease_token = null, lease_until = null,
+      set available_at = clock_timestamp(), generation = google_calendar_sync_jobs.generation + 1,
         last_error = null;
 end;
 $$;
@@ -188,11 +199,11 @@ begin
   for visit in select v.id from public.service_visits v
     where v.tenant_id = new.tenant_id
       and v.status in ('scheduled', 'in_progress')
-      and (v.assigned_user_id = new.user_id or exists (
+      and (v.assigned_user_id = new.user_id or (v.assigned_user_id is null and exists (
         select 1 from public.work_team_members m
         where m.tenant_id = v.tenant_id and m.team_id = v.work_team_id
           and m.user_id = new.user_id
-      ))
+      )))
   loop
     perform app_private.enqueue_google_calendar_visit(new.tenant_id, new.user_id, visit.id);
   end loop;
@@ -223,13 +234,13 @@ begin
     select v.tenant_id, auth.uid(), v.id
     from public.service_visits v
     where v.tenant_id = p_tenant_id and v.status in ('scheduled', 'in_progress')
-      and (v.assigned_user_id = auth.uid() or exists (
+      and (v.assigned_user_id = auth.uid() or (v.assigned_user_id is null and exists (
         select 1 from public.work_team_members m
         where m.tenant_id = v.tenant_id and m.team_id = v.work_team_id
           and m.user_id = auth.uid()
-      ))
+      )))
     on conflict (tenant_id, user_id, visit_id) do update
-      set available_at = clock_timestamp(), lease_token = null, lease_until = null,
+      set available_at = clock_timestamp(), generation = public.google_calendar_sync_jobs.generation + 1,
         last_error = null;
   get diagnostics queued = row_count;
   return queued;
