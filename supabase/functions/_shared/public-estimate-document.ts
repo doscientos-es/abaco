@@ -23,6 +23,8 @@ export function publicEstimateDocument(
     created_at: published.created_at,
     responded_at: current.responded_at,
     responded_by: current.responded_by,
+    responded_signature:
+      current.status === 'accepted' ? (current.responded_signature ?? null) : null,
     estimate_lines: published.estimate_lines,
     estimate_milestones: published.estimate_milestones,
   }

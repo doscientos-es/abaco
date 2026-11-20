@@ -27,6 +27,12 @@ describe('public estimate document projection', () => {
       title: 'Modificado',
       status: 'accepted',
       responded_by: 'Cliente',
+      responded_signature: [
+        [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+      ],
       document_design: { layout: 'proposal' },
       document_sections: [],
     })
@@ -34,6 +40,12 @@ describe('public estimate document projection', () => {
       title: 'Original',
       status: 'accepted',
       responded_by: 'Cliente',
+      responded_signature: [
+        [
+          { x: 0.1, y: 0.2 },
+          { x: 0.9, y: 0.8 },
+        ],
+      ],
       document_format: 'sections',
       document_design: published.document_design,
       document_sections: sections,
@@ -49,6 +61,21 @@ describe('public estimate document projection', () => {
       document_design: null,
       document_sections: [],
     })
+  })
+
+  it('exposes the captured signature only after acceptance', () => {
+    const signature = [
+      [
+        { x: 0.1, y: 0.2 },
+        { x: 0.9, y: 0.8 },
+      ],
+    ]
+    expect(
+      publicEstimateDocument({}, { status: 'sent', responded_signature: signature }),
+    ).toHaveProperty('responded_signature', null)
+    expect(
+      publicEstimateDocument({}, { status: 'accepted', responded_signature: signature }),
+    ).toHaveProperty('responded_signature', signature)
   })
 
   it('never exposes tokens or new internal columns by spreading rows', () => {

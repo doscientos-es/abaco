@@ -1,4 +1,4 @@
-import type { Client, Estimate, Tenant } from '@/shared/domain/types'
+import type { Client, Estimate, EstimateSignature, Tenant } from '@/shared/domain/types'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import {
   clientFromRow,
@@ -31,11 +31,17 @@ export async function callPublicEstimate(
   token: string,
   action: PublicAction,
   name?: string,
+  signature?: EstimateSignature,
 ): Promise<PublicResult> {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<Payload>(
     'public-estimate',
     {
-      body: { token, action, ...(name ? { name } : {}) },
+      body: {
+        token,
+        action,
+        ...(name ? { name } : {}),
+        ...(signature ? { signature } : {}),
+      },
     },
   )
   if (error || !data) {

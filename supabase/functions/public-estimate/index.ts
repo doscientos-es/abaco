@@ -30,7 +30,7 @@ function reply(status: number, body: Record<string, unknown>) {
 const tenantColumns =
   'id, name, legal_name, tax_id, email, phone, address, postal_code, city, website, brand_color, logo_url, document_footer'
 const estimateColumns = `id, tenant_id, number, client_id, title, status, valid_until,
-  responded_at, responded_by, viewed_at`
+  responded_at, responded_by, responded_signature, viewed_at`
 
 const escapeHtml = (value: string) =>
   value.replace(
@@ -108,6 +108,7 @@ Deno.serve(async (request) => {
     return reply(400, { error: 'invalid_input' })
   }
   const name = typeof input?.name === 'string' ? input.name.trim() : ''
+  const signature = input?.signature
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
@@ -140,6 +141,8 @@ Deno.serve(async (request) => {
       return reply(409, { error: 'expired' })
     if (action === 'accept' && name.length < 2) return reply(422, { error: 'name_required' })
     if (name.length > 120) return reply(422, { error: 'name_too_long' })
+    if (action === 'accept' && !isValidSignature(signature))
+      return reply(422, { error: 'signature_invalid' })
 
     const respondedAt = new Date().toISOString()
     const { data: updated, error: updateError } = await admin
@@ -148,6 +151,7 @@ Deno.serve(async (request) => {
         status: action === 'accept' ? 'accepted' : 'rejected',
         responded_at: respondedAt,
         responded_by: name || null,
+        responded_signature: action === 'accept' ? signature : null,
       })
       .eq('id', estimate.id)
       .eq('status', 'sent')
@@ -213,6 +217,7 @@ Deno.serve(async (request) => {
     postal_code: publishedTenant.postal_code,
     city: publishedTenant.city,
     website: publishedTenant.website,
+    iban: estimate.status === 'accepted' ? publishedTenant.iban : null,
     brand_color: publishedTenant.brand_color,
     logo_url: publishedTenant.logo_url,
     document_footer: publishedTenant.document_footer,
@@ -230,3 +235,31 @@ Deno.serve(async (request) => {
     publicationSource: publication.source,
   })
 })
+
+function isValidSignature(value: unknown): value is Array<Array<{ x: number; y: number }>> {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 10) return false
+  let points = 0
+  let hasDrawnStroke = false
+  for (const stroke of value) {
+    if (!Array.isArray(stroke) || stroke.length < 1) return false
+    if (stroke.length > 1) hasDrawnStroke = true
+    points += stroke.length
+    if (points > 300) return false
+    for (const point of stroke) {
+      if (
+        !point ||
+        typeof point !== 'object' ||
+        typeof point.x !== 'number' ||
+        typeof point.y !== 'number' ||
+        !Number.isFinite(point.x) ||
+        !Number.isFinite(point.y) ||
+        point.x < 0 ||
+        point.x > 1 ||
+        point.y < 0 ||
+        point.y > 1
+      )
+        return false
+    }
+  }
+  return hasDrawnStroke
+}

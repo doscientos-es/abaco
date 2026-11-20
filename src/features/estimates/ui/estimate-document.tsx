@@ -3,6 +3,7 @@ import { useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 import { documentAccent } from '@/shared/domain/document-appearance'
 import { estimateTotals, milestoneAmounts } from '@/shared/domain/estimate'
 import { defaultEstimateDesign, type EstimateDesign } from '@/shared/domain/estimate-design'
+import { estimateSignaturePath } from '@/shared/domain/estimate-signature'
 import { formatEuros } from '@/shared/domain/money'
 import type { Client, Estimate, Tenant } from '@/shared/domain/types'
 import { documentLogoStyle } from '@/shared/ui/document-logo-style'
@@ -177,7 +178,32 @@ export function EstimateDocument({
 
           <footer className="grid grid-cols-2 gap-4 pt-10 text-xs sm:gap-10">
             <div className="border-t pt-2">Firma de la empresa</div>
-            <div className="border-t pt-2">Conforme del cliente</div>
+            <div className="border-t pt-2">
+              Conforme del cliente
+              {estimate.respondedSignature ? (
+                <svg
+                  className="estimate-document__signature"
+                  viewBox="0 0 600 160"
+                  role="img"
+                  aria-label={`Firma de ${estimate.respondedBy ?? 'cliente'}`}
+                >
+                  <path
+                    d={estimateSignaturePath(estimate.respondedSignature)}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : null}
+              {estimate.respondedSignature && estimate.respondedBy ? (
+                <span className="text-muted-foreground block text-[9px]">
+                  Aceptado digitalmente por {estimate.respondedBy}
+                  {estimate.respondedAt ? ` · ${estimate.respondedAt.slice(0, 10)}` : ''}
+                </span>
+              ) : null}
+            </div>
           </footer>
           {design.showFooter && tenant.documentFooter ? (
             <p className="text-muted-foreground border-t pt-3 text-center text-xs whitespace-pre-line">

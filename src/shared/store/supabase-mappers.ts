@@ -3,6 +3,7 @@ import { documentLibrarySchema } from '../domain/document-library'
 import { estimateAgreementSchema } from '../domain/estimate-agreement'
 import { estimateDesignSchema } from '../domain/estimate-design'
 import { estimateSectionsSchema } from '../domain/estimate-document'
+import { isEstimateSignature } from '../domain/estimate-signature'
 import { invoiceDesignSchema } from '../domain/invoice-design'
 import type {
   CatalogItem,
@@ -203,6 +204,9 @@ export function estimateFromRow(row: EstimateRow): Estimate {
     ...present('publicToken', row.public_token),
     ...present('respondedAt', row.responded_at),
     ...present('respondedBy', row.responded_by),
+    ...(isEstimateSignature(row.responded_signature)
+      ? { respondedSignature: row.responded_signature }
+      : {}),
     ...present('emailSentAt', row.email_sent_at),
     lines: lines.map((l): EstimateLine => ({
       id: str(l.id),

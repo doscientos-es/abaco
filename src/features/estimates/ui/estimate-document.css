@@ -203,6 +203,13 @@
   white-space: nowrap;
 }
 
+.estimate-document__signature {
+  display: block;
+  width: min(100%, 12rem);
+  height: 3rem;
+  color: #171717;
+}
+
 .estimate-document--paged .estimate-document__section[data-page-break] {
   break-before: column;
   border: 0;

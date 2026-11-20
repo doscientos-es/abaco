@@ -68,6 +68,19 @@ body {
   background: var(--background);
 }
 
+html[data-public-estimate] {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+html[data-public-estimate] body {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
 h1,
 h2,
 h3 {

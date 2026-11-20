@@ -111,6 +111,9 @@ export type Milestone = {
 
 export type EstimateStatus = 'draft' | 'sent' | 'accepted' | 'rejected'
 
+export type EstimateSignaturePoint = { x: number; y: number }
+export type EstimateSignature = EstimateSignaturePoint[][]
+
 export type Estimate = {
   id: string
   tenantId: string
@@ -140,6 +143,8 @@ export type Estimate = {
   /** Set when the client accepted or rejected through the public link. */
   respondedAt?: string
   respondedBy?: string
+  /** Normalized signature strokes captured on the public link when accepted. */
+  respondedSignature?: EstimateSignature
   /** Recorded only after the email provider confirms an estimate send. */
   emailSentAt?: string
 }

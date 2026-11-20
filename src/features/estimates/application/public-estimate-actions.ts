@@ -1,3 +1,5 @@
+import type { EstimateSignature } from '@/shared/domain/types'
+
 import {
   callPublicEstimate,
   type PublicAction,
@@ -16,4 +18,5 @@ export const respondToPublicEstimate = (
   token: string,
   action: Exclude<PublicAction, 'view'>,
   name: string,
-): Promise<PublicResult> => callPublicEstimate(token, action, name)
+  signature?: EstimateSignature,
+): Promise<PublicResult> => callPublicEstimate(token, action, name, signature)
