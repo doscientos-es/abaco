@@ -168,7 +168,10 @@ function CompanyModules({ company, search }: { company: PlatformCompany; search:
           key={`${search.modulo ?? 'list'}:${search.edicion ?? 'detail'}`}
           tenantId={company.id}
           active={company.subscription_status === 'active'}
+          plan={company.plan}
+          nextPlan={next?.plan ?? null}
           courtesy={company.is_complimentary}
+          canGift
           period={next?.period}
           blocked={
             !company.is_complimentary &&

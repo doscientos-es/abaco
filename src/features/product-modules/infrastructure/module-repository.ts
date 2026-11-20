@@ -2,6 +2,8 @@ import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import {
   isModuleCode,
+  isModuleIncludedInPlan,
+  modules,
   type ModuleCode,
   type ModuleRate,
   type ModuleSubscription,
@@ -20,20 +22,31 @@ export async function listModuleRates(): Promise<ModuleRate[]> {
 }
 
 export async function listEnabledModules(tenantId: string): Promise<ModuleCode[]> {
-  const { data, error } = await createBrowserSupabaseClient()
-    .from('tenant_modules')
-    .select('module_code, billing_module_catalog!inner(code)')
-    .eq('tenant_id', tenantId)
-    .eq('enabled', true)
-    .eq('billing_module_catalog.status', 'pilot')
-  if (error) throw error
-  return data.map(({ module_code }) => module_code).filter(isModuleCode)
+  const client = createBrowserSupabaseClient()
+  const [{ data: tenant, error: tenantError }, { data: rows, error: modulesError }] =
+    await Promise.all([
+      client.from('tenants').select('plan').eq('id', tenantId).single(),
+      client
+        .from('tenant_modules')
+        .select('module_code,enabled,gifted,billing_module_catalog!inner(code)')
+        .eq('tenant_id', tenantId)
+        .eq('billing_module_catalog.status', 'pilot'),
+    ])
+  if (tenantError || modulesError) throw new Error('No se pudieron consultar los módulos.')
+  const enabled = (rows ?? [])
+    .filter((row) => row.enabled || row.gifted)
+    .map((row) => row.module_code)
+    .filter(isModuleCode)
+  const included = (Object.keys(modules) as ModuleCode[]).filter((code) =>
+    isModuleIncludedInPlan(code, tenant.plan),
+  )
+  return [...new Set([...enabled, ...included])]
 }
 
 export async function listModuleSubscriptions(tenantId: string): Promise<ModuleSubscription[]> {
   const { data, error } = await createBrowserSupabaseClient()
     .from('tenant_modules')
-    .select('module_code,enabled,next_enabled,monthly_cents,yearly_cents')
+    .select('module_code,enabled,next_enabled,gifted,monthly_cents,yearly_cents')
     .eq('tenant_id', tenantId)
   if (error) throw error
   return data.flatMap((row) =>

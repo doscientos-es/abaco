@@ -121,7 +121,7 @@ export const billingCatalogQuery = queryOptions({
     const { data, error } = await createBrowserSupabaseClient()
       .from('billing_catalog')
       .select(
-        'plan,seats,monthly_cents,yearly_cents,vat_percent,plan_info:billing_plan_display(name,audience,benefit,revision)',
+        'plan,seats,monthly_cents,yearly_cents,seat_monthly_cents,vat_percent,plan_info:billing_plan_display(name,audience,benefit,revision)',
       )
       .order('seats')
       .overrideTypes<CatalogRate[], { merge: false }>()

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CatalogRate } from '@/features/billing'
 
-import { CatalogFieldError, priceField, readCatalogUpdate } from './catalog-update'
+import { CatalogFieldError, priceField, readCatalogUpdate, seatPriceField } from './catalog-update'
 
 const display = {
   revision: 7,
@@ -10,11 +10,12 @@ const display = {
   audience: 'Equipos grandes',
   benefit: 'Coordina el equipo',
 }
-const rates: CatalogRate[] = [25, 50].map((seats) => ({
+const rates: CatalogRate[] = [16].map((seats) => ({
   plan: 'scale',
   seats,
-  monthly_cents: 6900,
-  yearly_cents: 69000,
+  monthly_cents: 24900,
+  yearly_cents: 249000,
+  seat_monthly_cents: 300,
   vat_percent: 21,
   plan_info: display,
 }))
@@ -24,8 +25,8 @@ function edit() {
   form.set('name', '  Escala Plus ')
   form.set('audience', 'Para varias cuadrillas')
   form.set('benefit', 'Organiza el trabajo')
-  form.set(priceField(25), '64,90')
-  form.set(priceField(50), '100.25')
+  form.set(priceField(16), '249')
+  form.set(seatPriceField, '3,00')
   return form
 }
 
@@ -37,7 +38,8 @@ describe('editing plan pricing', () => {
       name: 'Escala Plus',
       audience: 'Para varias cuadrillas',
       benefit: 'Organiza el trabajo',
-      rates: { 25: 6490, 50: 10025 },
+      rates: { 16: 24900 },
+      seatMonthlyCents: 300,
     })
   })
 
@@ -45,17 +47,25 @@ describe('editing plan pricing', () => {
     'rejects an invalid tier price: %s',
     (price) => {
       const form = edit()
-      form.set(priceField(50), price)
-      expect(() => readCatalogUpdate(form, rates)).toThrow('tramo de 50')
+      form.set(priceField(16), price)
+      expect(() => readCatalogUpdate(form, rates)).toThrow('tramo de 16')
     },
   )
 
   it('rejects a missing tier rather than applying an incomplete price update', () => {
     const form = edit()
-    form.delete(priceField(25))
-    expect(() => readCatalogUpdate(form, rates)).toThrow('tramo de 25')
+    form.delete(priceField(16))
+    expect(() => readCatalogUpdate(form, rates)).toThrow('tramo de 16')
     expect(() => readCatalogUpdate(form, rates)).toThrow(
-      expect.objectContaining({ field: priceField(25) }),
+      expect.objectContaining({ field: priceField(16) }),
+    )
+  })
+
+  it('rejects a missing Enterprise seat price', () => {
+    const form = edit()
+    form.delete(seatPriceField)
+    expect(() => readCatalogUpdate(form, rates)).toThrow(
+      expect.objectContaining({ field: seatPriceField }),
     )
   })
 

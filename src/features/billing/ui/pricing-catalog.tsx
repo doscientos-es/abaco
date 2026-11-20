@@ -11,6 +11,7 @@ import {
   MAX_SCALE_PLAN_MEMBERS,
   paidPlans,
   planInfo,
+  sameCapacity,
   smallestRateFor,
   type BillingTerms,
   type FixedBillingPrice,
@@ -108,8 +109,9 @@ export function PricingCatalog({
               <PlanOptionCard
                 key={plan.id}
                 plan={plan}
+                rate={rate}
                 terms={terms}
-                recommended={recommended === rate}
+                recommended={sameCapacity(recommended, rate)}
               >
                 {renderAction?.(terms, plan)}
               </PlanOptionCard>
@@ -125,10 +127,13 @@ export function PricingCatalog({
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {scale.map((rate) => (
               <li key={rate.seats}>
-                Hasta {rate.seats} personas
+                {rate.plan === 'scale'
+                  ? `Desde ${rate.seats} personas`
+                  : `Hasta ${rate.seats} personas`}
                 {!fixedPrice ? (
                   <>
-                    : {formatEuros(catalogQuote(rate, period).net_cents / 100)}{' '}
+                    {rate.plan === 'scale' ? ' · ' : ': '}
+                    {formatEuros(catalogQuote(rate, period).net_cents / 100)}{' '}
                     {period === 'year' ? 'al año' : 'al mes'}, sin IVA
                   </>
                 ) : null}
@@ -162,8 +167,8 @@ export function PricingCatalog({
           {addons.data?.length ? (
             <>
               <p className="text-muted-foreground text-sm">
-                El precio del módulo se suma al plan base, por empresa. Puedes contratarlo desde
-                Ajustes → Suscripción de Ábaco.
+                Los suplementos son un precio fijo por empresa, no por persona. Puedes contratarlos
+                desde Ajustes → Suscripción de Ábaco.
               </p>
               <ul className="space-y-2 text-sm">
                 {addons.data.map((addon) => (

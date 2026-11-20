@@ -6,14 +6,22 @@ import {
   billingCatalogQuery,
   billingPreviewQuery,
   billingVatLabel,
+  catalogRateForCapacity,
   catalogQuote,
+  MAX_SCALE_PLAN_MEMBERS,
   planLabel,
+  SCALE_PLAN_MIN_MEMBERS,
   smallestRateFor,
   subscriptionQuery,
   type BillingTerms,
   type CatalogRate,
   type Interval,
 } from '@/features/billing'
+import {
+  moduleNetForPlan,
+  moduleSubscriptionsQuery,
+  type ModuleSubscription,
+} from '@/features/product-modules'
 import { applyRate, centsToInput, formatEuros, parseEuros } from '@/shared/domain/money'
 
 import {
@@ -48,6 +56,7 @@ export function CompanyBillingAgreement({
   const catalog = useQuery(billingCatalogQuery)
   const previewOptions = billingPreviewQuery(tenantId)
   const preview = useQuery(previewOptions)
+  const moduleSubscriptions = useQuery(moduleSubscriptionsQuery(tenantId))
   const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: (agreement: BillingAgreement | { restoreCatalog: number }) =>
@@ -71,7 +80,7 @@ export function CompanyBillingAgreement({
   const editing = search.edicion
   const vatBlocked = preview.data?.pending || subscriptionStatus === 'past_due'
   const catalogRate =
-    next && catalog.data?.find((rate) => rate.plan === next.plan && rate.seats === next.seats)
+    next && catalog.data ? catalogRateForCapacity(catalog.data, next.plan, next.seats) : null
   const catalogNet = next && catalogRate ? catalogQuote(catalogRate, next.period).net_cents : null
   const blocked = preview.data?.cancel_at_period_end
     ? 'Retira la cancelación antes de cambiar las condiciones.'
@@ -182,7 +191,11 @@ export function CompanyBillingAgreement({
           <AlertTitle>{blockMessage}</AlertTitle>
         </Alert>
       ) : null}
-      {editing === 'cuota' && preview.isSuccess && catalog.isSuccess && !blocked ? (
+      {editing === 'cuota' &&
+      preview.isSuccess &&
+      catalog.isSuccess &&
+      moduleSubscriptions.isSuccess &&
+      !blocked ? (
         <AgreementForm
           key={
             next
@@ -193,8 +206,7 @@ export function CompanyBillingAgreement({
           members={members}
           terms={next}
           fixedNet={fixedNet}
-          moduleMonthly={preview.data.module_monthly_cents ?? 0}
-          moduleYearly={preview.data.module_yearly_cents ?? 0}
+          moduleSubscriptions={moduleSubscriptions.data}
           vatPercent={preview.data.vat_percent}
           saving={mutation.isPending}
           feedback={
@@ -245,8 +257,7 @@ function AgreementForm({
   members,
   terms,
   fixedNet,
-  moduleMonthly,
-  moduleYearly,
+  moduleSubscriptions,
   vatPercent,
   saving,
   feedback,
@@ -257,8 +268,7 @@ function AgreementForm({
   members: number
   terms: BillingTerms | null
   fixedNet: number | null
-  moduleMonthly: number
-  moduleYearly: number
+  moduleSubscriptions: ModuleSubscription[]
   vatPercent: number
   saving: boolean
   feedback: React.ReactNode
@@ -267,7 +277,7 @@ function AgreementForm({
 }) {
   const titleId = useId()
   const initialRate = terms
-    ? rates.find((rate) => rate.plan === terms.plan && rate.seats === terms.seats)
+    ? catalogRateForCapacity(rates, terms.plan, terms.seats)
     : smallestRateFor(rates, Math.max(members, 1))
   const [seats, setSeats] = useState(initialRate?.seats ?? 0)
   const [period, setPeriod] = useState<Interval>(terms?.period ?? 'month')
@@ -275,14 +285,23 @@ function AgreementForm({
   const [mode, setMode] = useState(fixedNet !== null ? 'agreed' : 'catalog')
   const initialPrice = fixedNet ?? base
   const [price, setPrice] = useState(initialPrice === undefined ? '' : centsToInput(initialPrice))
-  const rate = rates.find((entry) => entry.seats === seats)
+  const rate =
+    rates.find((entry) => entry.seats === seats) ?? catalogRateForCapacity(rates, 'scale', seats)
+  const capacityOptions = rates.flatMap((entry) =>
+    entry.plan === 'scale'
+      ? Array.from({ length: MAX_SCALE_PLAN_MEMBERS - SCALE_PLAN_MIN_MEMBERS + 1 }, (_, index) => ({
+          ...entry,
+          seats: SCALE_PLAN_MIN_MEMBERS + index,
+        }))
+      : [entry],
+  )
   const agreed = mode === 'agreed'
   const raw = price.trim()
   const customCents = /^\d{1,6}([,.]\d{1,2})?$/.test(raw) ? parseEuros(raw) : 0
   const validPrice = customCents >= 1 && customCents <= 10_000_000
   const netCents = agreed ? (validPrice ? customCents : null) : null
   const quote = rate ? catalogQuote(rate, period) : null
-  const moduleNet = period === 'year' ? moduleYearly : moduleMonthly
+  const moduleNet = rate ? moduleNetForPlan(rate.plan, period, moduleSubscriptions) : 0
   const baseNet = agreed ? netCents : (quote?.net_cents ?? null)
   const totalNet = baseNet === null ? null : baseNet + moduleNet
   const amount = rate && totalNet !== null ? totalNet + applyRate(totalNet, vatPercent) : null
@@ -317,9 +336,9 @@ function AgreementForm({
                 isDisabled={saving}
                 placeholder="Selecciona un tramo"
                 value={seats ? String(seats) : null}
-                options={rates.map((entry) => ({
+                options={capacityOptions.map((entry) => ({
                   id: String(entry.seats),
-                  label: `${planLabel(entry.plan, rates)} · ${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
+                  label: `${planLabel(entry.plan, rates)} · ${entry.plan === 'scale' && entry.seats === SCALE_PLAN_MIN_MEMBERS ? 'desde ' : ''}${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
                   isDisabled: entry.seats < members,
                 }))}
                 onChange={(value) => {

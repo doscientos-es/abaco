@@ -8,9 +8,11 @@ import {
   moduleCatalogQuery,
   moduleSubscriptionsQuery,
   scheduleModule,
+  setTenantModuleGift,
   tenantModulesQuery,
 } from '../application/module-queries'
 import {
+  isModuleIncludedInPlan,
   modules,
   type ModuleCode,
   type ModuleRate,
@@ -18,6 +20,7 @@ import {
 } from '../domain/modules'
 
 type Selection = { rate: ModuleRate; enabled: boolean; undo: boolean }
+type GiftSelection = { code: ModuleCode; gifted: boolean }
 type ModuleNavigation =
   | {
       renderRow: (summary: {
@@ -50,6 +53,9 @@ export function ModuleSubscriptions({
   courtesy = false,
   blocked = false,
   period,
+  plan,
+  nextPlan,
+  canGift = false,
   onChanged,
   navigation,
 }: {
@@ -58,6 +64,9 @@ export function ModuleSubscriptions({
   courtesy?: boolean
   blocked?: boolean
   period?: ModulePeriod | undefined
+  plan?: string | undefined
+  nextPlan?: string | null | undefined
+  canGift?: boolean
   onChanged: () => void | Promise<unknown>
   navigation?: ModuleNavigation
 }) {
@@ -65,6 +74,7 @@ export function ModuleSubscriptions({
   const subscriptions = useQuery(moduleSubscriptionsQuery(tenantId))
   const client = useQueryClient()
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [giftSelection, setGiftSelection] = useState<GiftSelection | null>(null)
   const change = useMutation({
     mutationFn: ({ rate, enabled }: Selection) => scheduleModule(tenantId, rate, enabled),
     onSuccess: async () => {
@@ -77,6 +87,18 @@ export function ModuleSubscriptions({
     },
     onError: () => client.invalidateQueries({ queryKey: moduleCatalogQuery.queryKey }),
   })
+  const gift = useMutation({
+    mutationFn: (change: GiftSelection) =>
+      setTenantModuleGift(tenantId, change.code, change.gifted),
+    onSuccess: async () => {
+      setGiftSelection(null)
+      await Promise.all([
+        client.invalidateQueries({ queryKey: moduleSubscriptionsQuery(tenantId).queryKey }),
+        client.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey }),
+        onChanged(),
+      ])
+    },
+  })
   const timing = active ? 'en la próxima renovación' : 'al pagar la primera cuota'
   const detail = navigation && 'code' in navigation ? navigation : undefined
   const listing = navigation && 'renderRow' in navigation ? navigation : undefined
@@ -84,8 +106,19 @@ export function ModuleSubscriptions({
   const rates = catalog.data?.filter((rate) => !detail || rate.code === detail.code) ?? []
   const findSubscription = (code: ModuleCode) =>
     subscriptions.data?.find((item) => item.module_code === code)
+  const detailIncluded =
+    detail !== undefined &&
+    (isModuleIncludedInPlan(detail.code, plan ?? '') ||
+      (nextPlan != null && isModuleIncludedInPlan(detail.code, nextPlan)))
   const rateToEdit =
-    detail?.editing && !change.isSuccess && !blocked && ready ? rates[0] : undefined
+    detail?.editing &&
+    !detailIncluded &&
+    !findSubscription(detail.code)?.gifted &&
+    !change.isSuccess &&
+    !blocked &&
+    ready
+      ? rates[0]
+      : undefined
   const confirmation = change.isPending
     ? change.variables
     : rateToEdit
@@ -139,6 +172,11 @@ export function ModuleSubscriptions({
           <AlertTitle>{change.error.message}</AlertTitle>
         </Alert>
       ) : null}
+      {gift.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>{gift.error.message}</AlertTitle>
+        </Alert>
+      ) : null}
       {change.isSuccess ? (
         <FormFeedback
           state={{
@@ -168,13 +206,29 @@ export function ModuleSubscriptions({
             const enabled = item?.enabled ?? false
             const pending = item?.next_enabled ?? null
             const module = modules[rate.code]
+            const included = isModuleIncludedInPlan(rate.code, plan ?? '')
+            const includedNext =
+              !included && nextPlan != null && isModuleIncludedInPlan(rate.code, nextPlan)
+            const gifted = item?.gifted ?? false
             const action = pending !== null ? 'Deshacer cambio' : enabled ? 'Desactivar' : 'Activar'
             const modulePrice = item && (enabled || pending === true) ? item : rate
             const surcharge =
-              courtesy || (modulePrice.monthly_cents === 0 && modulePrice.yearly_cents === 0)
+              courtesy ||
+              gifted ||
+              included ||
+              includedNext ||
+              (modulePrice.monthly_cents === 0 && modulePrice.yearly_cents === 0)
                 ? 'Sin suplemento.'
                 : price(modulePrice, period)
-            const status = enabled ? 'Activo' : 'Inactivo'
+            const status = gifted
+              ? 'Regalado'
+              : included
+                ? 'Incluido en el plan'
+                : includedNext
+                  ? 'Incluido en el próximo plan'
+                  : enabled
+                    ? 'Activo'
+                    : 'Inactivo'
             const scheduled =
               pending === null ? null : pending ? 'Alta programada' : 'Baja programada'
             if (listing)
@@ -201,11 +255,8 @@ export function ModuleSubscriptions({
                   <p>{surcharge}</p>
                   {scheduled ? <p>{scheduled}.</p> : null}
                 </div>
-                {detail ? (
-                  !detail.editing && !blocked ? (
-                    detail.editLink
-                  ) : null
-                ) : (
+                {detail && !detail.editing && !blocked ? detail.editLink : null}
+                {!detail && !included && !includedNext && !gifted ? (
                   <Button
                     variant="outline"
                     aria-label={`${action}: ${module.name}`}
@@ -217,7 +268,20 @@ export function ModuleSubscriptions({
                   >
                     {action}
                   </Button>
-                )}
+                ) : null}
+                {canGift && detail?.editing ? (
+                  <Button
+                    variant="outline"
+                    aria-label={`${gifted ? 'Retirar regalo' : 'Regalar'}: ${module.name}`}
+                    isDisabled={blocked || gift.isPending || Boolean(giftSelection)}
+                    onPress={() => {
+                      gift.reset()
+                      setGiftSelection({ code: rate.code, gifted: !gifted })
+                    }}
+                  >
+                    {gifted ? 'Retirar regalo' : 'Regalar módulo'}
+                  </Button>
+                ) : null}
               </li>
             )
           })}
@@ -252,6 +316,39 @@ export function ModuleSubscriptions({
                 Volver
               </Button>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+      {gift.isSuccess ? (
+        <FormFeedback
+          state={{
+            status: 'success',
+            message: 'Regalo actualizado. No se ha realizado ningún cobro.',
+          }}
+          className="h-auto"
+        />
+      ) : null}
+      {giftSelection ? (
+        <div className="border-border space-y-2 border-t pt-3 text-sm" aria-live="polite">
+          <p>
+            {giftSelection.gifted ? 'Regalar' : 'Retirar el regalo de'}{' '}
+            {modules[giftSelection.code].name}. El cambio de acceso es inmediato y no realiza
+            cargos.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              isDisabled={blocked || gift.isPending}
+              onPress={() => gift.mutate(giftSelection)}
+            >
+              {gift.isPending ? 'Guardando…' : 'Confirmar regalo'}
+            </Button>
+            <Button
+              variant="outline"
+              isDisabled={gift.isPending}
+              onPress={() => setGiftSelection(null)}
+            >
+              Volver
+            </Button>
           </div>
         </div>
       ) : null}

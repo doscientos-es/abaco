@@ -7,5 +7,6 @@ La sección **Empresas → Suscripción** es distinta: los precios pactados y el
 ## Integración con la futura landing
 
 - Consultar `billing_catalog` en la API pública de Supabase, incluyendo su relación `billing_plan_display`. Usar un cliente con acceso anónimo, sin credenciales privilegiadas ni consultas a empresas o suscripciones.
-- Usar los campos `plan` y `seats` para identificar el tramo; mostrar `monthly_cents` o `yearly_cents` tal como llegan (céntimos, sin IVA), y tomar los textos de `name`, `audience` y `benefit`. Si solo se muestra un «desde», seleccionar el menor precio mensual del catálogo aplicable.
+- Usar `plan` y `seats` para identificar el tramo; los importes están en céntimos y no incluyen IVA. Para Autónomo, Equipo pequeño y Equipo grande, `monthly_cents` y `yearly_cents` son los totales del plan. Para Enterprise, `monthly_cents` y `yearly_cents` son el precio base: calcular el total mensual como `monthly_cents + seat_monthly_cents × seats`, y el anual como `yearly_cents + seat_monthly_cents × seats × 10`. El plan empieza en 16 plazas. Tomar los textos de `name`, `audience` y `benefit` desde `billing_plan_display`.
+- Los módulos opcionales son una cuota fija por empresa, en `billing_module_catalog`; excluir de la oferta adicional aquellos módulos incluidos en el plan seleccionado.
 - Leer en tiempo de ejecución o con revalidación de caché, no solo al compilar la landing. Si la consulta falla, mostrar un enlace a `/precios` en vez de inventar un importe o mantener una copia manual.

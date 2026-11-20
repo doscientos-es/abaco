@@ -11,6 +11,19 @@ import {
 
 export { scheduleModule } from '../infrastructure/module-repository'
 
+export async function setTenantModuleGift(tenantId: string, code: ModuleCode, gifted: boolean) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_set_tenant_module_gift', {
+    p_tenant: tenantId,
+    p_module: code,
+    p_gifted: gifted,
+  })
+  if (error) {
+    throw new Error(
+      error.code === 'P0001' ? error.message : 'No se pudo actualizar el regalo del módulo.',
+    )
+  }
+}
+
 export const moduleCatalogQuery = queryOptions({
   queryKey: ['product-modules', 'catalog'],
   queryFn: listModuleRates,

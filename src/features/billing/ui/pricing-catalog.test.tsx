@@ -23,8 +23,8 @@ function catalogClient() {
     {
       plan: 'team',
       seats: 5,
-      monthly_cents: 3490,
-      yearly_cents: 34900,
+      monthly_cents: 6900,
+      yearly_cents: 69000,
       vat_percent: 21,
       plan_info: {
         name: 'Equipo Plus',
@@ -35,7 +35,9 @@ function catalogClient() {
     },
   ])
   queryClient.setQueryData(moduleCatalogQuery.queryKey, [
-    { code: 'procurement', monthly_cents: 1900, yearly_cents: 19000 },
+    { code: 'workers', monthly_cents: 500, yearly_cents: 5000 },
+    { code: 'procurement', monthly_cents: 1000, yearly_cents: 10000 },
+    { code: 'mcp', monthly_cents: 700, yearly_cents: 7000 },
   ])
   return queryClient
 }
@@ -45,9 +47,10 @@ it('renders published prices and plan copy in the public cards and capacity brea
   queryClient.setQueryData(billingCatalogQuery.queryKey, [
     {
       plan: 'scale',
-      seats: 25,
-      monthly_cents: 7250,
-      yearly_cents: 72500,
+      seats: 16,
+      monthly_cents: 24900,
+      yearly_cents: 249000,
+      seat_monthly_cents: 300,
       vat_percent: 21,
       plan_info: {
         name: 'Cuadrillas Plus',
@@ -64,12 +67,13 @@ it('renders published prices and plan copy in the public cards and capacity brea
     </QueryClientProvider>,
   )
 
-  expect(html).toContain('Cuadrillas Plus, hasta 25 personas')
+  expect(html).toContain('Cuadrillas Plus, desde 16 personas')
   expect(html).toContain('Para equipos en expansión')
   expect(html).toContain('Coordina varias cuadrillas')
   expect(html).toContain('Ver todos los tramos de Cuadrillas Plus')
-  expect(html).toMatch(/Hasta 25 personas: 72,50\s*€ al mes, sin IVA/)
-  expect(html).toMatch(/87,73\s*€ con IVA, al mes/)
+  expect(html).toMatch(/Desde 16 personas · 297,00\s*€ al mes, sin IVA/)
+  expect(html).toMatch(/359,37\s*€ con IVA, al mes/)
+  expect(html).toMatch(/3,00\s*€ por plaza × 16 plazas al mes/)
 })
 
 it('lists the pilot surcharge separately from the amount sent to plan checkout', () => {
@@ -83,13 +87,15 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   )
 
   expect(html).toContain('contratos recurrentes y visitas')
-  expect(html).toContain('Módulo de trabajadores incluido.')
+  expect(html).toContain('Trabajadores incluido.')
   expect(html).toContain('No está incluido en Autónomo.')
   expect(html).toContain('Compras e inventario')
-  expect(html).toMatch(/\+19,00\s*€ al mes/)
+  expect(html).toMatch(/\+5,00\s*€ al mes/)
+  expect(html).toMatch(/\+10,00\s*€ al mes/)
+  expect(html).toMatch(/\+7,00\s*€ al mes/)
   expect(html).toContain('Ajustes → Suscripción de Ábaco')
   expect(action).toHaveBeenCalledWith(
-    expect.objectContaining({ net_cents: 3490, amount_cents: 4223 }),
+    expect.objectContaining({ net_cents: 6900, amount_cents: 8349 }),
     expect.objectContaining({ id: 'team', name: 'Equipo Plus', benefit: 'Coordina el equipo' }),
   )
 })
@@ -97,14 +103,14 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
 it('shows that the solo plan excludes staff', () => {
   const queryClient = catalogClient()
   queryClient.setQueryData(billingCatalogQuery.queryKey, [
-    { plan: 'solo', seats: 1, monthly_cents: 2000, yearly_cents: 20000, vat_percent: 21 },
+    { plan: 'solo', seats: 1, monthly_cents: 2900, yearly_cents: 29000, vat_percent: 21 },
   ])
   const html = renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <PricingCatalog />
     </QueryClientProvider>,
   )
-  expect(html).toContain('Sin módulo de trabajadores.')
+  expect(html).toContain('Trabajadores disponible como extra por empresa (+5 €/mes).')
 })
 
 it('quotes the negotiated price and keeps its period when choosing capacity', () => {

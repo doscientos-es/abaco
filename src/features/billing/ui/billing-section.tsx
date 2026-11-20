@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import {
   ModuleSubscriptions,
+  moduleNetForPlan,
   moduleSubscriptionsQuery,
   staffModuleQuery,
   tenantModulesQuery,
@@ -68,6 +69,7 @@ export function BillingSection({
   const preview = useQuery(billingPreviewQuery(tenantId))
   const { data: rates } = useQuery(billingCatalogQuery)
   const team = useQuery(memberCountQuery(tenantId))
+  const moduleSubscriptionsState = useQuery(moduleSubscriptionsQuery(tenantId))
   const [selection, setSelection] = useState<{
     terms: BillingTerms
     action: 'checkout' | 'change' | 'retry'
@@ -149,7 +151,12 @@ export function BillingSection({
   const managedChange = scheduled && preview.data?.next_managed === true
   const members = Math.max(1, team.data ?? 1)
   const ready = Boolean(
-    subscription && preview.data && team.data !== undefined && !pending && !busy,
+    subscription &&
+    preview.data &&
+    team.data !== undefined &&
+    moduleSubscriptionsState.isSuccess &&
+    !pending &&
+    !busy,
   )
 
   if (subscription?.isComplimentary) {
@@ -197,13 +204,21 @@ export function BillingSection({
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
         <SubscriptionBillingProfileForm key={tenantId} tenantId={tenantId} />
         <hr className="border-border" />
-        {subscriptionState.isError || team.isError || preview.isError ? (
+        {subscriptionState.isError ||
+        team.isError ||
+        preview.isError ||
+        moduleSubscriptionsState.isError ? (
           <div role="alert" className="space-y-2">
-            <p>No se pudo verificar tu suscripción o el número de personas con acceso.</p>
+            <p>No se pudo verificar tu suscripción, el equipo o sus módulos.</p>
             <Button
               variant="outline"
               onPress={() =>
-                void Promise.all([subscriptionState.refetch(), team.refetch(), preview.refetch()])
+                void Promise.all([
+                  subscriptionState.refetch(),
+                  team.refetch(),
+                  preview.refetch(),
+                  moduleSubscriptionsState.refetch(),
+                ])
               }
             >
               Reintentar
@@ -255,6 +270,8 @@ export function BillingSection({
           <ModuleSubscriptions
             tenantId={tenantId}
             active={active}
+            plan={subscription.plan}
+            nextPlan={subscription.nextPlan}
             blocked={
               pending ||
               pastDue ||
@@ -294,12 +311,13 @@ export function BillingSection({
                   subscription?.cancelAtPeriodEnd === true
                 }
                 onPress={() => {
-                  const extras =
-                    terms.period === 'year'
-                      ? preview.data?.module_yearly_cents
-                      : preview.data?.module_monthly_cents
+                  const extras = moduleNetForPlan(
+                    terms.plan,
+                    terms.period,
+                    moduleSubscriptionsState.data ?? [],
+                  )
                   setSelection({
-                    terms: withModulePrice(terms, extras ?? 0),
+                    terms: withModulePrice(terms, extras),
                     action: active ? 'change' : 'checkout',
                   })
                 }}

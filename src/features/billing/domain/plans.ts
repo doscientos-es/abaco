@@ -31,21 +31,21 @@ export const planCatalog: readonly PlanInfo[] = [
   },
   {
     id: 'team',
-    name: 'Equipo',
-    audience: 'Para una cuadrilla que comparte la gestión del negocio.',
-    benefit: 'Comparte el trabajo y asigna accesos según el rol de cada persona.',
+    name: 'Equipo pequeño',
+    audience: 'Para equipos de hasta 5 personas con acceso.',
+    benefit: 'Comparte el trabajo e incluye las herramientas para coordinar trabajadores.',
   },
   {
     id: 'business',
-    name: 'Empresa',
-    audience: 'Para una oficina que coordina varias cuadrillas.',
+    name: 'Equipo grande',
+    audience: 'Para equipos de hasta 15 personas con acceso.',
     benefit: 'Organiza equipos y trabajos, y consulta costes y márgenes en un mismo sitio.',
   },
   {
     id: 'scale',
-    name: 'Escala',
-    audience: 'Para empresas de 16 a 200 personas con acceso.',
-    benefit: 'Elige la capacidad que necesitas para operar con varias cuadrillas.',
+    name: 'Enterprise',
+    audience: 'Para empresas con 16 o más personas con acceso.',
+    benefit: 'Todo incluido, con un precio transparente por cada plaza del equipo.',
   },
 ]
 
@@ -65,6 +65,7 @@ export type CatalogRate = {
   seats: number
   monthly_cents: number
   yearly_cents: number
+  seat_monthly_cents?: number
   vat_percent: number
   plan_info?: (Omit<PlanInfo, 'id'> & { revision: number }) | null
 }
@@ -102,7 +103,10 @@ export function catalogQuote(
   vatPercent = rate.vat_percent,
   fixedNetCents?: number,
 ): BillingTerms {
-  const net = fixedNetCents ?? (period === 'year' ? rate.yearly_cents : rate.monthly_cents)
+  const perSeat = rate.plan === 'scale' ? (rate.seat_monthly_cents ?? 0) * rate.seats : 0
+  const net =
+    fixedNetCents ??
+    (period === 'year' ? rate.yearly_cents + perSeat * 10 : rate.monthly_cents + perSeat)
   return {
     plan: rate.plan,
     seats: rate.seats,
@@ -118,10 +122,32 @@ export function smallestRateFor(
   members: number,
 ): CatalogRate | null {
   if (!Number.isInteger(members) || members < 1) return null
+  if (members >= SCALE_PLAN_MIN_MEMBERS && members <= MAX_SCALE_PLAN_MEMBERS) {
+    const enterprise = rates.find((rate) => rate.plan === 'scale')
+    if (enterprise) return { ...enterprise, seats: members }
+  }
   return rates.reduce<CatalogRate | null>(
     (best, rate) => (rate.seats >= members && (!best || rate.seats < best.seats) ? rate : best),
     null,
   )
+}
+
+export function catalogRateForCapacity(
+  rates: readonly CatalogRate[],
+  plan: PaidPlan,
+  seats: number,
+): CatalogRate | null {
+  if (plan === 'scale') {
+    const enterprise = rates.find((rate) => rate.plan === 'scale')
+    return enterprise && seats >= SCALE_PLAN_MIN_MEMBERS && seats <= MAX_SCALE_PLAN_MEMBERS
+      ? { ...enterprise, seats }
+      : null
+  }
+  return rates.find((rate) => rate.plan === plan && rate.seats === seats) ?? null
+}
+
+export function sameCapacity(a: CatalogRate | null, b: CatalogRate | null): boolean {
+  return a !== null && b !== null && a.plan === b.plan && a.seats === b.seats
 }
 
 export function formatEuros(value: number): string {

@@ -8,6 +8,7 @@ export type CatalogUpdate = {
   audience: string
   benefit: string
   rates: Record<number, number>
+  seatMonthlyCents?: number
 }
 
 export const catalogFields = [
@@ -27,6 +28,7 @@ export const catalogFields = [
 ] as const
 
 export const priceField = (seats: number) => `price-${seats}`
+export const seatPriceField = 'seat-price'
 
 export class CatalogFieldError extends Error {
   constructor(
@@ -68,5 +70,19 @@ export function readCatalogUpdate(form: FormData, rates: readonly CatalogRate[])
     }
     prices[rate.seats] = cents
   }
-  return { plan: first.plan, revision: first.plan_info.revision, ...display, rates: prices }
+  let seatMonthlyCents: number | undefined
+  if (first.plan === 'scale') {
+    const parsedSeatPrice = catalogMonthlyCents(String(form.get(seatPriceField) ?? ''))
+    if (parsedSeatPrice === null) {
+      throw new CatalogFieldError(seatPriceField, 'Introduce un precio por plaza válido.')
+    }
+    seatMonthlyCents = parsedSeatPrice
+  }
+  return {
+    plan: first.plan,
+    revision: first.plan_info.revision,
+    ...display,
+    rates: prices,
+    ...(seatMonthlyCents === undefined ? {} : { seatMonthlyCents }),
+  }
 }

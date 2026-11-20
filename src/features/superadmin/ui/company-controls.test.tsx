@@ -204,7 +204,7 @@ describe('company module controls', () => {
         }}
       />,
     )
-    expect(list).toContain('Compras e inventario · Inactivo')
+    expect(list).toContain('Proveedores · Inactivo')
     expect(list).not.toContain('<button')
 
     const detail = {
@@ -219,7 +219,7 @@ describe('company module controls', () => {
     const editing = render(
       <ModuleSubscriptions {...base} navigation={{ ...detail, editing: true }} />,
     )
-    expect(editing).toMatch(/Activar Compras e inventario\. \+190,00\s*€\/año, sin IVA/)
+    expect(editing).toMatch(/Activar Proveedores\. \+190,00\s*€\/año, sin IVA/)
     expect(editing).toContain('Guardar cambio')
     const blocked = render(
       <ModuleSubscriptions {...base} blocked navigation={{ ...detail, editing: true }} />,
@@ -233,6 +233,7 @@ describe('company module controls', () => {
         module_code: 'procurement',
         enabled: false,
         next_enabled: true,
+        gifted: false,
         monthly_cents: 1900,
         yearly_cents: 18000,
       },
@@ -241,7 +242,7 @@ describe('company module controls', () => {
       { code: 'procurement', monthly_cents: 1900, yearly_cents: 19000 },
     ])
     const html = render(<ModuleSubscriptions tenantId={tenantId} active onChanged={vi.fn()} />)
-    expect(html).toContain('Compras e inventario · Inactivo')
+    expect(html).toContain('Proveedores · Inactivo')
     expect(html).toContain('Alta programada')
     expect(html).toContain('Deshacer cambio')
     expect(html).toMatch(/19,00\s*€\/mes o \+180,00\s*€\/año/)

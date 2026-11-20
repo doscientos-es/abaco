@@ -77,7 +77,10 @@ export async function saveCatalogPlan(update: CatalogUpdate) {
     p_name: update.name,
     p_audience: update.audience,
     p_benefit: update.benefit,
-    p_rates: update.rates,
+    p_rates:
+      update.seatMonthlyCents === undefined
+        ? update.rates
+        : { ...update.rates, seat_monthly_cents: update.seatMonthlyCents },
   })
   if (error?.code === '40001') {
     throw new Error('Otra persona ha actualizado el plan. Recarga el catálogo antes de guardar.')

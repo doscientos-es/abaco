@@ -1,24 +1,37 @@
 import type { ReactNode } from 'react'
 
-import { billingVatLabel, formatEuros, type BillingTerms, type PlanInfo } from '../domain/plans'
+import {
+  billingVatLabel,
+  formatEuros,
+  SCALE_PLAN_MIN_MEMBERS,
+  type CatalogRate,
+  type BillingTerms,
+  type PlanInfo,
+} from '../domain/plans'
 
 export function PlanOptionCard({
   plan,
+  rate,
   terms,
   recommended,
   children,
 }: {
   plan: PlanInfo
+  rate: CatalogRate
   terms: BillingTerms
   recommended: boolean
   children?: ReactNode
 }) {
   const yearly = terms.period === 'year'
   const price = terms.net_cents / (yearly ? 1200 : 100)
+  const capacity =
+    plan.id === 'scale'
+      ? `desde ${Math.max(SCALE_PLAN_MIN_MEMBERS, terms.seats)} personas`
+      : `hasta ${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`
 
   return (
     <article
-      aria-label={`${plan.name}, hasta ${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`}
+      aria-label={`${plan.name}, ${capacity}`}
       className={`bg-card flex flex-col gap-3 rounded-xl border p-4 ${recommended ? 'border-primary ring-primary/20 ring-2' : 'border-border'}`}
     >
       <div className="min-h-16">
@@ -32,11 +45,13 @@ export function PlanOptionCard({
       </div>
 
       <p className="text-sm leading-relaxed">{plan.benefit}</p>
+      <p className="text-muted-foreground text-xs">{capacity}, incluida quien administra.</p>
       <p className="text-muted-foreground text-xs">
-        Hasta {terms.seats} {terms.seats === 1 ? 'persona' : 'personas'}, incluida quien administra.
-      </p>
-      <p className="text-muted-foreground text-xs">
-        {plan.id === 'solo' ? 'Sin módulo de trabajadores.' : 'Módulo de trabajadores incluido.'}
+        {plan.id === 'solo'
+          ? 'Trabajadores disponible como extra por empresa (+5 €/mes).'
+          : 'Trabajadores incluido.'}
+        {plan.id === 'business' || plan.id === 'scale' ? ' Proveedores incluido.' : null}
+        {plan.id === 'scale' ? ' MCP incluido.' : null}
       </p>
 
       <div className="mt-auto">
@@ -51,6 +66,14 @@ export function PlanOptionCard({
           {formatEuros(terms.amount_cents / 100)} {billingVatLabel(terms.vat_percent)},{' '}
           {yearly ? 'en un único pago anual' : 'al mes'}.
         </p>
+        {plan.id === 'scale' ? (
+          <p className="text-muted-foreground mt-1 text-xs">
+            {yearly ? 'Desglose anual: ' : 'Desglose: '}
+            {formatEuros((yearly ? rate.yearly_cents : rate.monthly_cents) / 100)} de base +{' '}
+            {formatEuros(((rate.seat_monthly_cents ?? 0) * (yearly ? 10 : 1)) / 100)} por plaza ×{' '}
+            {terms.seats} plazas {yearly ? 'al año' : 'al mes'}.
+          </p>
+        ) : null}
       </div>
 
       {children}

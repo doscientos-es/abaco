@@ -22,7 +22,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 
-import { billingCatalogQuery, type CatalogRate } from '@/features/billing'
+import { billingCatalogQuery, catalogQuote, type CatalogRate } from '@/features/billing'
 import { centsToInput, formatEuros } from '@/shared/domain/money'
 
 import { saveCatalogPlan } from '../application/platform-billing'
@@ -32,6 +32,7 @@ import {
   catalogMonthlyCents,
   priceField,
   readCatalogUpdate,
+  seatPriceField,
 } from '../domain/catalog-update'
 import { planSearch, type PlatformSearch } from '../domain/platform-navigation'
 import { PlatformField } from './platform-form-field'
@@ -139,7 +140,9 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
               <TableBody>
                 {[...plans].map(([id, planRates]) => {
                   const info = planRates[0]?.plan_info
-                  const monthly = Math.min(...planRates.map((rate) => rate.monthly_cents))
+                  const monthly = Math.min(
+                    ...planRates.map((rate) => catalogQuote(rate, 'month').net_cents),
+                  )
                   return (
                     <TableRow key={id}>
                       <TableCell className="whitespace-normal">
@@ -196,12 +199,22 @@ function CatalogPlanDetail({
               className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
             >
               <dt className="font-medium">
-                {rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`}
+                {rate.plan === 'scale'
+                  ? `Desde ${rate.seats} personas`
+                  : rate.seats === 1
+                    ? '1 persona'
+                    : `Hasta ${rate.seats} personas`}
               </dt>
               <dd className="flex flex-wrap gap-x-3 tabular-nums">
-                <span>{formatEuros(rate.monthly_cents)}/mes</span>
+                <span>
+                  {rate.plan === 'scale'
+                    ? `${formatEuros(rate.monthly_cents)}/mes base + ${formatEuros(rate.seat_monthly_cents ?? 0)}/plaza/mes`
+                    : `${formatEuros(rate.monthly_cents)}/mes`}
+                </span>
                 <span className="text-muted-foreground">
-                  {formatEuros(rate.yearly_cents)} al año
+                  {rate.plan === 'scale'
+                    ? `${formatEuros(rate.yearly_cents)} al año base + ${formatEuros((rate.seat_monthly_cents ?? 0) * 10)}/plaza/año`
+                    : `${formatEuros(rate.yearly_cents)} al año`}
                 </span>
               </dd>
             </div>
@@ -234,6 +247,9 @@ function CatalogPlanForm({
     benefit: display.benefit,
   }
   for (const rate of rates) savedValues[priceField(rate.seats)] = centsToInput(rate.monthly_cents)
+  if (rates[0]?.plan === 'scale') {
+    savedValues[seatPriceField] = centsToInput(rates[0].seat_monthly_cents ?? 0)
+  }
   const values = draft?.values ?? savedValues
   const stale = draft !== null && draft.revision !== display.revision
   const fieldError = validation instanceof CatalogFieldError ? validation : null
@@ -311,7 +327,9 @@ function CatalogPlanForm({
         })}
       </FieldSet>
       <FieldSet disabled={mutation.isPending} className="min-w-0 gap-3">
-        <FieldLegend variant="label">Precios por capacidad</FieldLegend>
+        <FieldLegend variant="label">
+          {rates[0]?.plan === 'scale' ? 'Precio base y precio por plaza' : 'Precios por capacidad'}
+        </FieldLegend>
         {rates.map((rate) => {
           const name = priceField(rate.seats)
           return (
@@ -324,6 +342,26 @@ function CatalogPlanForm({
             />
           )
         })}
+        {rates[0]?.plan === 'scale' ? (
+          <PlatformField
+            label="Precio mensual por plaza · €/mes"
+            hint="Se suma una vez por cada plaza Enterprise, incluidas las 16 iniciales."
+            error={fieldError?.field === seatPriceField ? fieldError.message : undefined}
+          >
+            {(control) => (
+              <Input
+                {...control}
+                name={seatPriceField}
+                inputMode="decimal"
+                placeholder="Ej. 3,00"
+                required
+                maxLength={8}
+                value={values[seatPriceField] ?? ''}
+                onChange={(event) => change(seatPriceField, event.currentTarget.value)}
+              />
+            )}
+          </PlatformField>
+        ) : null}
       </FieldSet>
       <div className="border-border space-y-2 border-t pt-3">
         {stale ? (
@@ -380,7 +418,11 @@ function RateField({
   const cents = catalogMonthlyCents(value)
   return (
     <PlatformField
-      label={`${rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`} · €/mes`}
+      label={
+        rate.plan === 'scale'
+          ? 'Precio base mensual · €/mes'
+          : `${rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`} · €/mes`
+      }
       hint={
         cents === null
           ? 'El importe anual se calcula a partir del precio mensual.'

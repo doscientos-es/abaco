@@ -7,13 +7,16 @@ export {
 export type { Subscription } from './application/billing-actions'
 export {
   billingVatLabel,
+  catalogRateForCapacity,
   catalogQuote,
+  MAX_SCALE_PLAN_MEMBERS,
   paidPlans,
   planCatalog,
   planInfo,
   planLabel,
   smallestRateFor,
   STANDARD_BILLING_VAT,
+  SCALE_PLAN_MIN_MEMBERS,
   TRIAL_DAYS,
 } from './domain/plans'
 export type { BillingTerms, CatalogRate, Interval, PaidPlan } from './domain/plans'

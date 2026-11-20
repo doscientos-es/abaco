@@ -1,6 +1,6 @@
 # Ábaco — enfoque comercial y validación
 
-Actualizado el 15 de octubre de 2026. Documento de trabajo: las hipótesis no son resultados medidos.
+Actualizado el 20 de noviembre de 2026. Documento de trabajo: las hipótesis no son resultados medidos.
 Esta fecha corresponde a la última revisión comercial registrada, no verifica que precios,
 mercado o piloto sigan vigentes. Antes de usarlo externamente, confirmar la oferta en código
 y contrastar las fuentes de mercado y el avance comercial.
@@ -24,18 +24,18 @@ El primer resultado útil es enviar un presupuesto real. La siguiente señal de 
 
 La aceptación registrada no se presenta como firma electrónica certificada. No prometer cobro automático de anticipos, resultados garantizados, integraciones o gestión integral de obras sin validar el flujo completo. Redsys tramita la suscripción de Ábaco: no demuestra un sistema de cobro de los trabajos del instalador.
 
-## 2. Oferta actual, no una nueva tarifa
+## 2. Oferta vigente
 
-Los precios por capacidad están en `billing_catalog`. Los precios de extras, por empresa, están en `billing_module_catalog`. Los extras no participan todavía en los cobros de Redsys.
+Los precios de los planes están en `billing_catalog`; el importe de Enterprise se calcula sumando el precio base y el precio mensual por plaza. Los precios de los módulos, por empresa y no por persona, están en `billing_module_catalog` y se incluyen en la confirmación y los cobros de suscripción.
 
-| Plan     | Personas, incluido el propietario | Mensual sin IVA | Anual sin IVA | Equivalente mensual anual |
-| -------- | --------------------------------: | --------------: | ------------: | ------------------------: |
-| Autónomo |                                 1 |            20 € |         200 € |                   16,67 € |
-| Equipo   |                           Hasta 5 |            34 € |         340 € |                   28,33 € |
-| Empresa  |                          Hasta 15 |            54 € |         540 € |                      45 € |
-| Escala   |            16–200, en seis tramos |        69–329 € |   690–3.290 € |               según tramo |
+| Plan           | Personas, incluido el propietario |           Mensual sin IVA |                Anual sin IVA | Equivalente mensual anual |
+| -------------- | --------------------------------: | ------------------------: | ---------------------------: | ------------------------: |
+| Autónomo       |                                 1 |                      29 € |                        290 € |                   24,17 € |
+| Equipo pequeño |                           Hasta 5 |                      69 € |                        690 € |                   57,50 € |
+| Equipo grande  |                          Hasta 15 |                     199 € |                      1.990 € |                  165,83 € |
+| Enterprise     |                          Desde 16 | 249 € + 3 € por plaza/mes | 2.490 € + 30 € por plaza/año |               Desde 297 € |
 
-Todos incluyen el mismo núcleo: clientes, centros, catálogo, presupuestos, trabajos, planificación, contratos, visitas, partes, equipo, horarios, vacaciones, facturas, cobros y contabilidad básica. Recomendar el plan más pequeño que admita al equipo real; elegir extras de forma independiente.
+Todos incluyen el mismo núcleo. Trabajadores se incluye en Equipo pequeño y superiores; Proveedores, en Equipo grande y Enterprise; MCP, en Enterprise. Autónomo puede contratar los módulos aparte. Recomendar el plan más pequeño que admita al equipo real y valorar cada módulo no incluido.
 
 - Prueba: 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
 - El pago anual se cobra de una vez; su equivalente mensual no es una cuota mensual.
@@ -45,12 +45,14 @@ Todos incluyen el mismo núcleo: clientes, centros, catálogo, presupuestos, tra
 
 ### Módulos opcionales
 
-| Módulo                   | Mensual sin IVA | Anual sin IVA | Estado                                                  |
-| ------------------------ | --------------: | ------------: | ------------------------------------------------------- |
-| Compras e inventario     |           +19 € |        +190 € | Piloto: proveedores, stock, faltantes y contacto manual |
-| Logística de proveedores |           +29 € |        +290 € | Hipótesis interna: no se ofrece ni se puede activar     |
+| Módulo                   | Mensual sin IVA | Anual sin IVA | Disponibilidad                                      |
+| ------------------------ | --------------: | ------------: | --------------------------------------------------- |
+| Trabajadores             |            +5 € |         +50 € | Extra de Autónomo; incluido en Equipo pequeño o más |
+| Proveedores              |           +10 € |        +100 € | Extra en Autónomo y Equipo pequeño                  |
+| MCP                      |            +7 € |         +70 € | Extra hasta Enterprise                              |
+| Logística de proveedores |           +29 € |        +290 € | No se ofrece ni se puede activar                    |
 
-El suplemento es fijo por empresa, no por plaza. Equipo con Compras son 53 €/mes o 530 €/año, sin IVA. Superadmin y los administradores de la empresa pueden programar altas y bajas desde **Módulos opcionales**. El precio y el acceso cambian al confirmar el primer pago o la siguiente renovación, sin prorrateos ni borrado de datos. En empresas de cortesía, Superadmin cambia el acceso al momento y sin cobro. El módulo de Logística requiere validar quién pide el camión, cómo se confirma la entrega y qué canal usa cada proveedor.
+Los suplementos son fijos por empresa, no por plaza. Superadmin puede regalar módulos a una empresa; el acceso regalado no añade cargos. Los administradores pueden programar las altas y bajas de módulos de pago desde **Módulos opcionales**. El precio y el acceso cambian al confirmar el primer pago o la siguiente renovación, sin prorrateos ni borrado de datos. En empresas de cortesía, Superadmin cambia el acceso al momento y sin cobro. El módulo de Logística requiere validar quién pide el camión, cómo se confirma la entrega y qué canal usa cada proveedor.
 
 En **Superadmin → empresa → Condiciones de facturación** se puede cambiar el plan, la capacidad, el periodo y el precio base sin IVA. Los módulos contratados se suman automáticamente; no se deben volver a incluir en el precio base pactado. Guardar no cobra ni cambia el historial. La tarifa de catálogo restaura el precio base del tramo y periodo elegidos.
 
