@@ -1,15 +1,7 @@
+import { writeCsv } from '../lib/write-csv'
 import { ledgerNetCents, ledgerVatCents } from './estimate'
 import { centsToPlain } from './money'
 import type { LedgerEntry } from './types'
-
-function escapeField(value: string): string {
-  const safe = /^[\s]*[=+\-@]/.test(value) ? `'${value}` : value
-  return /[";\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
-}
-
-function structuredCsv(headers: string[], rows: string[][]): string {
-  return `\uFEFF${[headers, ...rows].map((row) => row.map(escapeField).join(';')).join('\r\n')}\r\n`
-}
 
 export type ExportClient = {
   id: string
@@ -67,7 +59,7 @@ const netFromGross = (grossCents: number, vatRate: number) =>
   Math.round(grossCents / (1 + vatRate / 100))
 
 export function buildClientsCsv(clients: ExportClient[]): string {
-  return structuredCsv(
+  return writeCsv(
     [
       'cliente_id',
       'nombre',
@@ -96,7 +88,7 @@ export function buildClientsCsv(clients: ExportClient[]): string {
 }
 
 export function buildInvoicesCsv(invoices: ExportInvoice[]): string {
-  return structuredCsv(
+  return writeCsv(
     [
       'factura_id',
       'numero',
@@ -143,7 +135,7 @@ export function buildInvoicesCsv(invoices: ExportInvoice[]): string {
 
 export function buildPaymentsCsv(payments: ExportPayment[], invoices: ExportInvoice[]): string {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
-  return structuredCsv(
+  return writeCsv(
     [
       'movimiento_id',
       'factura_id',
@@ -172,7 +164,7 @@ export function buildPaymentsCsv(payments: ExportPayment[], invoices: ExportInvo
 }
 
 export function buildExpensesCsv(expenses: ExportExpense[]): string {
-  return structuredCsv(
+  return writeCsv(
     [
       'gasto_id',
       'fecha',
@@ -213,14 +205,14 @@ export function buildLedgerCsv(entries: LedgerEntry[]): string {
       return [
         entry.date,
         entry.kind === 'income' ? (entry.amountCents < 0 ? 'Reembolso' : 'Ingreso') : 'Gasto',
-        escapeField(entry.concept),
-        escapeField(entry.category),
+        entry.concept,
+        entry.category,
         centsToPlain(sign * ledgerNetCents(entry)),
         entry.vatRate.toFixed(2),
         centsToPlain(sign * entry.amountCents),
-      ].join(';')
+      ]
     })
-  return `\uFEFF${[header.join(';'), ...rows].join('\r\n')}\r\n`
+  return writeCsv(header, rows)
 }
 
 export function ledgerVatSummary(entries: LedgerEntry[]): { collected: number; paid: number } {
@@ -289,17 +281,15 @@ export function buildQuarterlyVatCsv(quarters: QuarterVat[]): string {
   ]
   const rows = [...quarters]
     .reverse()
-    .map((q) =>
-      [
-        q.key,
-        centsToPlain(q.salesBase),
-        centsToPlain(q.collected),
-        centsToPlain(q.purchasesBase),
-        centsToPlain(q.paid),
-        centsToPlain(q.toPay),
-      ].join(';'),
-    )
-  return `\uFEFF${[header.join(';'), ...rows].join('\r\n')}\r\n`
+    .map((q) => [
+      q.key,
+      centsToPlain(q.salesBase),
+      centsToPlain(q.collected),
+      centsToPlain(q.purchasesBase),
+      centsToPlain(q.paid),
+      centsToPlain(q.toPay),
+    ])
+  return writeCsv(header, rows)
 }
 
 export function downloadTextFile(filename: string, content: string, mime = 'text/csv'): void {

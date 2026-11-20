@@ -1,3 +1,5 @@
+import { writeCsv } from '../lib/write-csv'
+
 /**
  * Generic table import (Excel/CSV). A schema says which columns a table accepts; this module
  * reads the rows against it. A file whose headers do not match is rejected whole (`fatal`).
@@ -97,13 +99,12 @@ export function planImport<T>(
   return { valid, duplicates, errors }
 }
 
-const quote = (value: string) => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
-
 /** Header plus one example row, ready to open in Excel. */
 export function buildTemplateCsv(schema: ImportSchema<unknown>): string {
-  const header = schema.columns.map((c) => quote(c.label)).join(';')
-  const example = schema.columns.map((c) => quote(c.example)).join(';')
-  return `\uFEFF${header}\r\n${example}\r\n`
+  return writeCsv(
+    schema.columns.map((c) => c.label),
+    [schema.columns.map((c) => c.example)],
+  )
 }
 
 /** Text to paste into ChatGPT together with the user's own Excel so it comes back in our format. */
