@@ -30,7 +30,6 @@ export function BrandPreview({
     >
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-muted-foreground text-xs font-medium">Vista previa en directo</p>
           <h2 className="text-lg font-semibold">Así se verá tu espacio de trabajo</h2>
         </div>
         <span className="border-border bg-card rounded-full border px-2.5 py-1 text-xs">

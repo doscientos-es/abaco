@@ -144,6 +144,7 @@ describe('personalization sections', () => {
 
   it('applies the draft color and logo to the sample workspace without saving', () => {
     expect(render()).toContain('Nuevo presupuesto')
+    expect(render()).not.toContain('Vista previa en directo')
     changeField('Color hexadecimal', '#AAAAAA')
     changeField('Logo de la empresa', 'https://example.test/logo.png')
     const customized = render()
@@ -192,6 +193,8 @@ describe('personalization sections', () => {
     changeField('Firma del correo', 'Saludos del equipo')
     changeField('Mensaje en correos de presupuesto', 'Tu <propuesta> personalizada')
     const estimate = render()
+    expect(estimate).not.toContain('Vista previa en directo')
+    expect(estimate).not.toContain('Correo de ejemplo')
     expect(estimate).toContain('>Equipo comercial</dd>')
     expect(estimate).toContain('Tu &lt;propuesta&gt; personalizada')
     expect(estimate).toContain('Saludos del equipo')
@@ -201,6 +204,8 @@ describe('personalization sections', () => {
     expect(render()).toContain('Factura DEMO-001 · Empresa')
     changeField('Mensaje en correos de factura', 'Tu factura personalizada')
     const invoice = render()
+    expect(invoice).not.toContain('Vista previa en directo')
+    expect(invoice).not.toContain('Correo de ejemplo')
     expect(invoice).toContain('Tu factura personalizada')
     expect(invoice).not.toContain('Tu &lt;propuesta&gt; personalizada')
     expect(invoice).toContain('>Equipo comercial</dd>')

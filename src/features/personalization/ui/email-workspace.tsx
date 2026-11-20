@@ -55,12 +55,6 @@ function EmailPreview({
 
   return (
     <div className="border-border bg-muted/70 rounded-xl border p-3 sm:p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Vista previa en directo</h2>
-        <span className="border-border bg-card rounded-full border px-2.5 py-1 text-xs">
-          Correo de ejemplo
-        </span>
-      </div>
       <article className="border-border bg-card mx-auto max-w-3xl overflow-hidden rounded-xl border shadow-sm">
         <header className="border-border space-y-3 border-b p-4 sm:p-6">
           <h3 className="text-lg font-semibold wrap-anywhere">
