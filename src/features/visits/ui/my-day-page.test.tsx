@@ -127,6 +127,21 @@ describe('navegación por días', () => {
     expect(mocks.date).toBe('2026-12-31')
   })
 
+  it('links only the authorized visit address to Maps and handles missing addresses', () => {
+    mocks.visits = [
+      { ...visit, address: 'C/ Peñón 4 & Norte', notes: 'Información privada 612345678' },
+      { ...visit, id: 'other', title: 'Otra', address: '  ' },
+    ]
+    const html = renderToStaticMarkup(<MyDayPage />)
+    expect(html).toContain('destination=C%2F+Pe%C3%B1%C3%B3n+4+%26+Norte')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('Sin dirección de visita.')
+    expect(html.match(/La dirección puede estar incompleta/g)).toHaveLength(1)
+    expect(html).toContain('Comprueba la localidad y el destino en Google Maps.')
+    expect(html).not.toContain('wa.me')
+    expect(html).not.toMatch(/href="[^"]*Informaci%C3%B3n/)
+  })
+
   it('groups assigned work under the contract and keeps individual actions available', () => {
     mocks.visits = [
       { ...visit, contract_id: 'contract', contract_title: 'Oficina', title: 'Fregar' },

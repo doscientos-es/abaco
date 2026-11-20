@@ -19,6 +19,7 @@ import { can, useSession } from '@/features/auth'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
 import { ClientVisitHistory } from '@/features/visits/ui/client-visit-history'
 import { useTenantData } from '@/shared/store/store'
+import { ClientWhatsappAction, VisitMapsAction } from '@/shared/ui/contact-actions'
 import { PageNotFound } from '@/shared/ui/page-states'
 
 import { loadClientPassport } from '../application/client-passport-actions'
@@ -75,6 +76,19 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
         </PageHeaderActions>
       </PageHeader>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Contacto principal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {client.phone ? <p className="text-sm">Teléfono: {client.phone}</p> : null}
+          <ClientWhatsappAction
+            phone={client.phone}
+            label={`Abrir WhatsApp del cliente ${client.name}`}
+          />
+        </CardContent>
+      </Card>
+
       {passport.isPending ? <output>Cargando ficha del cliente…</output> : null}
       {passport.isError ? (
         <div role="alert" className="border-destructive rounded-lg border p-4 text-sm">
@@ -113,6 +127,10 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                         {contact.phone ? (
                           <a href={`tel:${contact.phone}`}>{contact.phone}</a>
                         ) : null}
+                        <ClientWhatsappAction
+                          phone={contact.phone}
+                          label={`Abrir WhatsApp de ${contact.name}`}
+                        />
                         {contact.email ? (
                           <a href={`mailto:${contact.email}`} className="block break-all">
                             {contact.email}
@@ -159,6 +177,19 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                       {location.address}
                       {location.city ? ` · ${location.city}` : ''}
                     </p>
+                    <VisitMapsAction
+                      showAddress={false}
+                      coordinates={{ latitude: location.latitude, longitude: location.longitude }}
+                      address={
+                        location.address?.trim()
+                          ? [location.address, location.postal_code, location.city]
+                              .filter((part) => part?.trim())
+                              .map((part) => part.trim())
+                              .join(', ')
+                          : ''
+                      }
+                      label={`Cómo llegar al centro ${location.name} en Google Maps`}
+                    />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {canWrite ? (

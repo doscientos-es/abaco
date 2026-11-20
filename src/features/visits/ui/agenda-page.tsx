@@ -32,6 +32,7 @@ import {
 } from '@/shared/lib/event-calendar'
 import { useTenantData } from '@/shared/store/store'
 import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
+import { VisitMapsAction } from '@/shared/ui/contact-actions'
 import { EventCalendar } from '@/shared/ui/event-calendar'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -448,6 +449,11 @@ export function AgendaPage() {
   function renderVisitExpandedDetails(visit: VisitSummary) {
     return (
       <>
+        <VisitMapsAction
+          addressMayBeIncomplete
+          address={visit.address}
+          label={`Cómo llegar a ${visit.title} en Google Maps`}
+        />
         {replanning?.id === visit.id ? (
           <VisitReplanForm
             key={`${visit.id}:${visit.updated_at}`}

@@ -293,7 +293,7 @@ describe('AgendaPage: nueva visita', () => {
         title: 'Cristales TEST',
         client_name: 'Oficinas TEST',
         location_name: 'Sede',
-        address: '',
+        address: 'Calle Ávila & 4',
         timezone: 'Europe/Madrid',
         scheduled_start_at: '2026-11-13T09:00:00Z',
         scheduled_end_at: '2026-11-13T10:00:00Z',
@@ -331,6 +331,9 @@ describe('AgendaPage: nueva visita', () => {
     expect(list).not.toContain('Otro TEST')
     expect(list).toContain('Reprogramar')
     expect(list).toContain('Ver parte')
+    expect(list).toContain('destination=Calle+%C3%81vila+%26+4')
+    expect(list).toContain('La dirección puede estar incompleta. Comprueba la localidad')
+    expect(list).toContain('rel="noopener noreferrer"')
     const listQuery = mocks.queryKeys.find((key) => key[0] === 'office-visits')
     mocks.buttons.get('Calendario')?.()
     const navigation = mocks.navigate.mock.calls.at(-1)?.[0] as {
@@ -362,6 +365,8 @@ describe('AgendaPage: nueva visita', () => {
     expect(listQuery?.slice(2, 4)).toEqual(['2026-11-09', '2026-11-15'])
     expect(calendar).toContain('Reprogramar')
     expect(calendar).toContain('Ver parte')
+    expect(calendar).toContain('destination=Calle+%C3%81vila+%26+4')
+    expect(calendar).toContain('La dirección puede estar incompleta. Comprueba la localidad')
   })
 
   it('keeps the default month when switching views and moves one day in daily planning', () => {

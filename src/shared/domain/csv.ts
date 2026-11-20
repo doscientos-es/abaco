@@ -9,6 +9,7 @@ export type ExportClient = {
   kind: string
   taxId: string
   email: string
+
   phone: string
   address: string
   billingAddress: string

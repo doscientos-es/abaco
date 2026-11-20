@@ -58,6 +58,9 @@ describe('assigned visit acceptance', () => {
 
     expect(mocks.eq).toHaveBeenCalledWith('tenant_id', 'tenant')
     expect(mocks.in).toHaveBeenCalledWith('id', ['required', 'optional'])
+    expect(mocks.from).toHaveBeenCalledTimes(1)
+    expect(mocks.from).toHaveBeenCalledWith('service_visits')
+    expect(mocks.select).toHaveBeenCalledWith('id,work_order_id,paper_snapshot')
     expect(visits).toEqual([
       {
         id: 'required',

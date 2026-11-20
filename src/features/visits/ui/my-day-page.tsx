@@ -14,6 +14,7 @@ import {
 } from '@/features/incidents/application/incident-queue'
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
 import { moveDays, todayInMadrid } from '@/shared/lib/date-range'
+import { VisitMapsAction } from '@/shared/ui/contact-actions'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import {
@@ -334,20 +335,11 @@ export function MyDayPage() {
                   <p className="text-muted-foreground">Visita de tu equipo</p>
                 ) : null}
                 {visit.location_name ? <p>{visit.location_name}</p> : null}
-                {visit.address ? (
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">{visit.address}</p>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(visit.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary inline-flex min-h-10 items-center gap-1 font-medium underline"
-                    >
-                      <MapPinIcon aria-hidden="true" />
-                      Cómo llegar
-                    </a>
-                  </div>
-                ) : null}
+                <VisitMapsAction
+                  addressMayBeIncomplete
+                  address={visit.address}
+                  label={`Cómo llegar a ${visit.title} en Google Maps`}
+                />
                 {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
                 {visit.work_order_id ? (
                   <section

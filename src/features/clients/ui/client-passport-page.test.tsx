@@ -7,6 +7,11 @@ import { ClientPassportPage } from './client-passport-page'
 
 const mocks = vi.hoisted(() => ({
   allowed: true,
+  clientPhone: '612 345 678',
+  contactPhone: '+44 20 7946 0958',
+  address: 'Calle Ávila 4',
+  latitude: null as number | null,
+  longitude: null as number | null,
   start: vi.fn(),
   actions: new Map<string, () => void>(),
 }))
@@ -40,13 +45,19 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: () => ({
     data: {
-      contacts: [{ id: 'contact', name: 'Ana', active: true, role: 'other' }],
+      contacts: [
+        { id: 'contact', name: 'Ana', active: true, role: 'other', phone: mocks.contactPhone },
+      ],
       locations: [
         {
           id: 'centre',
           name: 'Office centre',
           active: true,
-          address: 'Test address',
+          address: mocks.address,
+          postal_code: '05001',
+          city: 'Ávila',
+          latitude: mocks.latitude,
+          longitude: mocks.longitude,
           opening_hours: 'Lunes a viernes, 8:00–18:00',
           operational_contact: 'Reception',
           access_notes: 'Call ahead',
@@ -67,7 +78,7 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({
     tenant: { id: 'tenant' },
-    clients: [{ id: 'client', name: 'Client TEST' }],
+    clients: [{ id: 'client', name: 'Client TEST', phone: mocks.clientPhone }],
   }),
 }))
 vi.mock('@/features/incidents/ui/incident-panel', () => ({
@@ -83,6 +94,11 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.actions.clear()
   mocks.allowed = true
+  mocks.clientPhone = '612 345 678'
+  mocks.contactPhone = '+44 20 7946 0958'
+  mocks.address = 'Calle Ávila 4'
+  mocks.latitude = null
+  mocks.longitude = null
 })
 
 describe('client service centres', () => {
@@ -103,6 +119,56 @@ describe('client service centres', () => {
     expect(html).toContain('aria-label="Editar contacto Ana"')
     mocks.actions.get('Editar contacto Ana')?.()
     expect(mocks.start).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'editContact' }))
+  })
+
+  it('offers secure contact and centre links without including private notes', () => {
+    const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('https://wa.me/34612345678?text=')
+    expect(html).toContain('https://wa.me/442079460958?text=')
+    expect(html).toContain('Podrás revisar y editar el mensaje en WhatsApp antes de enviarlo.')
+    expect(html).toContain('Calle Ávila 4 · Ávila')
+    expect(html).toContain('destination=Calle+%C3%81vila+4%2C+05001%2C+%C3%81vila')
+    expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(3)
+    expect(html).not.toMatch(/href="[^"]*(?:Reception|Cleaning|Call\+ahead)/)
+  })
+
+  it('prioritizes centre coordinates without hiding the original address', () => {
+    mocks.latitude = 40.656
+    mocks.longitude = -4.7
+    const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('Calle Ávila 4 · Ávila')
+    expect(html).toContain('destination=40.656%2C-4.7')
+    expect(html).not.toContain('destination=Calle+')
+    expect(html).not.toContain('La dirección puede estar incompleta')
+  })
+
+  it('uses coordinates without a street and falls back when coordinates are invalid', () => {
+    mocks.address = ''
+    mocks.latitude = 0
+    mocks.longitude = 0
+    let html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('destination=0%2C0')
+    expect(html).toContain(' · Ávila')
+    expect(html).not.toContain('Sin dirección de visita.')
+
+    mocks.address = 'Calle Ávila 4'
+    mocks.latitude = 91
+    html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('destination=Calle+%C3%81vila+4%2C+05001%2C+%C3%81vila')
+    expect(html).not.toContain('destination=91')
+  })
+
+  it('does not offer links without a valid phone or a street address', () => {
+    mocks.clientPhone = ''
+    mocks.contactPhone = '612345678 ext 9'
+    mocks.address = '  '
+    const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('WhatsApp no disponible: sin teléfono.')
+    expect(html).toContain('WhatsApp no disponible: revisa el teléfono')
+    expect(html).toContain('Sin dirección de visita.')
+    expect(html).toContain(' · Ávila')
+    expect(html).not.toContain('https://wa.me/')
+    expect(html).not.toContain('https://www.google.com/maps/')
   })
 
   it('does not offer centre creation or editing to a read-only user', () => {
