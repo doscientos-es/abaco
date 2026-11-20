@@ -71,6 +71,26 @@ describe('customer-facing estimate', () => {
     )
   })
 
+  it('prints optional line details beneath the estimate item description', () => {
+    const html = renderToStaticMarkup(
+      <EstimateDocument
+        estimate={{
+          ...estimate,
+          lines: estimate.lines.map((line) => ({
+            ...line,
+            details: 'Acabado mate\nColor blanco',
+          })),
+        }}
+        tenant={tenant}
+        client={undefined}
+      />,
+    )
+
+    expect(html).toContain('Acabado mate')
+    expect(html).toContain('Color blanco')
+    expect(html).toContain('whitespace-pre-line')
+  })
+
   it('flows the compact header and prices together without blank cover or index pages', () => {
     const html = renderToStaticMarkup(
       <EstimateDocument

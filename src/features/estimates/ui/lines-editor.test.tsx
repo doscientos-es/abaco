@@ -10,6 +10,7 @@ import type { Estimate, EstimateLine } from '@/shared/domain/types'
 const mocks = vi.hoisted(() => ({
   unitOptions: [] as Array<{ value: string; label: string }>,
   setUnit: null as null | ((value: string) => void),
+  setDetails: null as null | ((value: string) => void),
 }))
 
 vi.mock('@doscientos/ui', () => ({
@@ -33,6 +34,10 @@ vi.mock('@doscientos/ui', () => ({
   DropdownMenuTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   HighlightMatch: () => null,
   Input: (props: ComponentProps<'input'>) => <input {...props} />,
+  Textarea: (props: ComponentProps<'textarea'>) => {
+    mocks.setDetails = (value) => props.onChange?.({ target: { value } } as never)
+    return <textarea {...props} />
+  },
 }))
 vi.mock('@/shared/ui/form', () => ({
   SelectField: ({
@@ -91,6 +96,8 @@ describe('LinesEditor', () => {
     expect(markup).toContain('estimate-line__description')
     expect(markup).toContain('estimate-line__header')
     expect(markup).toContain('aria-label="Descripción"')
+    expect(markup).toContain('Descripción (opcional)')
+    expect(markup).toContain('placeholder="Especificaciones o detalles adicionales…"')
     expect(markup).toContain('aria-label="Cantidad"')
     expect(markup).toContain('aria-label="Unidad"')
     expect(markup).toContain('<select aria-label="Unidad"')
@@ -101,6 +108,24 @@ describe('LinesEditor', () => {
     expect(markup).toContain('Eliminar partida')
     expect(markup).toContain('<svg')
     expect(markup).toContain('aria-hidden="true"')
+  })
+
+  it('updates optional line details without dropping its inventory selection', () => {
+    const onChange = vi.fn()
+    const catalogLine = { ...line, catalogItemId: 'catalog-item-1' }
+    renderToStaticMarkup(
+      <LinesEditor
+        estimate={{ ...estimate, lines: [catalogLine] }}
+        catalog={[]}
+        onChange={onChange}
+      />,
+    )
+
+    mocks.setDetails?.('Acabado mate, color blanco')
+
+    expect(onChange).toHaveBeenCalledWith([
+      { ...catalogLine, details: 'Acabado mate, color blanco' },
+    ])
   })
 
   it('selects a standard unit and retains existing custom units', () => {

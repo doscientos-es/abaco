@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
   HighlightMatch,
   Input,
+  Textarea,
   toast,
 } from '@doscientos/ui'
 import { ArrowDown, ArrowUp, Copy, DotsThree, Trash } from '@phosphor-icons/react'
@@ -307,6 +308,22 @@ export function LinesEditor({
                   </DropdownMenuTrigger>
                 </div>
               </div>
+              <label
+                htmlFor={`estimate-line-details-${line.id}`}
+                className="text-muted-foreground mt-2 block text-xs"
+              >
+                <span className="mb-1 block">Descripción (opcional)</span>
+                <Textarea
+                  id={`estimate-line-details-${line.id}`}
+                  aria-label="Descripción (opcional)"
+                  maxLength={formLimits.estimateLineDetails}
+                  placeholder="Especificaciones o detalles adicionales…"
+                  rows={2}
+                  className="bg-surface-subtle/50 min-h-16 resize-y px-2 py-1.5 text-sm"
+                  value={line.details ?? ''}
+                  onChange={(event) => updateLine(line.id, { details: event.target.value })}
+                />
+              </label>
             </div>
           ))}
         </div>

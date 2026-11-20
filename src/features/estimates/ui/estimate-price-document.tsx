@@ -27,6 +27,11 @@ export function EstimatePriceTable({ lines }: { lines: EstimateLine[] }) {
             <tr key={line.id} className="border-b">
               <td className="py-2">
                 {line.description}
+                {line.details ? (
+                  <span className="text-muted-foreground block text-xs whitespace-pre-line">
+                    {line.details}
+                  </span>
+                ) : null}
                 {line.discountPercent > 0 ? (
                   <span className="text-muted-foreground block text-xs">
                     Descuento {line.discountPercent}%

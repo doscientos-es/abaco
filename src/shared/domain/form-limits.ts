@@ -13,6 +13,7 @@ export const formLimits = {
   unit: 24,
   estimateTitle: 200,
   estimateLineDescription: 200,
+  estimateLineDetails: 1000,
   estimateClauses: 4000,
   milestoneLabel: 160,
   milestoneDescription: 500,

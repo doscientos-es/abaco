@@ -21,7 +21,7 @@ describe('public estimate document projection', () => {
       document_sections: sections,
       conversion_destination: 'contract',
       contract_billing_frequency: 'quarterly',
-      estimate_lines: [{ id: 'line', description: 'Servicio' }],
+      estimate_lines: [{ id: 'line', description: 'Servicio', details: 'Mantenimiento semanal' }],
     }
     const projected = publicEstimateDocument(published, {
       title: 'Modificado',

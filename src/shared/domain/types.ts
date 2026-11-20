@@ -92,6 +92,8 @@ export type EstimateLine = {
   id: string
   catalogItemId: string | null
   description: string
+  /** Optional specifications shown beneath the line item in customer-facing estimates. */
+  details?: string
   kind: CatalogKind
   unit: string
   quantity: number
