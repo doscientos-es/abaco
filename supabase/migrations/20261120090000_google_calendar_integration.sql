@@ -241,6 +241,164 @@ create trigger google_calendar_connection_backfill
   on public.google_calendar_connections
   for each row execute function app_private.enqueue_google_calendar_connection_visits();
 
+create function public.authorize_google_calendar_actor(p_tenant_id uuid, p_user_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select p_tenant_id is not null and p_user_id is not null and exists (
+    select 1 from public.memberships m
+    where m.tenant_id = p_tenant_id and m.user_id = p_user_id
+      and m.role in ('user', 'technician')
+  );
+$$;
+revoke all on function public.authorize_google_calendar_actor(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.authorize_google_calendar_actor(uuid, uuid) to service_role;
+
+create function public.save_google_calendar_oauth_state(
+  p_state_hash text, p_tenant_id uuid, p_user_id uuid, p_code_verifier text,
+  p_return_origin text, p_expires_at timestamptz
+) returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role'
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id)
+    or p_expires_at <= clock_timestamp()
+    or p_expires_at > clock_timestamp() + interval '10 minutes' then
+    raise exception 'No se puede iniciar la conexión de Calendar' using errcode = '42501';
+  end if;
+  delete from public.google_calendar_oauth_states where expires_at <= clock_timestamp();
+  insert into public.google_calendar_oauth_states
+    (state_hash, tenant_id, user_id, code_verifier, return_origin, expires_at)
+  values (p_state_hash, p_tenant_id, p_user_id, p_code_verifier, p_return_origin, p_expires_at);
+end;
+$$;
+revoke all on function public.save_google_calendar_oauth_state(text, uuid, uuid, text, text, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.save_google_calendar_oauth_state(text, uuid, uuid, text, text, timestamptz)
+  to service_role;
+
+create function public.consume_google_calendar_oauth_state(p_state_hash text)
+returns table(tenant_id uuid, user_id uuid, code_verifier text, return_origin text, expires_at timestamptz)
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role' then
+    raise exception 'No autorizado' using errcode = '42501';
+  end if;
+  return query delete from public.google_calendar_oauth_states s
+    where s.state_hash = p_state_hash and s.expires_at > clock_timestamp()
+    returning s.tenant_id, s.user_id, s.code_verifier, s.return_origin, s.expires_at;
+end;
+$$;
+revoke all on function public.consume_google_calendar_oauth_state(text)
+  from public, anon, authenticated;
+grant execute on function public.consume_google_calendar_oauth_state(text) to service_role;
+
+create function public.save_google_calendar_connection_token(
+  p_tenant_id uuid, p_user_id uuid, p_refresh_token_ciphertext text
+) returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role'
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id)
+    or p_refresh_token_ciphertext is null or char_length(p_refresh_token_ciphertext) > 4096 then
+    raise exception 'No se puede guardar la conexión de Calendar' using errcode = '42501';
+  end if;
+  insert into public.google_calendar_connections
+    (tenant_id, user_id, status, refresh_token_ciphertext, last_error,
+      sync_lease_token, sync_lease_until, updated_at)
+  values (p_tenant_id, p_user_id, 'provisioning', p_refresh_token_ciphertext, null,
+    null, null, clock_timestamp())
+  on conflict (tenant_id, user_id) do update set
+    status = 'provisioning', refresh_token_ciphertext = excluded.refresh_token_ciphertext,
+    last_error = null, sync_lease_token = null, sync_lease_until = null,
+    updated_at = clock_timestamp();
+end;
+$$;
+revoke all on function public.save_google_calendar_connection_token(uuid, uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.save_google_calendar_connection_token(uuid, uuid, text) to service_role;
+
+create function public.complete_google_calendar_connection(
+  p_tenant_id uuid, p_user_id uuid, p_calendar_id text
+) returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role' or p_calendar_id is null
+    or char_length(p_calendar_id) not between 1 and 1024 or p_calendar_id = 'primary'
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id) then
+    raise exception 'No se puede completar la conexión de Calendar' using errcode = '42501';
+  end if;
+  update public.google_calendar_connections set status = 'connected', calendar_id = p_calendar_id,
+    last_error = null, updated_at = clock_timestamp()
+    where tenant_id = p_tenant_id and user_id = p_user_id
+      and status = 'provisioning' and refresh_token_ciphertext is not null;
+  return found;
+end;
+$$;
+revoke all on function public.complete_google_calendar_connection(uuid, uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.complete_google_calendar_connection(uuid, uuid, text) to service_role;
+
+create function public.rotate_google_calendar_refresh_token(
+  p_tenant_id uuid, p_user_id uuid, p_previous text, p_next text
+) returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role' or p_next is null
+    or char_length(p_next) > 4096
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id) then
+    raise exception 'No se puede renovar la conexión de Calendar' using errcode = '42501';
+  end if;
+  update public.google_calendar_connections set refresh_token_ciphertext = p_next,
+    updated_at = clock_timestamp()
+    where tenant_id = p_tenant_id and user_id = p_user_id
+      and refresh_token_ciphertext = p_previous and status in ('connected', 'provisioning');
+  return found;
+end;
+$$;
+revoke all on function public.rotate_google_calendar_refresh_token(uuid, uuid, text, text)
+  from public, anon, authenticated;
+grant execute on function public.rotate_google_calendar_refresh_token(uuid, uuid, text, text)
+  to service_role;
+
+create function public.disconnect_google_calendar_connection(p_tenant_id uuid, p_user_id uuid)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.role() is distinct from 'service_role'
+    or not public.authorize_google_calendar_actor(p_tenant_id, p_user_id) then
+    raise exception 'No se puede desconectar este calendario' using errcode = '42501';
+  end if;
+  update public.google_calendar_connections set status = 'disconnected',
+    refresh_token_ciphertext = null, last_error = null, sync_lease_token = null,
+    sync_lease_until = null, updated_at = clock_timestamp()
+    where tenant_id = p_tenant_id and user_id = p_user_id;
+  if not found then return false; end if;
+  delete from public.google_calendar_sync_jobs
+    where tenant_id = p_tenant_id and user_id = p_user_id;
+  return true;
+end;
+$$;
+revoke all on function public.disconnect_google_calendar_connection(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.disconnect_google_calendar_connection(uuid, uuid) to service_role;
+
+create function public.disconnect_my_google_calendar(p_tenant_id uuid)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null or p_tenant_id is null or not public.has_role(
+    p_tenant_id, array['user', 'technician']::public.app_role[]
+  ) then
+    raise exception 'No tienes permiso para desconectar este calendario' using errcode = '42501';
+  end if;
+  update public.google_calendar_connections set status = 'disconnected',
+    refresh_token_ciphertext = null, last_error = null, sync_lease_token = null,
+    sync_lease_until = null, updated_at = clock_timestamp()
+    where tenant_id = p_tenant_id and user_id = auth.uid();
+  if not found then return false; end if;
+  delete from public.google_calendar_sync_jobs
+    where tenant_id = p_tenant_id and user_id = auth.uid();
+  return true;
+end;
+$$;
+revoke all on function public.disconnect_my_google_calendar(uuid)
+  from public, anon;
+grant execute on function public.disconnect_my_google_calendar(uuid) to authenticated;
+
 create function public.queue_my_google_calendar_sync(p_tenant_id uuid)
 returns integer language plpgsql security definer set search_path = '' as $$
 declare queued integer;

@@ -79,54 +79,25 @@ describe('server OAuth preparation', () => {
       expect(body.get('redirect_uri')).toBe(config.redirectUri)
       return json({ refresh_token: 'refresh-test', scope: calendarScope })
     })
-    await completeCalendarAuthorization(
-      actor,
-      state,
-      'code-test',
-      config,
-      store,
-      allowed,
-      fetcher,
-      2000,
-    )
+    await completeCalendarAuthorization(state, 'code-test', config, store, allowed, fetcher, 2000)
     expect(saved()).not.toContain('refresh-test')
     expect(decryptRefreshToken(saved(), config.encryptionKey, actor)).toBe('refresh-test')
     await expect(
-      completeCalendarAuthorization(
-        actor,
-        state,
-        'code-test',
-        config,
-        store,
-        allowed,
-        fetcher,
-        2000,
-      ),
+      completeCalendarAuthorization(state, 'code-test', config, store, allowed, fetcher, 2000),
     ).rejects.toThrow('state')
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
 
-  it('rejects state replay, expiry, wrong user or tenant, and revoked membership before exchange', async () => {
-    for (const [callbackActor, now, authorize] of [
-      [{ ...actor, userId: '5c000000-0000-4000-8000-000000000004' }, 2000, allowed],
-      [{ ...actor, tenantId: '5c000000-0000-4000-8000-000000000004' }, 2000, allowed],
-      [actor, 601000, allowed],
-      [actor, 2000, async () => false],
-    ] as [CalendarActor, number, (actor: CalendarActor) => Promise<boolean>][]) {
+  it('rejects expired state and revoked membership before exchanging the code', async () => {
+    for (const [now, authorize] of [
+      [601000, allowed],
+      [2000, async () => false],
+    ] as [number, (actor: CalendarActor) => Promise<boolean>][]) {
       const { store } = memoryStore()
       const state = (await begin(store)).searchParams.get('state') ?? ''
       const fetcher = vi.fn<typeof fetch>()
       await expect(
-        completeCalendarAuthorization(
-          callbackActor,
-          state,
-          'code',
-          config,
-          store,
-          authorize,
-          fetcher,
-          now,
-        ),
+        completeCalendarAuthorization(state, 'code', config, store, authorize, fetcher, now),
       ).rejects.toThrow('state')
       expect(fetcher).not.toHaveBeenCalled()
     }
@@ -141,7 +112,6 @@ describe('server OAuth preparation', () => {
       const state = (await begin(store)).searchParams.get('state') ?? ''
       await expect(
         completeCalendarAuthorization(
-          actor,
           state,
           'code',
           config,
@@ -160,7 +130,6 @@ describe('server OAuth preparation', () => {
     }
     await expect(
       completeCalendarAuthorization(
-        actor,
         state,
         'code',
         config,

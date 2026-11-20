@@ -125,7 +125,6 @@ export async function beginCalendarAuthorization(
 
 /** Consume state once, reauthorize, exchange server-side and persist before reporting success. */
 export async function completeCalendarAuthorization(
-  actor: CalendarActor,
   state: string,
   code: string,
   config: OAuthConfig,
@@ -134,20 +133,18 @@ export async function completeCalendarAuthorization(
   fetcher: typeof fetch = fetch,
   now = Date.now(),
 ) {
-  validateActor(actor)
   validateConfig(config)
   if (!statePattern.test(state)) throw new Error('Invalid authorization state')
   const pending = await store.consumeState(digest(state))
+  if (pending) validateActor(pending.actor)
   if (
     !pending ||
     !Number.isFinite(pending.expiresAt) ||
     pending.expiresAt <= now ||
-    pending.actor.tenantId.toLowerCase() !== actor.tenantId.toLowerCase() ||
-    pending.actor.userId.toLowerCase() !== actor.userId.toLowerCase() ||
     !statePattern.test(pending.verifier) ||
     !code ||
     code.length > 4096 ||
-    !(await authorize(actor))
+    !(await authorize(pending.actor))
   )
     throw new Error('Invalid authorization state')
   let response: Response
@@ -178,8 +175,9 @@ export async function completeCalendarAuthorization(
     !result.scope.split(/\s+/).includes(calendarScope)
   )
     throw new Error('Google authorization missing permission or offline access')
-  const encrypted = encryptRefreshToken(result.refresh_token, config.encryptionKey, actor)
-  await store.saveAuthorizedConnection(actor, encrypted)
+  const encrypted = encryptRefreshToken(result.refresh_token, config.encryptionKey, pending.actor)
+  await store.saveAuthorizedConnection(pending.actor, encrypted)
+  return pending.actor
 }
 
 export class CalendarAuthorizationError extends Error {
