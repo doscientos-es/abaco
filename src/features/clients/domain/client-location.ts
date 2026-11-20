@@ -29,6 +29,20 @@ export type LocationDraft = {
   id: string
   original: ServiceLocation | null
   input: LocationInput
+  /** New centres inherit the client's address and contact until customized. */
+  usesClientDetails?: boolean
+}
+
+export function setLocationClientDetails(
+  draft: LocationDraft,
+  isDistinct: boolean,
+  clientDetails: Pick<LocationInput, 'address' | 'operational_contact'>,
+): LocationDraft {
+  return {
+    ...draft,
+    usesClientDetails: !isDistinct,
+    input: isDistinct ? draft.input : { ...draft.input, ...clientDetails },
+  }
 }
 
 export const locationKinds = [

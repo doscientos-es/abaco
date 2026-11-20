@@ -64,6 +64,7 @@ export function ClientForm({
         }
       : empty,
   )
+  const currentForm = useRef(form)
   const [initialForm] = useState(() => JSON.stringify(form))
   const saved = useRef(false)
   const savedClientId = useRef(client?.id)
@@ -72,7 +73,28 @@ export function ClientForm({
   const [saveError, setSaveError] = useState('')
   const set = (key: keyof ClientInput) => (value: string) => {
     saved.current = false
-    setForm((previous) => ({ ...previous, [key]: value }))
+    const next = { ...currentForm.current, [key]: value }
+    currentForm.current = next
+    setForm(next)
+    const clientContact = [next.name, next.phone, next.email].filter(Boolean).join(' · ')
+    if (
+      locations.locations.some(({ original, usesClientDetails }) => !original && usesClientDetails)
+    ) {
+      locations.setLocations(
+        locations.locations.map((draft) =>
+          !draft.original && draft.usesClientDetails
+            ? {
+                ...draft,
+                input: {
+                  ...draft.input,
+                  address: next.address,
+                  operational_contact: clientContact,
+                },
+              }
+            : draft,
+        ),
+      )
+    }
   }
   const duplicates = findPotentialClientDuplicates(form, clients, client?.id)
   const isDirty =
@@ -270,7 +292,12 @@ export function ClientForm({
           </Button>
         </div>
       ) : !client || locations.query.isSuccess ? (
-        <ClientLocationsEditor locations={locations.locations} onChange={locations.setLocations} />
+        <ClientLocationsEditor
+          locations={locations.locations}
+          onChange={locations.setLocations}
+          clientAddress={form.address}
+          clientContact={[form.name, form.phone, form.email].filter(Boolean).join(' · ')}
+        />
       ) : null}
     </div>
   )

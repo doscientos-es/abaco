@@ -1,15 +1,26 @@
 import { Button } from '@doscientos/ui'
 
-import { locationInput, type LocationDraft } from '../domain/client-location'
+import {
+  locationInput,
+  setLocationClientDetails,
+  type LocationDraft,
+} from '../domain/client-location'
 import { LocationFields } from './location-fields'
 
 export function ClientLocationsEditor({
   locations,
   onChange,
+  clientAddress,
+  clientContact,
 }: {
   locations: LocationDraft[]
   onChange: (locations: LocationDraft[]) => void
+  clientAddress: string
+  clientContact: string
 }) {
+  const updateLocation = (id: string, update: (draft: LocationDraft) => LocationDraft) =>
+    onChange(locations.map((draft) => (draft.id === id ? update(draft) : draft)))
+
   return (
     <section
       className="border-border bg-card rounded-xl border p-4 sm:p-6"
@@ -26,7 +37,16 @@ export function ClientLocationsEditor({
           onPress={() =>
             onChange([
               ...locations,
-              { id: crypto.randomUUID(), original: null, input: locationInput() },
+              {
+                id: crypto.randomUUID(),
+                original: null,
+                input: {
+                  ...locationInput(),
+                  address: clientAddress,
+                  operational_contact: clientContact,
+                },
+                usesClientDetails: true,
+              },
             ])
           }
         >
@@ -52,12 +72,34 @@ export function ClientLocationsEditor({
             <LocationFields
               value={draft.input}
               showUsage={Boolean(draft.original)}
-              onChange={(input) =>
-                onChange(
-                  locations.map((item) => (item.id === draft.id ? { ...item, input } : item)),
-                )
-              }
+              showClientDetails={Boolean(draft.original) || !draft.usesClientDetails}
+              onChange={(input) => updateLocation(draft.id, (item) => ({ ...item, input }))}
             />
+            {!draft.original ? (
+              <div className="sm:col-span-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!draft.usesClientDetails}
+                    onChange={(event) => {
+                      const isDistinct = event.target.checked
+                      updateLocation(draft.id, (item) =>
+                        setLocationClientDetails(item, isDistinct, {
+                          address: clientAddress,
+                          operational_contact: clientContact,
+                        }),
+                      )
+                    }}
+                  />
+                  <span>La dirección o el contacto de este centro son distintos</span>
+                </label>
+                {draft.usesClientDetails ? (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Se usarán la dirección y el contacto del cliente.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             {!draft.original ? (
               <Button
                 type="button"

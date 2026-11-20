@@ -4,6 +4,7 @@ import {
   locationInput,
   locationPersistenceInput,
   parseLocationCoordinates,
+  setLocationClientDetails,
   sameLocationInput,
   validLocationInput,
 } from './client-location'
@@ -55,6 +56,37 @@ describe('centre coordinates', () => {
     expect(locationPersistenceInput(input)).toMatchObject({
       opening_hours: 'Texto anterior',
       opening_schedule: slots,
+    })
+  })
+})
+
+describe('inheriting client details for new centres', () => {
+  it('keeps inherited details by default, preserves distinct values, and restores inheritance', () => {
+    const draft = {
+      id: 'new-centre',
+      original: null,
+      input: {
+        ...locationInput(),
+        address: 'Client address',
+        operational_contact: 'Client contact',
+      },
+      usesClientDetails: true,
+    }
+
+    const distinct = setLocationClientDetails(draft, true, {
+      address: 'Client address',
+      operational_contact: 'Client contact',
+    })
+    expect(distinct.usesClientDetails).toBe(false)
+    expect(
+      setLocationClientDetails(
+        { ...distinct, input: { ...distinct.input, address: 'Centre address' } },
+        false,
+        { address: 'Updated client address', operational_contact: 'Updated contact' },
+      ),
+    ).toMatchObject({
+      usesClientDetails: true,
+      input: { address: 'Updated client address', operational_contact: 'Updated contact' },
     })
   })
 })

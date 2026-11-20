@@ -15,12 +15,14 @@ export function LocationFields({
   serviceLocationOnly = false,
   includeName = true,
   showUsage = true,
+  showClientDetails = true,
 }: {
   value: LocationInput
   onChange: (value: LocationInput) => void
   serviceLocationOnly?: boolean
   includeName?: boolean
   showUsage?: boolean
+  showClientDetails?: boolean
 }) {
   const set = (key: keyof LocationInput) => (next: string) => onChange({ ...value, [key]: next })
   return (
@@ -49,23 +51,32 @@ export function LocationFields({
           onChange={set('kind')}
         />
       ) : null}
-      <TextField label="Ciudad" value={value.city} onChange={set('city')} placeholder="Melilla" />
-      <TextField
-        label="Dirección del centro"
-        value={value.address}
-        onChange={set('address')}
-        placeholder="Calle y número"
-        maxLength={500}
-        required
-        className="sm:col-span-2"
-        icon={fieldIcons.pin}
-      />
-      <TextField
-        label="Código postal"
-        value={value.postal_code}
-        onChange={set('postal_code')}
-        placeholder="52001"
-      />
+      {showClientDetails ? (
+        <>
+          <TextField
+            label="Ciudad"
+            value={value.city}
+            onChange={set('city')}
+            placeholder="Melilla"
+          />
+          <TextField
+            label="Dirección del centro"
+            value={value.address}
+            onChange={set('address')}
+            placeholder="Calle y número"
+            maxLength={500}
+            required
+            className="sm:col-span-2"
+            icon={fieldIcons.pin}
+          />
+          <TextField
+            label="Código postal"
+            value={value.postal_code}
+            onChange={set('postal_code')}
+            placeholder="52001"
+          />
+        </>
+      ) : null}
       <TextField
         label="Coordenadas del centro"
         value={value.coordinates}
@@ -79,13 +90,15 @@ export function LocationFields({
         className="sm:col-span-2"
       />
       <LocationCoordinateSearch address={value} onSelect={set('coordinates')} />
-      <TextField
-        label="Contacto operativo del centro"
-        value={value.operational_contact}
-        onChange={set('operational_contact')}
-        placeholder="Nombre, teléfono o correo · opcional"
-        maxLength={1000}
-      />
+      {showClientDetails ? (
+        <TextField
+          label="Contacto operativo del centro"
+          value={value.operational_contact}
+          onChange={set('operational_contact')}
+          placeholder="Nombre, teléfono o correo · opcional"
+          maxLength={1000}
+        />
+      ) : null}
       <TextareaField
         label="Horario del centro"
         value={value.opening_hours}

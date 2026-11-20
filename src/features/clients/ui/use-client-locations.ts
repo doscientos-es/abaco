@@ -13,7 +13,7 @@ export function useClientLocations(tenantId: string, clientId?: string) {
   const query = useQuery(clientPassportQuery(tenantId, clientId))
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<LocationDraft[] | null>(null)
-  const locations =
+  const locations: LocationDraft[] =
     drafts ??
     (query.data?.locations ?? []).map((location) => ({
       id: location.id,

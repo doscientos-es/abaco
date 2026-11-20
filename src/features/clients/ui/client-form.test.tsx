@@ -275,7 +275,7 @@ describe('client form', () => {
     await vi.waitFor(() => expect(mocks.saved).toHaveBeenCalledWith('existing'))
   })
 
-  it('creates a centre with address and hours only after the client is persisted', async () => {
+  it('inherits client address and contact for a new centre before persisting it', async () => {
     let persisted!: () => void
     mocks.synchronize.mockReturnValue(
       new Promise<void>((resolve) => {
@@ -284,9 +284,18 @@ describe('client form', () => {
     )
     render('dialog')
     mocks.fields.get('Nombre')?.('Nuevo cliente')
+    render('dialog')
+    mocks.fields.get('Dirección principal de servicio')?.('Calle del cliente 1')
+    render('dialog')
+    mocks.fields.get('Teléfono')?.('600 000 001')
+    render('dialog')
+    mocks.fields.get('Email')?.('cliente@example.com')
+    render('dialog')
     mocks.buttons.get('Añadir centro')?.()
     render('dialog')
     expect(mocks.fields.has('Uso')).toBe(false)
+    expect(mocks.fields.has('Dirección del centro')).toBe(false)
+    expect(mocks.fields.has('Contacto operativo del centro')).toBe(false)
     mocks.fields.get('Nombre del centro')?.('Oficina')
     render('dialog')
     mocks.fields.get('Dirección del centro')?.('Calle Nueva 2')
@@ -309,7 +318,8 @@ describe('client form', () => {
       expect.objectContaining({
         name: 'Oficina',
         kind: 'service',
-        address: 'Calle Nueva 2',
+        address: 'Calle del cliente 1',
+        operational_contact: 'Nuevo cliente · 600 000 001 · cliente@example.com',
         opening_hours: 'Lunes a viernes, 8–18',
         coordinates: '35.2923, -2.9381',
       }),
@@ -393,17 +403,16 @@ describe('client form', () => {
       .mockRejectedValueOnce(new Error('Sin conexión'))
     render('dialog')
     mocks.fields.get('Nombre')?.('Nuevo')
+    render('dialog')
+    mocks.fields.get('Dirección principal de servicio')?.('Dirección del cliente')
+    render('dialog')
     mocks.buttons.get('Añadir centro')?.()
     render('dialog')
     mocks.fields.get('Nombre del centro')?.('Primero')
     render('dialog')
-    mocks.fields.get('Dirección del centro')?.('Dirección 1')
-    render('dialog')
     mocks.buttons.get('Añadir centro')?.()
     render('dialog')
     mocks.fields.get('Nombre del centro')?.('Segundo')
-    render('dialog')
-    mocks.fields.get('Dirección del centro')?.('Dirección 2')
     render('dialog')
     // Return the same stable id passed to the repository for the first checkpoint.
     mocks.insertLocation
