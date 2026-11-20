@@ -29,11 +29,17 @@ export function PublicEstimateSignature({
   }
 
   function start(event: React.PointerEvent<SVGSVGElement>) {
-    if (disabled || points >= estimateSignatureLimits.points) return
+    if (
+      disabled ||
+      points >= estimateSignatureLimits.points ||
+      value.length >= estimateSignatureLimits.strokes
+    )
+      return
     const nextPoint = point(event)
     if (!nextPoint) return
     event.preventDefault()
     drawing.current = true
+    event.currentTarget.setPointerCapture(event.pointerId)
     onChange([...value, [nextPoint]])
   }
 

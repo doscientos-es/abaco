@@ -34,5 +34,13 @@ describe('estimate signature', () => {
     expect(isEstimateSignature([Array.from({ length: 301 }, () => ({ x: 0.5, y: 0.5 }))])).toBe(
       false,
     )
+    expect(
+      isEstimateSignature(
+        Array.from({ length: 11 }, () => [
+          { x: 0.2, y: 0.5 },
+          { x: 0.8, y: 0.5 },
+        ]),
+      ),
+    ).toBe(false)
   })
 })

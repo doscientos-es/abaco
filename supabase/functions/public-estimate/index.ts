@@ -1,9 +1,9 @@
 /**
  * Página pública del presupuesto: el cliente ve el presupuesto y lo acepta o rechaza sin tener cuenta.
  * La única credencial es el token del enlace (uuid aleatorio). Solo se exponen los datos que ya salen
- * en el documento del cliente; nunca el IBAN ni datos internos.
+ * en el documento del cliente; el IBAN capturado se comparte solo después de aceptar.
  *
- * Body: { token: uuid, action: 'view' | 'accept' | 'reject', name?: string }
+ * Body: { token: uuid, action: 'view' | 'accept' | 'reject', name?: string, signature?: strokes }
  * Respuesta: 200 { estimate, tenant, client } | 4xx { error: 'not_found' | 'expired' | 'already_responded' | ... }
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -162,6 +162,7 @@ Deno.serve(async (request) => {
     estimate.status = action === 'accept' ? 'accepted' : 'rejected'
     estimate.responded_at = respondedAt
     estimate.responded_by = name || null
+    estimate.responded_signature = action === 'accept' ? signature : null
   }
 
   const [{ data: tenant }, { data: client }] = await Promise.all([
