@@ -33,7 +33,7 @@ Los precios de los planes están en `billing_catalog`; el importe de Enterprise 
 | Autónomo       |                                 1 |                      29 € |                        290 € |                   24,17 € |
 | Equipo pequeño |                           Hasta 5 |                      69 € |                        690 € |                   57,50 € |
 | Equipo grande  |                          Hasta 15 |                     199 € |                      1.990 € |                  165,83 € |
-| Enterprise     |                          Desde 16 | 249 € + 3 € por plaza/mes | 2.490 € + 30 € por plaza/año |               Desde 297 € |
+| Enterprise     |                          Desde 16 | 249 € + 3 € por plaza/mes | 2.490 € + 30 € por plaza/año |            Desde 247,50 € |
 
 Todos incluyen el mismo núcleo. Trabajadores se incluye en Equipo pequeño y superiores; Proveedores, en Equipo grande y Enterprise; MCP, en Enterprise. Autónomo puede contratar los módulos aparte. Recomendar el plan más pequeño que admita al equipo real y valorar cada módulo no incluido.
 

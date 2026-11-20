@@ -72,7 +72,8 @@ export function readCatalogUpdate(form: FormData, rates: readonly CatalogRate[])
   }
   let seatMonthlyCents: number | undefined
   if (first.plan === 'scale') {
-    const parsedSeatPrice = catalogMonthlyCents(String(form.get(seatPriceField) ?? ''))
+    const entry = form.get(seatPriceField)
+    const parsedSeatPrice = catalogMonthlyCents(typeof entry === 'string' ? entry : '')
     if (parsedSeatPrice === null) {
       throw new CatalogFieldError(seatPriceField, 'Introduce un precio por plaza válido.')
     }

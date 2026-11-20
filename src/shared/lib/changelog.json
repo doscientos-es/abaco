@@ -8,6 +8,15 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add seat pricing for scale plan and update catalog",
+            "Add signature handling and validation for public estimates",
+            "Add client signature feature for public estimates",
+            "Add optional line details for better estimate clarity",
+            "Replace unit input with a select field for better UX",
+            "Inherit client address and contact for new locations",
+            "Pause Google Calendar sync until worker deployment",
+            "Integrate Google Calendar sync and OAuth handling",
+            "Update release notes for new features and fixes",
             "Update authorization logic for calendar sync jobs",
             "Integrate Google Calendar OAuth and event management",
             "Add role change trigger for Google Calendar visits",
@@ -113,6 +122,69 @@
         }
       ],
       "changes": [
+        {
+          "sha": "344f904662a7ec9146bbd3f2b79bdce2ebcbd3bd",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add seat pricing for scale plan and update catalog"
+        },
+        {
+          "sha": "e2fa4c108a07c741fa64ac577c92b173f6ecd037",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add signature handling and validation for public estimates"
+        },
+        {
+          "sha": "264936732705f4e863354c7f6162f73193f0eaeb",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add client signature feature for public estimates"
+        },
+        {
+          "sha": "2c2ea3008f64e1261248713751d8b22d4521b9d0",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add optional line details for better estimate clarity"
+        },
+        {
+          "sha": "893b5a9ea5e7d6caf4184da8bd68d7083c1786c5",
+          "type": "feat",
+          "scope": "lines-editor",
+          "breaking": false,
+          "description": "Replace unit input with a select field for better UX"
+        },
+        {
+          "sha": "9d97d99c1a11e1f3e6de90fdf6253f3e5457cbcf",
+          "type": "feat",
+          "scope": "clients",
+          "breaking": false,
+          "description": "Inherit client address and contact for new locations"
+        },
+        {
+          "sha": "d6138548ffa61d2c407f2ec097dbee01d02f4f73",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Pause Google Calendar sync until worker deployment"
+        },
+        {
+          "sha": "32f0d59c9493eabc25d291f8aa1042faeca22557",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Integrate Google Calendar sync and OAuth handling"
+        },
+        {
+          "sha": "d05e7e69726679e49b6901d1ac7f27e306fcc228",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update release notes for new features and fixes"
+        },
         {
           "sha": "35427d1e0a53abe788b9aa717a722c75a96566c9",
           "type": "feat",

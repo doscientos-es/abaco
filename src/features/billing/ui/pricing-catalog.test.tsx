@@ -89,7 +89,7 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(html).toContain('contratos recurrentes y visitas')
   expect(html).toContain('Trabajadores incluido.')
   expect(html).toContain('No está incluido en Autónomo.')
-  expect(html).toContain('Compras e inventario')
+  expect(html).toContain('Proveedores')
   expect(html).toMatch(/\+5,00\s*€ al mes/)
   expect(html).toMatch(/\+10,00\s*€ al mes/)
   expect(html).toMatch(/\+7,00\s*€ al mes/)

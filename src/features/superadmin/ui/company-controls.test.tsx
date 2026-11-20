@@ -85,6 +85,16 @@ beforeEach(() => {
     { plan: 'business', seats: 15, monthly_cents: 5400, yearly_cents: 54000, vat_percent: 21 },
   ])
   client.setQueryData(billingPreviewQuery(tenantId).queryKey, preview)
+  client.setQueryData(moduleSubscriptionsQuery(tenantId).queryKey, [
+    {
+      module_code: 'procurement',
+      enabled: true,
+      next_enabled: true,
+      gifted: false,
+      monthly_cents: 1900,
+      yearly_cents: 19000,
+    },
+  ])
 })
 
 describe('company billing controls', () => {
@@ -175,7 +185,7 @@ describe('company billing controls', () => {
     expect(vat).toMatch(/data-slot="select-value"[^>]*>0 % · Sin IVA<\/span>/)
     expect(vat).not.toContain('Guardar condiciones')
     const agreement = renderBilling(3, 'cuota')
-    expect(agreement).toMatch(/Total previsto: 487,50\s*€ sin IVA \(0 %\)/)
+    expect(agreement).toMatch(/Total previsto: 487,50\s*€ sin IVA \(0 %\) \/ año/)
     expect(agreement).toMatch(/41,14\s*€ con IVA \/ mes/)
     await setCompanyBillingVat(tenantId, 0)
     expect(rpc).toHaveBeenCalledExactlyOnceWith('superadmin_set_billing_vat', {

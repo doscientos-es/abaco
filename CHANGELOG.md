@@ -6,6 +6,15 @@
 
 ### Nuevas funciones
 
+- Add seat pricing for scale plan and update catalog
+- Add signature handling and validation for public estimates
+- Add client signature feature for public estimates
+- Add optional line details for better estimate clarity
+- Replace unit input with a select field for better UX
+- Inherit client address and contact for new locations
+- Pause Google Calendar sync until worker deployment
+- Integrate Google Calendar sync and OAuth handling
+- Update release notes for new features and fixes
 - Update authorization logic for calendar sync jobs
 - Integrate Google Calendar OAuth and event management
 - Add role change trigger for Google Calendar visits
