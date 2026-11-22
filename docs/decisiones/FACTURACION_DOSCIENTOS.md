@@ -39,6 +39,11 @@ requisitos de factura electrónica B2B y la declaración responsable aplicables.
 
 El código de preparación de borradores valida datos y cálculos: **no emite ni
 numera facturas**, y no cambia el circuito de cobro ni el backoffice.
+El PR prepara la pantalla para que el superadmin guarde en Ábaco la identidad
+fiscal y las series previstas de Doscientos. La configuración tiene control de
+acceso, revisión y auditoría, pero aún no la consume ningún emisor ni activa el
+cambio de sistema. Las migraciones de configuración se han aplicado en Supabase;
+la interfaz aún depende del despliegue de este PR.
 
 ## Exportación para gestoría
 

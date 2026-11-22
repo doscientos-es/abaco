@@ -130,6 +130,7 @@ vi.mock('@tanstack/react-query', () => ({
         },
       }
     }
+    if (queryKey[0] === 'platform-invoice-issuer') return { data: { revision: 0, profile: null } }
     if (queryKey[0] === 'platform-invoice') {
       return { data: queryKey[2] === invoice.merchant_order ? invoice : null }
     }
@@ -257,6 +258,7 @@ describe('platform administration navigation', () => {
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
       ['platform-invoices', 'platform-user', 'FA', 2, 'issued'],
+      ['platform-invoice-issuer', 'platform-user'],
     ])
     expect(html).toContain('FA-2030-01')
     expect(html).toMatch(
