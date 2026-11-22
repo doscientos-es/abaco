@@ -58,3 +58,17 @@ export const signupSchema = z.object({
 export function firstError(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Revisa los datos.'
 }
+
+const signupStepSchemas = [
+  signupSchema.pick({ fullName: true }),
+  signupSchema.pick({ companyName: true }),
+  signupSchema.pick({ email: true, password: true }),
+] as const
+
+/** Validate only the fields visible in the current registration step. */
+export function signupStepError(step: number, values: z.input<typeof signupSchema>): string | null {
+  const schema = signupStepSchemas[step]
+  if (!schema) return 'Revisa los datos.'
+  const result = schema.safeParse(values)
+  return result.success ? null : firstError(result.error)
+}

@@ -1,12 +1,21 @@
+import type * as React from 'react'
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TRIAL_DAYS } from '@/features/billing/domain/plans'
-import { brand } from '@/shared/lib/brand'
 
 import { RegisterPage } from './register-page'
 
+const fixtures = vi.hoisted(() => ({ step: 0 }))
+vi.mock('react', async (importOriginal) => {
+  const react = await importOriginal<typeof React>()
+  return {
+    ...react,
+    useState: (initial: unknown) =>
+      initial === 0 ? [fixtures.step, vi.fn()] : react.useState(initial),
+  }
+})
 vi.mock('@doscientos/ui', () => ({
   Button: ({ children, isDisabled }: { children: ReactNode; isDisabled?: boolean }) => (
     <button disabled={isDisabled}>{children}</button>
@@ -47,31 +56,38 @@ vi.mock('@/shared/ui/form', () => ({
   ),
 }))
 
-describe('RegisterPage positioning', () => {
+describe('RegisterPage', () => {
   const render = () => renderToStaticMarkup(<RegisterPage />)
 
-  it('focuses on installers and a real quotation rather than generic management', () => {
+  it('starts with a single question and shows progress', () => {
+    fixtures.step = 0
     const html = render()
-
-    expect(html).toContain(brand.tagline)
-    expect(html).toContain(brand.audience)
-    expect(html).toContain(brand.promise)
-    expect(html).toContain('Prueba Ábaco con tu próximo presupuesto')
-    expect(html).toContain('Instalaciones García')
-    expect(html).toContain('Aceptación o rechazo desde el enlace del cliente.')
-    expect(html).toContain('Facturas y seguimiento de cobros pendientes.')
-    expect(html).not.toContain('firma certificada')
-    expect(html).not.toContain('cobro automático de anticipos')
+    expect(html).toContain('Paso 1 de 3')
+    expect(html).toContain('Progreso del registro')
+    expect(html).toContain('Tu nombre')
+    expect(html).not.toContain('Nombre de la empresa')
+    expect(html).not.toContain('Contraseña')
+    expect(html).toContain('Continuar')
   })
 
-  it('keeps the current offer and clearly describes the card-free trial', () => {
+  it('asks for the company without discarding the option to go back', () => {
+    fixtures.step = 1
     const html = render()
+    expect(html).toContain('Paso 2 de 3')
+    expect(html).toContain('Nombre de la empresa')
+    expect(html).toContain('Volver')
+    expect(html).not.toContain('Contraseña')
+  })
 
+  it('finishes with credentials and accurately describes the current trial', () => {
+    fixtures.step = 2
+    const html = render()
+    expect(html).toContain('Paso 3 de 3')
+    expect(html).toContain('Correo')
+    expect(html).toContain('Contraseña')
     expect(html).toContain('href="/precios"')
-    expect(html).toContain('El módulo de trabajadores está incluido desde el plan Equipo.')
-    expect(html).toContain('Sin tarjeta.')
-    expect(html).toContain('conservas tus datos en modo lectura')
-    expect(html).toContain(`Crear cuenta y probar ${TRIAL_DAYS} días`)
+    expect(html).toContain(`${TRIAL_DAYS} días de prueba sin tarjeta`)
+    expect(html).toContain('Crear cuenta')
     expect(html).toContain('autoComplete="new-password"')
   })
 })
