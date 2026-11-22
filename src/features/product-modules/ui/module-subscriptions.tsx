@@ -55,6 +55,7 @@ export function ModuleSubscriptions({
   period,
   plan,
   nextPlan,
+  allowIncludedSelection = false,
   canGift = false,
   onChanged,
   navigation,
@@ -66,6 +67,7 @@ export function ModuleSubscriptions({
   period?: ModulePeriod | undefined
   plan?: string | undefined
   nextPlan?: string | null | undefined
+  allowIncludedSelection?: boolean
   canGift?: boolean
   onChanged: () => void | Promise<unknown>
   navigation?: ModuleNavigation
@@ -210,7 +212,10 @@ export function ModuleSubscriptions({
             const includedNext =
               !included && nextPlan != null && isModuleIncludedInPlan(rate.code, nextPlan)
             const gifted = item?.gifted ?? false
+            const selectForStandard = allowIncludedSelection && included && !gifted && !includedNext
             const action = pending !== null ? 'Deshacer cambio' : enabled ? 'Desactivar' : 'Activar'
+            const actionLabel =
+              selectForStandard && !enabled && pending === null ? 'Contratar para Ábaco' : action
             const modulePrice = item && (enabled || pending === true) ? item : rate
             const surcharge =
               courtesy ||
@@ -253,20 +258,26 @@ export function ModuleSubscriptions({
                   </p>
                   <p className="text-muted-foreground">{module.description}</p>
                   <p>{surcharge}</p>
+                  {selectForStandard ? (
+                    <p className="text-muted-foreground">
+                      Para conservarlo con la nueva tarifa, contrátalo como módulo opcional.{' '}
+                      {price(modulePrice, period)}
+                    </p>
+                  ) : null}
                   {scheduled ? <p>{scheduled}.</p> : null}
                 </div>
                 {detail && !detail.editing && !blocked ? detail.editLink : null}
-                {!detail && !included && !includedNext && !gifted ? (
+                {!detail && (!included || selectForStandard) && !includedNext && !gifted ? (
                   <Button
                     variant="outline"
-                    aria-label={`${action}: ${module.name}`}
+                    aria-label={`${actionLabel}: ${module.name}`}
                     isDisabled={blocked || change.isPending || Boolean(selection)}
                     onPress={() => {
                       change.reset()
                       setSelection(changeFor(rate, item))
                     }}
                   >
-                    {action}
+                    {actionLabel}
                   </Button>
                 ) : null}
                 {canGift && detail?.editing ? (

@@ -98,7 +98,8 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
       {editing && !catalog.isError ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-muted-foreground text-sm">
-            Importes sin IVA. La tarifa anual equivale a 10 mensualidades.
+            Importes sin IVA. La cuota base anual equivale a 10 mensualidades. Las plazas
+            adicionales de Ábaco se cobran durante los 12 meses.
           </p>
           <Button
             variant="outline"
@@ -207,14 +208,18 @@ function CatalogPlanDetail({
               </dt>
               <dd className="flex flex-wrap gap-x-3 tabular-nums">
                 <span>
-                  {rate.plan === 'scale'
-                    ? `${formatEuros(rate.monthly_cents)}/mes base + ${formatEuros(rate.seat_monthly_cents ?? 0)}/plaza/mes`
-                    : `${formatEuros(rate.monthly_cents)}/mes`}
+                  {rate.plan === 'standard'
+                    ? `${formatEuros(rate.monthly_cents)}/mes base + ${formatEuros(rate.seat_monthly_cents ?? 0)}/plaza adicional/mes`
+                    : rate.plan === 'scale'
+                      ? `${formatEuros(rate.monthly_cents)}/mes base + ${formatEuros(rate.seat_monthly_cents ?? 0)}/plaza/mes`
+                      : `${formatEuros(rate.monthly_cents)}/mes`}
                 </span>
                 <span className="text-muted-foreground">
-                  {rate.plan === 'scale'
-                    ? `${formatEuros(rate.yearly_cents)} al año base + ${formatEuros((rate.seat_monthly_cents ?? 0) * 10)}/plaza/año`
-                    : `${formatEuros(rate.yearly_cents)} al año`}
+                  {rate.plan === 'standard'
+                    ? `${formatEuros(rate.yearly_cents)} al año base + ${formatEuros((rate.seat_monthly_cents ?? 0) * 12)}/plaza adicional/año`
+                    : rate.plan === 'scale'
+                      ? `${formatEuros(rate.yearly_cents)} al año base + ${formatEuros((rate.seat_monthly_cents ?? 0) * 10)}/plaza/año`
+                      : `${formatEuros(rate.yearly_cents)} al año`}
                 </span>
               </dd>
             </div>
@@ -247,7 +252,7 @@ function CatalogPlanForm({
     benefit: display.benefit,
   }
   for (const rate of rates) savedValues[priceField(rate.seats)] = centsToInput(rate.monthly_cents)
-  if (rates[0]?.plan === 'scale') {
+  if (rates[0]?.plan === 'scale' || rates[0]?.plan === 'standard') {
     savedValues[seatPriceField] = centsToInput(rates[0].seat_monthly_cents ?? 0)
   }
   const values = draft?.values ?? savedValues
@@ -328,7 +333,9 @@ function CatalogPlanForm({
       </FieldSet>
       <FieldSet disabled={mutation.isPending} className="min-w-0 gap-3">
         <FieldLegend variant="label">
-          {rates[0]?.plan === 'scale' ? 'Precio base y precio por plaza' : 'Precios por capacidad'}
+          {rates[0]?.plan === 'scale' || rates[0]?.plan === 'standard'
+            ? 'Precio base y precio por plaza'
+            : 'Precios por capacidad'}
         </FieldLegend>
         {rates.map((rate) => {
           const name = priceField(rate.seats)
@@ -342,10 +349,14 @@ function CatalogPlanForm({
             />
           )
         })}
-        {rates[0]?.plan === 'scale' ? (
+        {rates[0]?.plan === 'scale' || rates[0]?.plan === 'standard' ? (
           <PlatformField
             label="Precio mensual por plaza · €/mes"
-            hint="Se suma una vez por cada plaza Enterprise, incluidas las 16 iniciales."
+            hint={
+              rates[0]?.plan === 'standard'
+                ? 'Se suma por cada persona adicional; la primera está incluida en la cuota base.'
+                : 'Se suma una vez por cada plaza Enterprise, incluidas las 16 iniciales.'
+            }
             error={fieldError?.field === seatPriceField ? fieldError.message : undefined}
           >
             {(control) => (
@@ -419,7 +430,7 @@ function RateField({
   return (
     <PlatformField
       label={
-        rate.plan === 'scale'
+        rate.plan === 'scale' || rate.plan === 'standard'
           ? 'Precio base mensual · €/mes'
           : `${rate.seats === 1 ? '1 persona' : `Hasta ${rate.seats} personas`} · €/mes`
       }

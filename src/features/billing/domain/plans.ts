@@ -2,7 +2,7 @@
  * Todos los planes comparten el núcleo; el catálogo orienta por tamaño del equipo.
  * Sales prices come from the public billing catalogue in Supabase.
  */
-export const paidPlans = ['solo', 'team', 'business', 'scale'] as const
+export const paidPlans = ['solo', 'team', 'business', 'scale', 'standard'] as const
 export type PaidPlan = (typeof paidPlans)[number]
 export type Plan = PaidPlan | 'trial'
 export type Interval = 'month' | 'year'
@@ -23,6 +23,12 @@ export const MAX_SCALE_PLAN_MEMBERS = 200
 export const SCALE_PLAN_MIN_MEMBERS = 16
 
 export const planCatalog: readonly PlanInfo[] = [
+  {
+    id: 'standard',
+    name: 'Ábaco',
+    audience: 'Para profesionales y equipos de cualquier tamaño.',
+    benefit: 'El mismo núcleo para todos, con módulos opcionales por empresa.',
+  },
   {
     id: 'solo',
     name: 'Autónomo',
@@ -103,10 +109,17 @@ export function catalogQuote(
   vatPercent = rate.vat_percent,
   fixedNetCents?: number,
 ): BillingTerms {
-  const perSeat = rate.plan === 'scale' ? (rate.seat_monthly_cents ?? 0) * rate.seats : 0
+  const perSeat =
+    rate.plan === 'standard'
+      ? (rate.seat_monthly_cents ?? 0) * (rate.seats - 1)
+      : rate.plan === 'scale'
+        ? (rate.seat_monthly_cents ?? 0) * rate.seats
+        : 0
   const net =
     fixedNetCents ??
-    (period === 'year' ? rate.yearly_cents + perSeat * 10 : rate.monthly_cents + perSeat)
+    (period === 'year'
+      ? rate.yearly_cents + perSeat * (rate.plan === 'standard' ? 12 : 10)
+      : rate.monthly_cents + perSeat)
   return {
     plan: rate.plan,
     seats: rate.seats,
@@ -122,6 +135,8 @@ export function smallestRateFor(
   members: number,
 ): CatalogRate | null {
   if (!Number.isInteger(members) || members < 1) return null
+  const standard = rates.find((rate) => rate.plan === 'standard')
+  if (standard && members <= MAX_SCALE_PLAN_MEMBERS) return { ...standard, seats: members }
   if (members >= SCALE_PLAN_MIN_MEMBERS && members <= MAX_SCALE_PLAN_MEMBERS) {
     const enterprise = rates.find((rate) => rate.plan === 'scale')
     if (enterprise) return { ...enterprise, seats: members }
@@ -137,6 +152,12 @@ export function catalogRateForCapacity(
   plan: PaidPlan,
   seats: number,
 ): CatalogRate | null {
+  if (plan === 'standard') {
+    const standard = rates.find((rate) => rate.plan === 'standard')
+    return standard && Number.isInteger(seats) && seats >= 1 && seats <= MAX_SCALE_PLAN_MEMBERS
+      ? { ...standard, seats }
+      : null
+  }
   if (plan === 'scale') {
     const enterprise = rates.find((rate) => rate.plan === 'scale')
     return enterprise && seats >= SCALE_PLAN_MIN_MEMBERS && seats <= MAX_SCALE_PLAN_MEMBERS

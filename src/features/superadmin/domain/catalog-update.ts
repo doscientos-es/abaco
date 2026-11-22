@@ -71,7 +71,7 @@ export function readCatalogUpdate(form: FormData, rates: readonly CatalogRate[])
     prices[rate.seats] = cents
   }
   let seatMonthlyCents: number | undefined
-  if (first.plan === 'scale') {
+  if (first.plan === 'scale' || first.plan === 'standard') {
     const entry = form.get(seatPriceField)
     const parsedSeatPrice = catalogMonthlyCents(typeof entry === 'string' ? entry : '')
     if (parsedSeatPrice === null) {

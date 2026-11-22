@@ -50,4 +50,9 @@ describe('module charges by plan', () => {
   it('counts a scheduled activation when quoting the next payment', () => {
     expect(moduleNetForPlan('solo', 'month', subscriptions)).toBe(2200)
   })
+
+  it('charges all selected modules for the new offer while preserving gifted modules', () => {
+    expect(moduleNetForPlan('standard', 'month', subscriptions)).toBe(2200)
+    expect(moduleNetForPlan('standard', 'year', subscriptions)).toBe(22000)
+  })
 })

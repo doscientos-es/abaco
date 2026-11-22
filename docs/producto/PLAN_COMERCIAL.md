@@ -26,31 +26,28 @@ La aceptación registrada no se presenta como firma electrónica certificada. No
 
 ## 2. Oferta vigente
 
-Los precios de los planes están en `billing_catalog`; el importe de Enterprise se calcula sumando el precio base y el precio mensual por plaza. Los precios de los módulos, por empresa y no por persona, están en `billing_module_catalog` y se incluyen en la confirmación y los cobros de suscripción.
+Una cuota base incluye el núcleo y una persona. Cada plaza adicional cuesta 8 €/mes, tanto con pago mensual como anual. Las plazas cubren a las personas con acceso, incluida la persona administradora y las invitaciones pendientes; los trabajadores registrados sin acceso no ocupan plaza. Los importes son sin IVA.
 
-| Plan           | Personas, incluido el propietario |           Mensual sin IVA |                Anual sin IVA | Equivalente mensual anual |
-| -------------- | --------------------------------: | ------------------------: | ---------------------------: | ------------------------: |
-| Autónomo       |                                 1 |                      29 € |                        290 € |                   24,17 € |
-| Equipo pequeño |                           Hasta 5 |                      69 € |                        690 € |                   57,50 € |
-| Equipo grande  |                          Hasta 15 |                     199 € |                      1.990 € |                  165,83 € |
-| Enterprise     |                          Desde 16 | 249 € + 3 € por plaza/mes | 2.490 € + 30 € por plaza/año |            Desde 247,50 € |
+| Concepto                   | Pago mensual |                        Pago anual |
+| -------------------------- | -----------: | --------------------------------: |
+| Cuota base con una persona |  34,80 €/mes | 348 €/año, equivalente a 29 €/mes |
+| Cada persona adicional     |      8 €/mes |                          96 €/año |
 
-Todos incluyen el mismo núcleo. Trabajadores se incluye en Equipo pequeño y superiores; Proveedores, en Equipo grande y Enterprise; MCP, en Enterprise. Autónomo puede contratar los módulos aparte. Recomendar el plan más pequeño que admita al equipo real y valorar cada módulo no incluido.
+Por ejemplo, tres personas cuestan 50,80 €/mes o 540 €/año (45 €/mes equivalentes), antes de módulos e IVA. El ahorro anual de dos mensualidades se aplica a la cuota base, no a las plazas adicionales. El catálogo vigente está en `billing_catalog`.
 
 - Prueba: 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
 - El pago anual se cobra de una vez; su equivalente mensual no es una cuota mensual.
 - Más de 200 personas o necesidades especiales: conversación y alcance evaluado, no una integración prometida.
-- Esencial, Pro, Equipo a 79 €, Empresa a 149 € y Operaciones a 249 € son propuestas del documento comercial, **no planes vigentes**. No anunciarlos ni utilizarlos para prever ingresos actuales.
-- No introducir una entrada a 9 € ni cinco niveles sin evidencia de autoservicio, costes de soporte y disposición a pagar.
+- Los planes anteriores se mantienen para clientes existentes; no se cambian sus condiciones automáticamente. El paso a la nueva tarifa es voluntario y sus módulos incluidos deben contratarse aparte si se quieren conservar.
 
 ### Módulos opcionales
 
-| Módulo                   | Mensual sin IVA | Anual sin IVA | Disponibilidad                                      |
-| ------------------------ | --------------: | ------------: | --------------------------------------------------- |
-| Trabajadores             |            +5 € |         +50 € | Extra de Autónomo; incluido en Equipo pequeño o más |
-| Proveedores              |           +10 € |        +100 € | Extra en Autónomo y Equipo pequeño                  |
-| MCP                      |            +7 € |         +70 € | Extra hasta Enterprise                              |
-| Logística de proveedores |           +29 € |        +290 € | No se ofrece ni se puede activar                    |
+| Módulo                   | Mensual sin IVA | Anual sin IVA | Disponibilidad                   |
+| ------------------------ | --------------: | ------------: | -------------------------------- |
+| Trabajadores             |            +9 € |         +90 € | Opcional                         |
+| Proveedores              |           +15 € |        +150 € | Opcional                         |
+| MCP                      |            +9 € |         +90 € | Opcional                         |
+| Logística de proveedores |           +29 € |        +290 € | No se ofrece ni se puede activar |
 
 Los suplementos son fijos por empresa, no por plaza. Superadmin puede regalar módulos a una empresa; el acceso regalado no añade cargos. Los administradores pueden programar las altas y bajas de módulos de pago desde **Módulos opcionales**. El precio y el acceso cambian al confirmar el primer pago o la siguiente renovación, sin prorrateos ni borrado de datos. En empresas de cortesía, Superadmin cambia el acceso al momento y sin cobro. El módulo de Logística requiere validar quién pide el camión, cómo se confirma la entrega y qué canal usa cada proveedor.
 
@@ -74,12 +71,7 @@ MRR significa ingreso recurrente mensual normalizado, sin IVA. Una suscripción 
 
 **Ticket medio = MRR / empresas con suscripción de pago activa.** Excluir pruebas gratuitas; distinguir descuentos, impagos y cobros de suscripciones.
 
-Ejemplo no observado: 70 % Autónomo, 25 % Equipo y 5 % Empresa.
-
-- Si todos pagan mensualmente: ticket de **25,20 €**.
-- Si todos pagan anualmente: ticket de **21 €**, calculado con precios anuales exactos antes de redondear.
-- Una cartera mixta exige calcular cada plan y periodo por separado.
-- 30 € es una hipótesis a validar, no un ticket conservador demostrado; 35–45 € es una aspiración, no una previsión.
+El ticket depende de las plazas, los módulos y el periodo contratados. Una empresa con una persona aporta 34,80 € de MRR con pago mensual o 29 € con pago anual; cada plaza adicional aporta 8 € de MRR. Los módulos anuales se dividen entre 12. La composición de la cartera es una hipótesis hasta disponer de datos reales.
 
 **Contribución por cliente = ticket − costes variables por cliente.** Incluir comisiones de pago y comerciales recurrentes, soporte e infraestructura de uso, sin duplicar partidas ya incluidas en los costes fijos.
 

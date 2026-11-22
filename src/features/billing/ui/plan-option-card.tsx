@@ -14,20 +14,24 @@ export function PlanOptionCard({
   rate,
   terms,
   recommended,
+  fixedPrice = false,
   children,
 }: {
   plan: PlanInfo
   rate: CatalogRate
   terms: BillingTerms
   recommended: boolean
+  fixedPrice?: boolean
   children?: ReactNode
 }) {
   const yearly = terms.period === 'year'
   const price = terms.net_cents / (yearly ? 1200 : 100)
   const capacity =
-    plan.id === 'scale'
-      ? `desde ${Math.max(SCALE_PLAN_MIN_MEMBERS, terms.seats)} personas`
-      : `hasta ${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`
+    plan.id === 'standard'
+      ? `${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`
+      : plan.id === 'scale'
+        ? `desde ${Math.max(SCALE_PLAN_MIN_MEMBERS, terms.seats)} personas`
+        : `hasta ${terms.seats} ${terms.seats === 1 ? 'persona' : 'personas'}`
 
   return (
     <article
@@ -46,13 +50,9 @@ export function PlanOptionCard({
 
       <p className="text-sm leading-relaxed">{plan.benefit}</p>
       <p className="text-muted-foreground text-xs">{capacity}, incluida quien administra.</p>
-      <p className="text-muted-foreground text-xs">
-        {plan.id === 'solo'
-          ? 'Trabajadores disponible como extra por empresa (+5 €/mes).'
-          : 'Trabajadores incluido.'}
-        {plan.id === 'business' || plan.id === 'scale' ? ' Proveedores incluido.' : null}
-        {plan.id === 'scale' ? ' MCP incluido.' : null}
-      </p>
+      {plan.id !== 'standard' ? (
+        <p className="text-muted-foreground text-xs">Condiciones del plan anterior.</p>
+      ) : null}
 
       <div className="mt-auto">
         <p>
@@ -66,7 +66,14 @@ export function PlanOptionCard({
           {formatEuros(terms.amount_cents / 100)} {billingVatLabel(terms.vat_percent)},{' '}
           {yearly ? 'en un único pago anual' : 'al mes'}.
         </p>
-        {plan.id === 'scale' ? (
+        {plan.id === 'standard' && !fixedPrice ? (
+          <p className="text-muted-foreground mt-1 text-xs">
+            {formatEuros((yearly ? rate.yearly_cents : rate.monthly_cents) / 100)} de cuota base
+            {yearly ? ' al año' : ' al mes'}, con una persona incluida;{' '}
+            {formatEuros(((rate.seat_monthly_cents ?? 0) * (yearly ? 12 : 1)) / 100)} por cada plaza
+            adicional {yearly ? 'al año' : 'al mes'}.
+          </p>
+        ) : plan.id === 'scale' ? (
           <p className="text-muted-foreground mt-1 text-xs">
             {yearly ? 'Desglose anual: ' : 'Desglose: '}
             {formatEuros((yearly ? rate.yearly_cents : rate.monthly_cents) / 100)} de base +{' '}

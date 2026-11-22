@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   catalogQuote,
+  catalogRateForCapacity,
   sameCapacity,
   smallestRateFor,
   withModulePrice,
@@ -29,6 +30,31 @@ const rates = [
 ]
 
 describe('catalogue quotes', () => {
+  const standard = rate('standard', 1, 3480, 800)
+
+  it.each([
+    [1, 3480, 34800],
+    [3, 5080, 54000],
+    [200, 162680, 1945200],
+  ])(
+    'prices %s people with one included and annual seats billed for 12 months',
+    (seats, monthly, yearly) => {
+      const selected = catalogRateForCapacity([...rates, standard], 'standard', seats)
+      if (!selected) throw new Error('Expected a valid capacity')
+      expect(catalogQuote(selected, 'month').net_cents).toBe(monthly)
+      expect(catalogQuote(selected, 'year').net_cents).toBe(yearly)
+      expect(catalogQuote(selected, 'year').amount_cents).toBe(Math.round(yearly * 1.21))
+    },
+  )
+
+  it('prefers the per-person offer and rejects invalid capacities', () => {
+    const catalog = [...rates, standard]
+    expect(smallestRateFor(catalog, 5)).toMatchObject({ plan: 'standard', seats: 5 })
+    expect(catalogRateForCapacity(catalog, 'standard', 0)).toBeNull()
+    expect(catalogRateForCapacity(catalog, 'standard', 201)).toBeNull()
+    expect(catalogRateForCapacity(catalog, 'standard', 1.5)).toBeNull()
+  })
+
   it.each([
     [1, 1],
     [2, 5],

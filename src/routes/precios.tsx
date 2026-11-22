@@ -10,7 +10,7 @@ function PricingPage() {
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-8">
       <header className="space-y-4">
         <p className="text-primary text-sm font-semibold">Ábaco</p>
-        <h1 className="text-3xl font-semibold">Un plan para cada tamaño de equipo</h1>
+        <h1 className="text-3xl font-semibold">Una tarifa que crece con tu equipo</h1>
         <p className="text-muted-foreground max-w-2xl">
           Envía presupuestos, recibe la respuesta de tus clientes y controla lo que te queda por
           cobrar.

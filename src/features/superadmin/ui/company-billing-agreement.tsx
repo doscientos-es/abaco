@@ -279,22 +279,29 @@ function AgreementForm({
   const initialRate = terms
     ? catalogRateForCapacity(rates, terms.plan, terms.seats)
     : smallestRateFor(rates, Math.max(members, 1))
-  const [seats, setSeats] = useState(initialRate?.seats ?? 0)
+  const [capacity, setCapacity] = useState(
+    initialRate ? `${initialRate.plan}:${initialRate.seats}` : '',
+  )
   const [period, setPeriod] = useState<Interval>(terms?.period ?? 'month')
   const base = terms?.base_net_cents ?? terms?.net_cents
   const [mode, setMode] = useState(fixedNet !== null ? 'agreed' : 'catalog')
   const initialPrice = fixedNet ?? base
   const [price, setPrice] = useState(initialPrice === undefined ? '' : centsToInput(initialPrice))
-  const rate =
-    rates.find((entry) => entry.seats === seats) ?? catalogRateForCapacity(rates, 'scale', seats)
   const capacityOptions = rates.flatMap((entry) =>
-    entry.plan === 'scale'
-      ? Array.from({ length: MAX_SCALE_PLAN_MEMBERS - SCALE_PLAN_MIN_MEMBERS + 1 }, (_, index) => ({
-          ...entry,
-          seats: SCALE_PLAN_MIN_MEMBERS + index,
-        }))
+    entry.plan === 'scale' || entry.plan === 'standard'
+      ? Array.from(
+          {
+            length:
+              MAX_SCALE_PLAN_MEMBERS - (entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1) + 1,
+          },
+          (_, index) => ({
+            ...entry,
+            seats: (entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1) + index,
+          }),
+        )
       : [entry],
   )
+  const rate = capacityOptions.find((entry) => `${entry.plan}:${entry.seats}` === capacity)
   const agreed = mode === 'agreed'
   const raw = price.trim()
   const customCents = /^\d{1,6}([,.]\d{1,2})?$/.test(raw) ? parseEuros(raw) : 0
@@ -335,15 +342,15 @@ function AgreementForm({
                 {...control}
                 isDisabled={saving}
                 placeholder="Selecciona un tramo"
-                value={seats ? String(seats) : null}
+                value={capacity || null}
                 options={capacityOptions.map((entry) => ({
-                  id: String(entry.seats),
+                  id: `${entry.plan}:${entry.seats}`,
                   label: `${planLabel(entry.plan, rates)} · ${entry.plan === 'scale' && entry.seats === SCALE_PLAN_MIN_MEMBERS ? 'desde ' : ''}${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
                   isDisabled: entry.seats < members,
                 }))}
                 onChange={(value) => {
                   onEdit()
-                  setSeats(Number(value))
+                  setCapacity(value ?? '')
                 }}
               />
             )}

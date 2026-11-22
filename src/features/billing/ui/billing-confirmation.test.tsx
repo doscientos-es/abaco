@@ -15,20 +15,20 @@ const fixtures = vi.hoisted(() => ({
   status: 'trialing',
   pending: false,
   courtesy: false,
-  members: 16,
+  members: 3,
   moduleYearly: 0,
   vatPercent: 21,
   managed: false,
 }))
 const terms: BillingTerms = {
-  plan: 'scale',
-  seats: 25,
+  plan: 'standard',
+  seats: 3,
   period: 'year',
-  net_cents: 69000,
-  amount_cents: 83490,
+  net_cents: 54000,
+  amount_cents: 65340,
   vat_percent: 21,
 }
-const current = { ...terms, period: 'month', net_cents: 6900, amount_cents: 8349 }
+const current = { ...terms, period: 'month', net_cents: 5080, amount_cents: 6147 }
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
@@ -39,13 +39,14 @@ vi.mock('@doscientos/ui', () => ({ Button: fixtures.button }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: fixtures.invalidate }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
+    isSuccess: true,
     data:
       queryKey[0] === 'subscription'
         ? {
             status: fixtures.status,
-            plan: 'scale',
+            plan: 'standard',
             isComplimentary: fixtures.courtesy,
-            nextPlan: fixtures.managed ? 'scale' : null,
+            nextPlan: fixtures.managed ? 'standard' : null,
           }
         : queryKey[0] === 'billing-preview'
           ? {
@@ -56,9 +57,22 @@ vi.mock('@tanstack/react-query', () => ({
               vat_percent: fixtures.vatPercent,
               next_managed: fixtures.managed,
             }
-          : queryKey[0] === 'billing-catalog'
-            ? undefined
-            : fixtures.members,
+          : queryKey[0] === 'module-subscriptions'
+            ? [
+                {
+                  module_code: 'procurement',
+                  enabled: true,
+                  next_enabled: null,
+                  gifted: false,
+                  monthly_cents: fixtures.moduleYearly / 10,
+                  yearly_cents: fixtures.moduleYearly,
+                },
+              ]
+            : queryKey[0] === 'referral-overview'
+              ? { balance_cents: 0 }
+              : queryKey[0] === 'billing-catalog'
+                ? undefined
+                : fixtures.members,
   }),
 }))
 vi.mock('../application/billing-actions', () => ({
@@ -68,6 +82,7 @@ vi.mock('../application/billing-actions', () => ({
   billingCatalogQuery: { queryKey: ['billing-catalog'] },
   subscriptionQuery: () => ({ queryKey: ['subscription'] }),
   memberCountQuery: () => ({ queryKey: ['member-count'] }),
+  referralOverviewQuery: () => ({ queryKey: ['referral-overview'] }),
 }))
 vi.mock('./pricing-catalog', () => ({
   PricingCatalog: ({
@@ -79,18 +94,27 @@ vi.mock('./pricing-catalog', () => ({
   }) =>
     renderAction(
       catalogQuote(
-        { plan: 'scale', seats: 25, monthly_cents: 6900, yearly_cents: 69000, vat_percent: 21 },
+        {
+          plan: 'standard',
+          seats: 3,
+          monthly_cents: 3480,
+          yearly_cents: 34800,
+          seat_monthly_cents: 800,
+          vat_percent: 21,
+        },
         'year',
         vatPercent,
       ),
-      { name: 'Escala' },
+      { name: 'Ábaco' },
     ),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
+vi.mock('./referral-program', () => ({ ReferralProgram: () => null }))
 vi.mock('./subscription-billing-profile-form', () => ({
   SubscriptionBillingProfileForm: () => null,
 }))
-vi.mock('@/features/product-modules', () => ({
+vi.mock('@/features/product-modules', async () => ({
+  moduleNetForPlan: (await import('../../product-modules/domain/modules')).moduleNetForPlan,
   ModuleSubscriptions: () => null,
   moduleSubscriptionsQuery: () => ({ queryKey: ['module-subscriptions'] }),
   staffModuleQuery: () => ({ queryKey: ['staff'] }),
@@ -108,7 +132,7 @@ describe('billing confirmation', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     fixtures.status = 'trialing'
-    fixtures.members = 16
+    fixtures.members = 3
     fixtures.pending = false
     fixtures.courtesy = false
     fixtures.moduleYearly = 0
@@ -135,47 +159,47 @@ describe('billing confirmation', () => {
 
   it('shows and confirms the untaxed amount, including modules, at 0 % VAT', async () => {
     fixtures.vatPercent = 0
-    fixtures.moduleYearly = 19000
+    fixtures.moduleYearly = 15000
     fixtures.accept.mockResolvedValue({ ok: true })
     render()
-    action('Elegir Escala').onPress()
-    expect(render()).toMatch(/880,00\s*€ sin IVA \(0 %\)/)
-    action('Continuar a Redsys').onPress()
+    action('Elegir Ábaco').onPress()
+    expect(render()).toMatch(/690,00\s*€ sin IVA \(0 %\)/)
+    action('Continuar al pago').onPress()
     await vi.waitFor(() =>
       expect(fixtures.accept).toHaveBeenCalledWith(
         'company',
         'checkout',
-        expect.objectContaining({ amount_cents: 88000, vat_percent: 0 }),
+        expect.objectContaining({ amount_cents: 69000, vat_percent: 0 }),
       ),
     )
   })
 
   it('requires confirmation of the gross annual charge before sending the exact quote to Redsys', async () => {
-    fixtures.moduleYearly = 19000
+    fixtures.moduleYearly = 15000
     fixtures.accept.mockResolvedValue({ ok: true, form: { url: 'https://example.test' } })
     render()
-    action('Elegir Escala').onPress()
+    action('Elegir Ábaco').onPress()
     expect(fixtures.accept).not.toHaveBeenCalled()
     const html = render()
-    expect(html).toMatch(/1\.064,80\s*€|1064,80\s*€/)
-    expect(html).toMatch(/190,00\s*€ en módulos/)
-    expect(html).toContain('Continuar a Redsys')
-    action('Continuar a Redsys').onPress()
+    expect(html).toMatch(/834,90\s*€/)
+    expect(html).toMatch(/150,00\s*€ en módulos/)
+    expect(html).toContain('Continuar al pago')
+    action('Continuar al pago').onPress()
     await vi.waitFor(() => expect(fixtures.submit).toHaveBeenCalled())
     expect(fixtures.accept).toHaveBeenCalledWith('company', 'checkout', {
       ...terms,
-      base_net_cents: 69000,
-      module_net_cents: 19000,
-      net_cents: 88000,
-      amount_cents: 106480,
+      base_net_cents: 54000,
+      module_net_cents: 15000,
+      net_cents: 69000,
+      amount_cents: 83490,
     })
   })
 
-  it('lets a monthly Scale customer schedule annual billing without starting checkout', async () => {
+  it('lets a monthly customer schedule annual billing without starting checkout', async () => {
     fixtures.status = 'active'
     fixtures.accept.mockResolvedValue({ ok: true })
     render()
-    action('Elegir Escala').onPress()
+    action('Elegir Ábaco').onPress()
     expect(render()).toContain('sin cobro inmediato')
     action('Programar cambio').onPress()
     await vi.waitFor(() => expect(fixtures.accept).toHaveBeenCalledWith('company', 'change', terms))
@@ -185,9 +209,9 @@ describe('billing confirmation', () => {
   it('does not let users repeat an unresolved payment or buy a tier too small', () => {
     fixtures.pending = true
     expect(render()).toContain('No repitas el pago')
-    expect(action('Elegir Escala').isDisabled).toBe(true)
+    expect(action('Elegir Ábaco').isDisabled).toBe(true)
     fixtures.pending = false
-    fixtures.members = 26
+    fixtures.members = 4
     render()
     expect(action('No cubre a tu equipo').isDisabled).toBe(true)
   })
@@ -204,6 +228,6 @@ describe('billing confirmation', () => {
   it('does not offer payments for a courtesy company', () => {
     fixtures.courtesy = true
     expect(render()).toContain('Acceso de cortesía')
-    expect(action('Elegir Escala')).toBeUndefined()
+    expect(action('Elegir Ábaco')).toBeUndefined()
   })
 })

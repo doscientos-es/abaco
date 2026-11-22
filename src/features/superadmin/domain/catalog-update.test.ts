@@ -69,6 +69,23 @@ describe('editing plan pricing', () => {
     )
   })
 
+  it('saves both the base and additional-person price for the new offer', () => {
+    const form = edit()
+    const existing = rates[0]
+    if (!existing) throw new Error('Expected a catalogue rate')
+    form.set(priceField(1), '34,80')
+    form.set(seatPriceField, '8')
+    expect(readCatalogUpdate(form, [{ ...existing, plan: 'standard', seats: 1 }])).toMatchObject({
+      plan: 'standard',
+      rates: { 1: 3480 },
+      seatMonthlyCents: 800,
+    })
+    form.delete(seatPriceField)
+    expect(() => readCatalogUpdate(form, [{ ...existing, plan: 'standard', seats: 1 }])).toThrow(
+      expect.objectContaining({ field: seatPriceField }),
+    )
+  })
+
   it('attributes whitespace-only public copy to the corresponding field', () => {
     const form = edit()
     form.set('benefit', '  ')

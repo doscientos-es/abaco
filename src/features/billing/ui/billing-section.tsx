@@ -308,6 +308,7 @@ export function BillingSection({
             active={active}
             plan={subscription.plan}
             nextPlan={subscription.nextPlan}
+            allowIncludedSelection={subscription.plan !== 'standard'}
             blocked={
               pending ||
               pastDue ||
@@ -373,6 +374,13 @@ export function BillingSection({
               Confirmar {planLabel(selection.terms.plan, rates)} · hasta {selection.terms.seats}{' '}
               personas
             </h3>
+            {selection.terms.plan === 'standard' && subscription?.plan !== 'standard' ? (
+              <p className="text-muted-foreground text-sm">
+                Los módulos incluidos en tu plan anterior o durante la prueba no están incluidos en
+                esta tarifa. Solo conservarás los módulos contratados o de cortesía; tus datos no se
+                borrarán. Puedes contratar módulos desde esta página.
+              </p>
+            ) : null}
             <p>
               {formatEuros(selection.terms.net_cents / 100)} sin IVA ·{' '}
               <strong>

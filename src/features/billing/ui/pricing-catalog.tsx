@@ -9,9 +9,7 @@ import {
   catalogQuote,
   formatEuros,
   MAX_SCALE_PLAN_MEMBERS,
-  paidPlans,
   planInfo,
-  sameCapacity,
   smallestRateFor,
   type BillingTerms,
   type FixedBillingPrice,
@@ -37,7 +35,7 @@ export function PricingCatalog({
   const catalog = useQuery({ ...billingCatalogQuery, refetchOnMount: 'always' })
   const addons = useQuery({ ...moduleCatalogQuery, enabled: showModuleCatalog })
   const headcountId = useId()
-  const [selectedPeriod, setPeriod] = useState<Interval>('month')
+  const [selectedPeriod, setPeriod] = useState<Interval>('year')
   const period = fixedPrice?.period ?? selectedPeriod
   const [headcount, setHeadcount] = useState<string>()
   const requested = Number(headcount ?? actualMembers)
@@ -54,16 +52,20 @@ export function PricingCatalog({
       </div>
     )
 
-  const recommended = smallestRateFor(catalog.data, members)
-  const scale = catalog.data.filter((rate) => rate.plan === 'scale')
-  const scaleRate = smallestRateFor(scale, members) ?? scale.at(-1)
-  const scalePlan = planInfo('scale', scale)
+  const standardRates = catalog.data.filter((rate) => rate.plan === 'standard')
+  const rate = smallestRateFor(standardRates, members)
+  const plan = planInfo('standard', standardRates)
+  const terms = rate ? catalogQuote(rate, period, vatPercent, fixedPrice?.netCents) : null
 
   return (
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm">
-        Todos los planes incluyen el mismo núcleo. Elige el plan por número de personas con acceso,
-        incluida quien administra.
+        Una cuota base con una persona incluida, más un importe por cada plaza adicional. Los
+        módulos opcionales se cobran por empresa, no por persona.
+      </p>
+      <p className="text-muted-foreground text-sm">
+        Las plazas contratadas cubren a las personas con acceso, incluida la persona administradora
+        y las invitaciones pendientes. Puedes ajustar la capacidad para la siguiente renovación.
       </p>
       <div className="flex flex-wrap items-end gap-4">
         <label htmlFor={headcountId} className="grid gap-1 text-sm font-medium">
@@ -90,72 +92,33 @@ export function PricingCatalog({
           >
             <TabsList aria-label="Periodo de pago">
               <TabsTrigger id="month">Mensual</TabsTrigger>
-              <TabsTrigger id="year">Anual · 2 meses de ahorro</TabsTrigger>
+              <TabsTrigger id="year">Anual · 2 meses de ahorro en la cuota base</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
       </div>
       {members > MAX_SCALE_PLAN_MEMBERS ? (
         <CustomPlanCard />
+      ) : rate && plan && terms ? (
+        <PlanOptionCard
+          plan={plan}
+          rate={rate}
+          terms={terms}
+          recommended
+          fixedPrice={Boolean(fixedPrice)}
+        >
+          {renderAction?.(terms, plan)}
+        </PlanOptionCard>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {paidPlans.map((id) => {
-            const rate =
-              id === 'scale' ? scaleRate : catalog.data.find((option) => option.plan === id)
-            const plan = id === 'scale' ? scalePlan : planInfo(id, catalog.data)
-            if (!rate || !plan) return null
-            const terms = catalogQuote(rate, period, vatPercent, fixedPrice?.netCents)
-            return (
-              <PlanOptionCard
-                key={plan.id}
-                plan={plan}
-                rate={rate}
-                terms={terms}
-                recommended={sameCapacity(recommended, rate)}
-              >
-                {renderAction?.(terms, plan)}
-              </PlanOptionCard>
-            )
-          })}
-        </div>
+        <p role="alert">La tarifa por persona todavía no está disponible.</p>
       )}
-      {scaleRate && scalePlan ? (
-        <details className="border-border rounded-lg border p-3 text-sm">
-          <summary className="cursor-pointer font-medium">
-            Ver todos los tramos de {scalePlan.name}
-          </summary>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-            {scale.map((rate) => (
-              <li key={rate.seats}>
-                {rate.plan === 'scale'
-                  ? `Desde ${rate.seats} personas`
-                  : `Hasta ${rate.seats} personas`}
-                {!fixedPrice ? (
-                  <>
-                    {rate.plan === 'scale' ? ' · ' : ': '}
-                    {formatEuros(catalogQuote(rate, period).net_cents / 100)}{' '}
-                    {period === 'year' ? 'al año' : 'al mes'}, sin IVA
-                  </>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
       <section className="space-y-2">
-        <h2 className="font-semibold">Incluido en todos los planes</h2>
+        <h2 className="font-semibold">Incluido en la cuota base</h2>
         <ul className="text-muted-foreground grid gap-1 text-sm sm:grid-cols-2">
           {coreFeatures.map((item) => (
             <li key={item}>✓ {item}</li>
           ))}
         </ul>
-      </section>
-      <section className="space-y-1 text-sm">
-        <h2 className="font-semibold">Módulo de trabajadores</h2>
-        <p className="text-muted-foreground">
-          Incluido automáticamente desde Equipo, también durante la prueba. No está incluido en
-          Autónomo.
-        </p>
       </section>
       {showModuleCatalog ? (
         <section className="space-y-2">
