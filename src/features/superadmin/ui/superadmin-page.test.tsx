@@ -87,6 +87,22 @@ vi.mock('@tanstack/react-query', () => ({
     if (queryKey[0] === 'platform-access') return { data: state.allowed }
     if (queryKey[0] === 'platform-companies') return { data: [company] }
     if (queryKey[0] === 'platform-company') return { data: state.missingCompany ? null : company }
+    if (queryKey[0] === 'platform-company-profile') {
+      return {
+        data: {
+          name: company.name,
+          legal_name: 'Empresa de prueba SL',
+          tax_id: '',
+          email: '',
+          phone: '',
+          address: '',
+          postal_code: '',
+          city: '',
+          website: '',
+          updated_at: '2026-11-22T10:00:00Z',
+        },
+      }
+    }
     if (queryKey[0] === 'billing-catalog') {
       return {
         data: [
@@ -171,10 +187,28 @@ describe('platform administration navigation', () => {
     expect(html).toContain('Empresa de prueba')
     expect(html).toContain('3 personas')
     expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}`)
+    expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}&amp;seccion=datos`)
+    expect(html).toContain('Suscripción y precio')
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
       ['platform-companies', 'prueba', 100],
       ['billing-catalog'],
+    ])
+  })
+
+  it('loads the company profile without querying payments or subscription controls', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(
+      <SuperadminPage search={{ empresa: tenantId, seccion: 'datos' }} />,
+    )
+    expect(html).toContain('Empresa de prueba SL')
+    expect(html).toContain('Editar datos')
+    expect(html).toContain('Ir a suscripción y precio')
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['platform-company', tenantId],
+      ['billing-catalog'],
+      ['platform-company-profile', tenantId],
     ])
   })
 

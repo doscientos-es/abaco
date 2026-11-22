@@ -3,7 +3,7 @@ import { isModuleCode, type ModuleCode } from '@/features/product-modules'
 
 export const platformPageSize = 50
 export const platformMaxPage = Math.floor(2_147_483_647 / platformPageSize) + 1
-export const companySections = ['suscripcion', 'modulos', 'pagos'] as const
+export const companySections = ['suscripcion', 'datos', 'modulos', 'pagos'] as const
 export type CompanySection = (typeof companySections)[number]
 export const invoiceFilters = ['issued', 'in_progress'] as const
 export type InvoiceFilter = (typeof invoiceFilters)[number]
@@ -19,7 +19,7 @@ export type PlatformSearch = {
   plan?: PaidPlan
   modulo?: ModuleCode
   referencia?: string
-  edicion?: 'cuota' | 'iva' | 'plan' | 'modulo'
+  edicion?: 'cuota' | 'iva' | 'plan' | 'modulo' | 'empresa'
 }
 
 export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearch {
@@ -65,9 +65,13 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
       ? modulo && raw.edicion === 'modulo'
         ? 'modulo'
         : undefined
-      : section !== 'pagos' && (raw.edicion === 'cuota' || raw.edicion === 'iva')
-        ? raw.edicion
-        : undefined
+      : section === 'datos'
+        ? raw.edicion === 'empresa'
+          ? 'empresa'
+          : undefined
+        : section !== 'pagos' && (raw.edicion === 'cuota' || raw.edicion === 'iva')
+          ? raw.edicion
+          : undefined
 
   return {
     ...(q && { q }),

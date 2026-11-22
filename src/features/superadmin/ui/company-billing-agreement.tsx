@@ -191,6 +191,15 @@ export function CompanyBillingAgreement({
           <AlertTitle>{blockMessage}</AlertTitle>
         </Alert>
       ) : null}
+      {editing === 'cuota' && !blocked && moduleSubscriptions.isPending ? (
+        <PlatformLoading>Cargando módulos para calcular el precio…</PlatformLoading>
+      ) : null}
+      {editing === 'cuota' && !blocked && moduleSubscriptions.isError ? (
+        <PlatformMessage
+          title="No se pudieron consultar los módulos para calcular el precio."
+          onRetry={() => void moduleSubscriptions.refetch()}
+        />
+      ) : null}
       {editing === 'cuota' &&
       preview.isSuccess &&
       catalog.isSuccess &&
@@ -280,28 +289,34 @@ function AgreementForm({
     ? catalogRateForCapacity(rates, terms.plan, terms.seats)
     : smallestRateFor(rates, Math.max(members, 1))
   const [capacity, setCapacity] = useState(
-    initialRate ? `${initialRate.plan}:${initialRate.seats}` : '',
+    initialRate
+      ? `${initialRate.plan}:${initialRate.plan === 'standard' || initialRate.plan === 'scale' ? 'variable' : initialRate.seats}`
+      : '',
   )
+  const [seats, setSeats] = useState(String(initialRate?.seats ?? Math.max(members, 1)))
   const [period, setPeriod] = useState<Interval>(terms?.period ?? 'month')
   const base = terms?.base_net_cents ?? terms?.net_cents
   const [mode, setMode] = useState(fixedNet !== null ? 'agreed' : 'catalog')
   const initialPrice = fixedNet ?? base
   const [price, setPrice] = useState(initialPrice === undefined ? '' : centsToInput(initialPrice))
-  const capacityOptions = rates.flatMap((entry) =>
-    entry.plan === 'scale' || entry.plan === 'standard'
-      ? Array.from(
-          {
-            length:
-              MAX_SCALE_PLAN_MEMBERS - (entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1) + 1,
-          },
-          (_, index) => ({
-            ...entry,
-            seats: (entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1) + index,
-          }),
-        )
-      : [entry],
-  )
-  const rate = capacityOptions.find((entry) => `${entry.plan}:${entry.seats}` === capacity)
+  const capacityOptions = rates.map((entry) => ({
+    entry,
+    variable: entry.plan === 'scale' || entry.plan === 'standard',
+    id: `${entry.plan}:${entry.plan === 'scale' || entry.plan === 'standard' ? 'variable' : entry.seats}`,
+  }))
+  const selected = capacityOptions.find((option) => option.id === capacity)
+  const count = Number(seats)
+  const minSeats = selected?.entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1
+  const variableValid =
+    /^\d+$/.test(seats) &&
+    Number.isInteger(count) &&
+    count >= minSeats &&
+    count <= MAX_SCALE_PLAN_MEMBERS
+  const rate = selected?.variable
+    ? variableValid
+      ? { ...selected.entry, seats: count }
+      : null
+    : (selected?.entry ?? null)
   const agreed = mode === 'agreed'
   const raw = price.trim()
   const customCents = /^\d{1,6}([,.]\d{1,2})?$/.test(raw) ? parseEuros(raw) : 0
@@ -343,18 +358,53 @@ function AgreementForm({
                 isDisabled={saving}
                 placeholder="Selecciona un tramo"
                 value={capacity || null}
-                options={capacityOptions.map((entry) => ({
-                  id: `${entry.plan}:${entry.seats}`,
-                  label: `${planLabel(entry.plan, rates)} · ${entry.plan === 'scale' && entry.seats === SCALE_PLAN_MIN_MEMBERS ? 'desde ' : ''}${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
-                  isDisabled: entry.seats < members,
+                options={capacityOptions.map(({ entry, variable, id }) => ({
+                  id,
+                  label: variable
+                    ? `${planLabel(entry.plan, rates)} · por persona`
+                    : `${planLabel(entry.plan, rates)} · ${entry.seats} ${entry.seats === 1 ? 'persona' : 'personas'}`,
+                  isDisabled: !variable && entry.seats < members,
                 }))}
                 onChange={(value) => {
                   onEdit()
                   setCapacity(value ?? '')
+                  const option = capacityOptions.find((item) => item.id === value)
+                  if (option?.variable)
+                    setSeats(
+                      String(
+                        Math.max(
+                          members,
+                          option.entry.plan === 'scale' ? SCALE_PLAN_MIN_MEMBERS : 1,
+                        ),
+                      ),
+                    )
                 }}
               />
             )}
           </PlatformField>
+          {selected?.variable ? (
+            <PlatformField
+              label="Personas con acceso"
+              hint={`Entre ${minSeats} y ${MAX_SCALE_PLAN_MEMBERS}; actualmente hay ${members}.`}
+              error={
+                !variableValid
+                  ? `Indica un número entero entre ${minSeats} y ${MAX_SCALE_PLAN_MEMBERS}.`
+                  : capacityError
+              }
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={minSeats}
+                  max={MAX_SCALE_PLAN_MEMBERS}
+                  step={1}
+                  value={seats}
+                  onChange={(event) => setSeats(event.currentTarget.value)}
+                />
+              )}
+            </PlatformField>
+          ) : null}
           <PlatformField label="Periodo de facturación">
             {(control) => (
               <PlatformSelect
@@ -414,7 +464,10 @@ function AgreementForm({
             <>
               Total previsto: {formatEuros(amount)} {billingVatLabel(vatPercent)} /{' '}
               {periodUnit(period)}.
-              {moduleNet > 0 ? <> Incluye {formatEuros(moduleNet)} en módulos, sin IVA.</> : null}
+              <span className="text-muted-foreground mt-1 block">
+                Base: {formatEuros(baseNet ?? 0)} · Módulos: {formatEuros(moduleNet)} · IVA:{' '}
+                {formatEuros(amount - (totalNet ?? 0))}.
+              </span>
             </>
           ) : (
             'Completa las condiciones para ver el importe previsto.'

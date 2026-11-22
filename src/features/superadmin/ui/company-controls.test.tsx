@@ -116,6 +116,23 @@ describe('company billing controls', () => {
     expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Guardar condiciones<\/button>/)
   })
 
+  it('explains when modules cannot be loaded instead of showing an incomplete price', async () => {
+    const options = moduleSubscriptionsQuery(tenantId)
+    client.removeQueries({ queryKey: options.queryKey })
+    client.setDefaultOptions({ queries: { retryOnMount: false } })
+    await expect(
+      client.fetchQuery({
+        ...options,
+        queryFn: () => Promise.reject(new Error('offline')),
+        retry: false,
+      }),
+    ).rejects.toThrow('offline')
+    const html = renderBilling(3, 'cuota')
+    expect(html).toContain('No se pudieron consultar los módulos para calcular el precio.')
+    expect(html).toContain('Reintentar')
+    expect(html).not.toContain('Guardar condiciones')
+  })
+
   it('does not save a tier with insufficient seats or show an editor while a payment is pending', () => {
     const insufficient = renderBilling(6, 'cuota')
     expect(insufficient).toMatch(/<button\b[^>]*\bdisabled=""[^>]*>Guardar condiciones<\/button>/)
@@ -192,6 +209,39 @@ describe('company billing controls', () => {
       p_tenant: tenantId,
       p_vat: 0,
     })
+  })
+
+  it('edits per-person capacity with a number field and shows a price breakdown', () => {
+    client.setQueryData(billingCatalogQuery.queryKey, [
+      {
+        plan: 'standard',
+        seats: 1,
+        monthly_cents: 3480,
+        yearly_cents: 34800,
+        seat_monthly_cents: 800,
+        vat_percent: 21,
+      },
+    ])
+    const terms: BillingTerms = {
+      plan: 'standard',
+      seats: 3,
+      period: 'month',
+      net_cents: 5080,
+      amount_cents: 6147,
+      vat_percent: 21,
+    }
+    client.setQueryData(billingPreviewQuery(tenantId).queryKey, {
+      ...preview,
+      current: terms,
+      next: terms,
+      fixed_net_cents: null,
+    })
+    const html = renderBilling(3, 'cuota')
+    expect(html).toContain('Personas con acceso')
+    expect(html).toMatch(/type="number"[^>]*value="3"/)
+    expect(html).toMatch(/Base: 50,80\s*€/)
+    expect(html).toContain('IVA:')
+    expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Guardar condiciones<\/button>/)
   })
 })
 

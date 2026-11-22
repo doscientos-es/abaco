@@ -21,6 +21,7 @@ import {
 } from '../domain/platform-navigation'
 import { CompanyBillingAgreement } from './company-billing-agreement'
 import { CompanyPayments } from './company-payments'
+import { CompanyProfileSection } from './company-profile'
 import { CompanyNavigation } from './platform-shell'
 import {
   billingPeriodLabel,
@@ -87,7 +88,9 @@ export function CompanyDetail({
       <nav aria-label="Secciones de la empresa">
         <CompanyNavigation search={search} />
       </nav>
-      {search.seccion === 'modulos' ? (
+      {search.seccion === 'datos' ? (
+        <CompanyProfileSection tenantId={company.id} search={search} />
+      ) : search.seccion === 'modulos' ? (
         <CompanyModules company={company} search={search} />
       ) : search.seccion === 'pagos' ? (
         <CompanyPayments tenantId={company.id} rates={rates} />

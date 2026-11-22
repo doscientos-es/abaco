@@ -3,6 +3,41 @@ import { queryOptions } from '@tanstack/react-query'
 import type { BillingTerms } from '@/features/billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
+import type { CompanyProfile, CompanyProfileValues } from '../domain/company-profile'
+
+export const platformCompanyProfileQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['platform-company-profile', tenantId],
+    queryFn: async (): Promise<CompanyProfile | null> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc(
+        'superadmin_company_profile',
+        {
+          p_tenant: tenantId,
+        },
+      )
+      if (error) throw new Error('No se pudieron cargar los datos de la empresa.')
+      return data as CompanyProfile | null
+    },
+  })
+
+export async function updateCompanyProfile(
+  tenantId: string,
+  expectedUpdatedAt: string,
+  profile: CompanyProfileValues,
+) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_update_company_profile', {
+    p_tenant: tenantId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_profile: profile,
+  })
+  if (error)
+    throw new Error(
+      ['22023', '40001', 'P0001'].includes(error.code)
+        ? error.message
+        : 'No se pudieron guardar los datos de la empresa.',
+    )
+}
+
 export type BillingAgreement = Pick<BillingTerms, 'plan' | 'period' | 'seats'> & {
   netCents: number | null
 }

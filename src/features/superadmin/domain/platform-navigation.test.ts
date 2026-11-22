@@ -95,4 +95,15 @@ describe('platform search parameters', () => {
       seccion: 'pagos',
     })
   })
+
+  it('keeps company profile editing scoped to the data section', () => {
+    const company = { empresa: 'abc00000-0000-0000-0000-000000000001', q: 'taller', page: 3 }
+    const data = { ...company, seccion: 'datos' } as const
+    const editing = parsePlatformSearch({ ...data, edicion: 'empresa' })
+    expect(editing).toEqual({ ...data, edicion: 'empresa' })
+    expect(withoutEditor(editing)).toEqual(data)
+    expect(companySectionSearch(editing, 'suscripcion')).toEqual(company)
+    expect(parsePlatformSearch({ ...data, edicion: 'cuota' })).toEqual(data)
+    expect(parsePlatformSearch({ ...company, edicion: 'empresa' })).toEqual(company)
+  })
 })

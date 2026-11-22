@@ -18,7 +18,11 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { billingCatalogQuery, planLabel } from '@/features/billing'
 
 import type { PlatformCompany } from '../application/superadmin-queries'
-import { directorySearch, type PlatformSearch } from '../domain/platform-navigation'
+import {
+  companySectionSearch,
+  directorySearch,
+  type PlatformSearch,
+} from '../domain/platform-navigation'
 import {
   billingPeriodLabel,
   CompanyStatus,
@@ -142,6 +146,27 @@ function CompanyTable({
                 {company.member_count} {company.member_count === 1 ? 'persona' : 'personas'}
                 <span className="lg:hidden"> · {planLabel(company.plan, rates)}</span>
               </p>
+              <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                <Link
+                  to="/superadmin"
+                  search={companySectionSearch(
+                    { ...directorySearch(search), empresa: company.id },
+                    'datos',
+                  )}
+                  aria-label={`Ver ficha de ${company.name}`}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Ver ficha
+                </Link>
+                <Link
+                  to="/superadmin"
+                  search={{ ...directorySearch(search), empresa: company.id }}
+                  aria-label={`Ver suscripción y precio de ${company.name}`}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Suscripción y precio
+                </Link>
+              </div>
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap items-center gap-1">

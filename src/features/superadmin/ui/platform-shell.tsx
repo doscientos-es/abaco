@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Buildings,
   CreditCard,
+  IdentificationCard,
   Package,
   Receipt,
   ShieldCheck,
@@ -34,6 +35,7 @@ import {
 
 const sections = [
   { id: 'suscripcion', label: 'Suscripción', icon: Wallet },
+  { id: 'datos', label: 'Datos', icon: IdentificationCard },
   { id: 'modulos', label: 'Módulos', icon: Package },
   { id: 'pagos', label: 'Pagos', icon: CreditCard },
 ] as const
@@ -41,7 +43,7 @@ const sections = [
 export function CompanyNavigation({ search }: { search: PlatformSearch }) {
   const section = search.seccion ?? 'suscripcion'
   return (
-    <ul className="border-border flex gap-1 border-b pb-2">
+    <ul className="border-border flex flex-wrap gap-1 border-b pb-2">
       {sections.map(({ id, label, icon: Icon }) => (
         <li key={id} className="min-w-0">
           <Link
