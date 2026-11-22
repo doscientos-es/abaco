@@ -16,6 +16,13 @@ La firma del módulo compartido no debe considerarse validada para este uso sin
 pruebas independientes de interoperabilidad y cumplimiento. La librería por sí
 sola no implementa todo el sistema exigido para la modalidad sin remisión.
 
+En una comprobación independiente con un XML sintético, el resumen del documento
+producido por `signXml` no coincidió con el calculado mediante la transformación
+de canonicalización XML C14N 1.0 declarada por la propia firma. La implementación
+actual calcula el resumen sobre los bytes originales, que no son necesariamente
+canónicos. No debe utilizarse para emitir registros NO VERI\*FACTU hasta corregirla
+y verificar las firmas completas y los ejemplos oficiales de la AEAT.
+
 ## Corte entre sistemas
 
 - Conservar el histórico y las cadenas del backoffice sin reemitir facturas.
