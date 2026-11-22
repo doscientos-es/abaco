@@ -48,7 +48,13 @@ export async function signIn(email: string, password: string): Promise<ActionRes
   return error ? { ok: false, message: translateAuthError(error.message) } : ok
 }
 
-export type SignUpInput = { fullName: string; companyName: string; email: string; password: string }
+export type SignUpInput = {
+  fullName: string
+  companyName: string
+  email: string
+  password: string
+  referralCode?: string
+}
 export type SignUpResult = { ok: true; needsConfirmation: boolean } | { ok: false; message: string }
 
 /**
@@ -65,6 +71,7 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
           full_name: input.fullName,
           company_name: input.companyName,
           [welcomePendingField]: true,
+          ...(input.referralCode ? { abaco_referral_code: input.referralCode } : {}),
         },
       },
     })

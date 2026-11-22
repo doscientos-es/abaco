@@ -41,7 +41,9 @@ function downloadReceipt(payment: Payment, companyName: string, description: str
 <p>Cliente: <strong>${escapeHtml(companyName)}</strong><br>Fecha: ${date}<br>Referencia de la operación: ${escapeHtml(payment.order)}</p>
 <table style="width:100%;border-collapse:collapse"><tr><td>${escapeHtml(description)}</td><td style="text-align:right">${cents(base)}</td></tr>
 <tr><td>IVA (${payment.vatPercent} %)</td><td style="text-align:right">${cents(payment.amountCents - base)}</td></tr>
-<tr><td style="border-top:1px solid #999"><strong>Total pagado con tarjeta</strong></td><td style="border-top:1px solid #999;text-align:right"><strong>${cents(payment.amountCents)}</strong></td></tr></table>
+<tr><td style="border-top:1px solid #999"><strong>Total de la factura</strong></td><td style="border-top:1px solid #999;text-align:right"><strong>${cents(payment.amountCents)}</strong></td></tr>
+<tr><td>Saldo de referidos aplicado</td><td style="text-align:right">${cents(payment.referralCreditCents)}</td></tr>
+<tr><td>Pagado con tarjeta</td><td style="text-align:right">${cents(payment.chargedCents)}</td></tr></table>
 </body></html>`
   downloadTextFile(`justificante-abaco-${payment.order}.html`, html, 'text/html')
 }
@@ -157,6 +159,11 @@ export function PaymentHistory({
                   <p className="text-muted-foreground text-xs">
                     {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
                   </p>
+                  {p.status === 'succeeded' && p.referralCreditCents > 0 ? (
+                    <p className="text-muted-foreground text-xs">
+                      Tarjeta {cents(p.chargedCents)} · saldo {cents(p.referralCreditCents)}
+                    </p>
+                  ) : null}
                   {p.status === 'succeeded' &&
                     (p.invoicePortalUrl && p.invoiceNumber ? (
                       <a

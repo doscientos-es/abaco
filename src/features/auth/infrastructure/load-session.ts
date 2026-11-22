@@ -59,7 +59,13 @@ function createPendingCompany(name: unknown): Promise<boolean> {
     const supabase = createBrowserSupabaseClient()
     const { data, error } = await supabase.rpc('create_company', { p_name: name })
     if (error || typeof data !== 'string') return false
-    await supabase.auth.updateUser({ data: { company_name: null, [activeCompanyField]: data } })
+    await supabase.auth.updateUser({
+      data: {
+        company_name: null,
+        abaco_referral_code: null,
+        [activeCompanyField]: data,
+      },
+    })
     return true
   })().finally(() => {
     pendingCompany = null

@@ -17,6 +17,7 @@ import {
   cancelPlan,
   resumePlan,
   memberCountQuery,
+  referralOverviewQuery,
   submitToRedsys,
   subscriptionQuery,
   undoPlanChange,
@@ -33,6 +34,7 @@ import {
 } from '../domain/plans'
 import { PaymentHistory } from './payment-history'
 import { PricingCatalog } from './pricing-catalog'
+import { ReferralProgram } from './referral-program'
 import { SubscriptionBillingProfileForm } from './subscription-billing-profile-form'
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', {
@@ -69,6 +71,7 @@ export function BillingSection({
   const preview = useQuery(billingPreviewQuery(tenantId))
   const { data: rates } = useQuery(billingCatalogQuery)
   const team = useQuery(memberCountQuery(tenantId))
+  const referral = useQuery(referralOverviewQuery(tenantId))
   const moduleSubscriptionsState = useQuery(moduleSubscriptionsQuery(tenantId))
   const [selection, setSelection] = useState<{
     terms: BillingTerms
@@ -76,6 +79,7 @@ export function BillingSection({
   } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [paidByBalance, setPaidByBalance] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -123,14 +127,18 @@ export function BillingSection({
   async function go(key: string, action: () => Promise<BillingResult>) {
     setBusy(key)
     setError('')
+    setPaidByBalance(false)
     try {
       const result = await action()
       if (result.ok && result.form) return submitToRedsys(result.form)
+      setPaidByBalance(result.ok && result.paidByBalance === true)
       if (result.ok) setSelection(null)
       else setError(result.message)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] }),
         queryClient.invalidateQueries({ queryKey: ['billing-preview', tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['referral-overview', tenantId] }),
         queryClient.invalidateQueries({ queryKey: staffModuleQuery(tenantId).queryKey }),
       ])
     } catch {
@@ -166,7 +174,13 @@ export function BillingSection({
         <p className="text-muted-foreground text-sm">
           Acceso de cortesía: sin caducidad ni renovaciones automáticas.
         </p>
-        <div className="mt-5">
+        <div className="mt-5 space-y-5">
+          <ReferralProgram
+            summary={referral.data}
+            isPending={referral.isPending}
+            isError={referral.isError}
+            onRetry={() => void referral.refetch()}
+          />
           <PaymentHistory
             tenantId={tenantId}
             companyName={companyName}
@@ -201,7 +215,23 @@ export function BillingSection({
             No se ha confirmado el pago. Si sigue pendiente de verificación, no lo repitas.
           </output>
         ) : null}
+        {paidByBalance ? (
+          <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
+            Tu suscripción se ha pagado con el saldo disponible. Estamos preparando la factura.
+          </output>
+        ) : null}
+        {paidByBalance ? (
+          <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
+            Tu suscripción se ha pagado con el saldo disponible. Estamos preparando la factura.
+          </output>
+        ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
+        <ReferralProgram
+          summary={referral.data}
+          isPending={referral.isPending}
+          isError={referral.isError}
+          onRetry={() => void referral.refetch()}
+        />
         <SubscriptionBillingProfileForm key={tenantId} tenantId={tenantId} />
         <hr className="border-border" />
         {subscriptionState.isError ||
@@ -235,9 +265,15 @@ export function BillingSection({
           <p>
             {active ? 'Próxima renovación' : 'Importe a pagar'}:{' '}
             <strong>
-              {formatEuros(upcoming.amount_cents / 100)} {billingVatLabel(upcoming.vat_percent)}
+              {formatEuros(
+                Math.max(0, upcoming.amount_cents - (referral.data?.balance_cents ?? 0)) / 100,
+              )}{' '}
+              {billingVatLabel(upcoming.vat_percent)}
             </strong>{' '}
             por {upcoming.period === 'year' ? 'año' : 'mes'}.
+            {(referral.data?.balance_cents ?? 0) > 0 ? (
+              <> Se aplicará el saldo disponible a la factura.</>
+            ) : null}
             {upcoming.module_net_cents ? (
               <> Incluye {formatEuros(upcoming.module_net_cents / 100)} en módulos, sin IVA.</>
             ) : null}
@@ -345,6 +381,20 @@ export function BillingSection({
               </strong>{' '}
               por {selection.terms.period === 'year' ? 'año' : 'mes'}.
             </p>
+            {(referral.data?.balance_cents ?? 0) > 0 ? (
+              <p className="text-sm">
+                Aplicaremos{' '}
+                {formatEuros(
+                  Math.min(referral.data?.balance_cents ?? 0, selection.terms.amount_cents) / 100,
+                )}{' '}
+                de saldo; quedarán{' '}
+                {formatEuros(
+                  Math.max(0, selection.terms.amount_cents - (referral.data?.balance_cents ?? 0)) /
+                    100,
+                )}{' '}
+                por pagar.
+              </p>
+            ) : null}
             {selection.terms.module_net_cents ? (
               <p className="text-sm">
                 Incluye {formatEuros(selection.terms.module_net_cents / 100)} en módulos, sin IVA.
@@ -353,7 +403,9 @@ export function BillingSection({
             <p className="text-muted-foreground text-sm">
               {selection.action === 'change'
                 ? 'El cambio se aplica en la próxima renovación, sin cobro inmediato.'
-                : 'Continuarás en Redsys para confirmar el pago con tarjeta.'}
+                : selection.terms.amount_cents <= (referral.data?.balance_cents ?? 0)
+                  ? 'El saldo cubre el importe. Confirmarás la suscripción sin pasar por Redsys.'
+                  : 'El saldo se aplicará primero; confirmarás el resto en Redsys.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -364,7 +416,11 @@ export function BillingSection({
                   )
                 }
               >
-                {selection.action === 'change' ? 'Programar cambio' : 'Continuar a Redsys'}
+                {selection.action === 'change'
+                  ? 'Programar cambio'
+                  : selection.terms.amount_cents <= (referral.data?.balance_cents ?? 0)
+                    ? 'Pagar con saldo'
+                    : 'Continuar al pago'}
               </Button>
               <Button
                 variant="outline"

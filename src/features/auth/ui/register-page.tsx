@@ -10,6 +10,7 @@ import { PasswordField, TextField } from '@/shared/ui/form'
 
 import { sessionQuery, signUp } from '../application/auth-actions'
 import { firstError, passwordRules, signupSchema } from '../domain/credentials'
+import { referralCodeFromSearch } from '../domain/referral-link'
 import { AuthLayout, FormError } from './auth-layout'
 
 const toLogin = (
@@ -36,7 +37,9 @@ export function RegisterPage() {
     if (!parsed.success) return setError(firstError(parsed.error))
     setBusy(true)
     setError(null)
-    const result = await signUp(parsed.data)
+    const referralCode =
+      typeof window === 'undefined' ? null : referralCodeFromSearch(window.location.search)
+    const result = await signUp({ ...parsed.data, ...(referralCode ? { referralCode } : {}) })
     setBusy(false)
     if (!result.ok) return setError(result.message)
     if (result.needsConfirmation) return setSentTo(parsed.data.email)

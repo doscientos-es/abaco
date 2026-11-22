@@ -154,6 +154,27 @@ export const billingPreviewQuery = (tenantId: string) =>
     },
   })
 
+export type ReferralOverview = {
+  code: string
+  balance_cents: number
+  referred_count: number
+  earned_cents: number
+  redeemed_cents: number
+}
+
+export const referralOverviewQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['referral-overview', tenantId],
+    staleTime: 60_000,
+    queryFn: async (): Promise<ReferralOverview> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc('referral_summary', {
+        p_tenant: tenantId,
+      })
+      if (error || !data) throw new Error('No se pudo cargar el saldo de referidos.')
+      return data as ReferralOverview
+    },
+  })
+
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed'
 
 export type Payment = {
@@ -165,6 +186,10 @@ export type Payment = {
   period: Interval
   /** Amount charged, VAT included. */
   amountCents: number
+  /** Portion of the invoice actually charged to the saved card. */
+  chargedCents: number
+  /** Referral balance used to settle this invoice. */
+  referralCreditCents: number
   netCents: number | null
   vatPercent: number
   status: PaymentStatus
@@ -189,7 +214,7 @@ export const paymentsQuery = (tenantId: string) =>
           createBrowserSupabaseClient()
             .from('billing_payments')
             .select(
-              'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url',
+              'id, merchant_order, kind, plan, period, amount_cents, charge_cents, referral_credit_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url',
             )
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
@@ -209,6 +234,8 @@ export const paymentsQuery = (tenantId: string) =>
           plan: row.plan as PaidPlan,
           period: row.period as Interval,
           amountCents: row.amount_cents,
+          chargedCents: row.charge_cents,
+          referralCreditCents: row.referral_credit_cents,
           netCents: row.net_cents,
           vatPercent: row.vat_percent,
           status: row.status as PaymentStatus,
@@ -230,11 +257,14 @@ type RedsysForm = {
   signature: string
 }
 
-export type BillingResult = { ok: true; form?: RedsysForm } | { ok: false; message: string }
+export type BillingResult =
+  | { ok: true; form?: RedsysForm; paidByBalance?: boolean }
+  | { ok: false; message: string }
 
 async function call(body: Record<string, unknown>): Promise<BillingResult> {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<{
     form?: RedsysForm
+    paidByBalance?: boolean
   }>('billing', { body })
   if (error) {
     const body: unknown =
@@ -248,7 +278,9 @@ async function call(body: Record<string, unknown>): Promise<BillingResult> {
           : 'No se pudo completar la operación. Inténtalo de nuevo.',
     }
   }
-  return data?.form ? { ok: true, form: data.form } : { ok: true }
+  return data?.form
+    ? { ok: true, form: data.form }
+    : { ok: true, paidByBalance: data?.paidByBalance === true }
 }
 
 /** Sends the browser to Redsys' hosted card page (the card never touches our servers). */
