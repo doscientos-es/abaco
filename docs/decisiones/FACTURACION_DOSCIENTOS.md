@@ -40,6 +40,16 @@ requisitos de factura electrónica B2B y la declaración responsable aplicables.
 El código de preparación de borradores valida datos y cálculos: **no emite ni
 numera facturas**, y no cambia el circuito de cobro ni el backoffice.
 
+## Exportación para gestoría
+
+La preparación del CSV selecciona por fecha de emisión el último trimestre
+natural cerrado en horario peninsular, conserva los importes fiscales y
+distingue las rectificativas. Requiere datos de facturas emitidas, no cobros ni
+perfiles editables. Todavía no está conectada a ninguna fuente ni a la pantalla;
+no incluye los documentos PDF. El listado actual solo conoce la fecha de cobro
+y el enlace o número comunicado por backoffice, por lo que no permite construir
+un registro fiscal trimestral completo ni garantiza incluir todas las facturas.
+
 Fuentes: [modalidades AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/cuestiones-generales/modalidades-cumplimiento-obligaciones.html),
 [plazos AEAT](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/nota-informativa-ampliacion-plazo-adaptacion-facturacion.html)
 y [RD 1007/2023](https://www.boe.es/buscar/act.php?id=BOE-A-2023-24840).
