@@ -162,7 +162,7 @@ function DashboardMetric({
     <Link
       to={to}
       title={detail}
-      className="focus-visible:ring-ring block rounded-xl transition-shadow outline-none hover:shadow-md focus-visible:ring-2"
+      className="focus-visible:ring-ring block h-full rounded-xl transition-shadow outline-none hover:shadow-sm focus-visible:ring-2"
     >
       {children}
       <span className="sr-only">{detail}</span>
@@ -199,6 +199,7 @@ function DashboardWidget({
               hint={`${data.open.length} presupuestos enviados`}
               tone="info"
               icon={fieldIcons.file}
+              variant="dashboard"
             />
           </DashboardMetric>
           <DashboardMetric
@@ -212,6 +213,7 @@ function DashboardWidget({
               hint="De presupuestos aceptados"
               tone="warning"
               icon={fieldIcons.euro}
+              variant="dashboard"
             />
           </DashboardMetric>
           <DashboardMetric
@@ -226,6 +228,7 @@ function DashboardWidget({
               tone="success"
               icon={fieldIcons.bank}
               trend={months.map((month) => month.income)}
+              variant="dashboard"
             />
           </DashboardMetric>
           <DashboardMetric
@@ -238,6 +241,7 @@ function DashboardWidget({
               value={`${data.winRate}%`}
               hint={`${data.decided.length} resueltos · ${data.clients.length} clientes`}
               icon={fieldIcons.percent}
+              variant="dashboard"
             />
           </DashboardMetric>
         </div>
@@ -256,7 +260,7 @@ function DashboardWidget({
     case 'receivables':
       return (
         <Card className="overflow-hidden">
-          <CardHeader className="border-border flex-row items-center justify-between border-b pb-4">
+          <CardHeader className="flex-row items-center justify-between gap-3 pb-3">
             <div>
               <CardTitle>Qué me deben</CardTitle>
               <p className="text-muted-foreground text-xs">
@@ -322,7 +326,7 @@ function DashboardWidget({
     case 'recent-estimates':
       return (
         <Card className="overflow-hidden">
-          <CardHeader className="border-border flex-row items-center justify-between border-b pb-4">
+          <CardHeader className="flex-row items-center justify-between gap-3 pb-3">
             <CardTitle>Últimos presupuestos</CardTitle>
             <Link
               to="/presupuestos"

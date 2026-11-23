@@ -97,6 +97,9 @@ describe('dashboard customization', () => {
     expect(html).toMatch(/href="\/presupuestos"[^>]*title="Pendiente de respuesta/)
     expect(html).toMatch(/href="\/contabilidad"[^>]*title="Cobrado este mes/)
     expect(html).toContain('aceptados entre presupuestos aceptados o rechazados')
+    expect(html).toContain('0 presupuestos enviados')
+    expect(html).toContain('De presupuestos aceptados')
+    expect(html).toContain('Gastos')
   })
 
   it('renders the saved line chart and real expense and movement data', () => {

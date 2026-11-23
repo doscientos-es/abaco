@@ -58,6 +58,7 @@ describe('EstimateStatusSummary', () => {
     expect(rows[0]).toContain('Borrador')
     expect(rows[0]).toContain('1 presupuesto')
     expect(rows[0]).toContain(formatEuros(0))
+    expect(html).not.toContain('stroke-dasharray=')
   })
 
   it('shows status counts and VAT-inclusive amounts with proportional segments', () => {
@@ -75,7 +76,8 @@ describe('EstimateStatusSummary', () => {
     expect(rows[2]).toContain('Aceptado')
     expect(rows[2]).toContain('2 presupuestos')
     expect(rows[2]).toContain(formatEuros(12100))
-    expect(html.match(/width:50%/g)).toHaveLength(2)
+    expect(html.match(/stroke-dasharray="50 50"/g)).toHaveLength(2)
+    expect(html).toContain('stroke-dashoffset="-50"')
   })
 
   it('filters by creation month and can size the segments by counts instead of amount', () => {
@@ -92,8 +94,9 @@ describe('EstimateStatusSummary', () => {
         ]}
       />,
     )
-    expect(html).toContain('2 presupuestos')
+    expect(html).toMatch(/>2<\/p><p[^>]*>presupuestos<\/p>/)
     expect(html).not.toContain(formatEuros(45678))
-    expect(html.match(/width:50%/g)).toHaveLength(2)
+    expect(html.match(/stroke-dasharray="50 50"/g)).toHaveLength(2)
+    expect(html).toContain('>presupuestos</p>')
   })
 })

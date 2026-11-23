@@ -26,6 +26,7 @@ export function StatCard({
   tone = 'default',
   trend,
   className = '',
+  variant = 'default',
 }: {
   label: string
   value: string
@@ -35,7 +36,40 @@ export function StatCard({
   /** Optional values drawn as a tiny line on the right. */
   trend?: number[]
   className?: string
+  variant?: 'default' | 'dashboard'
 }) {
+  if (variant === 'dashboard') {
+    return (
+      <div
+        className={`border-border bg-card flex h-full min-w-0 flex-col rounded-xl border p-1 ${className}`}
+      >
+        <div className="border-border/70 bg-background/40 flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border px-3 py-3">
+          {icon ? (
+            <span
+              className={`flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4 ${iconTone[tone]}`}
+            >
+              {icon}
+            </span>
+          ) : null}
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-xs leading-4">{label}</p>
+            <p className="mt-1 text-xl leading-tight font-semibold tracking-tight break-words tabular-nums">
+              {value}
+            </p>
+          </div>
+        </div>
+        {hint || (trend && trend.length > 1) ? (
+          <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-2">
+            {hint ? <p className="text-muted-foreground text-xs leading-4">{hint}</p> : null}
+            {trend && trend.length > 1 ? (
+              <Sparkline values={trend} className={lineTone[tone]} />
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div
       className={`border-border bg-card flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 ${className}`}
