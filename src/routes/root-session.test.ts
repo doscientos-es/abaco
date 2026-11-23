@@ -178,6 +178,56 @@ describe('root session guard', () => {
     queryClient.clear()
   })
 
+  it('blocks an unpaid worker from their assigned work while keeping the payment page accessible', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const session = {
+      userId: 'worker-1',
+      email: '',
+      fullName: '',
+      tenantId: 'company-1',
+      role: 'user',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    tenantAccess.mockResolvedValue(false)
+    const visit = (path: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: path, href: path },
+      } as Parameters<typeof beforeLoad>[0])
+    await expect(visit('/mi-jornada')).rejects.toMatchObject({ options: { to: '/ajustes' } })
+    await expect(visit('/ajustes')).resolves.toEqual({ session, hasTenantAccess: false })
+    expect(hydrateStore).not.toHaveBeenCalled()
+    queryClient.clear()
+  })
+
+  it('does not enter the workspace if subscription verification fails', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    loadSession.mockResolvedValue({
+      userId: 'user-1',
+      email: '',
+      fullName: '',
+      tenantId: 'company-1',
+      role: 'admin',
+      companies: [],
+      needsWelcome: false,
+    })
+    tenantAccess.mockRejectedValue(new Error('No se pudo comprobar la suscripción.'))
+    await expect(
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: '/', href: '/' },
+      } as Parameters<typeof beforeLoad>[0]),
+    ).rejects.toThrow('No se pudo comprobar la suscripción.')
+    expect(hydrateStore).not.toHaveBeenCalled()
+    queryClient.clear()
+  })
+
   it('loads administrative data before completing a switch to an admin company', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const beforeLoad = Route.options.beforeLoad
