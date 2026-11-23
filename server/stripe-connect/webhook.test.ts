@@ -36,7 +36,9 @@ describe('Stripe Connect webhook verification', () => {
 
   it('rejects a changed body, wrong secret and missing signature', () => {
     const { body, signature } = signed(event)
-    expect(() => verifyConnectEvent(Buffer.from(`${body} `), signature, config)).toThrow()
+    expect(() =>
+      verifyConnectEvent(Buffer.concat([body, Buffer.from(' ')]), signature, config),
+    ).toThrow()
     expect(() =>
       verifyConnectEvent(body, signature, { ...config, webhookSecret: 'whsec_other' }),
     ).toThrow()

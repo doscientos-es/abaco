@@ -29,30 +29,33 @@ const event = {
   data: { object: session },
 }
 
-function store(): StripePaymentStore {
-  return { findReservation: vi.fn().mockResolvedValue(expected), settlePayment: vi.fn() }
+function store() {
+  const findReservation = vi.fn<StripePaymentStore['findReservation']>().mockResolvedValue(expected)
+  const settlePayment = vi.fn<StripePaymentStore['settlePayment']>()
+  const repository: StripePaymentStore = { findReservation, settlePayment }
+  return { repository, findReservation, settlePayment }
 }
 
 describe('stored Stripe payment processing', () => {
   it('settles only a matching paid checkout and passes the payment identity to the transaction', async () => {
-    const repository = store()
+    const { repository, settlePayment } = store()
     await expect(processConnectPayment(event, repository)).resolves.toBe('settled')
-    expect(repository.settlePayment).toHaveBeenCalledWith('evt_ABC123', expected, 'pi_ABC123')
+    expect(settlePayment).toHaveBeenCalledWith('evt_ABC123', expected, 'pi_ABC123')
   })
 
   it('settles an asynchronously confirmed checkout', async () => {
-    const repository = store()
+    const { repository, settlePayment } = store()
     await expect(
       processConnectPayment(
         { ...event, type: 'checkout.session.async_payment_succeeded' },
         repository,
       ),
     ).resolves.toBe('settled')
-    expect(repository.settlePayment).toHaveBeenCalledWith('evt_ABC123', expected, 'pi_ABC123')
+    expect(settlePayment).toHaveBeenCalledWith('evt_ABC123', expected, 'pi_ABC123')
   })
 
   it('ignores unrelated and initially unpaid events without issuing an invoice', async () => {
-    const repository = store()
+    const { repository, findReservation, settlePayment } = store()
     await expect(
       processConnectPayment({ ...event, type: 'account.updated' }, repository),
     ).resolves.toBe('ignored')
@@ -62,21 +65,21 @@ describe('stored Stripe payment processing', () => {
         repository,
       ),
     ).resolves.toBe('ignored')
-    expect(repository.findReservation).not.toHaveBeenCalled()
-    expect(repository.settlePayment).not.toHaveBeenCalled()
+    expect(findReservation).not.toHaveBeenCalled()
+    expect(settlePayment).not.toHaveBeenCalled()
   })
 
   it('retries when the checkout reservation is not available yet', async () => {
-    const repository = store()
-    vi.mocked(repository.findReservation).mockResolvedValue(null)
+    const { repository, findReservation, settlePayment } = store()
+    findReservation.mockResolvedValue(null)
     await expect(processConnectPayment(event, repository)).rejects.toThrow(
       'reservation unavailable',
     )
-    expect(repository.settlePayment).not.toHaveBeenCalled()
+    expect(settlePayment).not.toHaveBeenCalled()
   })
 
   it('rejects invalid operation identifiers before querying the reservation store', async () => {
-    const repository = store()
+    const { repository, findReservation } = store()
     const invalid = {
       ...event,
       data: { object: { ...session, metadata: { operation_id: 'bad' } } },
@@ -84,7 +87,7 @@ describe('stored Stripe payment processing', () => {
     await expect(processConnectPayment(invalid, repository)).rejects.toThrow(
       'Invalid Stripe payment operation',
     )
-    expect(repository.findReservation).not.toHaveBeenCalled()
+    expect(findReservation).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -98,14 +101,14 @@ describe('stored Stripe payment processing', () => {
       data: { object: { ...session, payment_status: 'unpaid' } },
     },
   ])('rejects mismatched payment data', async (mismatch) => {
-    const repository = store()
+    const { repository, settlePayment } = store()
     await expect(processConnectPayment(mismatch, repository)).rejects.toThrow('does not match')
-    expect(repository.settlePayment).not.toHaveBeenCalled()
+    expect(settlePayment).not.toHaveBeenCalled()
   })
 
   it('propagates transaction failures so the worker can retry', async () => {
-    const repository = store()
-    vi.mocked(repository.settlePayment).mockRejectedValue(new Error('database unavailable'))
+    const { repository, settlePayment } = store()
+    settlePayment.mockRejectedValue(new Error('database unavailable'))
     await expect(processConnectPayment(event, repository)).rejects.toThrow('database unavailable')
   })
 })
