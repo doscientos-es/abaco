@@ -90,7 +90,6 @@ export function EstimateListPage() {
   const [creatingClient, setCreatingClient] = useState(false)
   const [toDelete, setToDelete] = useState<Estimate | null>(null)
   const [newFormat, setNewFormat] = useState<EstimateFormat>('sections')
-  const [newPurpose, setNewPurpose] = useState<EstimatePurpose>('contract')
   const [purpose, setPurpose] = useState<'all' | EstimatePurpose>('all')
   const visible = estimates.filter((e) => {
     const client = clients.find((c) => c.id === e.clientId)
@@ -118,7 +117,6 @@ export function EstimateListPage() {
     setNewClientId(activeClients[0]?.id ?? '')
     setNewTitle('')
     setNewFormat('sections')
-    setNewPurpose('contract')
     setCreating(true)
   }
 
@@ -127,7 +125,12 @@ export function EstimateListPage() {
     setCreating(false)
     void navigate({
       to: '/presupuestos/nuevo',
-      search: { clientId: newClientId, title: newTitle, format: newFormat, purpose: newPurpose },
+      search: {
+        clientId: newClientId,
+        title: newTitle,
+        format: newFormat,
+        purpose: newFormat === 'table' ? 'work' : 'contract',
+      },
     })
   }
 
@@ -417,22 +420,6 @@ export function EstimateListPage() {
           value={newTitle}
           onChange={setNewTitle}
         />
-        <SelectField
-          label="Tipo de presupuesto"
-          value={newPurpose}
-          options={[
-            { value: 'work', label: 'Instalación · obra puntual y pagos en plazos' },
-            { value: 'contract', label: 'Mantenimiento · contrato con fin opcional' },
-          ]}
-          onChange={(value) => {
-            if (value === 'work' || value === 'contract') setNewPurpose(value)
-          }}
-        />
-        <p className="text-muted-foreground text-sm sm:col-span-2">
-          {newPurpose === 'work'
-            ? 'Para una obra concreta: acuerda el precio y los plazos de pago, sin contrato de mantenimiento.'
-            : 'Al aprobar el presupuesto se creará un contrato en borrador para configurar su vigencia y trabajos.'}
-        </p>
         <EstimateFormatPicker value={newFormat} onChange={setNewFormat} />
       </FormDialog>
 

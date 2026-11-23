@@ -23,6 +23,8 @@ describe('estimate format cards', () => {
       expect(html).toContain('Tipo de presupuesto')
       expect(html).toContain('Instalación')
       expect(html).toContain('Mantenimiento')
+      expect(html).toContain('sin contrato de mantenimiento')
+      expect(html).toContain('contrato en borrador')
       expect(html.match(/type="radio"/g)).toHaveLength(2)
       expect(html.match(/checked=""/g)).toHaveLength(1)
       const selectedInput = html

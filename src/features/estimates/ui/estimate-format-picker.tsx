@@ -2,8 +2,14 @@ import { estimateFormatLabels, type EstimateFormat } from '@/shared/domain/estim
 import { VisualRadioGroup } from '@/shared/ui/visual-radio-group'
 
 const formats = [
-  { value: 'table', description: 'Partidas, cantidades y precios en una tabla.' },
-  { value: 'sections', description: 'Una propuesta con títulos, textos, precios y servicios.' },
+  {
+    value: 'table',
+    description: 'Obra puntual con partidas y pagos en plazos, sin contrato de mantenimiento.',
+  },
+  {
+    value: 'sections',
+    description: 'Propuesta por secciones. Al aprobarla se crea un contrato en borrador.',
+  },
 ] as const
 
 const formatOptions = formats.map((format) => ({
