@@ -255,6 +255,7 @@ describe('acceso a la aprobación del presupuesto', () => {
               estimate: {
                 ...estimate,
                 documentFormat: 'sections',
+                conversionDestination: 'contract',
                 sections,
               },
               patch: vi.fn(),
