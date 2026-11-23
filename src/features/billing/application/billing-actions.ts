@@ -200,6 +200,24 @@ export type Payment = {
   invoicePortalUrl: string | null
 }
 
+type BillingPaymentRow = {
+  id: string
+  merchant_order: string
+  kind: string
+  plan: string
+  period: string
+  amount_cents: number
+  charge_cents?: number | null
+  referral_credit_cents?: number | null
+  net_cents: number | null
+  vat_percent: number
+  status: string
+  created_at: string
+  settled_at: string | null
+  invoice_number: string | null
+  invoice_portal_url: string | null
+}
+
 /** Every charge attempt of the company, newest first. Only admins can read them (RLS). */
 export const paymentsQuery = (tenantId: string) =>
   queryOptions({
@@ -219,6 +237,7 @@ export const paymentsQuery = (tenantId: string) =>
               .select(columns)
               .eq('tenant_id', tenantId)
               .order('created_at', { ascending: false })
+              .returns<BillingPaymentRow[]>()
               .abortSignal(requestSignal)
           const common =
             'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url'
@@ -256,8 +275,8 @@ export const paymentsQuery = (tenantId: string) =>
           plan: row.plan as PaidPlan,
           period: row.period as Interval,
           amountCents: row.amount_cents,
-          chargedCents: row.charge_cents,
-          referralCreditCents: row.referral_credit_cents,
+          chargedCents: row.charge_cents ?? null,
+          referralCreditCents: row.referral_credit_cents ?? null,
           netCents: row.net_cents,
           vatPercent: row.vat_percent,
           status: row.status as PaymentStatus,
