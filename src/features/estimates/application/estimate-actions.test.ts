@@ -151,8 +151,32 @@ it('rejects deleting an invoiced draft or its milestone without changing local s
   expect(() => deleteEstimate(estimateId)).toThrow('presupuesto con facturas emitidas')
   expect(state.data).toBe(before)
   expect(() => patchEstimate(estimateId, { milestones: [] })).toThrow('hito con facturas emitidas')
+  expect(() =>
+    patchEstimate(estimateId, { conversionDestination: 'work', automaticContract: false }),
+  ).toThrow('facturas o cobros')
   expect(state.data).toBe(before)
   expect(state.data?.estimates[0]?.milestones).toHaveLength(1)
   patchEstimate(estimateId, { title: 'Corregido' })
   expect(state.data?.estimates[0]?.title).toBe('Corregido')
+})
+
+it('does not change the purpose of a draft with a registered payment', () => {
+  const estimateId = createEstimate('client', 'Oferta')
+  if (!state.data) throw new Error('Missing data')
+  state.data.ledger.push({
+    id: 'payment',
+    tenantId: 'tenant',
+    kind: 'income',
+    date: '2026-11-01',
+    concept: 'Señal',
+    category: 'Cobro',
+    amountCents: 100,
+    vatRate: 21,
+    estimateId,
+    milestoneId: null,
+  })
+  expect(() =>
+    patchEstimate(estimateId, { conversionDestination: 'work', automaticContract: false }),
+  ).toThrow('facturas o cobros')
+  expect(state.data.estimates[0]?.conversionDestination).toBe('contract')
 })

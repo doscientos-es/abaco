@@ -100,6 +100,9 @@ describe('explicit estimate creation', () => {
       contractBillingFrequency: 'monthly',
     })
     expect(completeDraft()).toMatchObject(estimatePurposePatch('contract'))
+    expect(
+      buildEstimateDraft(data.tenant, 'client', 'Instalación', 'table', newId, new Date(), 'work'),
+    ).toMatchObject(estimatePurposePatch('work'))
   })
 
   it('copies a named default from the company library into the new draft', () => {

@@ -58,6 +58,13 @@ export function patchEstimate(id: string, patch: Partial<Estimate>): void {
     estimates: data.estimates.map((estimate) => {
       if (estimate.id !== id || estimate.status !== 'draft') return estimate
       const next = { ...estimate, ...patch }
+      if (
+        (next.conversionDestination ?? 'work') !== (estimate.conversionDestination ?? 'work') &&
+        (data.invoices.some((invoice) => invoice.estimateId === id) ||
+          data.ledger.some((entry) => entry.estimateId === id))
+      ) {
+        throw new Error('No se puede cambiar el tipo de un presupuesto con facturas o cobros.')
+      }
       const error = estimateRemovalError(estimate, next, data.invoices)
       if (error) throw new Error(error)
       return next

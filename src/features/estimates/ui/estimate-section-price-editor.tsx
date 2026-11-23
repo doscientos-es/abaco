@@ -76,7 +76,9 @@ export function EstimateSectionPriceEditor({
       <p className="text-muted-foreground text-xs">
         {estimate.conversionDestination === 'contract'
           ? 'La periodicidad se aplica a todo el presupuesto.'
-          : 'El importe corresponde a la obra completa, no a una cuota periódica.'}
+          : frequency === 'once'
+            ? 'El importe corresponde a la obra completa, no a una cuota periódica.'
+            : 'Este borrador conserva un precio periódico anterior; revísalo en los datos generales.'}
         {estimate.discountType !== 'none'
           ? ' Introduce el precio antes del descuento global; la redacción incluye el descuento aplicado.'
           : ''}

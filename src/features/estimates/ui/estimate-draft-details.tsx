@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
 import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
@@ -93,7 +93,13 @@ export function EstimateDraftDetails({
             ]}
             onChange={(purpose) => {
               if (purpose === 'work' || purpose === 'contract') {
-                patchEstimate(estimate.id, estimatePurposePatch(purpose))
+                try {
+                  patchEstimate(estimate.id, estimatePurposePatch(purpose))
+                } catch (error) {
+                  toast.error('No se pudo cambiar el tipo', {
+                    description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
+                  })
+                }
               }
             }}
           />
@@ -104,6 +110,24 @@ export function EstimateDraftDetails({
                 ? 'Al aprobarlo se crea un contrato en borrador. Podrás configurar su inicio, fin opcional y trabajos antes de activarlo.'
                 : 'Al aprobarlo podrás crear y configurar el contrato de mantenimiento.'}
           </p>
+          {estimate.conversionDestination !== 'contract' &&
+          estimate.contractBillingFrequency &&
+          estimate.contractBillingFrequency !== 'once' ? (
+            <div className="space-y-2 text-sm @min-[44rem]:col-span-4">
+              <p>
+                Este borrador antiguo conserva un precio periódico. Puedes convertirlo en un precio
+                único para la obra.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onPress={() => patchEstimate(estimate.id, { contractBillingFrequency: 'once' })}
+              >
+                Usar precio único
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
       <ClientFormDialog
