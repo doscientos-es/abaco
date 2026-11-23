@@ -61,8 +61,10 @@ export function MobileSaveStatus({ status }: { status: SaveStatus }) {
 export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
   if (status.state !== 'error') return null
 
-  const trialEnded = status.message?.includes('Tu prueba ha terminado') ?? false
-  if (trialEnded) {
+  const planRequired =
+    status.message?.includes('Tu prueba ha terminado') ||
+    status.message?.includes('Activa tu suscripción')
+  if (planRequired) {
     return (
       <section
         aria-live="polite"
@@ -71,7 +73,7 @@ export function SaveStatusNotice({ status, onRetry }: { status: SaveStatus; onRe
       >
         <Info aria-hidden="true" className="text-primary size-5 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="font-medium">La prueba gratuita ha terminado</p>
+          <p className="font-medium">Suscripción necesaria</p>
           <p className="text-muted-foreground mt-0.5">
             Tus datos guardados siguen a salvo. Este último cambio no se ha guardado; elige un plan
             para seguir editando.

@@ -45,12 +45,8 @@ const dateFormat = new Intl.DateTimeFormat('es-ES', {
 
 function currentLine(sub: Subscription, name: string): string {
   const until = sub.currentPeriodEnd ? dateFormat.format(sub.currentPeriodEnd) : ''
-  if (sub.status === 'trialing' && sub.canWrite) {
-    return `Prueba gratuita: te quedan ${sub.trialDaysLeft} ${sub.trialDaysLeft === 1 ? 'día' : 'días'}.`
-  }
-  if (sub.status === 'trialing')
-    return 'Tu prueba ha terminado. Tus datos están a salvo, solo en lectura.'
-  if (sub.status === 'canceled') return 'Sin plan activo. Tus datos están a salvo, solo en lectura.'
+  if (sub.status === 'trialing' || sub.status === 'canceled')
+    return 'Sin plan activo. Activa tu suscripción para utilizar Ábaco.'
   if (sub.status === 'past_due')
     return `Plan ${name}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
   if (sub.cancelAtPeriodEnd)

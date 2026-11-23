@@ -16,9 +16,6 @@ export type PlanInfo = {
   benefit: string
 }
 
-export const TRIAL_DAYS = 14
-/** Personas permitidas durante la prueba. */
-export const TRIAL_MEMBERS = 15
 export const MAX_SCALE_PLAN_MEMBERS = 200
 export const SCALE_PLAN_MIN_MEMBERS = 16
 
@@ -63,7 +60,7 @@ export function planInfo(plan: string, rates?: readonly CatalogRate[]): PlanInfo
 }
 
 export function planLabel(plan: string, rates?: readonly CatalogRate[]): string {
-  return plan === 'trial' ? 'Prueba' : (planInfo(plan, rates)?.name ?? plan)
+  return plan === 'trial' ? 'Sin plan' : (planInfo(plan, rates)?.name ?? plan)
 }
 
 export type CatalogRate = {

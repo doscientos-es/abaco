@@ -22,12 +22,10 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
   let urgent = false
   if (!sub.canWrite) {
     urgent = true
-    text = 'Tu prueba ha terminado: puedes ver tus datos, pero no editarlos.'
+    text = 'Activa tu suscripción para utilizar Ábaco.'
   } else if (sub.status === 'past_due') {
     urgent = true
     text = 'No hemos podido cobrar tu última cuota.'
-  } else if (sub.status === 'trialing' && sub.trialDaysLeft <= 5) {
-    text = `Te ${sub.trialDaysLeft === 1 ? 'queda 1 día' : `quedan ${sub.trialDaysLeft} días`} de prueba gratuita.`
   }
   if (!text) return null
 
@@ -36,9 +34,9 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
       <div className="shrink-0 px-3 pb-3">
         <Alert variant="warning" className="rounded-xl px-3 py-3 shadow-sm">
           <WarningCircle aria-hidden="true" className="size-4" />
-          <AlertTitle className="text-xs font-semibold">Prueba finalizada</AlertTitle>
+          <AlertTitle className="text-xs font-semibold">Suscripción necesaria</AlertTitle>
           <AlertDescription className="space-y-2 text-xs">
-            <span className="block">Activa un plan para volver a editar tus datos.</span>
+            <span className="block">Activa un plan para utilizar Ábaco.</span>
             {isAdmin ? (
               <PlanLink label="Activar plan" fullWidth />
             ) : (
@@ -53,10 +51,10 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
         className="plan-banner-expired-top rounded-none border-x-0 border-t-0 px-4 py-3 shadow-sm sm:px-10 md:hidden"
       >
         <WarningCircle aria-hidden="true" className="size-5" />
-        <AlertTitle className="text-sm font-semibold">Tu prueba ha terminado</AlertTitle>
+        <AlertTitle className="text-sm font-semibold">Suscripción necesaria</AlertTitle>
         <AlertDescription className="mt-1">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <span>Puedes ver tus datos, pero no editarlos.</span>
+            <span>Activa un plan para utilizar Ábaco.</span>
             {isAdmin ? (
               <PlanLink label="Activar plan" />
             ) : (

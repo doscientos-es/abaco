@@ -70,7 +70,6 @@ export function PaymentHistory({
   } = useQuery(paymentsQuery(tenantId))
   const preview = useQuery(billingPreviewQuery(tenantId))
   const { data: rates } = useQuery(billingCatalogQuery)
-  const onTrial = !subscription?.isComplimentary && subscription?.status === 'trialing'
   const active =
     subscription &&
     !subscription.isComplimentary &&
@@ -96,31 +95,22 @@ export function PaymentHistory({
           </dd>
         </div>
         <div className="border-border rounded-lg border p-3">
-          <dt className="text-muted-foreground text-xs">
-            {onTrial ? 'Fin de la prueba gratuita' : 'Próximo cobro'}
-          </dt>
+          <dt className="text-muted-foreground text-xs">Próximo cobro</dt>
           <dd className="font-medium">
-            {onTrial && subscription
-              ? day.format(subscription.trialEndsAt)
-              : active && preview.data?.pending
-                ? 'Pago en verificación'
-                : active && preview.isError
-                  ? 'No se pudo verificar'
-                  : active && !preview.data
-                    ? 'Consultando…'
-                    : subscription?.status === 'past_due' && next
-                      ? `Cuota pendiente: ${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)}`
-                      : willRenew && periodEnd && next
-                        ? `${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)} el ${day.format(periodEnd)}`
-                        : active && subscription.cancelAtPeriodEnd
-                          ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
-                          : 'Ninguno'}
+            {active && preview.data?.pending
+              ? 'Pago en verificación'
+              : active && preview.isError
+                ? 'No se pudo verificar'
+                : active && !preview.data
+                  ? 'Consultando…'
+                  : subscription?.status === 'past_due' && next
+                    ? `Cuota pendiente: ${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)}`
+                    : willRenew && periodEnd && next
+                      ? `${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)} el ${day.format(periodEnd)}`
+                      : active && subscription.cancelAtPeriodEnd
+                        ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
+                        : 'Ninguno'}
           </dd>
-          {onTrial ? (
-            <p className="text-muted-foreground mt-1 text-xs">
-              No se cobra automáticamente al terminar.
-            </p>
-          ) : null}
         </div>
       </dl>
       {subscription?.nextPlan && next ? (

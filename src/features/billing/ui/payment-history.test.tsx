@@ -73,14 +73,13 @@ describe('PaymentHistory', () => {
     expect(html).not.toContain('Cargando…')
   })
 
-  it('shows the trial end date without suggesting an automatic charge', () => {
+  it('does not show a trial date or upcoming charge before activation', () => {
     query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
 
     const html = render()
-    expect(html).toContain('Fin de la prueba gratuita')
-    expect(html).toContain('1 de noviembre de 2026')
-    expect(html).toContain('No se cobra automáticamente al terminar.')
-    expect(html).not.toContain('Próximo cobro')
+    expect(html).toContain('Próximo cobro')
+    expect(html).toContain('Ninguno')
+    expect(html).not.toContain('Fin de la prueba gratuita')
   })
 
   it('shows courtesy and no upcoming charge even with old trial data', () => {
@@ -180,7 +179,7 @@ describe('PaymentHistory', () => {
     expect(receipt).not.toContain('Pagado con tarjeta')
   })
 
-  it('keeps the end date visible for an expired trial', () => {
+  it('does not show legacy trial dates', () => {
     query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
 
     const html = render({
@@ -189,9 +188,9 @@ describe('PaymentHistory', () => {
       canWrite: false,
       trialDaysLeft: 0,
     })
-    expect(html).toContain('Fin de la prueba gratuita')
-    expect(html).toContain('1 de octubre de 2026')
-    expect(html).not.toContain('Próximo cobro')
+    expect(html).not.toContain('Fin de la prueba gratuita')
+    expect(html).not.toContain('1 de octubre de 2026')
+    expect(html).toContain('Próximo cobro')
   })
 
   it('keeps the next charge and renewal date for a paid subscription', () => {

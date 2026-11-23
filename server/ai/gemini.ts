@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import type { AiDocument, AiRequest } from '../../src/features/ai/domain/requests'
 import {
   estimateSuggestionSchema,
   receiptSuggestionSchema,
@@ -49,17 +50,7 @@ const estimateSchema = {
   required: ['message', 'lines'],
 }
 
-export type AiDocument = {
-  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp'
-  data: string
-}
-export type AiRequest =
-  | { task: 'receipt'; document: AiDocument }
-  | {
-      task: 'estimate'
-      messages: { role: 'user' | 'model'; text: string }[]
-      document?: AiDocument
-    }
+export type { AiRequest } from '../../src/features/ai/domain/requests'
 
 const documentInput = z
   .object({

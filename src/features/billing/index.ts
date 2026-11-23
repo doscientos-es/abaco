@@ -17,7 +17,6 @@ export {
   smallestRateFor,
   STANDARD_BILLING_VAT,
   SCALE_PLAN_MIN_MEMBERS,
-  TRIAL_DAYS,
 } from './domain/plans'
 export type { BillingTerms, CatalogRate, Interval, PaidPlan } from './domain/plans'
 export { BillingSection } from './ui/billing-section'

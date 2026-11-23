@@ -54,8 +54,8 @@ describe('PlanBanner', () => {
     const html = renderToStaticMarkup(<PlanBanner />)
 
     expect(html).toContain('role="alert"')
-    expect(html).toContain('Tu prueba ha terminado')
-    expect(html).toContain('Puedes ver tus datos, pero no editarlos.')
+    expect(html).toContain('Suscripción necesaria')
+    expect(html).toContain('Activa un plan para utilizar Ábaco.')
     expect(html).toContain('plan-banner-expired-top')
     expect(html).toContain('href="/ajustes?tab=plan"')
     expect(link.mock.calls[0]?.[0]).toMatchObject({ to: '/ajustes', search: { tab: 'plan' } })
@@ -64,8 +64,8 @@ describe('PlanBanner', () => {
   it('offers a compact activation action in the desktop sidebar', () => {
     const html = renderToStaticMarkup(<PlanBanner placement="sidebar" />)
 
-    expect(html).toContain('Prueba finalizada')
-    expect(html).toContain('Activa un plan para volver a editar tus datos.')
+    expect(html).toContain('Suscripción necesaria')
+    expect(html).toContain('Activa un plan para utilizar Ábaco.')
     expect(html).toContain('Activar plan')
     expect(html).toContain('href="/ajustes?tab=plan"')
   })

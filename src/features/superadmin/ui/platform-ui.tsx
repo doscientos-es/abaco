@@ -131,7 +131,7 @@ export const invoiceStatusLabel = (status: string | null | undefined, number?: s
   invoiceStatuses.get(status ?? '') ?? (number ? 'Factura numerada' : 'Sin solicitud de factura')
 
 const companyStatuses = {
-  trialing: { label: 'En prueba', variant: 'info' },
+  trialing: { label: 'Sin plan activo', variant: 'info' },
   active: { label: 'Activa', variant: 'success' },
   past_due: { label: 'Pago pendiente', variant: 'warning' },
   canceled: { label: 'Cancelada', variant: 'neutral' },

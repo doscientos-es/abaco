@@ -50,7 +50,6 @@ export function describeSubscription(row: {
     statuses.includes(row.subscription_status) ? row.subscription_status : 'canceled'
   ) as SubscriptionStatus
   const trialEndsAt = new Date(row.trial_ends_at)
-  const trialActive = status === 'trialing' && trialEndsAt.getTime() > Date.now()
   return {
     plan: (plans.includes(row.plan) ? row.plan : 'trial') as Plan,
     status,
@@ -65,11 +64,8 @@ export function describeSubscription(row: {
     nextPlan: paidPlans.find((plan) => plan === row.next_plan) ?? null,
     nextInterval:
       row.next_interval === 'year' || row.next_interval === 'month' ? row.next_interval : null,
-    canWrite: row.is_complimentary || trialActive || status === 'active' || status === 'past_due',
-    trialDaysLeft:
-      trialActive && !row.is_complimentary
-        ? Math.max(1, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
-        : 0,
+    canWrite: row.is_complimentary || status === 'active' || status === 'past_due',
+    trialDaysLeft: 0,
   }
 }
 

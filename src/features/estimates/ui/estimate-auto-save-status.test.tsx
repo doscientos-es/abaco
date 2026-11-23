@@ -54,7 +54,7 @@ describe('EstimateAutoSaveStatus', () => {
   it('directs the user to plans when the trial has ended', () => {
     mocks.status = { state: 'error', message: 'Tu prueba ha terminado' }
     const html = renderToStaticMarkup(<EstimateAutoSaveStatus />)
-    expect(html).toContain('Tu prueba ha terminado')
+    expect(html).toContain('Activa tu suscripción')
     expect(html).toContain('Elegir plan')
     expect(html).not.toContain('Reintentar guardado')
   })

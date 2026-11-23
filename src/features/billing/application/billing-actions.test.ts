@@ -46,6 +46,16 @@ describe('describeSubscription', () => {
     expect(describeSubscription({ ...expired, is_complimentary: false }).canWrite).toBe(false)
   })
 
+  it('never grants access from a legacy trial date', () => {
+    expect(
+      describeSubscription({
+        ...expired,
+        trial_ends_at: '2099-01-01T00:00:00Z',
+        is_complimentary: false,
+      }).canWrite,
+    ).toBe(false)
+  })
+
   it('continues to load legacy subscriptions before the courtesy migration', async () => {
     from.mockReturnValue(request)
     request.select.mockReturnValue(request)

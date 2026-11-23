@@ -6,7 +6,9 @@ import { retryStoreSaves, useSaveStatus } from '@/shared/store/store'
 /** The store tracks queued writes; individual fields may commit when they lose focus. */
 export function EstimateAutoSaveStatus() {
   const status = useSaveStatus()
-  const trialEnded = status.message?.includes('Tu prueba ha terminado') ?? false
+  const planRequired =
+    status.message?.includes('Tu prueba ha terminado') ||
+    status.message?.includes('Activa tu suscripción')
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm">
@@ -16,14 +18,14 @@ export function EstimateAutoSaveStatus() {
           {status.state === 'saving'
             ? 'Guardando cambios…'
             : status.state === 'error'
-              ? trialEnded
-                ? 'Hay cambios sin guardar. Tu prueba ha terminado.'
+              ? planRequired
+                ? 'Hay cambios sin guardar. Activa tu suscripción.'
                 : 'Hay cambios sin guardar. Reintenta el guardado.'
               : 'Sincronización al día.'}
         </p>
       </div>
       {status.state === 'error' ? (
-        trialEnded ? (
+        planRequired ? (
           <Link to="/ajustes" search={{ tab: 'plan' }} className={buttonVariants({ size: 'sm' })}>
             Elegir plan
           </Link>
