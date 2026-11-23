@@ -1,8 +1,12 @@
 # IA: cálculo inicial de costes
 
-La tarifa prevista es de 3,75 € por usuario y mes. La desactivación no genera devolución
-por el periodo ya cobrado. La facturación aún no está implementada: la calidad, el consumo
-real y la disponibilidad del modelo deben medirse antes de cobrar.
+La tarifa prevista es de 3,75 € por usuario y mes. La activación debe cobrarse antes de
+conceder acceso, proporcionalmente al tiempo que queda del ciclo vigente. En ciclos anuales
+la tarifa completa es de 45 € por usuario. La desactivación no genera devolución por el
+periodo ya cobrado y la reactivación dentro de ese ciclo no debe volver a cobrarlo. La
+renovación incluye solo los usuarios que siguen activos. La facturación aún no está
+implementada: la calidad, el consumo real y la disponibilidad del modelo deben medirse
+antes de cobrar.
 
 ## Modelo propuesto
 
