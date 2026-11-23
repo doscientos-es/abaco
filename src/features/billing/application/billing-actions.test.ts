@@ -102,9 +102,9 @@ describe('paymentsQuery', () => {
           kind: 'first',
           plan: 'solo',
           period: 'month',
-          amount_cents: 2420,
-          charge_cents: 2420,
-          referral_credit_cents: 0,
+          amount_cents: 1189,
+          invoice_net_cents: 983,
+          referral_discount_cents: 1231,
           net_cents: 2000,
           vat_percent: 21,
           invoice_number: null,
@@ -124,10 +124,10 @@ describe('paymentsQuery', () => {
         kind: 'first',
         plan: 'solo',
         period: 'month',
-        amountCents: 2420,
-        chargedCents: 2420,
-        referralCreditCents: 0,
-        netCents: 2000,
+        amountCents: 1189,
+        chargedCents: 1189,
+        referralCreditCents: 1231,
+        netCents: 983,
         vatPercent: 21,
         invoiceNumber: null,
         invoicePortalUrl: null,
@@ -142,7 +142,10 @@ describe('paymentsQuery', () => {
     request.abortSignal
       .mockResolvedValueOnce({
         data: null,
-        error: { code: '42703', message: 'column billing_payments.charge_cents does not exist' },
+        error: {
+          code: '42703',
+          message: 'column billing_payments.invoice_net_cents does not exist',
+        },
       })
       .mockResolvedValueOnce({
         data: [
@@ -171,7 +174,39 @@ describe('paymentsQuery', () => {
       referralCreditCents: null,
     })
     expect(request.select).toHaveBeenCalledTimes(2)
-    expect(request.select.mock.calls[1]?.[0]).not.toContain('charge_cents')
+    expect(request.select.mock.calls[1]?.[0]).not.toContain('invoice_net_cents')
+  })
+
+  it('preserves a fully discounted invoice with a zero taxable base', async () => {
+    request.abortSignal.mockResolvedValue({
+      data: [
+        {
+          id: 'free',
+          merchant_order: '1234FREE',
+          kind: 'renewal',
+          plan: 'solo',
+          period: 'month',
+          amount_cents: 0,
+          net_cents: 1000,
+          invoice_net_cents: 0,
+          referral_discount_cents: 1210,
+          vat_percent: 21,
+          status: 'succeeded',
+          created_at: '2026-10-14T10:00:00Z',
+          settled_at: '2026-10-14T10:00:00Z',
+          invoice_number: null,
+          invoice_portal_url: null,
+        },
+      ],
+      error: null,
+    })
+    const result = await client.fetchQuery(paymentsQuery('free-company'))
+    expect(result[0]).toMatchObject({
+      amountCents: 0,
+      chargedCents: 0,
+      referralCreditCents: 1210,
+      netCents: 0,
+    })
   })
 
   it('stops a stalled request after 15 seconds and permits a fresh retry', async () => {

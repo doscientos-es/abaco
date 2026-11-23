@@ -57,6 +57,11 @@ Deno.serve(async (request) => {
     })
     if (error) failed++
     if (error || typeof amount !== 'number') continue
+    // The reservation RPC has already settled a fully discounted renewal.
+    if (amount === 0) {
+      charged++
+      continue
+    }
     try {
       const result = await chargeReference({
         config,

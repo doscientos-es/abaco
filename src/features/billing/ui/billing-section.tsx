@@ -217,12 +217,7 @@ export function BillingSection({
         ) : null}
         {paidByBalance ? (
           <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
-            Tu suscripción se ha pagado con el saldo disponible. Estamos preparando la factura.
-          </output>
-        ) : null}
-        {paidByBalance ? (
-          <output className="bg-accent text-accent-foreground block rounded-lg px-4 py-3 text-sm">
-            Tu suscripción se ha pagado con el saldo disponible. Estamos preparando la factura.
+            El descuento por referidos cubre tu suscripción. Estamos preparando la factura.
           </output>
         ) : null}
         <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />

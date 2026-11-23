@@ -1,7 +1,8 @@
 # IA: cálculo inicial de costes
 
-Esta es una estimación para diseñar el módulo, no una tarifa publicada ni una cuota implementada.
-La calidad, el consumo real y la disponibilidad del modelo deben medirse antes de cobrar.
+La tarifa prevista es de 3,75 € por usuario y mes. La desactivación no genera devolución
+por el periodo ya cobrado. La facturación aún no está implementada: la calidad, el consumo
+real y la disponibilidad del modelo deben medirse antes de cobrar.
 
 ## Modelo propuesto
 
@@ -24,7 +25,7 @@ por solicitud, sin búsquedas ni herramientas de pago:
 - Coste de inferencia máximo bajo estos supuestos: 0,50 USD.
 - Triple del coste: 1,50 USD; con un descuento del 50 %, 0,75 USD, antes de otros costes.
 
-El precio comercial en euros necesita conversión de divisa y considerar infraestructura,
+El precio comercial en euros debe considerar la conversión de divisa, infraestructura,
 impuestos, comisiones, soporte y cambios de precios. El margen real no está garantizado por
 este cálculo. Documentos largos, historial de chat, reintentos y tokens de razonamiento
 también cuentan. El límite debe aplicarse en el servidor, con reservas atómicas para llamadas
@@ -42,9 +43,11 @@ del proveedor no incluye el esquema de respuesta, por lo que los 3.000 tokens co
 del adaptador no son un límite garantizado de facturación. El modelo está anunciado para
 retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.
 
-El adaptador no está conectado a la aplicación: faltan autorización por usuario, reservas
-de consumo concurrentes, facturación por asiento y los dos flujos de interfaz. Tampoco
-se ha probado con una clave real. No debe exponerse a clientes hasta completar esos controles.
+El endpoint exige sesión y una reserva de consumo, pero la función de base de datos que debe
+autorizarla y reservarla todavía no existe: falla cerrado y no llama al modelo. Faltan la
+activación por usuario, reservas concurrentes, facturación por asiento y los dos flujos de
+interfaz. Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta
+completar esos controles.
 La clave debe configurarse solo en el entorno del servidor, nunca con el prefijo `VITE_`.
 Antes de enviar documentos reales hay que revisar las condiciones de protección de datos y
 usar una cuenta de pago: el tratamiento del contenido difiere en el nivel gratuito.

@@ -43,9 +43,8 @@ function downloadReceipt(payment: Payment, companyName: string, description: str
 <tr><td>IVA (${payment.vatPercent} %)</td><td style="text-align:right">${cents(payment.amountCents - base)}</td></tr>
 <tr><td style="border-top:1px solid #999"><strong>Total de la factura</strong></td><td style="border-top:1px solid #999;text-align:right"><strong>${cents(payment.amountCents)}</strong></td></tr>
 ${
-  payment.referralCreditCents !== null && payment.chargedCents !== null
-    ? `<tr><td>Saldo de referidos aplicado</td><td style="text-align:right">${cents(payment.referralCreditCents)}</td></tr>
-<tr><td>Pagado con tarjeta</td><td style="text-align:right">${cents(payment.chargedCents)}</td></tr>`
+  payment.referralCreditCents !== null
+    ? `<tr><td>Descuento por referidos incluido en el total</td><td style="text-align:right">${cents(payment.referralCreditCents)}</td></tr>`
     : ''
 }</table>
 </body></html>`
@@ -168,7 +167,7 @@ export function PaymentHistory({
                   p.referralCreditCents > 0 &&
                   p.chargedCents !== null ? (
                     <p className="text-muted-foreground text-xs">
-                      Tarjeta {cents(p.chargedCents)} · saldo {cents(p.referralCreditCents)}
+                      Descuento por referidos {cents(p.referralCreditCents)}
                     </p>
                   ) : null}
                   {p.status === 'succeeded' &&

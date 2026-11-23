@@ -188,7 +188,7 @@ export type Payment = {
   amountCents: number
   /** Portion of the invoice actually charged to the saved card. */
   chargedCents: number | null
-  /** Referral balance used to settle this invoice. */
+  /** VAT-inclusive referral discount already included in the invoice total. */
   referralCreditCents: number | null
   netCents: number | null
   vatPercent: number
@@ -206,8 +206,8 @@ type BillingPaymentRow = {
   plan: string
   period: string
   amount_cents: number
-  charge_cents?: number | null
-  referral_credit_cents?: number | null
+  invoice_net_cents?: number | null
+  referral_discount_cents?: number | null
   net_cents: number | null
   vat_percent: number
   status: string
@@ -240,18 +240,18 @@ export const paymentsQuery = (tenantId: string) =>
               .abortSignal(requestSignal)
           const common =
             'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url'
-          const result = await select(`${common}, charge_cents, referral_credit_cents`)
+          const result = await select(`${common}, invoice_net_cents, referral_discount_cents`)
           if (
             result.error &&
             ['42703', 'PGRST204'].includes(result.error.code) &&
-            /charge_cents|referral_credit_cents/.test(result.error.message)
+            /invoice_net_cents|referral_discount_cents/.test(result.error.message)
           ) {
             const legacy = await select(common)
             if (legacy.error) throw legacy.error
             return legacy.data.map((row) => ({
               ...row,
-              charge_cents: null,
-              referral_credit_cents: null,
+              invoice_net_cents: null,
+              referral_discount_cents: null,
             }))
           }
           if (result.error) throw result.error
@@ -274,9 +274,9 @@ export const paymentsQuery = (tenantId: string) =>
           plan: row.plan as PaidPlan,
           period: row.period as Interval,
           amountCents: row.amount_cents,
-          chargedCents: row.charge_cents ?? null,
-          referralCreditCents: row.referral_credit_cents ?? null,
-          netCents: row.net_cents,
+          chargedCents: row.referral_discount_cents ? row.amount_cents : null,
+          referralCreditCents: row.referral_discount_cents || null,
+          netCents: row.invoice_net_cents ?? row.net_cents,
           vatPercent: row.vat_percent,
           status: row.status as PaymentStatus,
           createdAt: new Date(row.created_at),

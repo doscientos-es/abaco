@@ -87,8 +87,9 @@ Deno.serve(async (request) => {
     return reply(500, { error: 'No se pudo gestionar la facturación' })
   }
   if (!isCharge) return reply(200, { ok: true })
-  if (typeof amount !== 'number' || amount <= 0)
-    return reply(500, { error: 'Precio no disponible' })
+  // A zero total has already been settled atomically by the reservation RPC.
+  if (amount === 0) return reply(200, { ok: true, paidByBalance: true })
+  if (typeof amount !== 'number' || amount < 0) return reply(500, { error: 'Precio no disponible' })
 
   const form = firstPaymentForm({
     config,
