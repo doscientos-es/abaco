@@ -29,7 +29,15 @@ describe('AI access reservations', () => {
       create function public.tenant_can_write(p_tenant uuid) returns boolean language sql as $$
         select coalesce((select can_write from public.tenants where id=p_tenant),false) $$;
     `)
-    await db.exec(await readFile(new URL('./access.sql', import.meta.url), 'utf8'))
+    await db.exec(
+      await readFile(
+        new URL(
+          '../../supabase/migrations/20261123221018_ai_access_reservations.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
     await db.query('insert into public.tenants values ($1,true)', [tenant])
     await db.query('insert into public.memberships values ($1,$2,$3),($1,$4,$5)', [
       tenant,
