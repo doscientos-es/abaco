@@ -36,8 +36,9 @@ también cuentan. El límite debe aplicarse en el servidor, con reservas atómic
 concurrentes y facturación de intentos que consuman proveedor; un límite solo por número de
 solicitudes no garantiza el coste. El tope de entrada debe incluir archivos y contexto completo.
 
-La selección de usuarios, la integración con el cobro y estos límites todavía no están
-implementados. No activar ni cobrar el módulo hasta probar esos controles y los flujos reales.
+Existe un límite de 200 reservas mensuales por usuario en la base de datos. La selección de
+usuarios y la integración con el cobro todavía no están implementadas. No activar ni cobrar el
+módulo hasta probar todos los controles y los flujos reales.
 
 ## Estado de la integración
 
@@ -47,11 +48,11 @@ del proveedor no incluye el esquema de respuesta, por lo que los 3.000 tokens co
 del adaptador no son un límite garantizado de facturación. El modelo está anunciado para
 retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.
 
-El endpoint exige sesión y una reserva de consumo, pero la función de base de datos que debe
-autorizarla y reservarla todavía no existe: falla cerrado y no llama al modelo. Hay interfaz
-de revisión para gastos y presupuestos, pero sigue inaccesible sin el control de acceso.
-Faltan la activación por usuario, las reservas concurrentes y la facturación por asiento.
-Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta completar
+El endpoint exige sesión y una reserva de consumo. La función de base de datos que autoriza y
+reserva ya está desplegada; las asignaciones solo pueden gestionarse desde código de confianza.
+La interfaz de gastos y presupuestos permanece inaccesible sin una asignación válida. Falta
+implementar la activación por usuario y la facturación, y probar la concurrencia real de las
+reservas. Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta completar
 esos controles.
 La clave debe configurarse solo en el entorno del servidor, nunca con el prefijo `VITE_`.
 Antes de enviar documentos reales hay que revisar las condiciones de protección de datos y
