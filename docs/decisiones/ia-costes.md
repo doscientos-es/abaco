@@ -50,10 +50,10 @@ retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.
 
 El endpoint exige sesión y una reserva de consumo. La función de base de datos que autoriza y
 reserva ya está desplegada; las asignaciones solo pueden gestionarse desde código de confianza.
-La interfaz de gastos y presupuestos permanece inaccesible sin una asignación válida. Falta
-implementar la activación por usuario y la facturación, y probar la concurrencia real de las
-reservas. Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta completar
-esos controles.
+La interfaz de gastos y presupuestos permanece inaccesible sin una asignación válida. Se ha
+probado en PostgreSQL que dos reservas simultáneas no superan la última petición disponible.
+Falta implementar la activación por usuario y la facturación. Tampoco se ha probado con una
+clave real. No debe exponerse a clientes hasta completar esos controles.
 La clave debe configurarse solo en el entorno del servidor, nunca con el prefijo `VITE_`.
 Antes de enviar documentos reales hay que revisar las condiciones de protección de datos y
 usar una cuenta de pago: el tratamiento del contenido difiere en el nivel gratuito.
