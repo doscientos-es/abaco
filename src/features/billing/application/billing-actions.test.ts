@@ -11,7 +11,14 @@ import {
 const { from, rpc, request } = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
-  request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn(), single: vi.fn() },
+  request: {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    returns: vi.fn(),
+    abortSignal: vi.fn(),
+    single: vi.fn(),
+  },
 }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({
@@ -69,6 +76,7 @@ describe('paymentsQuery', () => {
     request.select.mockReturnValue(request)
     request.eq.mockReturnValue(request)
     request.order.mockReturnValue(request)
+    request.returns.mockReturnValue(request)
   })
 
   afterEach(() => {

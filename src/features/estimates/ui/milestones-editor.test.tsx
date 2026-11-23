@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   buttons: [] as ButtonProps[],
   patch: vi.fn(),
   error: vi.fn(),
+  creation: false,
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: (props: ButtonProps) => {
@@ -34,7 +35,10 @@ vi.mock('@/shared/store/store', () => ({
   newId: () => 'new-milestone',
 }))
 vi.mock('../application/estimate-actions', () => ({ registerMilestonePayment: vi.fn() }))
-vi.mock('./estimate-draft-context', () => ({ usePatchEstimate: () => mocks.patch }))
+vi.mock('./estimate-draft-context', () => ({
+  usePatchEstimate: () => mocks.patch,
+  useEstimateDraft: () => (mocks.creation ? {} : null),
+}))
 
 import { MilestonesEditor } from './milestones-editor'
 
@@ -72,9 +76,21 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.buttons = []
   mocks.invoices = []
+  mocks.creation = false
 })
 
 describe('payment splits', () => {
+  it('does not offer payment registration before creating the estimate', () => {
+    mocks.creation = true
+    render()
+    expect(mocks.buttons.find((button) => button.children === 'Registrar cobro')).toBeUndefined()
+  })
+
+  it('offers payment registration on an existing estimate', () => {
+    render()
+    expect(mocks.buttons.find((button) => button.children === 'Registrar cobro')).toBeDefined()
+  })
+
   it('sets a single 100% milestone using the existing milestone identity', () => {
     render()
     mocks.buttons.find((button) => button.children === 'Un pago · 100 %')?.onPress?.()

@@ -15,7 +15,7 @@ import type { Estimate, LedgerEntry, Milestone } from '@/shared/domain/types'
 import { newId, useTenantData } from '@/shared/store/store'
 
 import { registerMilestonePayment } from '../application/estimate-actions'
-import { usePatchEstimate } from './estimate-draft-context'
+import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 
 type Props = {
   estimate: Estimate
@@ -37,6 +37,7 @@ export function MilestonesEditor({
   readOnly = false,
 }: Props) {
   const patchEstimate = usePatchEstimate()
+  const creation = useEstimateDraft()
   const session = useSession()
   const { invoices } = useTenantData()
   const queryClient = useQueryClient()
@@ -266,14 +267,16 @@ export function MilestonesEditor({
                         {creatingDraftId === m.id ? 'Preparando…' : 'Preparar borrador'}
                       </Button>
                     ) : null}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      isDisabled={registered || m.amountCents <= 0}
-                      onPress={() => registerMilestonePayment(estimate, m, m.amountCents)}
-                    >
-                      {registered ? 'Cobrado' : 'Registrar cobro'}
-                    </Button>
+                    {!creation ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        isDisabled={registered || m.amountCents <= 0}
+                        onPress={() => registerMilestonePayment(estimate, m, m.amountCents)}
+                      >
+                        {registered ? 'Cobrado' : 'Registrar cobro'}
+                      </Button>
+                    ) : null}
                     {!readOnly ? (
                       <Button
                         size="sm"

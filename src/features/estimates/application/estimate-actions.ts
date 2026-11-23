@@ -138,6 +138,13 @@ export function registerMilestonePayment(
   amountCents: number,
 ): void {
   updateTenantData((data) => {
+    const savedEstimate = data.estimates.find((item) => item.id === estimate.id)
+    if (
+      estimate.tenantId !== data.tenant.id ||
+      !savedEstimate?.milestones.some((item) => item.id === milestone.id)
+    ) {
+      throw new Error('Guarda el presupuesto y sus plazos antes de registrar un cobro.')
+    }
     const entry: LedgerEntry = {
       id: newId(),
       tenantId: data.tenant.id,

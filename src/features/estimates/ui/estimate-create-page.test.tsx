@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   synchronize: vi.fn(),
   submit: vi.fn(),
+  navigate: vi.fn(),
   setters: [] as ReturnType<typeof vi.fn>[],
 }))
 vi.mock('react', async (original) => ({
@@ -17,7 +18,10 @@ vi.mock('react', async (original) => ({
     return [typeof initial === 'function' ? initial() : initial, setter]
   },
 }))
-vi.mock('@tanstack/react-router', () => ({ useBlocker: vi.fn(), useNavigate: () => vi.fn() }))
+vi.mock('@tanstack/react-router', () => ({
+  useBlocker: vi.fn(),
+  useNavigate: () => mocks.navigate,
+}))
 vi.mock('@/shared/store/store', () => ({
   synchronizeStoreSaves: mocks.synchronize,
   newId: () => crypto.randomUUID(),
@@ -97,10 +101,45 @@ describe('creation synchronization', () => {
   it('does not create the document again when retrying its own save', async () => {
     const page = form()
     page.submit()
-    await vi.waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledOnce())
     page.submit()
     await vi.waitFor(() => expect(mocks.setters[2]).toHaveBeenLastCalledWith(false))
     expect(mocks.submit).toHaveBeenCalledOnce()
-    expect(mocks.synchronize).toHaveBeenCalledTimes(2)
+    expect(mocks.synchronize).toHaveBeenCalledTimes(4)
+  })
+
+  it('opens the created estimate only after the save is confirmed', async () => {
+    let resolve!: () => void
+    mocks.synchronize.mockResolvedValueOnce(undefined).mockReturnValueOnce(
+      new Promise<void>((done) => {
+        resolve = done
+      }),
+    )
+    const page = form()
+    page.submit()
+    await vi.waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce())
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    const draft = mocks.submit.mock.calls[0]?.[0] as { id: string }
+    resolve()
+    await vi.waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/presupuestos/$estimateId',
+        params: { estimateId: draft.id },
+        replace: true,
+      }),
+    )
+  })
+
+  it('stays on the form after a failed save and retries without duplicating the estimate', async () => {
+    mocks.synchronize
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('Sin conexión'))
+    const page = form()
+    page.submit()
+    await vi.waitFor(() => expect(mocks.setters[3]).toHaveBeenLastCalledWith('Sin conexión'))
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    page.submit()
+    await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledOnce())
+    expect(mocks.submit).toHaveBeenCalledOnce()
   })
 })

@@ -1,5 +1,5 @@
 import { useBlocker, useNavigate } from '@tanstack/react-router'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 
 import type { EstimateFormat } from '@/shared/domain/estimate-document'
 import type { Estimate } from '@/shared/domain/types'
@@ -43,16 +43,6 @@ export function EstimateCreatePage({
     enableBeforeUnload: () => !saved.current,
   })
 
-  useEffect(() => {
-    if (!pending || status.state !== 'saved') return
-    saved.current = true
-    void navigate({
-      to: '/presupuestos/$estimateId',
-      params: { estimateId: draft.id },
-      replace: true,
-    })
-  }, [pending, status.state, draft.id, navigate])
-
   function patch(id: string, changes: Partial<Estimate>) {
     if (submitted.current || id !== draftRef.current.id) return
     draftRef.current = { ...draftRef.current, ...changes }
@@ -77,6 +67,13 @@ export function EstimateCreatePage({
         submitted.current = true
       }
       setPending(true)
+      await synchronizeStoreSaves()
+      saved.current = true
+      await navigate({
+        to: '/presupuestos/$estimateId',
+        params: { estimateId: draftRef.current.id },
+        replace: true,
+      })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo crear el presupuesto.')
     } finally {

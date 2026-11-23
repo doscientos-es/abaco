@@ -21,7 +21,12 @@ import {
 
 import { changeSectionPrice } from '../domain/estimate-section-price'
 import { buildEstimateDraft, estimatePurposePatch, newEstimateError } from '../domain/new-estimate'
-import { createEstimate, patchEstimate, submitEstimateDraft } from './estimate-actions'
+import {
+  createEstimate,
+  patchEstimate,
+  registerMilestonePayment,
+  submitEstimateDraft,
+} from './estimate-actions'
 
 const initial = (): TenantData => ({
   tenant: {
@@ -76,6 +81,14 @@ function completeDraft(): Estimate {
 const saved = () => vi.waitFor(() => expect(getSaveStatus().state).toBe('saved'))
 
 describe('explicit estimate creation', () => {
+  it('rejects payment for an unsubmitted estimate without queuing a ledger entry', () => {
+    const draft = completeDraft()
+    const milestone = { id: 'milestone', label: 'Señal', percent: 100 }
+    expect(() => registerMilestonePayment(draft, milestone, 1000)).toThrow('Guarda el presupuesto')
+    expect(currentTenantData()?.ledger).toEqual([])
+    expect(save).not.toHaveBeenCalled()
+  })
+
   it('persists distinct installation and maintenance routes without changing existing estimates', async () => {
     const installation = {
       ...completeDraft(),
