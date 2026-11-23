@@ -192,6 +192,35 @@ h3 {
   max-width: min(100%, 72rem);
 }
 
+[data-slot='ai-chat-overlay'] {
+  place-items: end;
+}
+
+[data-slot='ai-chat-overlay'] > :has(> .ai-chat) {
+  max-width: 30rem;
+}
+
+.ai-chat {
+  height: min(48rem, calc(100dvh - 2rem));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ai-chat-messages {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  [data-slot='ai-chat-overlay'] {
+    padding: 0;
+  }
+  .ai-chat {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}
+
 /* Keep page titles compact and consistent on desktop and mobile. */
 [data-slot='page-header-title'] {
   font-size: 1.25rem;

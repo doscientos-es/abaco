@@ -13,6 +13,7 @@ import { CheckCircle, Eye } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { EstimateAiAssistant, useAiAccess } from '@/features/ai'
 import { can, useSession } from '@/features/auth'
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Estimate, TenantData } from '@/shared/domain/types'
@@ -61,6 +62,7 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
   const [preview, setPreview] = useState(false)
   const client = clients.find(({ id }) => id === estimate.clientId)
   const canEdit = can(session?.role, 'estimates:write')
+  const aiAccess = useAiAccess(tenant.id, creation && canEdit ? session?.userId : undefined)
   const canApprove =
     !creation && canEdit && (estimate.status === 'draft' || estimate.status === 'sent')
   const actions = useEstimateDocumentActions({ estimate, client, tenantId: tenant.id, canApprove })
@@ -114,13 +116,20 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
               'Nuevo presupuesto'
             ) : (
               <>
-                <span className="max-md:hidden">Presupuesto </span>{estimate.number}{' '}
-                <StatusBadge status={estimate.status} />
+                <span className="max-md:hidden">Presupuesto </span>
+                {estimate.number} <StatusBadge status={estimate.status} />
               </>
             )}
           </PageHeaderTitle>
         </PageHeaderHeading>
         <PageHeaderActions>
+          {creation && aiAccess.data && !creation.submitted ? (
+            <EstimateAiAssistant
+              tenantId={tenant.id}
+              estimate={estimate}
+              onPatch={(patch) => patchEstimate(estimate.id, patch)}
+            />
+          ) : null}
           {approvalButton}
           {!creation ? (
             <Button

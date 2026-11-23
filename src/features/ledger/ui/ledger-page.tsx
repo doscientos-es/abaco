@@ -18,6 +18,7 @@ import { Paperclip, Plus } from '@phosphor-icons/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
+import { applyReceiptSuggestion, ReceiptAiReview, useAiAccess } from '@/features/ai'
 import { useSession } from '@/features/auth'
 import { quarterlyVat } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
@@ -122,6 +123,8 @@ function LedgerContent({
   isAdmin,
   storageKey,
 }: Pick<TenantData, 'ledger' | 'tenant'> & { isAdmin: boolean; storageKey: string }) {
+  const session = useSession()
+  const aiAccess = useAiAccess(tenant.id, isAdmin ? session?.userId : undefined)
   const columns = useTableColumns('apuntes', ledgerColumns)
   const navigate = useNavigate()
   const search = useSearch({ from: '/contabilidad' })
@@ -143,6 +146,7 @@ function LedgerContent({
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
   const [toAllocate, setToAllocate] = useState<LedgerEntry | null>(null)
   const [receipt, setReceipt] = useState<File | null>(null)
+  const [receiptVersion, setReceiptVersion] = useState(0)
   const [adding, setAdding] = useState(false)
   const [attachments, setAttachments] = useState<{
     entry: LedgerEntry
@@ -550,8 +554,23 @@ function LedgerContent({
               label="Justificante (opcional)"
               rules={receiptUpload}
               file={receipt}
-              onChange={setReceipt}
+              onChange={(file) => {
+                setReceipt(file)
+                setReceiptVersion((version) => version + 1)
+              }}
             />
+            {dialogOpen && form.kind === 'expense' && receipt && aiAccess.data ? (
+              <div className="mt-3">
+                <ReceiptAiReview
+                  key={receiptVersion}
+                  tenantId={tenant.id}
+                  file={receipt}
+                  onApply={(suggestion) =>
+                    setForm((current) => applyReceiptSuggestion(current, suggestion))
+                  }
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </FormDialog>
