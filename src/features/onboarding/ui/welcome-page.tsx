@@ -4,32 +4,27 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { AuthLayout, completeWelcome, FormError, sessionQuery, useSession } from '@/features/auth'
-import { subscriptionQuery, TRIAL_DAYS } from '@/features/billing'
-
-const day = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+import { subscriptionQuery } from '@/features/billing'
 
 export function WelcomePage() {
   const session = useSession()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const subscription = useQuery({
+  const subscriptionState = useQuery({
     ...subscriptionQuery(session?.tenantId ?? ''),
     enabled: Boolean(session?.tenantId),
-  }).data
-  const [busy, setBusy] = useState<'trial' | 'plan' | null>(null)
+  })
+  const subscription = subscriptionState.data
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const trialing = !subscription?.isComplimentary && subscription?.status === 'trialing'
-  const expired = trialing && !subscription.canWrite
-  const daysLeft = subscription?.trialDaysLeft ?? TRIAL_DAYS
-  const trialLabel = expired
-    ? 'Continuar en modo lectura'
-    : subscription && !trialing
-      ? 'Ir a mi empresa'
-      : `Crear mi primer presupuesto · ${daysLeft} días gratis`
+  const hasAccess =
+    subscription?.isComplimentary ||
+    subscription?.status === 'active' ||
+    subscription?.status === 'past_due'
 
-  async function choose(choice: 'trial' | 'plan') {
-    if (busy) return
-    setBusy(choice)
+  async function continueToCompany() {
+    if (busy || !subscription) return
+    setBusy(true)
     setError(null)
     try {
       const result = await completeWelcome()
@@ -40,24 +35,21 @@ export function WelcomePage() {
       // Refresh before navigating so the root guard no longer sends us back to welcome.
       await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
       await navigate(
-        choice === 'plan'
-          ? { to: '/ajustes', search: { tab: 'plan' }, replace: true }
-          : {
-              to: expired || (subscription && !trialing) ? '/' : '/presupuestos/nuevo',
-              replace: true,
-            },
+        hasAccess
+          ? { to: '/', replace: true }
+          : { to: '/ajustes', search: { tab: 'plan' }, replace: true },
       )
     } catch {
       setError('No se pudo continuar. Inténtalo de nuevo.')
     } finally {
-      setBusy(null)
+      setBusy(false)
     }
   }
 
   return (
     <AuthLayout
-      title="¿Cómo quieres empezar?"
-      description="Tu empresa ya está lista. Prueba Ábaco con un presupuesto real y sigue la respuesta de tu cliente."
+      title="Bienvenido a Ábaco"
+      description="Tu empresa está creada. Activa tu suscripción para empezar a trabajar."
     >
       <section aria-label="Tu primer presupuesto" className="space-y-2 text-sm">
         <h2 className="font-semibold">Tu primer presupuesto, paso a paso</h2>
@@ -68,59 +60,29 @@ export function WelcomePage() {
         </ol>
       </section>
       <section
-        aria-label="Prueba gratuita"
+        aria-label="Tu acceso"
         className="border-primary/30 bg-primary/5 space-y-3 rounded-xl border p-4"
       >
-        <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs font-medium">
-          Sin tarjeta
-        </span>
         <div className="space-y-1">
           <h2 className="font-semibold">
-            {subscription?.isComplimentary ? 'Acceso de cortesía' : 'Prueba gratuita'}
+            {hasAccess ? 'Tu acceso está activo' : 'Activa tu suscripción'}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {subscription?.isComplimentary
-              ? 'Todas las funciones del plan Empresa, sin caducidad.'
-              : `Todas las funciones del plan Empresa durante ${TRIAL_DAYS} días.`}
+            {hasAccess
+              ? 'Ya puedes acceder a tu empresa.'
+              : 'Elige un plan y paga con tarjeta para utilizar Ábaco.'}
           </p>
-          {trialing ? (
-            <p className="text-muted-foreground text-xs">
-              {expired ? 'Tu prueba terminó el' : 'Tu prueba termina el'}{' '}
-              {day.format(subscription.trialEndsAt)}.
-            </p>
-          ) : null}
         </div>
-        <Button className="w-full" isDisabled={busy !== null} onPress={() => void choose('trial')}>
-          {busy === 'trial' ? 'Entrando…' : trialLabel}
+        <Button
+          className="w-full"
+          isDisabled={busy || !subscription}
+          onPress={() => void continueToCompany()}
+        >
+          {busy ? 'Continuando…' : hasAccess ? 'Ir a mi empresa' : 'Elegir un plan'}
         </Button>
       </section>
-      {!subscription?.isComplimentary ? (
-        <section
-          aria-label="Elegir un plan"
-          className="border-border space-y-3 rounded-xl border p-4"
-        >
-          <div className="space-y-1">
-            <h2 className="font-semibold">¿Ya lo tienes claro?</h2>
-            <p className="text-muted-foreground text-sm">
-              Todas las funciones están incluidas. Elige según el número de personas de tu equipo y
-              paga con tarjeta.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            isDisabled={busy !== null}
-            onPress={() => void choose('plan')}
-          >
-            {busy === 'plan' ? 'Abriendo planes…' : 'Elegir un plan ahora'}
-          </Button>
-        </section>
-      ) : null}
-      {!subscription?.isComplimentary ? (
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          Sin tarjeta ni cobros automáticos durante la prueba. Al terminar, eliges un plan. Si no
-          contratas, tus datos se conservan en modo lectura.
-        </p>
+      {subscriptionState.isError ? (
+        <p role="alert">No se pudo comprobar tu suscripción. Vuelve a intentarlo.</p>
       ) : null}
       <FormError message={error} />
     </AuthLayout>

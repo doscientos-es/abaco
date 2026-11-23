@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
-import { TRIAL_DAYS } from '@/features/billing/domain/plans'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { PasswordField, TextField } from '@/shared/ui/form'
 
@@ -183,7 +182,7 @@ export function RegisterPage() {
         ) : null}
       </form>
       <p className="text-muted-foreground text-xs">
-        {TRIAL_DAYS} días de prueba sin tarjeta.{' '}
+        Activa tu suscripción para empezar a usar Ábaco.{' '}
         <Link to="/precios" className="font-medium underline">
           Ver precios
         </Link>

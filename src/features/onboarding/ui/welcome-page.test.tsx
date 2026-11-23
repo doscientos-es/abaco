@@ -29,7 +29,6 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 vi.mock('@/features/billing', () => ({
-  TRIAL_DAYS: 14,
   subscriptionQuery: (id: string) => ({ queryKey: ['subscription', id] }),
 }))
 vi.mock('@/features/auth', () => ({
@@ -56,7 +55,7 @@ vi.mock('@/features/auth', () => ({
 }))
 
 describe('WelcomePage', () => {
-  let busy: 'trial' | 'plan' | null
+  let busy: boolean
   let error: string | null
   let stateCalls: number
   const render = () => {
@@ -71,7 +70,7 @@ describe('WelcomePage', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    busy = null
+    busy = false
     error = null
     setBusy.mockImplementation((value: typeof busy) => {
       busy = value
@@ -88,9 +87,7 @@ describe('WelcomePage', () => {
     query.mockReturnValue({
       data: {
         status: 'trialing',
-        canWrite: true,
-        trialDaysLeft: 14,
-        trialEndsAt: new Date('2026-11-01T12:00:00Z'),
+        canWrite: false,
       },
     })
     complete.mockResolvedValue({ ok: true })
@@ -98,15 +95,12 @@ describe('WelcomePage', () => {
     navigate.mockResolvedValue(undefined)
   })
 
-  it('clearly offers a card-free trial, its end date, and a pay-now alternative', () => {
+  it('requires a subscription instead of offering a free trial', () => {
     const html = render()
 
-    expect(html).toContain('Crear mi primer presupuesto · 14 días gratis')
-    expect(html).toContain('Elegir un plan ahora')
-    expect(html).toContain('Tu prueba termina el')
-    expect(html).toContain('1 de noviembre de 2026')
-    expect(html).toContain('Sin tarjeta ni cobros automáticos durante la prueba.')
-    expect(html).toContain('tus datos se conservan en modo lectura')
+    expect(html).toContain('Elegir un plan')
+    expect(html).toContain('paga con tarjeta para utilizar Ábaco')
+    expect(html).not.toContain('prueba gratuita')
     expect(complete).not.toHaveBeenCalled()
   })
 
@@ -117,18 +111,15 @@ describe('WelcomePage', () => {
     expect(html).toContain('Añade un cliente.')
     expect(html).toContain('Prepara las partidas de materiales y mano de obra.')
     expect(html).toContain('Envía el enlace por WhatsApp o correo y consulta la respuesta.')
-    expect(html).toContain('Todas las funciones están incluidas.')
-    expect(html).toContain('Elige según el número de personas de tu equipo')
     expect(complete).not.toHaveBeenCalled()
   })
 
-  it('saves the trial choice, refreshes the session, and opens the dashboard', async () => {
+  it('saves the welcome choice and opens the company for courtesy tenants', async () => {
+    query.mockReturnValue({ data: { isComplimentary: true, status: 'trialing' } })
     render()
-    choose('Crear mi primer presupuesto · 14 días gratis')
+    choose('Ir a mi empresa')
 
-    await vi.waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith({ to: '/presupuestos/nuevo', replace: true }),
-    )
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
     expect(complete).toHaveBeenCalledOnce()
     expect(fetchQuery).toHaveBeenCalledWith({ queryKey: ['auth', 'session'], staleTime: 0 })
     expect(complete.mock.invocationCallOrder[0]).toBeLessThan(
@@ -137,12 +128,12 @@ describe('WelcomePage', () => {
     expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(
       navigate.mock.invocationCallOrder[0] ?? 0,
     )
-    expect(busy).toBeNull()
+    expect(busy).toBe(false)
   })
 
   it('opens plan selection rather than charging when pay-now is chosen', async () => {
     render()
-    choose('Elegir un plan ahora')
+    choose('Elegir un plan')
 
     await vi.waitFor(() =>
       expect(navigate).toHaveBeenCalledWith({
@@ -152,10 +143,10 @@ describe('WelcomePage', () => {
       }),
     )
     expect(complete).toHaveBeenCalledOnce()
-    expect(busy).toBeNull()
+    expect(busy).toBe(false)
   })
 
-  it('disables both choices while saving and re-enables them on failure', async () => {
+  it('disables the button while saving and re-enables it on failure', async () => {
     let finish: (result: ActionResult) => void = () => {}
     complete.mockReturnValue(
       new Promise<ActionResult>((resolve) => {
@@ -163,13 +154,13 @@ describe('WelcomePage', () => {
       }),
     )
     render()
-    choose('Crear mi primer presupuesto · 14 días gratis')
+    choose('Elegir un plan')
     button.mockClear()
     render()
     expect(button.mock.calls.every(([props]) => props.isDisabled)).toBe(true)
 
     finish({ ok: false, message: 'No se pudo guardar tu elección.' })
-    await vi.waitFor(() => expect(busy).toBeNull())
+    await vi.waitFor(() => expect(busy).toBe(false))
     expect(error).toBe('No se pudo guardar tu elección.')
     expect(fetchQuery).not.toHaveBeenCalled()
     expect(navigate).not.toHaveBeenCalled()
@@ -181,39 +172,16 @@ describe('WelcomePage', () => {
   it('handles a failed session refresh without a permanently disabled button', async () => {
     fetchQuery.mockRejectedValue(new Error('Unavailable'))
     render()
-    choose('Elegir un plan ahora')
+    choose('Elegir un plan')
 
-    await vi.waitFor(() => expect(busy).toBeNull())
+    await vi.waitFor(() => expect(busy).toBe(false))
     expect(error).toBe('No se pudo continuar. Inténtalo de nuevo.')
     expect(navigate).not.toHaveBeenCalled()
   })
 
-  it('uses the actual trial time remaining instead of restarting fourteen days', () => {
-    query.mockReturnValue({
-      data: {
-        status: 'trialing',
-        canWrite: true,
-        trialDaysLeft: 7,
-        trialEndsAt: new Date('2026-11-01T12:00:00Z'),
-      },
-    })
-
-    expect(render()).toContain('Crear mi primer presupuesto · 7 días gratis')
-  })
-
-  it('does not promise another free trial after the existing one has expired', () => {
-    query.mockReturnValue({
-      data: {
-        status: 'trialing',
-        canWrite: false,
-        trialDaysLeft: 0,
-        trialEndsAt: new Date('2026-10-01T12:00:00Z'),
-      },
-    })
-
-    const html = render()
-    expect(html).toContain('Continuar en modo lectura')
-    expect(html).toContain('Tu prueba terminó el')
-    expect(html).not.toContain('Crear mi primer presupuesto · 14 días gratis')
+  it('fails closed when the subscription cannot be loaded', () => {
+    query.mockReturnValue({ data: undefined, isError: true })
+    expect(render()).toContain('No se pudo comprobar tu suscripción')
+    expect(button.mock.calls[0]?.[0].isDisabled).toBe(true)
   })
 })

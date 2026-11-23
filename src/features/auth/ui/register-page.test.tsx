@@ -3,8 +3,6 @@ import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-import { TRIAL_DAYS } from '@/features/billing/domain/plans'
-
 import { RegisterPage } from './register-page'
 
 const fixtures = vi.hoisted(() => ({ step: 0 }))
@@ -79,14 +77,14 @@ describe('RegisterPage', () => {
     expect(html).not.toContain('Contraseña')
   })
 
-  it('finishes with credentials and accurately describes the current trial', () => {
+  it('finishes with credentials and explains that activation is required', () => {
     fixtures.step = 2
     const html = render()
     expect(html).toContain('Paso 3 de 3')
     expect(html).toContain('Correo')
     expect(html).toContain('Contraseña')
     expect(html).toContain('href="/precios"')
-    expect(html).toContain(`${TRIAL_DAYS} días de prueba sin tarjeta`)
+    expect(html).toContain('Activa tu suscripción para empezar a usar Ábaco')
     expect(html).toContain('Crear cuenta')
     expect(html).toContain('autoComplete="new-password"')
   })

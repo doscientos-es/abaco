@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 
-import { PricingCatalog, TRIAL_DAYS } from '@/features/billing'
+import { PricingCatalog } from '@/features/billing'
 
 export const Route = createFileRoute('/precios')({ component: PricingPage })
 
@@ -15,7 +15,7 @@ function PricingPage() {
           Envía presupuestos, recibe la respuesta de tus clientes y controla lo que te queda por
           cobrar.
         </p>
-        <p className="text-sm">{TRIAL_DAYS} días de prueba, sin tarjeta ni cobro automático.</p>
+        <p className="text-sm">Activa tu suscripción con tarjeta para empezar a usar Ábaco.</p>
         <div className="flex flex-wrap gap-4">
           {session?.role === 'admin' ? (
             <Link
@@ -28,7 +28,7 @@ function PricingPage() {
           ) : !session ? (
             <>
               <Link className="text-primary font-medium underline" to="/registro">
-                Empezar prueba gratis
+                Crear cuenta
               </Link>
               <Link className="text-muted-foreground underline" to="/entrar">
                 Ya tengo cuenta
