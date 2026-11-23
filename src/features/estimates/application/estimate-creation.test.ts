@@ -89,6 +89,22 @@ describe('explicit estimate creation', () => {
     expect(save).not.toHaveBeenCalled()
   })
 
+  it('allows a payment for a saved estimate and its own milestone', async () => {
+    const milestone = { id: newId(), label: 'Señal', percent: 100 }
+    const draft = { ...completeDraft(), milestones: [milestone] }
+    submitEstimateDraft(draft)
+    await saved()
+    registerMilestonePayment(draft, milestone, 1000)
+    await saved()
+    expect(currentTenantData()?.ledger).toEqual([
+      expect.objectContaining({
+        estimateId: draft.id,
+        milestoneId: milestone.id,
+        amountCents: 1000,
+      }),
+    ])
+  })
+
   it('persists distinct installation and maintenance routes without changing existing estimates', async () => {
     const installation = {
       ...completeDraft(),
