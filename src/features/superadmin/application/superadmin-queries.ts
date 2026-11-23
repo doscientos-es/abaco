@@ -5,6 +5,41 @@ import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { CompanyProfile, CompanyProfileValues } from '../domain/company-profile'
 
+export type CompanyReferral = { referrer_id: string | null; referrer_name: string | null }
+
+export const platformCompanyReferralQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['platform-company-referral', tenantId],
+    queryFn: async (): Promise<CompanyReferral | null> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc(
+        'superadmin_company_referral',
+        {
+          p_tenant: tenantId,
+        },
+      )
+      if (error) throw new Error('No se pudo cargar la recomendación.')
+      return data as CompanyReferral | null
+    },
+  })
+
+export async function setCompanyReferral(
+  tenantId: string,
+  referrer: string | null,
+  expected: string | null,
+) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_set_company_referral', {
+    p_tenant: tenantId,
+    p_referrer: referrer,
+    p_expected: expected,
+  })
+  if (error)
+    throw new Error(
+      ['22023', '40001'].includes(error.code)
+        ? error.message
+        : 'No se pudo guardar la recomendación.',
+    )
+}
+
 export const platformCompanyProfileQuery = (tenantId: string) =>
   queryOptions({
     queryKey: ['platform-company-profile', tenantId],

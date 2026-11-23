@@ -247,14 +247,13 @@ export function VisitPhotosPanel({
       {!closed ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
-            Imagen
+            Hacer foto o elegir imagen
             <input
               ref={fileInput}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              capture="environment"
               disabled={uploading}
-              className="border-input bg-background mt-1 block w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 block min-h-11 w-full min-w-0 rounded-lg border p-2"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </label>

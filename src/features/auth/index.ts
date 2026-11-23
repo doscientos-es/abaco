@@ -13,6 +13,7 @@ export {
 } from './domain/permissions'
 export type { Permission, Role } from './domain/permissions'
 export type { AuthSession } from './infrastructure/load-session'
+export { rememberReferral } from './application/referral-actions'
 export { CompanyDialog } from './ui/company-dialog'
 export { AuthLayout, FormError } from './ui/auth-layout'
 export { useCompanyActions } from './ui/use-company-actions'

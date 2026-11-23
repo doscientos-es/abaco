@@ -22,6 +22,7 @@ import {
 import { CompanyBillingAgreement } from './company-billing-agreement'
 import { CompanyPayments } from './company-payments'
 import { CompanyProfileSection } from './company-profile'
+import { CompanyReferralSection } from './company-referral'
 import { CompanyNavigation } from './platform-shell'
 import {
   billingPeriodLabel,
@@ -89,7 +90,10 @@ export function CompanyDetail({
         <CompanyNavigation search={search} />
       </nav>
       {search.seccion === 'datos' ? (
-        <CompanyProfileSection tenantId={company.id} search={search} />
+        <>
+          <CompanyProfileSection tenantId={company.id} search={search} />
+          <CompanyReferralSection key={company.id} tenantId={company.id} />
+        </>
       ) : search.seccion === 'modulos' ? (
         <CompanyModules company={company} search={search} />
       ) : search.seccion === 'pagos' ? (

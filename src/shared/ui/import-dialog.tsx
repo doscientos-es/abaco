@@ -7,9 +7,10 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTitle,
+  Spinner,
   toast,
 } from '@doscientos/ui'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { downloadTextFile } from '@/shared/domain/csv'
 import {
@@ -34,23 +35,33 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
   const [plan, setPlan] = useState<ImportPlan<T> | null>(null)
   const [fileName, setFileName] = useState('')
   const [reading, setReading] = useState(false)
+  const [importError, setImportError] = useState('')
+  const readVersion = useRef(0)
 
   function close() {
+    readVersion.current += 1
     setPlan(null)
     setFileName('')
+    setReading(false)
+    setImportError('')
     onClose()
   }
 
   async function pick(file: File | undefined) {
     if (!file) return
+    const version = ++readVersion.current
+    setPlan(null)
+    setImportError('')
     setFileName(file.name)
     setReading(true)
     try {
-      setPlan(planImport(await readSpreadsheet(file), schema, existingKeys))
+      const rows = await readSpreadsheet(file)
+      if (version === readVersion.current) setPlan(planImport(rows, schema, existingKeys))
     } catch (error) {
-      setPlan({ fatal: error instanceof Error ? error.message : 'No se pudo leer el archivo.' })
+      if (version === readVersion.current)
+        setPlan({ fatal: error instanceof Error ? error.message : 'No se pudo leer el archivo.' })
     } finally {
-      setReading(false)
+      if (version === readVersion.current) setReading(false)
     }
   }
 
@@ -110,7 +121,12 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
             </Button>
           </div>
 
-          {reading ? <p className="text-sm">Leyendo {fileName}…</p> : null}
+          {reading ? (
+            <output className="bg-muted/50 flex items-center gap-3 rounded-lg p-3 text-sm">
+              <Spinner aria-hidden="true" label="" size="sm" />
+              <span className="min-w-0 break-words">Leyendo {fileName}…</span>
+            </output>
+          ) : null}
           {plan && 'fatal' in plan ? (
             <div
               role="alert"
@@ -127,7 +143,8 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
           {plan && 'valid' in plan ? (
             <div className="space-y-2 rounded-md border p-3 text-sm" aria-live="polite">
               <p className="font-medium">
-                {plan.valid.length} listos para importar
+                {plan.valid.length}{' '}
+                {plan.valid.length === 1 ? 'registro listo' : 'registros listos'} para importar
                 {plan.duplicates > 0 ? ` · ${plan.duplicates} ya existentes (se omiten)` : ''}
                 {plan.errors.length > 0 ? ` · ${plan.errors.length} con errores (se omiten)` : ''}
               </p>
@@ -142,15 +159,32 @@ export function ImportDialog<T>({ open, onClose, schema, existingKeys, onImport 
               ) : null}
             </div>
           ) : null}
+          {importError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {importError}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <DialogClose variant="outline">Cancelar</DialogClose>
           <Button
-            isDisabled={valid.length === 0}
+            isDisabled={reading || valid.length === 0}
             onPress={() => {
-              onImport(valid)
-              toast.success(`${valid.length} importados`)
-              close()
+              if (reading || valid.length === 0) return
+              try {
+                onImport(valid)
+                toast.info(
+                  `${valid.length} ${valid.length === 1 ? 'registro añadido' : 'registros añadidos'} a la lista`,
+                  {
+                    description: 'Comprueba el estado de guardado antes de salir.',
+                  },
+                )
+                close()
+              } catch (error) {
+                setImportError(
+                  error instanceof Error ? error.message : 'No se pudo iniciar la importación.',
+                )
+              }
             }}
           >
             Importar {valid.length > 0 ? valid.length : ''}

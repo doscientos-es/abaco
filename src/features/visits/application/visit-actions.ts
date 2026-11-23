@@ -53,6 +53,7 @@ export {
   createServiceVisit,
   listMyVisits,
   listOfficeVisits,
+  listWorkVisits,
   listTechnicians,
   replanServiceVisit,
   replanContractDay,
@@ -63,4 +64,5 @@ export type {
   VisitPriority,
   VisitStatus,
   VisitSummary,
+  WorkVisit,
 } from '../infrastructure/visit-repository'

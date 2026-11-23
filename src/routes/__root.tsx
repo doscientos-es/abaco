@@ -10,7 +10,7 @@ import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
 import { UserFrame } from '@/app/technician-frame'
-import { NoCompanyPage, sessionQuery, welcomeRedirect } from '@/features/auth'
+import { NoCompanyPage, rememberReferral, sessionQuery, welcomeRedirect } from '@/features/auth'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
@@ -33,6 +33,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     const session = offline
       ? (cached?.data ?? null)
       : await context.queryClient.fetchQuery(sessionQuery)
+    if (!session && typeof window !== 'undefined') rememberReferral(location.searchStr)
     const path = location.pathname
     const isPlatformPage = path === '/superadmin'
     if (!session && !isPublicPath(path)) {

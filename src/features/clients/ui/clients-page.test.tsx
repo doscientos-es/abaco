@@ -8,6 +8,9 @@ import { ClientsPage } from './clients-page'
 const mocks = vi.hoisted(() => ({
   archived: false,
   hasClientTypes: true,
+  typeError: false,
+  refetch: vi.fn(),
+  clients: [] as { id: string; name: string; archivedAt?: string }[],
   target: null as { id: string; name: string } | null,
   stateIndex: 0,
   setImportOpen: vi.fn(),
@@ -32,7 +35,11 @@ vi.mock('react', async (original) => ({
 vi.mock('@doscientos/ui', () => {
   const Container = ({ children }: { children?: ReactNode }) => <div>{children}</div>
   return {
-    Button: Container,
+    Button: ({ children, onPress }: { children?: ReactNode; onPress?: () => void }) => {
+      if (typeof children === 'string' && onPress)
+        mocks.actions.set(children, [...(mocks.actions.get(children) ?? []), onPress])
+      return <button>{children}</button>
+    },
     Checkbox: Container,
     Popover: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</>,
     ConfirmDialog: ({ onConfirm }: { onConfirm: () => void }) => {
@@ -66,7 +73,11 @@ vi.mock('@doscientos/ui', () => {
   }
 })
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: mocks.hasClientTypes ? [{ value: 'type' }] : [] }),
+  useQuery: () => ({
+    data: mocks.hasClientTypes ? [{ value: 'type' }] : [],
+    isError: mocks.typeError,
+    refetch: mocks.refetch,
+  }),
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/clientes">{children}</a>,
@@ -77,14 +88,27 @@ vi.mock('@/shared/store/store', () => ({
   updateTenantData: mocks.update,
   useTenantData: () => ({
     tenant: { id: 'tenant' },
-    clients: [
-      { id: 'active', name: 'Ana' },
-      { id: 'archived', name: 'Bea', archivedAt: '2026-01-01' },
-    ],
+    clients: mocks.clients,
   }),
 }))
 vi.mock('@/shared/ui/import-dialog', () => ({ ImportDialog: () => null }))
-vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
+vi.mock('@/shared/ui/page-states', () => ({
+  EmptyPanel: ({
+    title,
+    description,
+    children,
+  }: {
+    title: string
+    description: string
+    children: ReactNode
+  }) => (
+    <div>
+      {title}
+      {description}
+      {children}
+    </div>
+  ),
+}))
 vi.mock('@/shared/ui/navigable-table-row', () => ({
   NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
     mocks.rows.push(onOpen)
@@ -102,6 +126,11 @@ beforeEach(() => {
   mocks.stateIndex = 0
   mocks.archived = false
   mocks.hasClientTypes = true
+  mocks.typeError = false
+  mocks.clients = [
+    { id: 'active', name: 'Ana' },
+    { id: 'archived', name: 'Bea', archivedAt: '2026-01-01' },
+  ]
   mocks.target = null
   mocks.actions.clear()
   mocks.rows = []
@@ -120,6 +149,23 @@ describe('client Excel import action', () => {
     mocks.hasClientTypes = false
     const html = renderToStaticMarkup(<ClientsPage />)
     expect(html).toContain('<button aria-label="Importar de Excel" disabled=""></button>')
+  })
+
+  it('offers a retry when client types cannot be loaded', () => {
+    mocks.typeError = true
+    const html = renderToStaticMarkup(<ClientsPage />)
+    expect(html).toContain('No se pudieron cargar los tipos de cliente')
+    mocks.actions.get('Reintentar')?.[0]?.()
+    expect(mocks.refetch).toHaveBeenCalledOnce()
+  })
+
+  it('distinguishes no archived clients from a search with no results', () => {
+    mocks.archived = true
+    mocks.clients = [{ id: 'active', name: 'Ana' }]
+    const html = renderToStaticMarkup(<ClientsPage />)
+    expect(html).toContain('No hay clientes archivados')
+    expect(html).toContain('Ver clientes activos')
+    expect(html).not.toContain('Limpiar búsqueda')
   })
 })
 

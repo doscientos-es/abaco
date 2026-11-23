@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { referralLink } from '@/features/auth/domain/referral-link'
 
 import type { ReferralOverview } from '../application/billing-actions'
-import { formatEuros } from '../domain/plans'
 
 export function ReferralProgram({
   summary,
@@ -42,35 +41,34 @@ export function ReferralProgram({
       </h3>
       {isError ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <p role="alert">No se pudo cargar el saldo de referidos.</p>
+          <p role="alert">No se pudo cargar el estado de referidos.</p>
           <Button variant="outline" size="sm" onPress={onRetry}>
             Reintentar
           </Button>
         </div>
       ) : isPending || summary === undefined ? (
-        <p className="text-muted-foreground mt-3 text-sm">Cargando saldo…</p>
+        <p className="text-muted-foreground mt-3 text-sm">Cargando referidos…</p>
       ) : summary === null ? (
         <p className="text-muted-foreground mt-3 text-sm">
           El programa de referidos aún no está disponible.
         </p>
       ) : (
         <>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Cuando una empresa que llegue desde tu enlace pague su suscripción, recibirás un saldo
-            del 10 % de lo cobrado con tarjeta. Se aplicará automáticamente a tus próximos pagos.
+          <p className="mt-3 text-sm font-semibold">
+            Recomendaciones activas · descuentos pendientes
           </p>
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-muted-foreground">Saldo disponible</dt>
-              <dd className="font-semibold">{formatEuros(summary.balance_cents / 100)}</dd>
-            </div>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Ya puedes compartir tu enlace y registrar empresas invitadas. Los descuentos todavía no
+            están activos y no se aplican a los cobros ni a las facturas.
+          </p>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">Empresas invitadas</dt>
               <dd className="font-semibold">{summary.referred_count}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Saldo generado</dt>
-              <dd className="font-semibold">{formatEuros(summary.earned_cents / 100)}</dd>
+              <dt className="text-muted-foreground">Empresa que te recomendó</dt>
+              <dd className="font-semibold">{summary.recommended_by ?? 'Sin recomendación'}</dd>
             </div>
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -88,12 +86,11 @@ export function ReferralProgram({
             </Button>
           </div>
           {message ? (
-            <p role="status" className="text-muted-foreground mt-2 text-xs">
-              {message}
-            </p>
+            <output className="text-muted-foreground mt-2 block text-xs">{message}</output>
           ) : null}
           <p className="text-muted-foreground mt-2 text-xs">
-            El saldo pertenece a esta empresa y se descuenta de sus facturas de suscripción.
+            La recomendación se asigna al crear la empresa. Solo el equipo de Ábaco puede
+            corregirla.
           </p>
         </>
       )}

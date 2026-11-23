@@ -8,8 +8,8 @@ import { fieldIcons } from '@/shared/ui/field-icons'
 import { PasswordField, TextField } from '@/shared/ui/form'
 
 import { sessionQuery, signUp } from '../application/auth-actions'
+import { clearReferral, rememberReferral } from '../application/referral-actions'
 import { firstError, passwordRules, signupSchema, signupStepError } from '../domain/credentials'
-import { referralCodeFromSearch } from '../domain/referral-link'
 import { AuthLayout, FormError } from './auth-layout'
 
 const toLogin = (
@@ -45,6 +45,9 @@ export function RegisterPage() {
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [step, setStep] = useState(0)
+  const [invitation] = useState(() =>
+    typeof window === 'undefined' ? null : rememberReferral(window.location.search),
+  )
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -68,10 +71,11 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     const referralCode =
-      typeof window === 'undefined' ? null : referralCodeFromSearch(window.location.search)
+      typeof window === 'undefined' ? null : rememberReferral(window.location.search)
     const result = await signUp({ ...parsed.data, ...(referralCode ? { referralCode } : {}) })
     setBusy(false)
     if (!result.ok) return setError(result.message)
+    clearReferral()
     if (result.needsConfirmation) return setSentTo(parsed.data.email)
     // Email confirmation is off: there is already a session, so go straight in.
     await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
@@ -107,6 +111,11 @@ export function RegisterPage() {
           aria-label="Progreso del registro"
         />
       </div>
+      {invitation ? (
+        <p className="text-muted-foreground text-sm">
+          Enlace de invitación detectado. Lo comprobaremos al crear tu empresa.
+        </p>
+      ) : null}
       <form ref={formRef} onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         {step === 0 ? (
           <TextField

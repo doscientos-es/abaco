@@ -18,20 +18,23 @@ import type { ReactNode } from 'react'
 /** Shown while a page is loading: mimics the layout (title, 4 cards, 2 panels) so nothing jumps. */
 export function PageLoading() {
   return (
-    <div className="space-y-6" aria-busy="true">
-      <Spinner label="Cargando…" className="sr-only" />
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-72 max-w-full" />
+    <div className="min-w-0 space-y-5 sm:space-y-6">
+      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Spinner label="Preparando tu espacio…" size="sm" />
+        <span aria-hidden="true">Preparando tu espacio…</span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-2" aria-hidden="true">
+        <Skeleton className="h-7 w-40 max-w-full" />
+        <Skeleton className="h-4 w-64 max-w-full" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-17 rounded-xl" />
+          <Skeleton key={i} className="h-16 rounded-xl sm:h-20" />
         ))}
       </div>
-      <div className="grid gap-3 lg:grid-cols-5">
-        <Skeleton className="h-64 rounded-xl lg:col-span-3" />
-        <Skeleton className="h-64 rounded-xl lg:col-span-2" />
+      <div className="grid gap-3 lg:grid-cols-5" aria-hidden="true">
+        <Skeleton className="h-44 rounded-xl sm:h-64 lg:col-span-3" />
+        <Skeleton className="hidden h-64 rounded-xl sm:block lg:col-span-2" />
       </div>
     </div>
   )
@@ -72,8 +75,11 @@ export function EmptyPanel({
   children?: ReactNode
 }) {
   return (
-    <DataViewState className="border-dashed py-10">
-      <span className="bg-secondary text-muted-foreground flex size-12 items-center justify-center rounded-full [&>svg]:size-6">
+    <DataViewState className="border-dashed px-4 py-8 sm:py-10">
+      <span
+        aria-hidden="true"
+        className="bg-secondary text-muted-foreground flex size-12 items-center justify-center rounded-full [&>svg]:size-6"
+      >
         {icon}
       </span>
       <DataViewStateTitle>{title}</DataViewStateTitle>

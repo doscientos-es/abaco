@@ -156,10 +156,9 @@ export const billingPreviewQuery = (tenantId: string) =>
 
 export type ReferralOverview = {
   code: string
-  balance_cents: number
   referred_count: number
-  earned_cents: number
-  redeemed_cents: number
+  recommended_by: string | null
+  rewards_active: false
 }
 
 export const referralOverviewQuery = (tenantId: string) =>
@@ -167,11 +166,11 @@ export const referralOverviewQuery = (tenantId: string) =>
     queryKey: ['referral-overview', tenantId],
     staleTime: 60_000,
     queryFn: async (): Promise<ReferralOverview | null> => {
-      const { data, error } = await createBrowserSupabaseClient().rpc('referral_summary', {
+      const { data, error } = await createBrowserSupabaseClient().rpc('referral_program_status', {
         p_tenant: tenantId,
       })
       if (error?.code === 'PGRST202') return null
-      if (error || !data) throw new Error('No se pudo cargar el saldo de referidos.')
+      if (error || !data) throw new Error('No se pudo cargar el estado de referidos.')
       return data as ReferralOverview
     },
   })

@@ -213,6 +213,20 @@ describe('paymentsQuery', () => {
 })
 
 describe('referralOverviewQuery', () => {
+  it('loads the attribution status without fabricating a discount balance', async () => {
+    const summary = {
+      code: 'AB12CD34EF56AB78',
+      referred_count: 2,
+      recommended_by: null,
+      rewards_active: false,
+    }
+    rpc.mockResolvedValue({ data: summary, error: null })
+    const client = new QueryClient()
+    await expect(client.fetchQuery(referralOverviewQuery('tenant'))).resolves.toEqual(summary)
+    expect(rpc).toHaveBeenCalledWith('referral_program_status', { p_tenant: 'tenant' })
+    client.clear()
+  })
+
   it('reports an unavailable program when the server has no referral function', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } })
     const client = new QueryClient()
@@ -223,7 +237,7 @@ describe('referralOverviewQuery', () => {
     rpc.mockResolvedValue({ data: null, error: { code: '42501' } })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     await expect(client.fetchQuery(referralOverviewQuery('tenant'))).rejects.toThrow(
-      'No se pudo cargar el saldo de referidos.',
+      'No se pudo cargar el estado de referidos.',
     )
     client.clear()
   })

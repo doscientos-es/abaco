@@ -81,7 +81,11 @@ export function PublishedEstimatePage({
         conversionOperationId.current,
       )
       toast.success('Trabajo creado desde el presupuesto aceptado')
-      void navigate({ to: '/trabajos/$workOrderId', params: { workOrderId } })
+      void navigate({
+        to: '/trabajos/$workOrderId',
+        params: { workOrderId },
+        hash: 'planificacion',
+      })
     } catch (error) {
       toast.error('No se pudo crear el trabajo', {
         description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
@@ -134,16 +138,17 @@ export function PublishedEstimatePage({
             <Link
               to="/trabajos/$workOrderId"
               params={{ workOrderId: workId }}
+              {...(conversionDestination !== 'contract' ? { hash: 'planificacion' } : {})}
               className={buttonVariants()}
             >
-              Abrir trabajo
+              {conversionDestination !== 'contract' ? 'Planear trabajo' : 'Abrir trabajo'}
             </Link>
           ) : accepted && conversionDestination !== 'contract' && can(role, 'work:write') ? (
             <Button
-              isDisabled={converting || existingWork.isPending}
+              isDisabled={converting || existingWork.isPending || existingWork.isError}
               onPress={() => void convertToWork()}
             >
-              {converting ? 'Creando trabajo…' : 'Crear trabajo'}
+              {converting ? 'Preparando trabajo…' : 'Planear trabajo'}
             </Button>
           ) : null}
           {contractId ? (
@@ -177,6 +182,14 @@ export function PublishedEstimatePage({
           />
         </PageHeaderActions>
       </PageHeader>
+      {accepted && conversionDestination !== 'contract' && existingWork.isError ? (
+        <div role="alert" className="space-y-2 text-sm">
+          <p>No se pudo comprobar si el presupuesto ya tiene un trabajo.</p>
+          <Button variant="outline" onPress={() => void existingWork.refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
       {accepted && can(role, 'catalog:read') ? <MaterialShortages estimateId={estimateId} /> : null}
       {manualApproval || estimate.emailSentAt ? (
         <details className="text-muted-foreground text-sm">

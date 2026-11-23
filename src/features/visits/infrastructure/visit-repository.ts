@@ -29,6 +29,45 @@ export type VisitSummary = {
 
 export type TechnicianOption = { id: string; label: string }
 
+export type WorkVisit = {
+  id: string
+  status: VisitStatus
+  scheduled_start_at: string
+  updated_at: string
+  timezone: string
+}
+
+/** All active and completed days for one work, independently of the visible agenda range. */
+export async function listWorkVisits(tenantId: string, workOrderId: string): Promise<WorkVisit[]> {
+  const visits: WorkVisit[] = []
+  const pageSize = 500
+  for (let page = 0; ; page += 1) {
+    const { data, error } = await createBrowserSupabaseClient()
+      .from('service_visits')
+      .select('id,status,scheduled_start_at,updated_at,service_locations(timezone)')
+      .eq('tenant_id', tenantId)
+      .eq('work_order_id', workOrderId)
+      .in('status', ['scheduled', 'in_progress', 'completed'])
+      .order('scheduled_start_at')
+      .order('id')
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+    if (error) throw new Error(error.message)
+    for (const row of data ?? []) {
+      const location = Array.isArray(row.service_locations)
+        ? row.service_locations[0]
+        : row.service_locations
+      visits.push({
+        id: row.id,
+        status: row.status as VisitStatus,
+        scheduled_start_at: row.scheduled_start_at,
+        updated_at: row.updated_at,
+        timezone: location?.timezone ?? 'Europe/Madrid',
+      })
+    }
+    if ((data?.length ?? 0) < pageSize) return visits
+  }
+}
+
 async function contractLabels(tenantId: string, visits: VisitSummary[]) {
   const { data, error } = await createBrowserSupabaseClient().rpc('list_visit_contract_labels', {
     p_tenant_id: tenantId,

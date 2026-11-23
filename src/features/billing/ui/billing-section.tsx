@@ -265,15 +265,9 @@ export function BillingSection({
           <p>
             {active ? 'Próxima renovación' : 'Importe a pagar'}:{' '}
             <strong>
-              {formatEuros(
-                Math.max(0, upcoming.amount_cents - (referral.data?.balance_cents ?? 0)) / 100,
-              )}{' '}
-              {billingVatLabel(upcoming.vat_percent)}
+              {formatEuros(upcoming.amount_cents / 100)} {billingVatLabel(upcoming.vat_percent)}
             </strong>{' '}
             por {upcoming.period === 'year' ? 'año' : 'mes'}.
-            {(referral.data?.balance_cents ?? 0) > 0 ? (
-              <> Se aplicará el saldo disponible a la factura.</>
-            ) : null}
             {upcoming.module_net_cents ? (
               <> Incluye {formatEuros(upcoming.module_net_cents / 100)} en módulos, sin IVA.</>
             ) : null}
@@ -389,20 +383,6 @@ export function BillingSection({
               </strong>{' '}
               por {selection.terms.period === 'year' ? 'año' : 'mes'}.
             </p>
-            {(referral.data?.balance_cents ?? 0) > 0 ? (
-              <p className="text-sm">
-                Aplicaremos{' '}
-                {formatEuros(
-                  Math.min(referral.data?.balance_cents ?? 0, selection.terms.amount_cents) / 100,
-                )}{' '}
-                de saldo; quedarán{' '}
-                {formatEuros(
-                  Math.max(0, selection.terms.amount_cents - (referral.data?.balance_cents ?? 0)) /
-                    100,
-                )}{' '}
-                por pagar.
-              </p>
-            ) : null}
             {selection.terms.module_net_cents ? (
               <p className="text-sm">
                 Incluye {formatEuros(selection.terms.module_net_cents / 100)} en módulos, sin IVA.
@@ -411,9 +391,7 @@ export function BillingSection({
             <p className="text-muted-foreground text-sm">
               {selection.action === 'change'
                 ? 'El cambio se aplica en la próxima renovación, sin cobro inmediato.'
-                : selection.terms.amount_cents <= (referral.data?.balance_cents ?? 0)
-                  ? 'El saldo cubre el importe. Confirmarás la suscripción sin pasar por Redsys.'
-                  : 'El saldo se aplicará primero; confirmarás el resto en Redsys.'}
+                : 'Confirmarás el pago en Redsys.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -424,11 +402,7 @@ export function BillingSection({
                   )
                 }
               >
-                {selection.action === 'change'
-                  ? 'Programar cambio'
-                  : selection.terms.amount_cents <= (referral.data?.balance_cents ?? 0)
-                    ? 'Pagar con saldo'
-                    : 'Continuar al pago'}
+                {selection.action === 'change' ? 'Programar cambio' : 'Continuar al pago'}
               </Button>
               <Button
                 variant="outline"

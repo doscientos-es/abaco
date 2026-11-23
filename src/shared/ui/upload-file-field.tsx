@@ -30,7 +30,7 @@ export function UploadFileField({
         aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
         aria-invalid={!!error}
         disabled={disabled}
-        className="border-input file:bg-muted file:text-foreground focus-visible:outline-ring block w-full min-w-0 rounded-md border p-1 text-sm file:mr-2 file:cursor-pointer file:rounded file:border-0 file:px-3 file:py-1 disabled:opacity-50"
+        className="border-input file:bg-muted file:text-foreground focus-visible:outline-ring block min-h-11 w-full min-w-0 rounded-md border p-1 text-sm file:mr-2 file:cursor-pointer file:rounded file:border-0 file:px-3 file:py-2 disabled:opacity-50"
         onChange={(event) => {
           const selected = event.currentTarget.files?.[0]
           event.currentTarget.value = ''
@@ -41,6 +41,7 @@ export function UploadFileField({
             onChange(selected)
           } catch (cause) {
             setError(cause instanceof Error ? cause.message : 'No se pudo seleccionar el archivo.')
+            onChange(null)
           }
         }}
       />
@@ -53,18 +54,20 @@ export function UploadFileField({
         </p>
       ) : null}
       {file ? (
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="min-w-0 break-words">{file.name}</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-2 text-sm">
+          <span className="min-w-0 flex-1 break-all">{file.name}</span>
           <Button
             variant="ghost"
             size="sm"
+            aria-label={`Quitar archivo seleccionado: ${file.name}`}
+            className="min-h-11"
             isDisabled={disabled}
             onPress={() => {
               setError('')
               onChange(null)
             }}
           >
-            Quitar archivo seleccionado
+            Quitar
           </Button>
         </div>
       ) : null}

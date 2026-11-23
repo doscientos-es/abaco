@@ -38,6 +38,7 @@ export function MobileNavigation({
       ))}
       <Button
         variant="ghost"
+        aria-label="Buscar y ver todas las secciones"
         aria-haspopup="dialog"
         aria-expanded={searchOpen}
         onPress={onOpenSearch}

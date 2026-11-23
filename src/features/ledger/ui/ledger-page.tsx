@@ -39,6 +39,7 @@ import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
+import { EmptyPanel } from '@/shared/ui/page-states'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
@@ -557,16 +558,30 @@ function LedgerContent({
 
       {tab === 'apuntes' ? (
         visible.length === 0 ? (
-          <div className="border-border bg-card rounded-xl border p-6 text-center" role="status">
-            <p className="font-medium">
-              {ledger.length === 0 ? 'Aún no hay apuntes' : 'No hay apuntes para estos filtros'}
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {ledger.length === 0
+          <EmptyPanel
+            icon={ledger.length === 0 ? fieldIcons.euro : fieldIcons.search}
+            title={ledger.length === 0 ? 'Aún no hay apuntes' : 'No hay apuntes para estos filtros'}
+            description={
+              ledger.length === 0
                 ? 'Añade un ingreso o gasto para empezar tu libro.'
-                : 'Prueba con otro periodo o limpia la búsqueda y el tipo seleccionado.'}
-            </p>
-          </div>
+                : 'Prueba con otro periodo o limpia los filtros para ver todos los apuntes.'
+            }
+          >
+            {ledger.length === 0 ? (
+              <Button onPress={() => setDialogOpen(true)}>Añadir apunte</Button>
+            ) : (
+              <Button
+                variant="outline"
+                onPress={() => {
+                  setMonth('')
+                  setKindFilter('all')
+                  setQuery('')
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </EmptyPanel>
         ) : (
           <>
             <ul className="space-y-3 md:hidden">

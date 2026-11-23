@@ -81,6 +81,12 @@ html[data-public-estimate] body {
   overflow: visible;
 }
 
+html[data-public-estimate][data-estimate-signature-open],
+html[data-public-estimate][data-estimate-signature-open] body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 h1,
 h2,
 h3 {
@@ -426,7 +432,17 @@ h3 {
 }
 
 @media (width < 48rem) {
+  /* Avoid iOS zooming the page when editing small-text form controls. */
+  :is(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+    textarea,
+    select
+  ) {
+    font-size: 1rem;
+  }
+
   .workspace-topbar {
+    position: static;
     padding-inline: 1rem;
   }
 

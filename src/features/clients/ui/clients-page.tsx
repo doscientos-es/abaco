@@ -78,6 +78,7 @@ export function ClientsPage() {
       Boolean(client.archivedAt) === showArchived &&
       fuzzySearch(query, client.name, client.email, client.phone, client.taxId, client.address),
   )
+  const hasClientsInView = clients.some((client) => Boolean(client.archivedAt) === showArchived)
   const pager = usePagination(visible, query)
   const columns = useTableColumns('clientes', clientColumns)
 
@@ -118,9 +119,22 @@ export function ClientsPage() {
       />
 
       {types.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          No se pudieron cargar los tipos de cliente. Recarga la página para importar.
-        </p>
+        <div
+          role="alert"
+          className="border-destructive/30 bg-destructive/5 flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
+        >
+          <p className="min-w-0 flex-1">
+            No se pudieron cargar los tipos de cliente para importar.
+          </p>
+          <Button size="sm" variant="outline" onPress={() => void types.refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
+      {types.isPending ? (
+        <output className="text-muted-foreground block text-sm">
+          Preparando la importación de clientes…
+        </output>
       ) : null}
       {types.isSuccess && !types.data.length ? (
         <p className="text-muted-foreground text-sm">
@@ -135,7 +149,8 @@ export function ClientsPage() {
         existingKeys={clientKeys(clients)}
         onImport={(values) => {
           const kind = types.data?.[0]?.value
-          if (!kind) return
+          if (!kind)
+            throw new Error('No hay tipos de cliente disponibles. Recarga y vuelve a intentarlo.')
           updateTenantData((data) => ({
             ...data,
             clients: [
@@ -160,13 +175,34 @@ export function ClientsPage() {
       </div>
 
       {visible.length === 0 ? (
-        clients.length === 0 && !showArchived ? (
+        !hasClientsInView && !showArchived ? (
           <EmptyPanel
             icon={fieldIcons.user}
-            title="Aún no tienes clientes"
-            description="Añade a tu primer cliente para poder hacerle un presupuesto y enviárselo por WhatsApp o email."
+            title={clients.length ? 'No tienes clientes activos' : 'Aún no tienes clientes'}
+            description={
+              clients.length
+                ? 'Puedes crear un cliente o recuperar uno de los archivados.'
+                : 'Añade a tu primer cliente para crearle un presupuesto.'
+            }
           >
-            <Button onPress={create}>+ Crear mi primer cliente</Button>
+            <Button onPress={create}>
+              {clients.length ? 'Nuevo cliente' : 'Crear mi primer cliente'}
+            </Button>
+            {clients.length ? (
+              <Button variant="outline" onPress={() => setShowArchived(true)}>
+                Ver archivados
+              </Button>
+            ) : null}
+          </EmptyPanel>
+        ) : !hasClientsInView ? (
+          <EmptyPanel
+            icon={fieldIcons.user}
+            title="No hay clientes archivados"
+            description="Los clientes que archives aparecerán aquí."
+          >
+            <Button variant="outline" onPress={() => setShowArchived(false)}>
+              Ver clientes activos
+            </Button>
           </EmptyPanel>
         ) : (
           <EmptyPanel

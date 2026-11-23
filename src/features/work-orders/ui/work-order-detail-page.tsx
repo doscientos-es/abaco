@@ -35,6 +35,7 @@ import {
   type WorkOrderStatus,
 } from '../application/work-order-actions'
 import { WorkCostsPanel } from './work-costs-panel'
+import { WorkDaysPlanner } from './work-days-planner'
 import { WorkExtrasPanel } from './work-extras-panel'
 import { WorkPlanForm } from './work-plan-form'
 import { WorkProfitabilityPanel } from './work-profitability-panel'
@@ -178,6 +179,12 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
         </p>
       ) : null}
 
+      {order.origin_estimate_id &&
+      order.kind === 'installation' &&
+      can(session?.role, 'visits:write') ? (
+        <WorkDaysPlanner tenantId={tenant.id} order={order} />
+      ) : null}
+
       {order.scope && order.acceptance && totals ? (
         <Card>
           <CardHeader>
@@ -273,7 +280,9 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
               : 'Sin asignar'}
           </p>
           <p>
-            Previsto:{' '}
+            {order.origin_estimate_id && order.kind === 'installation'
+              ? 'Periodo orientativo: '
+              : 'Previsto: '}
             {order.planned_start_at
               ? new Date(order.planned_start_at).toLocaleString('es-ES')
               : 'Sin fecha'}
@@ -290,6 +299,12 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
             </p>
           ) : null}
           {order.description ? <p className="whitespace-pre-line">{order.description}</p> : null}
+          {order.origin_estimate_id && order.kind === 'installation' ? (
+            <p className="text-muted-foreground">
+              Los días de agenda se gestionan en «Planear trabajo» y no modifican este periodo ni el
+              estado de la obra.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
