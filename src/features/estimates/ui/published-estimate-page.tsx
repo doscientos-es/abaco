@@ -121,6 +121,11 @@ export function PublishedEstimatePage({
           <PageHeaderTitle>
             {estimate.number} <StatusBadge status={estimate.status} />
           </PageHeaderTitle>
+          <p className="text-muted-foreground text-sm">
+            {conversionDestination === 'contract'
+              ? 'Mantenimiento · con contrato'
+              : 'Instalación · obra puntual'}
+          </p>
         </PageHeaderHeading>
         <PageHeaderActions>
           {approvalButton}

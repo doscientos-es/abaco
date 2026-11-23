@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   status: 'draft',
   role: 'admin',
   automaticContract: false,
+  purpose: 'contract' as 'work' | 'contract',
   documentFormat: 'table' as 'table' | 'sections',
   manualAcceptance: null as null | {
     accepted_at: string
@@ -76,7 +77,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
               ...estimate,
               status: state.status,
               automaticContract: state.automaticContract,
-              conversionDestination: 'contract',
+              conversionDestination: state.purpose,
             },
             client: { name: 'Cliente' },
             tenant: { name: 'Empresa' },
@@ -101,7 +102,7 @@ vi.mock('@/shared/store/store', () => ({
         ...estimate,
         status: state.status,
         automaticContract: state.automaticContract,
-        conversionDestination: 'contract',
+        conversionDestination: state.purpose,
         documentFormat: state.documentFormat,
         sections,
         emailSentAt: state.emailSentAt,
@@ -140,6 +141,7 @@ beforeEach(() => {
   state.status = 'draft'
   state.role = 'admin'
   state.automaticContract = false
+  state.purpose = 'contract'
   state.documentFormat = 'table'
   state.manualAcceptance = null
   state.emailSentAt = ''
@@ -151,6 +153,15 @@ describe('acceso a la aprobación del presupuesto', () => {
     if (!approval.button?.onPress) throw new Error('Missing approval action')
     approval.button.onPress({} as never)
   }
+
+  it('offers a work order instead of a contract for an accepted installation', () => {
+    state.status = 'accepted'
+    state.purpose = 'work'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('Instalación · obra puntual')
+    expect(html).toContain('Crear trabajo')
+    expect(html).not.toContain('Crear contrato')
+  })
 
   it.each(['draft', 'sent'])(
     'aprueba un presupuesto %s con un clic sin pedir persona ni comprobante',
