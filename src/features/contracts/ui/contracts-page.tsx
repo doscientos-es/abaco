@@ -54,7 +54,7 @@ export function ContractsPage() {
   return (
     <div className="space-y-5">
       <WorkspacePageHeading
-        title="Contratos de servicio"
+        title="Contratos"
         actions={
           <Link to="/trabajos" className="text-primary text-sm underline">
             Ir a planificación
@@ -108,24 +108,27 @@ function ContractsList() {
   })
   const columns = useTableColumns('contratos', contractColumns)
   return (
-    <div className="space-y-6">
-      <Link to="/presupuestos" className="text-primary text-sm underline">
-        Crear o revisar presupuesto
-      </Link>
-      <SelectField
-        label="Estado del contrato"
-        value={status}
-        options={[
-          { value: 'all', label: 'Todos' },
-          { value: 'active', label: 'Activos' },
-          { value: 'inactive', label: 'Inactivos' },
-        ]}
-        onChange={(value) => {
-          setStatus(value as ContractStatusFilter)
-          setPage(0)
-        }}
-        className="max-w-xs"
-      />
+    <div className="min-w-0 space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SelectField
+          label="Estado del contrato"
+          hideLabel
+          value={status}
+          options={[
+            { value: 'all', label: 'Todos los contratos' },
+            { value: 'active', label: 'Activos' },
+            { value: 'inactive', label: 'Inactivos' },
+          ]}
+          onChange={(value) => {
+            setStatus(value as ContractStatusFilter)
+            setPage(0)
+          }}
+          className="max-w-xs min-w-0"
+        />
+        <Link to="/presupuestos" className="text-primary text-sm underline">
+          Ver presupuestos
+        </Link>
+      </div>
       {query.isPending ? <output>Cargando contratos…</output> : null}
       {query.isError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -158,79 +161,113 @@ function ContractsList() {
         </EmptyPanel>
       ) : null}
       {query.data?.items.length ? (
-        <Table aria-label="Contratos de servicio">
-          <TableHeader>
-            <TableRow>
-              <TableColumnsHeader columns={columns} tableName="contratos" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          <ul aria-label="Contratos de servicio" className="space-y-2 md:hidden">
             {query.data.items.map((contract) => (
-              <NavigableTableRow
-                key={contract.id}
-                onOpen={() =>
-                  void navigate({
-                    to: '/contratos/$contractId',
-                    params: { contractId: contract.id },
-                  })
-                }
-              >
-                <TableColumnsCells
-                  columns={columns}
-                  cells={{
-                    title: (
-                      <TableCell className="min-w-48 font-medium">
-                        <Link
-                          to="/contratos/$contractId"
-                          params={{ contractId: contract.id }}
-                          className="underline-offset-4 hover:underline"
-                        >
-                          {contract.title}
-                        </Link>
-                      </TableCell>
-                    ),
-                    client: (
-                      <TableCell>
-                        {clients.find((client) => client.id === contract.client_id)?.name ??
-                          'Cliente'}
-                      </TableCell>
-                    ),
-                    status: (
-                      <TableCell>
-                        <ContractStatusBadge status={contract.status} />
-                      </TableCell>
-                    ),
-                    signature: (
-                      <TableCell>
-                        <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
-                          {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
-                        </Badge>
-                      </TableCell>
-                    ),
-                    amount: (
-                      <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
-                        {formatEuros(contract.price_cents)}
-                      </TableCell>
-                    ),
-                    billing: (
-                      <TableCell className="whitespace-nowrap">
-                        {contractBillingLabels[contract.billing_frequency]}
-                      </TableCell>
-                    ),
-                    collection: (
-                      <TableCell className="whitespace-nowrap">
-                        <ContractNextCollectionCell collection={contract.next_collection} />
-                      </TableCell>
-                    ),
-                  }}
-                />
-                <TableCell className="text-right">
+              <li key={contract.id} className="border-border bg-card rounded-lg border">
+                <Link
+                  to="/contratos/$contractId"
+                  params={{ contractId: contract.id }}
+                  className="active:bg-muted/60 block space-y-1 rounded-lg px-3 pt-3"
+                >
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 font-medium break-words">{contract.title}</span>
+                    <ContractStatusBadge status={contract.status} />
+                  </span>
+                  <span className="text-muted-foreground block text-xs break-words">
+                    {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {contract.signed_at ? 'Firmado' : 'Pendiente de firma'} ·{' '}
+                    {contractBillingLabels[contract.billing_frequency]}
+                  </span>
+                  <div className="text-xs">
+                    <ContractNextCollectionCell collection={contract.next_collection} />
+                  </div>
+                </Link>
+                <div className="flex items-center justify-between gap-2 px-3 pb-2">
+                  <span className="font-semibold tabular-nums">
+                    {formatEuros(contract.price_cents)}
+                  </span>
                   <ContractActions contract={contract} />
-                </TableCell>
-              </NavigableTableRow>
+                </div>
+              </li>
             ))}
-          </TableBody>
-        </Table>
+          </ul>
+          <Table aria-label="Contratos de servicio" containerClassName="max-md:hidden">
+            <TableHeader>
+              <TableRow>
+                <TableColumnsHeader columns={columns} tableName="contratos" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {query.data.items.map((contract) => (
+                <NavigableTableRow
+                  key={contract.id}
+                  onOpen={() =>
+                    void navigate({
+                      to: '/contratos/$contractId',
+                      params: { contractId: contract.id },
+                    })
+                  }
+                >
+                  <TableColumnsCells
+                    columns={columns}
+                    cells={{
+                      title: (
+                        <TableCell className="min-w-48 font-medium">
+                          <Link
+                            to="/contratos/$contractId"
+                            params={{ contractId: contract.id }}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {contract.title}
+                          </Link>
+                        </TableCell>
+                      ),
+                      client: (
+                        <TableCell>
+                          {clients.find((client) => client.id === contract.client_id)?.name ??
+                            'Cliente'}
+                        </TableCell>
+                      ),
+                      status: (
+                        <TableCell>
+                          <ContractStatusBadge status={contract.status} />
+                        </TableCell>
+                      ),
+                      signature: (
+                        <TableCell>
+                          <Badge variant={contract.signed_at ? 'success' : 'neutral'}>
+                            {contract.signed_at ? 'Firmado' : 'Pendiente de firma'}
+                          </Badge>
+                        </TableCell>
+                      ),
+                      amount: (
+                        <TableCell className="text-right font-medium whitespace-nowrap tabular-nums">
+                          {formatEuros(contract.price_cents)}
+                        </TableCell>
+                      ),
+                      billing: (
+                        <TableCell className="whitespace-nowrap">
+                          {contractBillingLabels[contract.billing_frequency]}
+                        </TableCell>
+                      ),
+                      collection: (
+                        <TableCell className="whitespace-nowrap">
+                          <ContractNextCollectionCell collection={contract.next_collection} />
+                        </TableCell>
+                      ),
+                    }}
+                  />
+                  <TableCell className="text-right">
+                    <ContractActions contract={contract} />
+                  </TableCell>
+                </NavigableTableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </>
       ) : null}
       {query.data && query.data.count > 0 ? (
         <div className="flex items-center justify-between text-sm">

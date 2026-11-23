@@ -10,7 +10,7 @@ import {
   TableRow,
   toast,
 } from '@doscientos/ui'
-import { Eye, Trash } from '@phosphor-icons/react'
+import { Eye, Plus, Trash } from '@phosphor-icons/react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -135,29 +135,35 @@ export function EstimateListPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-4 sm:space-y-8">
       <WorkspacePageHeading
         title="Presupuestos"
-        actions={<Button onPress={startNew}>Crear presupuesto</Button>}
+        actions={
+          <Button aria-label="Crear presupuesto" onPress={startNew}>
+            <Plus aria-hidden="true" className="size-4" />
+            <span className="sm:hidden">Nuevo</span>
+            <span className="max-sm:hidden">Crear presupuesto</span>
+          </Button>
+        }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <Input
           type="search"
           aria-label="Buscar presupuestos"
           maxLength={formLimits.searchQuery}
           placeholder="Buscar por número, obra o cliente…"
-          className="sm:max-w-sm sm:flex-1"
+          className="col-span-2 min-w-0 sm:max-w-sm sm:flex-1"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <SelectField
           label="Filtrar por estado"
           hideLabel
-          className="sm:w-52"
+          className="min-w-0 sm:w-52"
           value={status}
           options={[
-            { value: 'all', label: 'Todos los estados' },
+            { value: 'all', label: 'Estados' },
             ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
           ]}
           onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
@@ -165,10 +171,10 @@ export function EstimateListPage() {
         <SelectField
           label="Filtrar por tipo"
           hideLabel
-          className="sm:w-52"
+          className="min-w-0 sm:w-52"
           value={purpose}
           options={[
-            { value: 'all', label: 'Todos los tipos' },
+            { value: 'all', label: 'Tipos' },
             { value: 'work', label: 'Instalación' },
             { value: 'contract', label: 'Mantenimiento' },
           ]}
@@ -221,7 +227,7 @@ export function EstimateListPage() {
         )
       ) : (
         <>
-          <ul className="space-y-3 md:hidden">
+          <ul className="space-y-2 md:hidden">
             {pager.pageItems.map((estimate) => (
               <li
                 key={estimate.id}
@@ -230,7 +236,7 @@ export function EstimateListPage() {
                 <Link
                   to="/presupuestos/$estimateId"
                   params={{ estimateId: estimate.id }}
-                  className="active:bg-muted/60 block space-y-2 rounded-lg p-4"
+                  className="active:bg-muted/60 block space-y-1 rounded-lg px-3 pt-3"
                 >
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0 font-medium">{estimate.title}</span>
@@ -244,11 +250,11 @@ export function EstimateListPage() {
                       ? 'Mantenimiento'
                       : 'Instalación'}
                   </span>
-                  <span className="block text-lg font-semibold tabular-nums">
+                </Link>
+                <div className="flex items-center justify-between gap-2 px-3 pb-2">
+                  <span className="font-semibold tabular-nums">
                     {formatEuros(estimateTotalCents(estimate))}
                   </span>
-                </Link>
-                <div className="flex justify-end px-4 pb-4">
                   <EstimateActions
                     estimate={estimate}
                     canDelete={canDeleteEstimate(estimate)}

@@ -18,7 +18,7 @@ export function ContractJobsPage() {
   })
   return (
     <section className="space-y-4" aria-label="Trabajos contratados">
-      <h2 className="text-xl font-semibold">Trabajos contratados</h2>
+      <h2 className="text-lg font-semibold">Trabajos contratados</h2>
       <p className="text-muted-foreground text-sm">
         Cada trabajo pertenece a un contrato: puede realizarse una vez o periódicamente. Su
         planificación y sus partes se consultan en la planificación global.
@@ -42,7 +42,7 @@ export function ContractJobsPage() {
       ) : null}
       <ul className="divide-y rounded-lg border">
         {jobs.data?.items.map((job) => (
-          <li key={job.id} className="space-y-1 p-4">
+          <li key={job.id} className="space-y-1 px-3 py-3 sm:p-4">
             <Link
               to="/contratos/$contractId"
               params={{ contractId: job.contract.id }}

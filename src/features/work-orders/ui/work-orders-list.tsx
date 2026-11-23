@@ -42,7 +42,7 @@ export function WorkOrdersList({
             <Link
               to="/trabajos/$workOrderId"
               params={{ workOrderId: order.id }}
-              className="hover:bg-muted/40 focus-visible:ring-primary grid items-center gap-3 p-4 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:px-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_1rem] lg:gap-4"
+              className="hover:bg-muted/40 focus-visible:ring-primary grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:px-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_1rem] lg:gap-4 lg:py-4"
             >
               <div className="min-w-0">
                 <p className="text-foreground text-sm font-semibold break-words">{order.title}</p>
@@ -53,7 +53,7 @@ export function WorkOrdersList({
               <div>
                 <WorkStatusBadge status={order.status} />
               </div>
-              <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
+              <div className="text-muted-foreground col-span-2 flex min-w-0 items-center gap-2 text-xs lg:col-span-1">
                 <UsersThreeIcon aria-hidden="true" className="size-4 shrink-0" />
                 <span className="break-words">
                   {order.work_team_id
@@ -66,9 +66,9 @@ export function WorkOrdersList({
                     : 'Sin equipo asignado'}
                 </span>
               </div>
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
+              <div className="text-muted-foreground col-span-2 flex min-w-0 items-center gap-2 text-xs lg:col-span-1">
                 <CalendarBlankIcon aria-hidden="true" className="size-4 shrink-0" />
-                <span className="space-y-1">
+                <span className="flex flex-wrap gap-x-2 gap-y-1 lg:block lg:space-y-1">
                   {order.planned_start_at ? (
                     <time dateTime={order.planned_start_at} className="block">
                       {dateFormat.format(new Date(order.planned_start_at))}

@@ -1,4 +1,5 @@
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { ArrowLeft, Printer } from '@phosphor-icons/react'
 
 import { companyEstimateDesign } from '@/shared/domain/document-library'
 import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
@@ -36,9 +37,14 @@ export function EstimateDraftPreview({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 print:hidden">
         <Button variant="outline" onPress={onBack}>
-          Volver a editar
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Volver
         </Button>
-        <Button onPress={print}>Imprimir o guardar PDF</Button>
+        <Button aria-label="Imprimir o guardar PDF" onPress={print}>
+          <Printer aria-hidden="true" className="size-4" />
+          <span className="sm:hidden">PDF</span>
+          <span className="max-sm:hidden">Imprimir o guardar PDF</span>
+        </Button>
       </div>
       <EstimateDesignWorkspace
         estimate={estimate}

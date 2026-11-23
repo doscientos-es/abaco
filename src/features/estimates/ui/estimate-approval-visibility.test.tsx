@@ -32,7 +32,7 @@ vi.mock('@doscientos/ui', async (original) => {
     ...ui,
     toast: Object.assign(vi.fn(), ui.toast, { success: approval.success, error: approval.error }),
     Button: (props: ComponentProps<typeof UI.Button>) => {
-      if (props.children === 'Marcar como aprobado') approval.button = props
+      if (props['aria-label'] === 'Marcar como aprobado') approval.button = props
       return <ui.Button {...props} />
     },
   }
@@ -360,5 +360,18 @@ describe('acceso a la aprobación del presupuesto', () => {
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
     expect(html).not.toContain('Detalles de aprobación y envío')
     expect(html).not.toContain('Correo: sin confirmación')
+  })
+
+  it('keeps published details readable and document actions accessible on mobile', () => {
+    state.status = 'sent'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('aria-label="Resumen del presupuesto"')
+    expect(html).toContain('Trabajo')
+    expect(html).toContain('Cliente')
+    expect(html).toContain('2026-12-01')
+    expect(html).toContain('aria-label="Enviar por email"')
+    expect(html).toContain('aria-label="Imprimir o guardar PDF"')
+    expect(html).toContain('aria-label="Páginas del presupuesto"')
+    expect(html).toContain('max-h-[65dvh]')
   })
 })

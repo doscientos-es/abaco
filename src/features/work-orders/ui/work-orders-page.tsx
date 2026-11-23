@@ -94,13 +94,15 @@ function LegacyWorkOrdersPage() {
   return (
     <div className="space-y-4">
       <section aria-label="Filtros de trabajos" className="space-y-2">
-        <div className="grid gap-2 sm:max-w-2xl sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:max-w-2xl">
           <SelectField
             label="Equipo de trabajo"
+            hideLabel
+            className="min-w-0"
             isDisabled={teams.isPending || teams.isError}
             value={search.equipo ?? ''}
             options={[
-              { value: '', label: 'Todos los equipos' },
+              { value: '', label: 'Equipos' },
               { value: 'unassigned', label: 'Sin equipo asignado' },
               ...(teams.data ?? []).map((team) => ({
                 value: team.id,
@@ -113,9 +115,11 @@ function LegacyWorkOrdersPage() {
           />
           <SelectField
             label="Estado"
+            hideLabel
+            className="min-w-0"
             value={search.estado ?? ''}
             options={[
-              { value: '', label: 'Todos los estados' },
+              { value: '', label: 'Estados' },
               ...Object.entries(workStatusLabels).map(([value, label]) => ({ value, label })),
             ]}
             onChange={(value) =>

@@ -9,7 +9,7 @@ import {
   PageHeaderHeading,
   PageHeaderTitle,
 } from '@doscientos/ui'
-import { Eye } from '@phosphor-icons/react'
+import { CheckCircle, Eye } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
@@ -67,8 +67,17 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
   const { copyPublicLink, sendByEmail, sendByWhatsapp, approve, acceptingManually } = actions
 
   const approvalButton = canApprove ? (
-    <Button variant="outline" isDisabled={acceptingManually} onPress={() => void approve()}>
-      {acceptingManually ? 'Aprobando…' : 'Marcar como aprobado'}
+    <Button
+      variant="outline"
+      aria-label={acceptingManually ? 'Aprobando presupuesto' : 'Marcar como aprobado'}
+      className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+      isDisabled={acceptingManually}
+      onPress={() => void approve()}
+    >
+      <CheckCircle aria-hidden="true" className="size-4 shrink-0" />
+      <span className="max-sm:sr-only">
+        {acceptingManually ? 'Aprobando…' : 'Marcar como aprobado'}
+      </span>
     </Button>
   ) : null
 
@@ -113,18 +122,23 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
         <PageHeaderActions>
           {approvalButton}
           {!creation ? (
-            <Button onPress={() => void sendByEmail()}>
-              <span className="inline-flex items-center gap-2">
-                {fieldIcons.mail}
-                Enviar por email
-              </span>
+            <Button
+              aria-label="Enviar por email"
+              className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+              onPress={() => void sendByEmail()}
+            >
+              {fieldIcons.mail}
+              <span className="max-sm:sr-only">Enviar por email</span>
             </Button>
           ) : null}
-          <Button variant="outline" onPress={() => setPreview(true)}>
-            <span className="inline-flex items-center gap-2">
-              <Eye aria-hidden="true" className="size-4" />
-              Diseño y vista previa
-            </span>
+          <Button
+            variant="outline"
+            aria-label="Diseño y vista previa"
+            className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+            onPress={() => setPreview(true)}
+          >
+            <Eye aria-hidden="true" className="size-4" />
+            <span className="max-sm:sr-only">Diseño y vista previa</span>
           </Button>
           {!creation ? (
             <EstimateOptionsMenu

@@ -29,17 +29,27 @@ export function EstimateDesignWorkspace({
       />
     </DocumentPreview>
   )
-  if (!controls) return preview
+  if (!controls)
+    return (
+      <section
+        aria-label="Páginas del presupuesto"
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrollable preview needs keyboard focus.
+        tabIndex={0}
+        className="focus-visible:outline-ring max-h-[65dvh] min-w-0 overflow-auto rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 sm:max-h-none sm:overflow-visible print:max-h-none print:overflow-visible"
+      >
+        {preview}
+      </section>
+    )
 
   return (
     <div className="@container print:[container-type:normal]">
       <div className="grid min-w-0 items-start gap-5 @min-[43rem]:grid-cols-[minmax(17rem,30%)_minmax(0,1fr)] print:block">
-        <div className="min-w-0 print:hidden">{controls}</div>
+        <div className="order-2 min-w-0 @min-[43rem]:order-1 print:hidden">{controls}</div>
         <section
           aria-label="Páginas del presupuesto"
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrollable preview needs keyboard focus.
           tabIndex={0}
-          className="focus-visible:outline-ring min-w-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 @min-[43rem]:sticky @min-[43rem]:top-4 @min-[43rem]:max-h-[min(72dvh,52rem)] @min-[43rem]:overflow-auto print:static print:max-h-none print:overflow-visible"
+          className="focus-visible:outline-ring order-1 max-h-[65dvh] min-w-0 overflow-auto rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 @min-[43rem]:sticky @min-[43rem]:top-4 @min-[43rem]:order-2 @min-[43rem]:max-h-[min(72dvh,52rem)] print:static print:max-h-none print:overflow-visible"
         >
           {preview}
         </section>

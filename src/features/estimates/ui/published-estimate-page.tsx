@@ -7,6 +7,7 @@ import {
   PageHeaderTitle,
   toast,
 } from '@doscientos/ui'
+import { EnvelopeSimple, Printer } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState, type ReactNode } from 'react'
@@ -115,7 +116,7 @@ export function PublishedEstimatePage({
   const { automaticContract, conversionDestination } = snapshot.estimate
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-5 sm:space-y-8">
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>
@@ -150,11 +151,23 @@ export function PublishedEstimatePage({
               Abrir contrato
             </Link>
           ) : null}
-          <Button variant="outline" onPress={() => void actions.sendByEmail()}>
-            Enviar por email
+          <Button
+            variant="outline"
+            aria-label="Enviar por email"
+            className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+            onPress={() => void actions.sendByEmail()}
+          >
+            <EnvelopeSimple aria-hidden="true" className="size-4" />
+            <span className="max-sm:sr-only">Enviar por email</span>
           </Button>
-          <Button variant="outline" onPress={print}>
-            Imprimir o guardar PDF
+          <Button
+            variant="outline"
+            aria-label="Imprimir o guardar PDF"
+            className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+            onPress={print}
+          >
+            <Printer aria-hidden="true" className="size-4" />
+            <span className="max-sm:sr-only">Imprimir o guardar PDF</span>
           </Button>
           <EstimateOptionsMenu
             estimateId={estimateId}
@@ -213,6 +226,23 @@ export function PublishedEstimatePage({
           acredita el contenido exacto del envío original.
         </p>
       ) : null}
+      <section
+        aria-label="Resumen del presupuesto"
+        className="border-border bg-card grid min-w-0 gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3 sm:gap-4 sm:p-4"
+      >
+        <div className="min-w-0">
+          <span className="text-muted-foreground block text-xs">Título</span>
+          <p className="font-medium break-words">{snapshot.estimate.title}</p>
+        </div>
+        <div className="min-w-0">
+          <span className="text-muted-foreground block text-xs">Cliente</span>
+          <p className="break-words">{snapshot.client?.name ?? 'Cliente no disponible'}</p>
+        </div>
+        <div>
+          <span className="text-muted-foreground block text-xs">Válido hasta</span>
+          <p>{snapshot.estimate.validUntil || 'Sin fecha'}</p>
+        </div>
+      </section>
       <EstimateDesignWorkspace
         estimate={snapshot.estimate}
         client={snapshot.client}

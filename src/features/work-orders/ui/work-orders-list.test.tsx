@@ -73,6 +73,14 @@ describe('WorkOrdersList', () => {
     expect(html.match(/[0-9]{2}:[0-9]{2}/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('uses a compact mobile layout without hiding work details', () => {
+    const html = render()
+    expect(html).toContain('grid-cols-[minmax(0,1fr)_auto]')
+    expect(html).toContain('Mantenimiento')
+    expect(html).toContain('Hasta')
+    expect(html).toContain('Programado')
+  })
+
   it('explicitly identifies missing assignments instead of showing blank cells', () => {
     const html = render({ work_team_id: null, planned_start_at: null, planned_end_at: null })
     expect(html).toContain('Sin equipo asignado')
