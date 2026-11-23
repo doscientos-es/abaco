@@ -154,6 +154,32 @@ describe('PaymentHistory', () => {
     expect(render()).toContain('Factura aún no disponible')
   })
 
+  it('does not invent the card and referral breakdown for older payment records', () => {
+    const payment: Payment = {
+      id: 'paid',
+      order: '1234TEST',
+      plan: 'solo',
+      period: 'month',
+      kind: 'first',
+      vatPercent: 21,
+      netCents: 2000,
+      amountCents: 2420,
+      chargedCents: null,
+      referralCreditCents: null,
+      status: 'succeeded',
+      createdAt: new Date('2026-11-01'),
+      settledAt: null,
+      invoiceNumber: null,
+      invoicePortalUrl: null,
+    }
+    query.mockReturnValue({ data: [payment], isPending: false, isError: false })
+    render()
+    button.mock.calls.find(([props]) => props.children === 'Justificante')?.[0].onPress()
+    const receipt = download.mock.calls[0]?.[1] as string
+    expect(receipt).not.toContain('Saldo de referidos aplicado')
+    expect(receipt).not.toContain('Pagado con tarjeta')
+  })
+
   it('keeps the end date visible for an expired trial', () => {
     query.mockReturnValue({ data: [], isPending: false, isError: false, fetchStatus: 'idle' })
 
