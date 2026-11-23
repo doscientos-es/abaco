@@ -32,6 +32,16 @@ export default async function handler(request: IncomingMessage, response: Server
     const actor = { tenantId, userId: data.user.id }
     if (!(await canManageStripe(env.admin, actor)))
       return reply(response, 403, { error: 'forbidden' })
+    const action = input && typeof input === 'object' && 'action' in input ? input.action : 'start'
+    if (action === 'status') {
+      const { data: connected, error: statusError } = await env.admin.rpc(
+        'stripe_connect_account_exists',
+        { p_tenant_id: tenantId, p_user_id: actor.userId, p_livemode: env.config.liveMode },
+      )
+      if (statusError || typeof connected !== 'boolean') throw new Error('Status unavailable')
+      return reply(response, 200, { connected, liveMode: env.config.liveMode })
+    }
+    if (action !== 'start') return reply(response, 400, { error: 'invalid_input' })
     const url = await beginStripeAuthorization(
       actor,
       env.config,

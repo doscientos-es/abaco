@@ -31,6 +31,15 @@ describe('Stripe account persistence migration', () => {
       'utf8',
     )
     await db.exec(migration)
+    await db.exec(
+      await readFile(
+        new URL(
+          '../../supabase/migrations/20261123100000_stripe_connect_status.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
     await db.query('insert into public.tenants values ($1), ($2)', [tenantA, tenantB])
     await db.query('insert into auth.users values ($1), ($2), ($3)', [adminA, adminB, viewer])
     await db.query(
@@ -72,6 +81,16 @@ describe('Stripe account persistence migration', () => {
       ])
     await expect(connect(tenantA, viewer, 'acct_Test')).rejects.toMatchObject({ code: '42501' })
     await connect(tenantA, adminA, 'acct_Test')
+    const status = (tenant: string, user: string, liveMode: boolean) =>
+      db.query<{ connected: boolean }>(
+        'select public.stripe_connect_account_exists($1, $2, $3) as connected',
+        [tenant, user, liveMode],
+      )
+    expect((await status(tenantA, adminA, false)).rows[0]?.connected).toBe(true)
+    expect((await status(tenantA, adminA, true)).rows[0]?.connected).toBe(false)
+    expect((await status(tenantB, adminB, false)).rows[0]?.connected).toBe(false)
+    await expect(status(tenantA, adminB, false)).rejects.toMatchObject({ code: '42501' })
+    await expect(status(tenantA, viewer, false)).rejects.toMatchObject({ code: '42501' })
     await connect(tenantA, adminA, 'acct_Test')
     await expect(connect(tenantB, adminB, 'acct_Test')).rejects.toMatchObject({ code: '23505' })
     await expect(connect(tenantA, adminA, 'acct_Other')).rejects.toMatchObject({ code: '23505' })
@@ -82,6 +101,9 @@ describe('Stripe account persistence migration', () => {
     )
     await db.exec('set role service_role')
     await expect(connect(tenantA, adminA, 'acct_Test')).rejects.toMatchObject({ code: '42501' })
+    await db.exec('reset role')
+    await db.exec('set role authenticated')
+    await expect(status(tenantA, adminA, false)).rejects.toMatchObject({ code: '42501' })
     await db.exec('reset role')
   })
 })

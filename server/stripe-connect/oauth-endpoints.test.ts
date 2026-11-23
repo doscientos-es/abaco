@@ -110,7 +110,7 @@ describe('Stripe OAuth HTTP endpoints', () => {
     )
     expect(finish.statusCode).toBe(303)
     expect(finish.header('Location')).toBe(
-      'https://app.example.test/ajustes?tab=operativa&stripe=connected',
+      'https://app.example.test/ajustes?tab=integraciones&stripe=connected',
     )
     expect(mocks.rpc).toHaveBeenCalledWith('consume_stripe_connect_oauth_state', {
       p_state_hash: hash,
@@ -148,6 +148,23 @@ describe('Stripe OAuth HTTP endpoints', () => {
     )
     expect(result.header('Location')).toContain('stripe=error')
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('reports only the authorized tenant connection in the configured mode', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: true, error: null })
+    const result = await request(
+      authorize,
+      'POST',
+      { origin: 'https://app.example.test', authorization: 'Bearer test-only' },
+      JSON.stringify({ tenantId, action: 'status' }),
+    )
+    expect(result.statusCode).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('stripe_connect_account_exists', {
+      p_tenant_id: tenantId,
+      p_user_id: userId,
+      p_livemode: false,
+    })
+    expect(result.end).toHaveBeenCalledWith(expect.stringContaining('"connected":true'))
   })
 
   it('does not clear the pending state cookie for an unrelated callback', async () => {

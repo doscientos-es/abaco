@@ -88,7 +88,7 @@ export function redirectToSettings(
   result: 'connected' | 'error',
 ) {
   response.statusCode = 303
-  response.setHeader('Location', `${origin}/ajustes?tab=operativa&stripe=${result}`)
+  response.setHeader('Location', `${origin}/ajustes?tab=integraciones&stripe=${result}`)
   response.setHeader('Cache-Control', 'no-store')
   response.setHeader('Referrer-Policy', 'no-referrer')
   response.end()

@@ -15,6 +15,7 @@ import { version } from '../../../../package.json'
 import { patchTenant } from '../application/settings-actions'
 import { ChangelogSection } from './changelog-section'
 import { CompanyTab, OperatingDefaultsTab } from './company-tab'
+import { GoogleCalendarSettings } from './google-calendar-settings'
 import {
   companyFields,
   companySettingsPatch,
@@ -25,15 +26,24 @@ import {
   toForm,
   type Form,
 } from './settings-form'
+import { StripeConnectSettings } from './stripe-connect-settings'
 import { AccountSettings } from './user-settings-page'
 
-export type SettingsTab = 'empresa' | 'operativa' | 'cuenta' | 'interfaz' | 'plan' | 'novedades'
+export type SettingsTab =
+  | 'empresa'
+  | 'operativa'
+  | 'cuenta'
+  | 'interfaz'
+  | 'integraciones'
+  | 'plan'
+  | 'novedades'
 
 const labels: Record<SettingsTab, string> = {
   empresa: 'Empresa',
   operativa: 'Presupuestos y facturas',
   cuenta: 'Mi cuenta',
   interfaz: 'Interfaz',
+  integraciones: 'Integraciones',
   plan: 'Suscripción de Ábaco',
   novedades: 'Novedades',
 }
@@ -51,7 +61,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
   const [saved, setSaved] = useState(false)
 
   const canPlan = Boolean(session?.tenantId && session.role === 'admin')
-  const allowed: SettingsTab[] = ['empresa', 'operativa', 'cuenta', 'interfaz']
+  const allowed: SettingsTab[] = ['empresa', 'operativa', 'cuenta', 'interfaz', 'integraciones']
   if (canPlan) allowed.push('plan')
   allowed.push('novedades')
   const tab = allowed.find((id) => id === requested) ?? 'empresa'
@@ -108,6 +118,12 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       {tab === 'operativa' ? <OperatingDefaultsTab form={form} set={set} tenant={tenant} /> : null}
       {tab === 'cuenta' ? <AccountSettings /> : null}
       {tab === 'interfaz' ? <InterfaceSettings /> : null}
+      {tab === 'integraciones' ? (
+        <div className="space-y-5">
+          <StripeConnectSettings tenantId={tenant.id} />
+          <GoogleCalendarSettings />
+        </div>
+      ) : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
       ) : null}
