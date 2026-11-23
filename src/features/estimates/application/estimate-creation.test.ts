@@ -20,7 +20,7 @@ import {
 } from '@/shared/store/supabase-mappers'
 
 import { changeSectionPrice } from '../domain/estimate-section-price'
-import { buildEstimateDraft, newEstimateError } from '../domain/new-estimate'
+import { buildEstimateDraft, estimatePurposePatch, newEstimateError } from '../domain/new-estimate'
 import { createEstimate, patchEstimate, submitEstimateDraft } from './estimate-actions'
 
 const initial = (): TenantData => ({
@@ -76,6 +76,32 @@ function completeDraft(): Estimate {
 const saved = () => vi.waitFor(() => expect(getSaveStatus().state).toBe('saved'))
 
 describe('explicit estimate creation', () => {
+  it('persists distinct installation and maintenance routes without changing existing estimates', async () => {
+    const installation = {
+      ...completeDraft(),
+      ...estimatePurposePatch('work'),
+    }
+    submitEstimateDraft(installation)
+    await saved()
+    const row = estimateToRow(installation)
+    expect(row).toMatchObject({
+      conversion_destination: 'work',
+      automatic_contract: false,
+      contract_billing_frequency: 'once',
+    })
+    expect(estimateFromRow({ ...row, estimate_lines: [], estimate_milestones: [] })).toMatchObject({
+      conversionDestination: 'work',
+      automaticContract: false,
+      contractBillingFrequency: 'once',
+    })
+    expect(estimatePurposePatch('contract')).toEqual({
+      conversionDestination: 'contract',
+      automaticContract: true,
+      contractBillingFrequency: 'monthly',
+    })
+    expect(completeDraft()).toMatchObject(estimatePurposePatch('contract'))
+  })
+
   it('copies a named default from the company library into the new draft', () => {
     const id = newId()
     const design = {

@@ -47,19 +47,21 @@ export function EstimateSectionPriceEditor({
             }}
           />
         </FormField>
-        <SelectField
-          label="Periodicidad del precio"
-          value={frequency}
-          options={Object.entries(contractBillingLabels).map(([value, label]) => ({
-            value,
-            label,
-          }))}
-          onChange={(value) =>
-            patchEstimate(estimate.id, {
-              contractBillingFrequency: value as ContractBillingFrequency,
-            })
-          }
-        />
+        {estimate.conversionDestination === 'contract' ? (
+          <SelectField
+            label="Periodicidad del precio"
+            value={frequency}
+            options={Object.entries(contractBillingLabels).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            onChange={(value) =>
+              patchEstimate(estimate.id, {
+                contractBillingFrequency: value as ContractBillingFrequency,
+              })
+            }
+          />
+        ) : null}
       </div>
       {error ? (
         <p role="alert" className="text-destructive text-sm">
@@ -72,7 +74,9 @@ export function EstimateSectionPriceEditor({
         </p>
       ) : null}
       <p className="text-muted-foreground text-xs">
-        La periodicidad se aplica a todo el presupuesto.
+        {estimate.conversionDestination === 'contract'
+          ? 'La periodicidad se aplica a todo el presupuesto.'
+          : 'El importe corresponde a la obra completa, no a una cuota periódica.'}
         {estimate.discountType !== 'none'
           ? ' Introduce el precio antes del descuento global; la redacción incluye el descuento aplicado.'
           : ''}

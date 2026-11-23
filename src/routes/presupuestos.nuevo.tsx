@@ -9,6 +9,7 @@ export const Route = createFileRoute('/presupuestos/nuevo')({
     clientId: typeof search.clientId === 'string' ? search.clientId : '',
     title: typeof search.title === 'string' ? search.title : '',
     format: search.format === 'table' ? ('table' as const) : ('sections' as const),
+    purpose: search.purpose === 'work' ? ('work' as const) : ('contract' as const),
   }),
   component: CreateRoute,
 })

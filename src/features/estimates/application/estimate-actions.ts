@@ -86,6 +86,7 @@ export function duplicateEstimate(id: string): string | null {
       publicToken: _token,
       respondedAt: _at,
       respondedBy: _by,
+      respondedSignature: _signature,
       emailSentAt: _emailSentAt,
       ...base
     } = source
@@ -100,8 +101,12 @@ export function duplicateEstimate(id: string): string | null {
       id: created,
       number: formatEstimateNumber(data.tenant.nextEstimateNumber, new Date().getFullYear()),
       status: 'draft',
-      conversionDestination: 'contract',
-      automaticContract: true,
+      conversionDestination: source.conversionDestination ?? 'work',
+      automaticContract: source.conversionDestination === 'contract',
+      contractBillingFrequency:
+        source.conversionDestination === 'contract'
+          ? (source.contractBillingFrequency ?? 'monthly')
+          : 'once',
       createdAt: new Date().toISOString().slice(0, 10),
       // Fresh ids: rows are upserted by id, so reusing them would move the originals' children.
       lines,

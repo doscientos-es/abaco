@@ -8,6 +8,7 @@ import type { Client, Estimate } from '@/shared/domain/types'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 
+import { estimatePurposePatch } from '../domain/new-estimate'
 import { useEstimateDraft, usePatchEstimate } from './estimate-draft-context'
 
 export function EstimateDraftDetails({
@@ -83,29 +84,26 @@ export function EstimateDraftDetails({
             value={estimate.validUntil}
             onChange={(validUntil) => patchEstimate(estimate.id, { validUntil })}
           />
-          {!estimate.automaticContract ? (
-            <SelectField
-              label="Destino tras la aceptación"
-              className={
-                estimate.conversionDestination === 'contract' ? '' : '@min-[44rem]:col-span-2'
+          <SelectField
+            label="Tipo de presupuesto"
+            value={estimate.conversionDestination ?? 'work'}
+            options={[
+              { value: 'work', label: 'Instalación · obra puntual' },
+              { value: 'contract', label: 'Mantenimiento · con contrato' },
+            ]}
+            onChange={(purpose) => {
+              if (purpose === 'work' || purpose === 'contract') {
+                patchEstimate(estimate.id, estimatePurposePatch(purpose))
               }
-              value={estimate.conversionDestination ?? 'work'}
-              options={[
-                { value: 'work', label: 'Trabajo' },
-                { value: 'contract', label: 'Contrato recurrente' },
-              ]}
-              onChange={(conversionDestination) => {
-                if (conversionDestination === 'work' || conversionDestination === 'contract') {
-                  patchEstimate(estimate.id, { conversionDestination })
-                }
-              }}
-            />
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              Al aceptarse se crea automáticamente el contrato en borrador, con cada partida como
-              trabajo pendiente de configurar.
-            </p>
-          )}
+            }}
+          />
+          <p className="text-muted-foreground text-sm @min-[44rem]:col-span-2">
+            {estimate.conversionDestination !== 'contract'
+              ? 'Obra puntual con precio total y pagos en plazos. Al aprobarla podrás crear el trabajo; no se crea ningún contrato.'
+              : estimate.automaticContract
+                ? 'Al aprobarlo se crea un contrato en borrador. Podrás configurar su inicio, fin opcional y trabajos antes de activarlo.'
+                : 'Al aprobarlo podrás crear y configurar el contrato de mantenimiento.'}
+          </p>
         </CardContent>
       </Card>
       <ClientFormDialog

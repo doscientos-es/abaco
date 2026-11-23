@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => ({
   error: vi.fn(),
   clientId: '',
   format: 'sections' as 'sections' | 'table',
+  purpose: 'contract' as 'work' | 'contract',
+  purposeSelect: null as { onChange: (value: string) => void } | null,
   picker: null as {
     value: 'sections' | 'table'
     onChange: (value: 'sections' | 'table') => void
@@ -58,6 +60,13 @@ vi.mock('react', async (original) => ({
         mocks.format,
         (value: 'sections' | 'table') => {
           mocks.format = value
+        },
+      ]
+    if (index === 8)
+      return [
+        mocks.purpose,
+        (value: 'work' | 'contract') => {
+          mocks.purpose = value
         },
       ]
     return [index === 6 ? mocks.target : initial, index === 6 ? mocks.setTarget : vi.fn()]
@@ -102,7 +111,13 @@ vi.mock('@/shared/store/store', () => ({
 }))
 vi.mock('../application/estimate-actions', () => ({ deleteEstimate: mocks.remove }))
 vi.mock('@/features/clients/ui/client-form-dialog', () => ({ ClientFormDialog: () => null }))
-vi.mock('@/shared/ui/form', () => ({ SelectField: () => null, TextField: () => null }))
+vi.mock('@/shared/ui/form', () => ({
+  SelectField: (props: { label: string; onChange: (value: string) => void }) => {
+    if (props.label === 'Tipo de presupuesto') mocks.purposeSelect = props
+    return null
+  },
+  TextField: () => null,
+}))
 vi.mock('@/shared/ui/form-dialog', () => ({
   FormDialog: (props: NonNullable<typeof mocks.form> & { children: ReactNode }) => {
     mocks.form = props
@@ -140,6 +155,8 @@ beforeEach(() => {
   mocks.dialog = null
   mocks.clientId = ''
   mocks.format = 'sections'
+  mocks.purpose = 'contract'
+  mocks.purposeSelect = null
   mocks.picker = null
   mocks.form = null
   mocks.invoices = []
@@ -165,7 +182,20 @@ describe('estimate list actions', () => {
     mocks.form?.onSubmit()
     expect(mocks.navigate).toHaveBeenCalledWith({
       to: '/presupuestos/nuevo',
-      search: { clientId: 'client', title: '', format },
+      search: { clientId: 'client', title: '', format, purpose: 'contract' },
+    })
+  })
+
+  it('passes the selected installation purpose to the creation form', () => {
+    mocks.clientId = 'client'
+    renderToStaticMarkup(<EstimateListPage />)
+    mocks.purposeSelect?.onChange('work')
+    mocks.stateIndex = 0
+    renderToStaticMarkup(<EstimateListPage />)
+    mocks.form?.onSubmit()
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/presupuestos/nuevo',
+      search: { clientId: 'client', title: '', format: 'sections', purpose: 'work' },
     })
   })
 

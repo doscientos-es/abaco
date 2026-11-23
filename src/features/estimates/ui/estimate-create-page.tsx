@@ -6,7 +6,7 @@ import type { Estimate } from '@/shared/domain/types'
 import { newId, synchronizeStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/store'
 
 import { submitEstimateDraft } from '../application/estimate-actions'
-import { buildEstimateDraft } from '../domain/new-estimate'
+import { buildEstimateDraft, type EstimatePurpose } from '../domain/new-estimate'
 import { EstimateDraftProvider } from './estimate-draft-context'
 import { EstimateEditorPage } from './estimate-editor-page'
 
@@ -14,15 +14,17 @@ export function EstimateCreatePage({
   clientId = '',
   title = '',
   format = 'sections',
+  purpose = 'contract',
 }: {
   clientId?: string
   title?: string
   format?: EstimateFormat
+  purpose?: EstimatePurpose
 }) {
   const { tenant } = useTenantData()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(() =>
-    buildEstimateDraft(tenant, clientId, title, format, newId),
+    buildEstimateDraft(tenant, clientId, title, format, newId, new Date(), purpose),
   )
   const draftRef = useRef(draft)
   const submitted = useRef(false)

@@ -162,6 +162,20 @@ describe('simple price section editor', () => {
     expect(mocks.patch).toHaveBeenCalledWith('estimate', { contractBillingFrequency: 'yearly' })
   })
 
+  it('shows a one-off total without a recurring price selector for an installation', () => {
+    const installation = {
+      ...estimate,
+      conversionDestination: 'work' as const,
+      contractBillingFrequency: 'once' as const,
+    }
+    const html = renderToStaticMarkup(
+      <EstimateSectionPriceEditor estimate={installation} section={section} />,
+    )
+    expect(mocks.select).not.toHaveBeenCalled()
+    expect(html).toContain('PRESUPUESTO ÚNICO')
+    expect(html).toContain('obra completa')
+  })
+
   it('saves the exact price even when reverse VAT rounding differs', () => {
     renderToStaticMarkup(<EstimateSectionPriceEditor estimate={estimate} section={section} />)
     priceProps().onCommit(21_633)

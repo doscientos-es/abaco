@@ -13,7 +13,10 @@ describe('estimate creation route', () => {
       clientId: 'client',
       title: 'Oferta',
       format: 'table',
+      purpose: 'contract',
     })
+    expect(validate({ purpose: 'work' })).toMatchObject({ purpose: 'work' })
+    expect(validate({ purpose: 'invalid' })).toMatchObject({ purpose: 'contract' })
     expect(validate({ format: 'sections' })).toMatchObject({ format: 'sections' })
     expect(validate({ format: 'invalid' })).toMatchObject({ format: 'sections' })
     expect(validate({})).toMatchObject({ format: 'sections' })

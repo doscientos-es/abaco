@@ -35,12 +35,14 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { deleteEstimate } from '../application/estimate-actions'
+import type { EstimatePurpose } from '../domain/new-estimate'
 import { EstimateFormatPicker } from './estimate-format-picker'
 
 const estimateColumns = [
   { id: 'number', label: 'Nº' },
   { id: 'title', label: 'Obra', required: true },
   { id: 'client', label: 'Cliente' },
+  { id: 'purpose', label: 'Tipo' },
   { id: 'status', label: 'Estado' },
   { id: 'total', label: 'Total', headClassName: 'text-right' },
 ] as const
@@ -82,22 +84,28 @@ export function EstimateListPage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<'all' | EstimateStatus>('all')
   const [query, setQuery] = useState('')
-  const visible = estimates.filter((e) => {
-    const client = clients.find((c) => c.id === e.clientId)
-    const statusLabel = statusLabels[e.status]
-    return (
-      (status === 'all' || e.status === status) &&
-      fuzzySearch(query, e.number, e.title, statusLabel, client?.name ?? '')
-    )
-  })
-  const pager = usePagination(visible, `${status}|${query.trim().toLocaleLowerCase('es')}`)
-
   const [creating, setCreating] = useState(false)
   const [newClientId, setNewClientId] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [creatingClient, setCreatingClient] = useState(false)
   const [toDelete, setToDelete] = useState<Estimate | null>(null)
   const [newFormat, setNewFormat] = useState<EstimateFormat>('sections')
+  const [newPurpose, setNewPurpose] = useState<EstimatePurpose>('contract')
+  const [purpose, setPurpose] = useState<'all' | EstimatePurpose>('all')
+  const visible = estimates.filter((e) => {
+    const client = clients.find((c) => c.id === e.clientId)
+    const statusLabel = statusLabels[e.status]
+    return (
+      (status === 'all' || e.status === status) &&
+      (purpose === 'all' || (e.conversionDestination ?? 'work') === purpose) &&
+      fuzzySearch(query, e.number, e.title, statusLabel, client?.name ?? '')
+    )
+  })
+  const pager = usePagination(
+    visible,
+    `${status}|${purpose}|${query.trim().toLocaleLowerCase('es')}`,
+  )
+
   const columns = useTableColumns('presupuestos', estimateColumns)
 
   function canDeleteEstimate(estimate: Estimate) {
@@ -110,6 +118,7 @@ export function EstimateListPage() {
     setNewClientId(activeClients[0]?.id ?? '')
     setNewTitle('')
     setNewFormat('sections')
+    setNewPurpose('contract')
     setCreating(true)
   }
 
@@ -118,7 +127,7 @@ export function EstimateListPage() {
     setCreating(false)
     void navigate({
       to: '/presupuestos/nuevo',
-      search: { clientId: newClientId, title: newTitle, format: newFormat },
+      search: { clientId: newClientId, title: newTitle, format: newFormat, purpose: newPurpose },
     })
   }
 
@@ -150,13 +159,26 @@ export function EstimateListPage() {
           ]}
           onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
         />
-        {query || status !== 'all' ? (
+        <SelectField
+          label="Filtrar por tipo"
+          hideLabel
+          className="sm:w-52"
+          value={purpose}
+          options={[
+            { value: 'all', label: 'Todos los tipos' },
+            { value: 'work', label: 'Instalación' },
+            { value: 'contract', label: 'Mantenimiento' },
+          ]}
+          onChange={(value) => setPurpose(value as 'all' | EstimatePurpose)}
+        />
+        {query || status !== 'all' || purpose !== 'all' ? (
           <Button
             variant="ghost"
             size="sm"
             onPress={() => {
               setQuery('')
               setStatus('all')
+              setPurpose('all')
             }}
           >
             Limpiar filtros
@@ -187,6 +209,7 @@ export function EstimateListPage() {
               onPress={() => {
                 setQuery('')
                 setStatus('all')
+                setPurpose('all')
               }}
             >
               Limpiar filtros
@@ -213,6 +236,10 @@ export function EstimateListPage() {
                   <span className="text-muted-foreground block text-xs">
                     {estimate.number} ·{' '}
                     {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                    {' · '}
+                    {estimate.conversionDestination === 'contract'
+                      ? 'Mantenimiento'
+                      : 'Instalación'}
                   </span>
                   <span className="block text-lg font-semibold tabular-nums">
                     {formatEuros(estimateTotalCents(estimate))}
@@ -271,6 +298,13 @@ export function EstimateListPage() {
                       client: (
                         <TableCell>
                           {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
+                        </TableCell>
+                      ),
+                      purpose: (
+                        <TableCell>
+                          {estimate.conversionDestination === 'contract'
+                            ? 'Mantenimiento'
+                            : 'Instalación'}
                         </TableCell>
                       ),
                       status: (
@@ -383,6 +417,22 @@ export function EstimateListPage() {
           value={newTitle}
           onChange={setNewTitle}
         />
+        <SelectField
+          label="Tipo de presupuesto"
+          value={newPurpose}
+          options={[
+            { value: 'work', label: 'Instalación · obra puntual y pagos en plazos' },
+            { value: 'contract', label: 'Mantenimiento · contrato con fin opcional' },
+          ]}
+          onChange={(value) => {
+            if (value === 'work' || value === 'contract') setNewPurpose(value)
+          }}
+        />
+        <p className="text-muted-foreground text-sm sm:col-span-2">
+          {newPurpose === 'work'
+            ? 'Para una obra concreta: acuerda el precio y los plazos de pago, sin contrato de mantenimiento.'
+            : 'Al aprobar el presupuesto se creará un contrato en borrador para configurar su vigencia y trabajos.'}
+        </p>
         <EstimateFormatPicker value={newFormat} onChange={setNewFormat} />
       </FormDialog>
 

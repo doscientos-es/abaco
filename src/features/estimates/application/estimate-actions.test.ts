@@ -90,6 +90,24 @@ describe('estimate formats', () => {
     expect(copy?.sections?.[0]?.id).not.toBe(original.sections?.[0]?.id)
     expect(original.lines[0]?.id).toBe(lineId)
   })
+
+  it.each(['work', 'contract'] as const)('retains the %s route when duplicating', (purpose) => {
+    const id = createEstimate('client', 'Oferta')
+    patchEstimate(id, {
+      conversionDestination: purpose,
+      automaticContract: purpose === 'contract',
+      contractBillingFrequency: purpose === 'contract' ? 'yearly' : 'once',
+      respondedSignature: [[{ x: 0, y: 0 }]],
+    })
+    const copyId = duplicateEstimate(id)
+    const copy = state.data?.estimates.find((item) => item.id === copyId)
+    expect(copy).toMatchObject({
+      conversionDestination: purpose,
+      automaticContract: purpose === 'contract',
+      contractBillingFrequency: purpose === 'contract' ? 'yearly' : 'once',
+    })
+    expect(copy).not.toHaveProperty('respondedSignature')
+  })
 })
 
 it('removes only the selected draft and preserves published estimates', () => {

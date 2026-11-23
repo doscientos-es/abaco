@@ -6,6 +6,19 @@ import type { Estimate, Tenant } from '@/shared/domain/types'
 
 import { createEstimateSection, requiredEstimateSectionsError } from './estimate-sections'
 
+export type EstimatePurpose = 'work' | 'contract'
+
+/** The existing conversion fields are also the persisted distinction between the two proposals. */
+export function estimatePurposePatch(purpose: EstimatePurpose): Partial<Estimate> {
+  return purpose === 'work'
+    ? { conversionDestination: 'work', automaticContract: false, contractBillingFrequency: 'once' }
+    : {
+        conversionDestination: 'contract',
+        automaticContract: true,
+        contractBillingFrequency: 'monthly',
+      }
+}
+
 /** Preparing a form never reserves a number or writes to the store. */
 export function buildEstimateDraft(
   tenant: Tenant,
@@ -14,6 +27,7 @@ export function buildEstimateDraft(
   documentFormat: EstimateFormat,
   newId: () => string,
   now = new Date(),
+  purpose: EstimatePurpose = 'contract',
 ): Estimate {
   return {
     id: newId(),
@@ -32,9 +46,7 @@ export function buildEstimateDraft(
             createEstimateSection('prices', newId),
           ]
         : [],
-    conversionDestination: 'contract',
-    automaticContract: true,
-    contractBillingFrequency: 'monthly',
+    ...estimatePurposePatch(purpose),
     lines: [],
     discountType: 'none',
     discountValue: 0,
