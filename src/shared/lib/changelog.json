@@ -2,12 +2,20 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-20",
+      "date": "2026-11-23",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add payment milestones handling and validation logic",
+            "Add Stripe Connect event handling and related tests",
+            "Implement Stripe Connect webhook handler and tests",
+            "Add company profile management with validation and UI",
+            "Improve company profiles and billing navigation",
+            "Implement multi-step registration process with progress indicator",
+            "Introduce standard plan with per-person pricing model",
+            "Add referral code handling in signup and session management",
             "Add seat pricing for scale plan and update catalog",
             "Add signature handling and validation for public estimates",
             "Add client signature feature for public estimates",
@@ -113,6 +121,7 @@
         {
           "title": "Correcciones",
           "items": [
+            "Update enterprise pricing and correct test expectations",
             "Update pre-push hook to use pnpm typecheck instead of quality",
             "Order stylesheet imports",
             "Adjust search width for better layout consistency",
@@ -122,6 +131,69 @@
         }
       ],
       "changes": [
+        {
+          "sha": "6a516cda958feaef538b1d76bf195e8644f03235",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add payment milestones handling and validation logic"
+        },
+        {
+          "sha": "d0a85498b40f5357481901dd31e62c75b89f8fa6",
+          "type": "feat",
+          "scope": "stripe",
+          "breaking": false,
+          "description": "Add Stripe Connect event handling and related tests"
+        },
+        {
+          "sha": "388f4f209ddb09372e73afa1fa5031ad87218f10",
+          "type": "feat",
+          "scope": "stripe",
+          "breaking": false,
+          "description": "Implement Stripe Connect webhook handler and tests"
+        },
+        {
+          "sha": "6ec34548a3f503334d735055d1bb0850dd6855aa",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Add company profile management with validation and UI"
+        },
+        {
+          "sha": "911b6efb97cbac6184ae9f321d7a195d97e3d4fa",
+          "type": "feat",
+          "scope": "superadmin",
+          "breaking": false,
+          "description": "Improve company profiles and billing navigation"
+        },
+        {
+          "sha": "cb683a3f536f55e528eec9eddb1283f1836fb43d",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Implement multi-step registration process with progress indicator"
+        },
+        {
+          "sha": "b0bf003fe7ec87774bf9e07d76285548b3f330e1",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Introduce standard plan with per-person pricing model"
+        },
+        {
+          "sha": "e28217fc28d1f05eeb1107068e42676ea847d0c1",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add referral code handling in signup and session management"
+        },
+        {
+          "sha": "67f591addbb3912346d0d36c26ed37d789d64c05",
+          "type": "fix",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Update enterprise pricing and correct test expectations"
+        },
         {
           "sha": "344f904662a7ec9146bbd3f2b79bdce2ebcbd3bd",
           "type": "feat",
