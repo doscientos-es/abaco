@@ -166,10 +166,11 @@ export const referralOverviewQuery = (tenantId: string) =>
   queryOptions({
     queryKey: ['referral-overview', tenantId],
     staleTime: 60_000,
-    queryFn: async (): Promise<ReferralOverview> => {
+    queryFn: async (): Promise<ReferralOverview | null> => {
       const { data, error } = await createBrowserSupabaseClient().rpc('referral_summary', {
         p_tenant: tenantId,
       })
+      if (error?.code === 'PGRST202') return null
       if (error || !data) throw new Error('No se pudo cargar el saldo de referidos.')
       return data as ReferralOverview
     },
@@ -187,9 +188,9 @@ export type Payment = {
   /** Amount charged, VAT included. */
   amountCents: number
   /** Portion of the invoice actually charged to the saved card. */
-  chargedCents: number
+  chargedCents: number | null
   /** Referral balance used to settle this invoice. */
-  referralCreditCents: number
+  referralCreditCents: number | null
   netCents: number | null
   vatPercent: number
   status: PaymentStatus
@@ -209,16 +210,38 @@ export const paymentsQuery = (tenantId: string) =>
       const controller = new AbortController()
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
+        const loadPayments = async () => {
+          const client = createBrowserSupabaseClient()
+          const requestSignal = AbortSignal.any([signal, controller.signal])
+          const select = (columns: string) =>
+            client
+              .from('billing_payments')
+              .select(columns)
+              .eq('tenant_id', tenantId)
+              .order('created_at', { ascending: false })
+              .abortSignal(requestSignal)
+          const common =
+            'id, merchant_order, kind, plan, period, amount_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url'
+          const result = await select(`${common}, charge_cents, referral_credit_cents`)
+          if (
+            result.error &&
+            ['42703', 'PGRST204'].includes(result.error.code) &&
+            /charge_cents|referral_credit_cents/.test(result.error.message)
+          ) {
+            const legacy = await select(common)
+            if (legacy.error) throw legacy.error
+            return legacy.data.map((row) => ({
+              ...row,
+              charge_cents: null,
+              referral_credit_cents: null,
+            }))
+          }
+          if (result.error) throw result.error
+          return result.data
+        }
         // Also bound a stalled auth/token lookup, before Supabase starts the HTTP request.
-        const { data, error } = await Promise.race([
-          createBrowserSupabaseClient()
-            .from('billing_payments')
-            .select(
-              'id, merchant_order, kind, plan, period, amount_cents, charge_cents, referral_credit_cents, net_cents, vat_percent, status, created_at, settled_at, invoice_number, invoice_portal_url',
-            )
-            .eq('tenant_id', tenantId)
-            .order('created_at', { ascending: false })
-            .abortSignal(AbortSignal.any([signal, controller.signal])),
+        const data = await Promise.race([
+          loadPayments(),
           new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
               reject(new Error('No se pudo cargar el historial de pagos.'))
@@ -226,7 +249,6 @@ export const paymentsQuery = (tenantId: string) =>
             }, 15_000)
           }),
         ])
-        if (error) throw new Error('No se pudo cargar el historial de pagos.')
         return data.map((row) => ({
           id: row.id,
           order: row.merchant_order,
@@ -244,6 +266,8 @@ export const paymentsQuery = (tenantId: string) =>
           invoiceNumber: row.invoice_number,
           invoicePortalUrl: row.invoice_portal_url,
         }))
+      } catch {
+        throw new Error('No se pudo cargar el historial de pagos.')
       } finally {
         clearTimeout(timer)
       }

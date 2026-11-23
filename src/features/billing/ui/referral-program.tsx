@@ -12,7 +12,7 @@ export function ReferralProgram({
   isError,
   onRetry,
 }: {
-  summary: ReferralOverview | undefined
+  summary: ReferralOverview | null | undefined
   isPending: boolean
   isError: boolean
   onRetry: () => void
@@ -40,10 +40,6 @@ export function ReferralProgram({
       <h3 id="referral-program-title" className="font-semibold">
         Invita a otra empresa
       </h3>
-      <p className="text-muted-foreground mt-1 text-sm">
-        Cuando una empresa que llegue desde tu enlace pague su suscripción, recibirás un saldo del
-        10 % de lo cobrado con tarjeta. Se aplicará automáticamente a tus próximos pagos.
-      </p>
       {isError ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <p role="alert">No se pudo cargar el saldo de referidos.</p>
@@ -51,10 +47,18 @@ export function ReferralProgram({
             Reintentar
           </Button>
         </div>
-      ) : isPending || !summary ? (
+      ) : isPending || summary === undefined ? (
         <p className="text-muted-foreground mt-3 text-sm">Cargando saldo…</p>
+      ) : summary === null ? (
+        <p className="text-muted-foreground mt-3 text-sm">
+          El programa de referidos aún no está disponible.
+        </p>
       ) : (
         <>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Cuando una empresa que llegue desde tu enlace pague su suscripción, recibirás un saldo
+            del 10 % de lo cobrado con tarjeta. Se aplicará automáticamente a tus próximos pagos.
+          </p>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">Saldo disponible</dt>

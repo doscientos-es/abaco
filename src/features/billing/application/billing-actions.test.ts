@@ -1,15 +1,21 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { describeSubscription, paymentsQuery, subscriptionQuery } from './billing-actions'
+import {
+  describeSubscription,
+  paymentsQuery,
+  referralOverviewQuery,
+  subscriptionQuery,
+} from './billing-actions'
 
-const { from, request } = vi.hoisted(() => ({
+const { from, rpc, request } = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   request: { select: vi.fn(), eq: vi.fn(), order: vi.fn(), abortSignal: vi.fn(), single: vi.fn() },
 }))
 
 vi.mock('@/shared/lib/supabase/client', () => ({
-  createBrowserSupabaseClient: () => ({ from }),
+  createBrowserSupabaseClient: () => ({ from, rpc }),
 }))
 
 describe('describeSubscription', () => {
@@ -89,6 +95,12 @@ describe('paymentsQuery', () => {
           plan: 'solo',
           period: 'month',
           amount_cents: 2420,
+          charge_cents: 2420,
+          referral_credit_cents: 0,
+          net_cents: 2000,
+          vat_percent: 21,
+          invoice_number: null,
+          invoice_portal_url: null,
           status: 'succeeded',
           created_at: '2026-10-14T10:00:00Z',
           settled_at: '2026-10-14T10:01:00Z',
@@ -105,11 +117,53 @@ describe('paymentsQuery', () => {
         plan: 'solo',
         period: 'month',
         amountCents: 2420,
+        chargedCents: 2420,
+        referralCreditCents: 0,
+        netCents: 2000,
+        vatPercent: 21,
+        invoiceNumber: null,
+        invoicePortalUrl: null,
         status: 'succeeded',
         createdAt: new Date('2026-10-14T10:00:00Z'),
         settledAt: new Date('2026-10-14T10:01:00Z'),
       },
     ])
+  })
+
+  it('loads payments when referral columns are absent without inventing a payment breakdown', async () => {
+    request.abortSignal
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: '42703', message: 'column billing_payments.charge_cents does not exist' },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'p',
+            merchant_order: '1234TEST',
+            kind: 'first',
+            plan: 'solo',
+            period: 'month',
+            amount_cents: 2420,
+            net_cents: 2000,
+            vat_percent: 21,
+            status: 'succeeded',
+            created_at: '2026-10-14T10:00:00Z',
+            settled_at: null,
+            invoice_number: null,
+            invoice_portal_url: null,
+          },
+        ],
+        error: null,
+      })
+    const result = await client.fetchQuery(paymentsQuery('legacy'))
+    expect(result[0]).toMatchObject({
+      amountCents: 2420,
+      chargedCents: null,
+      referralCreditCents: null,
+    })
+    expect(request.select).toHaveBeenCalledTimes(2)
+    expect(request.select.mock.calls[1]?.[0]).not.toContain('charge_cents')
   })
 
   it('stops a stalled request after 15 seconds and permits a fresh retry', async () => {
@@ -147,5 +201,22 @@ describe('paymentsQuery', () => {
     await pending
     expect(signal.aborted).toBe(true)
     await vi.advanceTimersByTimeAsync(15_000)
+  })
+})
+
+describe('referralOverviewQuery', () => {
+  it('reports an unavailable program when the server has no referral function', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } })
+    const client = new QueryClient()
+    await expect(client.fetchQuery(referralOverviewQuery('tenant'))).resolves.toBeNull()
+    client.clear()
+  })
+  it('does not hide other server failures', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '42501' } })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await expect(client.fetchQuery(referralOverviewQuery('tenant'))).rejects.toThrow(
+      'No se pudo cargar el saldo de referidos.',
+    )
+    client.clear()
   })
 })
