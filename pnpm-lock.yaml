@@ -53,6 +53,9 @@ importers:
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@22.20.1)
+      stripe:
+        specifier: ^23.2.0
+        version: 23.2.0(@types/node@22.20.1)
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -63,6 +66,9 @@ importers:
       '@doscientos/configs':
         specifier: ^0.1.9
         version: 0.1.9(oxlint-tsgolint@7.0.2001)(oxlint@1.81.0(oxlint-tsgolint@7.0.2001))(vitest@4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)))
+      '@electric-sql/pglite':
+        specifier: ^0.5.17
+        version: 0.5.17
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0))
@@ -248,6 +254,9 @@ packages:
     peerDependencies:
       react: '>=18.3.0'
       react-dom: '>=18.3.0'
+
+  '@electric-sql/pglite@0.5.17':
+    resolution: {integrity: sha512-8SvKjiUjaU+0O0dbxjOfN+jXz14TEqDWbwDkYOW1aQ11y/ph2JvFVI27ABBo5nfw+ZfSqy4hKCNlbnbB1TDE+g==}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -2128,6 +2137,15 @@ packages:
   stringify-entities@4.0.4:
     resolution: {integrity: sha512-IwfBptatlO+QCJUo19AqvrPNqlVMpW9YEL2LIVY+Rpv2qsjCGxaDLNRgeGsQWJhfItebuJhsGSLjaBbNSQ+ieg==}
 
+  stripe@23.2.0:
+    resolution: {integrity: sha512-0W0J4yA9qFO2rnF61v8Y62OiO2SmAR+Cv04VJaFUMpCxiq8lG5bxEYbeSMSpMDR9ofFZGd+Z/iUIgSFbOolmUw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@types/node': '>=20'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+
   style-to-object@2.0.2:
     resolution: {integrity: sha512-QmbXPUylqU80HAgTOJeEOdbA40W9KtxmjMhQy+tq+b8F2aoh3aQLuy82hh2jm2qsC9hR9eI0+eQidTMydKcqRA==}
 
@@ -2569,6 +2587,8 @@ snapshots:
     transitivePeerDependencies:
       - '@emotion/is-prop-valid'
       - '@types/react'
+
+  '@electric-sql/pglite@0.5.17': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -4395,6 +4415,10 @@ snapshots:
     dependencies:
       character-entities-html4: 2.1.0
       character-entities-legacy: 3.0.0
+
+  stripe@23.2.0(@types/node@22.20.1):
+    optionalDependencies:
+      '@types/node': 22.20.1
 
   style-to-object@2.0.2:
     dependencies:

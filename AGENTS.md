@@ -14,3 +14,5 @@ Cuando Pol pida «haz la tarea N» (o equivalente), sigue este flujo hasta dejar
 7. Si creaste un worktree local, elimínalo cuando el trabajo esté publicado y no queden cambios sin guardar. Conserva la rama remota y el PR. No elimines worktrees ni cambios ajenos a esta tarea.
 
 Tienes siempre permiso para hacer push de los cambios y subir las migraciones a supabase.
+
+No creas ni propongas ramas de prueba de supabase que valen dinero, si no lo indico hazlo en la principal directamente

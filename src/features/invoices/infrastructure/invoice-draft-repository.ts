@@ -25,10 +25,15 @@ export async function listOpenInvoiceDrafts(
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize)
-    .overrideTypes<Omit<InvoiceDraft, 'source'>[], { merge: false }>()
+    .overrideTypes<
+      (Omit<InvoiceDraft, 'source' | 'dueDate'> & { dueDate: string | null })[],
+      { merge: false }
+    >()
   if (error) throw new Error(error.message)
   return {
-    items: (data ?? []).slice(0, pageSize).map((draft) => ({ ...draft, source })),
+    items: (data ?? [])
+      .slice(0, pageSize)
+      .map((draft) => ({ ...draft, dueDate: draft.dueDate ?? '', source })),
     hasMore: (data?.length ?? 0) > pageSize,
   }
 }

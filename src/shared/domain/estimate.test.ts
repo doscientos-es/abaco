@@ -6,9 +6,10 @@ import {
   defaultMilestones,
   formatEstimateNumber,
   milestoneAmounts,
+  paymentMilestonesError,
 } from './estimate'
 import { parseEuros } from './money'
-import type { EstimateLine, LedgerEntry } from './types'
+import type { Estimate, EstimateLine, LedgerEntry } from './types'
 
 const line = (
   kind: EstimateLine['kind'],
@@ -61,6 +62,61 @@ describe('milestoneAmounts', () => {
     const amounts = milestoneAmounts(defaultMilestones(40), 100001)
     expect(amounts.reduce((sum, m) => sum + m.amountCents, 0)).toBe(100001)
     expect(amounts[0]?.amountCents).toBe(40000)
+  })
+})
+
+describe('paymentMilestonesError', () => {
+  const estimate = {
+    conversionDestination: 'work',
+    milestones: [{ id: 'first', label: 'Primer pago', percent: 100 }],
+    lines: [line('labor', 1, 10000)],
+    vatRate: 0,
+    discountType: 'none',
+    discountValue: 0,
+  } as Estimate
+
+  it('accepts complete single and custom payment plans', () => {
+    expect(paymentMilestonesError(estimate)).toBeNull()
+    expect(
+      paymentMilestonesError({
+        ...estimate,
+        milestones: [
+          { id: 'first', label: 'Señal', percent: 33.33 },
+          { id: 'second', label: 'Final', percent: 66.67 },
+        ],
+      }),
+    ).toBeNull()
+  })
+
+  it('rejects empty, incomplete and invalid work payment plans', () => {
+    for (const milestones of [
+      [],
+      [{ id: 'first', label: 'Señal', percent: 50 }],
+      [{ id: 'first', label: ' ', percent: 100 }],
+      [{ id: 'first', label: 'Señal', percent: Number.NaN }],
+    ]) {
+      expect(paymentMilestonesError({ ...estimate, milestones })).not.toBeNull()
+    }
+  })
+
+  it('does not require milestones for contracts billed by period', () => {
+    expect(
+      paymentMilestonesError({ ...estimate, conversionDestination: 'contract', milestones: [] }),
+    ).toBeNull()
+  })
+
+  it('rejects a split whose rounded installments would exceed the agreed price', () => {
+    expect(
+      paymentMilestonesError({
+        ...estimate,
+        lines: [line('labor', 1, 1)],
+        milestones: [
+          { id: 'first', label: 'Primero', percent: 50 },
+          { id: 'second', label: 'Segundo', percent: 50 },
+          { id: 'third', label: 'Final', percent: 0 },
+        ],
+      }),
+    ).toContain('céntimos')
   })
 })
 

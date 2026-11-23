@@ -104,6 +104,19 @@ export function MilestonesEditor({
     ])
   }
 
+  function applyPaymentSplit(percentages: number[]) {
+    setMilestones(
+      percentages.map((percent, index) => ({
+        ...(estimate.milestones[index] ?? {
+          id: newId(),
+          label: `Pago ${index + 1}`,
+          description: '',
+        }),
+        percent,
+      })),
+    )
+  }
+
   function distributeEvenly() {
     const count = estimate.milestones.length
     if (count === 0) return
@@ -117,9 +130,39 @@ export function MilestonesEditor({
   }
 
   const balanced = Math.abs(percentSum - 100) < 0.001
+  const hasActivity =
+    ledger.some((entry) => entry.estimateId === estimate.id) ||
+    invoices.some((invoice) => invoice.estimateId === estimate.id)
 
   return (
     <div className="space-y-3">
+      {!readOnly ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Cómo se paga</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              isDisabled={hasActivity}
+              onPress={() => applyPaymentSplit([100])}
+            >
+              Un pago · 100 %
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              isDisabled={hasActivity}
+              onPress={() => applyPaymentSplit([50, 50])}
+            >
+              Dos pagos · 50 / 50
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            O personaliza los plazos y porcentajes. Al elegir un reparto se eliminan los plazos
+            sobrantes.
+          </p>
+        </div>
+      ) : null}
       {amounts.length > 0 ? (
         <div className="space-y-3">
           {amounts.map((m) => {

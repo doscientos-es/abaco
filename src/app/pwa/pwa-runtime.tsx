@@ -15,7 +15,8 @@ export function warnBeforeLeavingWithPendingSaves(target: Window) {
   const onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (getSaveStatus().state === 'saved') return
     event.preventDefault()
-    event.returnValue = ''
+    // Legacy browsers check `returnValue`; Reflect.set avoids throwing on getter-only EventTarget events.
+    Reflect.set(event, 'returnValue', '')
   }
   target.addEventListener('beforeunload', onBeforeUnload)
   return () => target.removeEventListener('beforeunload', onBeforeUnload)
