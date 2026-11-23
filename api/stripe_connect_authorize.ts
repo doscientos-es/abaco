@@ -2,7 +2,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { beginStripeAuthorization } from '../server/stripe-connect/oauth'
 import { oauthEnvironment, setStateCookie } from '../server/stripe-connect/oauth-http'
-import { canManageStripe, createStripeOAuthStore } from '../server/stripe-connect/oauth-store'
+import {
+  canManageStripe,
+  createStripeOAuthStore,
+  stripeAccountExists,
+} from '../server/stripe-connect/oauth-store'
 import { readJson, reply } from '../server/visit-report-pdf/http'
 
 export const config = { api: { bodyParser: false } }
@@ -34,11 +38,7 @@ export default async function handler(request: IncomingMessage, response: Server
       return reply(response, 403, { error: 'forbidden' })
     const action = input && typeof input === 'object' && 'action' in input ? input.action : 'start'
     if (action === 'status') {
-      const { data: connected, error: statusError } = await env.admin.rpc(
-        'stripe_connect_account_exists',
-        { p_tenant_id: tenantId, p_user_id: actor.userId, p_livemode: env.config.liveMode },
-      )
-      if (statusError || typeof connected !== 'boolean') throw new Error('Status unavailable')
+      const connected = await stripeAccountExists(env.admin, actor, env.config.liveMode)
       return reply(response, 200, { connected, liveMode: env.config.liveMode })
     }
     if (action !== 'start') return reply(response, 400, { error: 'invalid_input' })

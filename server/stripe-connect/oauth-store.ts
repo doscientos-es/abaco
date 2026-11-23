@@ -54,3 +54,17 @@ export async function canManageStripe(admin: SupabaseClient, actor: StripeActor)
   if (error) throw new Error('Could not verify Stripe permissions')
   return data?.role === 'owner' || data?.role === 'admin'
 }
+
+export async function stripeAccountExists(
+  admin: SupabaseClient,
+  actor: StripeActor,
+  liveMode: boolean,
+): Promise<boolean> {
+  const { data, error } = await admin.rpc('stripe_connect_account_exists', {
+    p_tenant_id: actor.tenantId,
+    p_user_id: actor.userId,
+    p_livemode: liveMode,
+  })
+  if (error || typeof data !== 'boolean') throw new Error('Stripe status unavailable')
+  return data
+}

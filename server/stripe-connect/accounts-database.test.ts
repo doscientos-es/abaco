@@ -34,7 +34,7 @@ describe('Stripe account persistence migration', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../supabase/migrations/20261123100000_stripe_connect_status.sql',
+          '../../supabase/migrations/20261123153336_stripe_connect_status.sql',
           import.meta.url,
         ),
         'utf8',
