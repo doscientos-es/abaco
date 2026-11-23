@@ -40,6 +40,10 @@ Existe un límite de 200 reservas mensuales por usuario en la base de datos. La 
 usuarios y la integración con el cobro todavía no están implementadas. No activar ni cobrar el
 módulo hasta probar todos los controles y los flujos reales.
 
+Una función interna calcula la ampliación de IA para un ciclo pagado conocido y distingue una
+reactivación ya pagada. Es solo una estimación: una futura reserva debe volver a comprobarla bajo
+el bloqueo de la empresa antes de cobrar. No crea pagos ni activa accesos.
+
 ## Estado de la integración
 
 El adaptador de servidor usa el modelo estable `gemini-3.1-flash-lite`, cuenta el contexto
