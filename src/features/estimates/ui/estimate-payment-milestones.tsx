@@ -25,7 +25,7 @@ export function EstimatePaymentMilestones({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hitos de pago</CardTitle>
+        <CardTitle>Forma y plazos de pago</CardTitle>
       </CardHeader>
       <CardContent>
         <MilestonesEditor

@@ -31,7 +31,7 @@ vi.mock('@/features/invoices/application/invoice-draft-actions', () => ({
 }))
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ invoices: mocks.invoices }),
-  newId: vi.fn(),
+  newId: () => 'new-milestone',
 }))
 vi.mock('../application/estimate-actions', () => ({ registerMilestonePayment: vi.fn() }))
 vi.mock('./estimate-draft-context', () => ({ usePatchEstimate: () => mocks.patch }))
@@ -72,6 +72,38 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.buttons = []
   mocks.invoices = []
+})
+
+describe('payment splits', () => {
+  it('sets a single 100% milestone using the existing milestone identity', () => {
+    render()
+    mocks.buttons.find((button) => button.children === 'Un pago · 100 %')?.onPress?.()
+    expect(mocks.patch).toHaveBeenCalledWith('estimate', {
+      milestones: [{ id: 'milestone', label: 'Señal', percent: 100 }],
+    })
+  })
+
+  it('sets two 50% milestones and gives the new milestone its own identity', () => {
+    render()
+    mocks.buttons.find((button) => button.children === 'Dos pagos · 50 / 50')?.onPress?.()
+    expect(mocks.patch).toHaveBeenCalledWith('estimate', {
+      milestones: [
+        { id: 'milestone', label: 'Señal', percent: 50 },
+        { id: 'new-milestone', label: 'Pago 2', description: '', percent: 50 },
+      ],
+    })
+  })
+
+  it('prevents replacing an already invoiced payment plan', () => {
+    mocks.invoices = [{ estimateId: 'estimate', milestoneId: 'milestone', number: 'F-1' }]
+    render()
+    expect(mocks.buttons.find((button) => button.children === 'Un pago · 100 %')?.isDisabled).toBe(
+      true,
+    )
+    expect(
+      mocks.buttons.find((button) => button.children === 'Dos pagos · 50 / 50')?.isDisabled,
+    ).toBe(true)
+  })
 })
 
 describe('milestone removal', () => {

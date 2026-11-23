@@ -1,6 +1,7 @@
 import { toast } from '@doscientos/ui'
 import { useRef, useState } from 'react'
 
+import { paymentMilestonesError } from '@/shared/domain/estimate'
 import type { Client, Estimate } from '@/shared/domain/types'
 import { sendDocument } from '@/shared/lib/send-document'
 import { whatsappLink } from '@/shared/lib/whatsapp'
@@ -26,6 +27,8 @@ export function useEstimateDocumentActions({
   const manualOperationId = useRef<string | null>(null)
 
   async function publishWithLink() {
+    const paymentError = estimate.status === 'draft' ? paymentMilestonesError(estimate) : null
+    if (paymentError) throw new Error(paymentError)
     const published = await publishEstimate(tenantId, estimate.id)
     return { link: `${window.location.origin}/p/${published.token}`, snapshot: published.snapshot }
   }
@@ -48,6 +51,11 @@ export function useEstimateDocumentActions({
   }
 
   async function sendByEmail() {
+    const paymentError = estimate.status === 'draft' ? paymentMilestonesError(estimate) : null
+    if (paymentError) {
+      toast.error('No se puede enviar el presupuesto', { description: paymentError })
+      return
+    }
     const sectionsError =
       estimate.status === 'draft' ? requiredEstimateSectionsError(estimate) : null
     if (sectionsError) {
@@ -94,6 +102,11 @@ export function useEstimateDocumentActions({
 
   async function approve() {
     if (!canApprove || manualAcceptanceInFlight.current) return
+    const paymentError = estimate.status === 'draft' ? paymentMilestonesError(estimate) : null
+    if (paymentError) {
+      toast.error('No se pudo aprobar el presupuesto', { description: paymentError })
+      return
+    }
     manualAcceptanceInFlight.current = true
     setAcceptingManually(true)
     manualOperationId.current ??= crypto.randomUUID()
