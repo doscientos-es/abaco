@@ -95,6 +95,21 @@ export const subscriptionQuery = (tenantId: string) =>
     },
   })
 
+/** The database is the authority for workspace access, including staff accounts. */
+export const tenantAccessQuery = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['tenant-access', tenantId],
+    staleTime: 0,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await createBrowserSupabaseClient().rpc('tenant_can_write', {
+        p_tenant: tenantId,
+      })
+      if (error || typeof data !== 'boolean')
+        throw new Error('No se pudo comprobar la suscripción.')
+      return data
+    },
+  })
+
 /** People in the company today: the only thing that decides which plan is needed. */
 export const memberCountQuery = (tenantId: string) =>
   queryOptions({

@@ -5,9 +5,10 @@ import { sessionQuery } from '@/features/auth/application/auth-actions'
 
 import { Route } from './__root'
 
-const { loadSession, hydrateStore } = vi.hoisted(() => ({
+const { loadSession, hydrateStore, tenantAccess } = vi.hoisted(() => ({
   loadSession: vi.fn(),
   hydrateStore: vi.fn(),
+  tenantAccess: vi.fn(),
 }))
 
 vi.mock('@/features/auth/infrastructure/load-session', () => ({ loadSession }))
@@ -18,6 +19,10 @@ vi.mock('@/features/auth', async () => ({
 }))
 vi.mock('@/app/app-frame', () => ({ AppFrame: () => null }))
 vi.mock('@/app/technician-frame', () => ({ UserFrame: () => null }))
+vi.mock('@/features/billing', () => ({
+  SubscriptionAccessPage: () => null,
+  tenantAccessQuery: (id: string) => ({ queryKey: ['tenant-access', id], queryFn: tenantAccess }),
+}))
 vi.mock('@/shared/store/store', () => ({
   hydrateStore,
   refreshStore: vi.fn(),
@@ -27,6 +32,7 @@ vi.mock('@/shared/store/store', () => ({
 describe('root session guard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    tenantAccess.mockResolvedValue(true)
   })
   afterEach(() => vi.unstubAllGlobals())
 
@@ -51,8 +57,9 @@ describe('root session guard', () => {
       needsWelcome: false,
     }
     queryClient.setQueryData(sessionQuery.queryKey, session)
+    queryClient.setQueryData(['tenant-access', 'company-1'], true)
     hydrateStore.mockResolvedValue(undefined)
-    await expect(visit()).resolves.toEqual({ session })
+    await expect(visit()).resolves.toEqual({ session, hasTenantAccess: true })
     expect(loadSession).not.toHaveBeenCalled()
     await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey, refetchType: 'none' })
     await expect(visit()).rejects.toThrow('Se necesita conexión')
@@ -80,11 +87,11 @@ describe('root session guard', () => {
     loadSession.mockResolvedValueOnce(null).mockResolvedValueOnce(session)
     hydrateStore.mockResolvedValue(undefined)
 
-    await expect(visit('/entrar')).resolves.toEqual({ session: null })
+    await expect(visit('/entrar')).resolves.toEqual({ session: null, hasTenantAccess: false })
     await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
     expect(queryClient.getQueryData(sessionQuery.queryKey)).toBeNull()
 
-    await expect(visit('/')).resolves.toEqual({ session })
+    await expect(visit('/')).resolves.toEqual({ session, hasTenantAccess: true })
     expect(loadSession).toHaveBeenCalledTimes(2)
     expect(hydrateStore).toHaveBeenCalledOnce()
     queryClient.clear()
@@ -137,8 +144,36 @@ describe('root session guard', () => {
         location: { pathname: path, href: path },
       } as Parameters<typeof beforeLoad>[0])
 
-    await expect(visit('/ajustes')).resolves.toEqual({ session })
+    await expect(visit('/ajustes')).resolves.toEqual({ session, hasTenantAccess: true })
     await expect(visit('/trabajos')).rejects.toMatchObject({ options: { to: '/mi-jornada' } })
+    expect(hydrateStore).not.toHaveBeenCalled()
+    queryClient.clear()
+  })
+
+  it('sends unpaid companies to the payment page without loading business data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const session = {
+      userId: 'user-1',
+      email: '',
+      fullName: '',
+      tenantId: 'company-1',
+      role: 'admin',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    tenantAccess.mockResolvedValue(false)
+    const visit = (path: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: path, href: path },
+      } as Parameters<typeof beforeLoad>[0])
+    await expect(visit('/clientes')).rejects.toMatchObject({
+      options: { to: '/ajustes', search: { tab: 'plan' } },
+    })
+    await expect(visit('/ajustes')).resolves.toEqual({ session, hasTenantAccess: false })
     expect(hydrateStore).not.toHaveBeenCalled()
     queryClient.clear()
   })

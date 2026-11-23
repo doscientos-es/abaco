@@ -11,6 +11,7 @@ import { useEffect } from 'react'
 import { AppFrame } from '@/app/app-frame'
 import { UserFrame } from '@/app/technician-frame'
 import { NoCompanyPage, rememberReferral, sessionQuery, welcomeRedirect } from '@/features/auth'
+import { SubscriptionAccessPage, tenantAccessQuery } from '@/features/billing'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
@@ -56,13 +57,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       const destination = welcomeRedirect(session.needsWelcome, path)
       if (destination) throw redirect({ to: destination, replace: true })
     }
-    // Screens read the store synchronously, so the data must be loaded before they render.
-    if (session?.role === 'admin' && !isPublicPath(path) && !isPlatformPage) {
+    let hasTenantAccess = false
+    if (
+      session?.role &&
+      session.tenantId &&
+      !isPublicPath(path) &&
+      !isPlatformPage &&
+      path !== '/nueva-contrasena'
+    ) {
+      const access = tenantAccessQuery(session.tenantId)
+      const cachedAccess = context.queryClient.getQueryState(access.queryKey)
+      if (
+        offline &&
+        (!cachedAccess || cachedAccess.isInvalidated || cachedAccess.data === undefined)
+      ) {
+        throw new Error('Se necesita conexión para comprobar la suscripción.')
+      }
+      hasTenantAccess = offline
+        ? cachedAccess?.data === true
+        : await context.queryClient.fetchQuery(access)
+      if (!hasTenantAccess && path !== '/ajustes' && path !== '/bienvenida') {
+        throw redirect({ to: '/ajustes', search: { tab: 'plan' }, replace: true })
+      }
+    }
+    // The payment screen must remain available without fetching business data.
+    if (hasTenantAccess && session?.role === 'admin' && !isPublicPath(path) && !isPlatformPage) {
       await hydrateStore()
       // Follows the company chosen in the session.
       if (session.tenantId) setActiveTenantId(session.tenantId)
     }
-    return { session }
+    return { session, hasTenantAccess }
   },
   component: RootLayout,
   errorComponent: PageError,
@@ -70,10 +94,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 })
 
 function RootLayout() {
-  const { session } = Route.useRouteContext()
+  const { session, hasTenantAccess } = Route.useRouteContext()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isPublic = isPublicPath(pathname) || pathname === '/nueva-contrasena'
-  const inOffice = session?.role === 'admin' && !isPublic && pathname !== '/superadmin'
+  const inOffice =
+    hasTenantAccess && session?.role === 'admin' && !isPublic && pathname !== '/superadmin'
 
   // Picks up changes made elsewhere (a client accepting an estimate) when the user comes back to the tab.
   useEffect(() => {
@@ -96,6 +121,7 @@ function RootLayout() {
   if (pathname === '/superadmin') return <Outlet />
   if (!session.role) return <NoCompanyPage />
   if (pathname === '/bienvenida') return <Outlet />
+  if (!hasTenantAccess) return <SubscriptionAccessPage />
   const workspaceKey = `${session.userId}:${session.tenantId}`
   if (session.role === 'user') {
     return (

@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import { fileURLToPath, URL } from 'node:url'
 
 import { createVitestConfig } from '@doscientos/configs/vitest'
@@ -9,13 +10,18 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  test: createVitestConfig({
-    include: [
-      'src/**/*.test.{ts,tsx}',
-      'server/**/*.test.{ts,tsx}',
-      'scripts/**/*.test.mjs',
-      'supabase/functions/_shared/**/*.test.ts',
-    ],
-    coverage: { include: ['src/features/**/application/**/*.ts'] },
-  }),
+  test: {
+    ...createVitestConfig({
+      include: [
+        'src/**/*.test.{ts,tsx}',
+        'server/**/*.test.{ts,tsx}',
+        'scripts/**/*.test.mjs',
+        'supabase/functions/_shared/**/*.test.ts',
+      ],
+      coverage: { include: ['src/features/**/application/**/*.ts'] },
+    }),
+    // Reuse workers while keeping each test file in its own VM context.
+    pool: 'vmForks',
+    maxWorkers: Math.min(4, availableParallelism()),
+  },
 })

@@ -3,6 +3,7 @@ export {
   billingPreviewQuery,
   paymentsQuery,
   subscriptionQuery,
+  tenantAccessQuery,
 } from './application/billing-actions'
 export type { Subscription } from './application/billing-actions'
 export {
@@ -22,3 +23,4 @@ export type { BillingTerms, CatalogRate, Interval, PaidPlan } from './domain/pla
 export { BillingSection } from './ui/billing-section'
 export { PlanBanner } from './ui/plan-banner'
 export { PricingCatalog } from './ui/pricing-catalog'
+export { SubscriptionAccessPage } from './ui/subscription-access-page'
