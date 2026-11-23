@@ -29,6 +29,7 @@ import {
   type PlatformSearch,
 } from '../domain/platform-navigation'
 import { PlatformField, PlatformSelect } from './platform-form-field'
+import { PlatformIssuer } from './platform-issuer'
 import {
   formatPlatformDate,
   invoiceStatusLabel,
@@ -72,6 +73,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
+      <PlatformIssuer userId={userId} />
       <section aria-label="Buscador de facturas" className={platformPanelClass}>
         <div className="border-border flex flex-wrap items-end gap-2 border-b p-3">
           <PlatformSearchForm
