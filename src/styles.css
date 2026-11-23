@@ -432,6 +432,10 @@ h3 {
 }
 
 @media (width < 48rem) {
+  .dashboard-key-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   /* Avoid iOS zooming the page when editing small-text form controls. */
   :is(
     input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
