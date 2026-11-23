@@ -74,7 +74,8 @@ export function EstimateSuggestionPreview({
       {complete ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-muted-foreground text-xs">
-            Revísalas antes de guardar el presupuesto.
+            Se añadirán como partidas nuevas; no sustituyen las ya añadidas. Revísalas antes de
+            guardar.
           </p>
           <Button type="button" onPress={onApply} isDisabled={disabled}>
             Añadir {complete === 1 ? '1 partida' : `${complete} partidas`}

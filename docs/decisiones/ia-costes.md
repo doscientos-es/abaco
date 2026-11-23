@@ -44,10 +44,11 @@ del adaptador no son un límite garantizado de facturación. El modelo está anu
 retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.
 
 El endpoint exige sesión y una reserva de consumo, pero la función de base de datos que debe
-autorizarla y reservarla todavía no existe: falla cerrado y no llama al modelo. Faltan la
-activación por usuario, reservas concurrentes, facturación por asiento y los dos flujos de
-interfaz. Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta
-completar esos controles.
+autorizarla y reservarla todavía no existe: falla cerrado y no llama al modelo. Hay interfaz
+de revisión para gastos y presupuestos, pero sigue inaccesible sin el control de acceso.
+Faltan la activación por usuario, las reservas concurrentes y la facturación por asiento.
+Tampoco se ha probado con una clave real. No debe exponerse a clientes hasta completar
+esos controles.
 La clave debe configurarse solo en el entorno del servidor, nunca con el prefijo `VITE_`.
 Antes de enviar documentos reales hay que revisar las condiciones de protección de datos y
 usar una cuenta de pago: el tratamiento del contenido difiere en el nivel gratuito.

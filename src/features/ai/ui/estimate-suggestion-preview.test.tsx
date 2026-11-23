@@ -27,6 +27,7 @@ describe('estimate suggestion review', () => {
     expect(html).toContain('Precio pendiente')
     expect(html).toContain('Una partida necesita más datos')
     expect(html).toContain('Añadir 1 partida')
+    expect(html).toContain('no sustituyen las ya añadidas')
   })
 
   it('never offers to apply incomplete suggestions', () => {

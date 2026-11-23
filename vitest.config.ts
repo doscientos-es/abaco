@@ -4,6 +4,8 @@ import { createVitestConfig } from '@doscientos/configs/vitest'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Tests must not load local application credentials.
+  envFile: false,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
