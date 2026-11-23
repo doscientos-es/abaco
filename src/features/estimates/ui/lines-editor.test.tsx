@@ -45,18 +45,25 @@ vi.mock('@/shared/ui/form', () => ({
     value,
     options,
     onChange,
+    className,
   }: {
     label: string
     value: string
     options: Array<{ value: string; label: string }>
     onChange: (value: string) => void
+    className?: string
   }) => {
     if (label === 'Unidad') {
       mocks.unitOptions = options
       mocks.setUnit = onChange
     }
     return (
-      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        aria-label={label}
+        className={className}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -101,6 +108,7 @@ describe('LinesEditor', () => {
     expect(markup).toContain('aria-label="Cantidad"')
     expect(markup).toContain('aria-label="Unidad"')
     expect(markup).toContain('<select aria-label="Unidad"')
+    expect(markup).toContain('estimate-line__unit')
     expect(markup).toContain('aria-label="Precio unitario"')
     expect(markup).toContain('aria-label="Descuento de la línea (%)"')
     expect(markup).toContain('aria-label="Más opciones de Pintura de paredes"')
@@ -151,6 +159,10 @@ describe('LinesEditor', () => {
     expect(css).toContain('@container estimate-lines (min-width: 46rem)')
     expect(css).toContain('minmax(10rem, 1fr)')
     expect(css).toContain('minmax(4.75rem, 0.16fr)')
+    expect(css).toContain('minmax(4.75rem, 0.16fr) 6rem')
+    expect(css).toContain('max-width: 6rem')
+    expect(css).toContain(".estimate-line__unit [data-slot='select-trigger']")
+    expect(css).toContain(".estimate-line__unit [data-slot='select-value']")
     expect(css).toContain('.estimate-line__mobile-label')
   })
 

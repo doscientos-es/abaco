@@ -228,7 +228,7 @@ export function LinesEditor({
                     value={line.unit}
                     options={lineUnitOptions(line.unit)}
                     searchable={false}
-                    className="min-w-0"
+                    className="estimate-line__unit min-w-0"
                     onChange={(unit) => updateLine(line.id, { unit })}
                   />
                 </div>
