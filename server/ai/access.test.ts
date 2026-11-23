@@ -77,7 +77,7 @@ describe('AI access reservations', () => {
     await db.query('update public.tenants set can_write=true where id=$1', [tenant])
   })
 
-  it('caps reservations atomically, even after deactivation and reactivation', async () => {
+  it('keeps the monthly cap after deactivation and reactivation', async () => {
     await db.query(
       'update app_private.ai_monthly_usage set requests=199 where tenant_id=$1 and user_id=$2',
       [tenant, user],
@@ -117,5 +117,24 @@ describe('AI access reservations', () => {
       (await db.query<{ access: boolean }>('select public.ai_my_access($1) as access', [tenant]))
         .rows[0]?.access,
     ).toBe(false)
+  })
+
+  it('allows the authenticated access check but blocks direct writes and reservations', async () => {
+    await db.query('update app_private.ai_assignments set enabled=true where user_id=$1', [user])
+    await db.query("select set_config('test.uid', $1, false)", [user])
+    await db.exec('set role authenticated')
+    try {
+      const result = await db.query<{ access: boolean }>(
+        'select public.ai_my_access($1) as access',
+        [tenant],
+      )
+      expect(result.rows[0]?.access).toBe(true)
+      await expect(reserve(user, 'receipt')).rejects.toThrow(/permission denied/i)
+      await expect(db.query('select * from app_private.ai_assignments')).rejects.toThrow(
+        /permission denied/i,
+      )
+    } finally {
+      await db.exec('reset role')
+    }
   })
 })
