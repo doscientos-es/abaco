@@ -280,7 +280,7 @@ export function SelectField({
         }}
         {...(placeholder ? { placeholder } : {})}
       >
-        <SelectTrigger className={controlClassName}>
+        <SelectTrigger {...(controlClassName ? { className: controlClassName } : {})}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

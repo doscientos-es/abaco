@@ -86,20 +86,25 @@ type CompleteLine = z.infer<typeof estimateLineSuggestionSchema> & {
   unitPriceCents: number
 }
 
+export function isCompleteEstimateSuggestion(
+  line: EstimateSuggestion['lines'][number],
+): line is CompleteLine {
+  return (
+    line.description !== null &&
+    line.kind !== null &&
+    line.unit !== null &&
+    line.quantity !== null &&
+    line.unitPriceCents !== null
+  )
+}
+
 /** Append complete suggestions without replacing manually entered prices or inventing missing values. */
 export function appendEstimateSuggestion(
   estimate: Estimate,
   suggestion: EstimateSuggestion,
   newId: () => string,
 ): { patch: Partial<Estimate>; incomplete: number } {
-  const complete = suggestion.lines.filter(
-    (line): line is CompleteLine =>
-      line.description !== null &&
-      line.kind !== null &&
-      line.unit !== null &&
-      line.quantity !== null &&
-      line.unitPriceCents !== null,
-  )
+  const complete = suggestion.lines.filter(isCompleteEstimateSuggestion)
   const incomplete = suggestion.lines.length - complete.length
   const prices = estimate.sections?.filter((section) => section.type === 'prices') ?? []
   if (

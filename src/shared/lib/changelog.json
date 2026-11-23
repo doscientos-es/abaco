@@ -8,10 +8,30 @@
         {
           "title": "Nuevas funciones",
           "items": [
+            "Improve mobile dashboard and workflows",
+            "Improve mobile workflows and referral management",
+            "Improve accessibility and UI for estimate approval",
+            "Allow payment for saved estimate with milestone",
+            "Validate milestone payment registration for drafts",
+            "Add BillingPaymentRow type and update payments query",
+            "Enhance payment and referral queries with null handling",
+            "Update estimate format descriptions and remove purpose select",
+            "Implement stripe account existence check and update migration",
+            "Add status action for Stripe connection and update tests",
+            "Update estimate line unit styling and add className",
+            "Enhance dashboard metrics and estimate status display",
+            "Add conversion destination to estimate approval test",
+            "Update estimate display based on conversion destination",
+            "Add validation for estimate purpose changes with payments",
+            "Add purpose handling for estimates and update UI",
+            "Update changelog for new features and corrections",
             "Add payment milestones handling and validation logic",
             "Add Stripe Connect event handling and related tests",
+            "Configure subscription invoice issuer",
             "Implement Stripe Connect webhook handler and tests",
+            "Prepare quarterly invoice export",
             "Add company profile management with validation and UI",
+            "Prepare subscription invoice drafts",
             "Improve company profiles and billing navigation",
             "Implement multi-step registration process with progress indicator",
             "Introduce standard plan with per-person pricing model",
@@ -121,6 +141,7 @@
         {
           "title": "Correcciones",
           "items": [
+            "Show dashboard metrics in two mobile columns",
             "Update enterprise pricing and correct test expectations",
             "Update pre-push hook to use pnpm typecheck instead of quality",
             "Order stylesheet imports",
@@ -131,6 +152,132 @@
         }
       ],
       "changes": [
+        {
+          "sha": "73ee503c876c8e6c81f82019e51a87b663f20a3c",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Show dashboard metrics in two mobile columns"
+        },
+        {
+          "sha": "b5d16dbc3bda5a4d083f9ce425184a97b5dd4ef6",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve mobile dashboard and workflows"
+        },
+        {
+          "sha": "63bdbef205d292df00e5c55f6b503051f2c9acce",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve mobile workflows and referral management"
+        },
+        {
+          "sha": "b32f6b2874de3a9a1ad7aa095e166292fd50ee46",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Improve accessibility and UI for estimate approval"
+        },
+        {
+          "sha": "4170eaf0fa45d0d5433f697259a44106f3fb6cdb",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Allow payment for saved estimate with milestone"
+        },
+        {
+          "sha": "93d2a2d7e89fb5a831782e1e12454b991e4749a1",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Validate milestone payment registration for drafts"
+        },
+        {
+          "sha": "e341108e2d1311843c797aae62611a6507d7c109",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add BillingPaymentRow type and update payments query"
+        },
+        {
+          "sha": "b56efe959302f5413df34990c9b0878bfbf56f60",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Enhance payment and referral queries with null handling"
+        },
+        {
+          "sha": "4a32fdc6db80af691ff3829233e48c78a289ffc4",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Update estimate format descriptions and remove purpose select"
+        },
+        {
+          "sha": "5c5bb92ce8a0d0cf29eb3e92906dab834ab9be13",
+          "type": "feat",
+          "scope": "stripe",
+          "breaking": false,
+          "description": "Implement stripe account existence check and update migration"
+        },
+        {
+          "sha": "760ec4c270b84c2730dbf657a012758557db4df7",
+          "type": "feat",
+          "scope": "stripe",
+          "breaking": false,
+          "description": "Add status action for Stripe connection and update tests"
+        },
+        {
+          "sha": "06a00375a67d586eb110942a7ab2d98af0aeb17e",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Update estimate line unit styling and add className"
+        },
+        {
+          "sha": "91578bb24c4806eb36c315775579173beb6fbbbf",
+          "type": "feat",
+          "scope": "dashboard",
+          "breaking": false,
+          "description": "Enhance dashboard metrics and estimate status display"
+        },
+        {
+          "sha": "184382d3078e4f65c824dd5f12c5bd642149958d",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add conversion destination to estimate approval test"
+        },
+        {
+          "sha": "1a635b0dc9f2c438ae6ddc16036bae265fb00ad7",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Update estimate display based on conversion destination"
+        },
+        {
+          "sha": "6d403fcb857a617b97058c6ac17c8411b11b5efc",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add validation for estimate purpose changes with payments"
+        },
+        {
+          "sha": "501abda20e5f626fe1277e2f18c69187309aec05",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add purpose handling for estimates and update UI"
+        },
+        {
+          "sha": "e3673a759c55abe43fc8ff610e127ef47f9b54d7",
+          "type": "feat",
+          "scope": "changelog",
+          "breaking": false,
+          "description": "Update changelog for new features and corrections"
+        },
         {
           "sha": "6a516cda958feaef538b1d76bf195e8644f03235",
           "type": "feat",
@@ -146,6 +293,13 @@
           "description": "Add Stripe Connect event handling and related tests"
         },
         {
+          "sha": "7f76f25a83e9dbcf44e820fa7a7cb95cef9a275f",
+          "type": "feat",
+          "scope": "DEV-42",
+          "breaking": false,
+          "description": "Configure subscription invoice issuer"
+        },
+        {
           "sha": "388f4f209ddb09372e73afa1fa5031ad87218f10",
           "type": "feat",
           "scope": "stripe",
@@ -153,11 +307,25 @@
           "description": "Implement Stripe Connect webhook handler and tests"
         },
         {
+          "sha": "ce1f35a88b532f6495f87cfb6a731d1537170e15",
+          "type": "feat",
+          "scope": "DEV-42",
+          "breaking": false,
+          "description": "Prepare quarterly invoice export"
+        },
+        {
           "sha": "6ec34548a3f503334d735055d1bb0850dd6855aa",
           "type": "feat",
           "scope": "superadmin",
           "breaking": false,
           "description": "Add company profile management with validation and UI"
+        },
+        {
+          "sha": "6d3d2a43fc88c9d51690bffee5be20dc6a0f23db",
+          "type": "feat",
+          "scope": "DEV-42",
+          "breaking": false,
+          "description": "Prepare subscription invoice drafts"
         },
         {
           "sha": "911b6efb97cbac6184ae9f321d7a195d97e3d4fa",

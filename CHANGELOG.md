@@ -6,10 +6,30 @@
 
 ### Nuevas funciones
 
+- Improve mobile dashboard and workflows
+- Improve mobile workflows and referral management
+- Improve accessibility and UI for estimate approval
+- Allow payment for saved estimate with milestone
+- Validate milestone payment registration for drafts
+- Add BillingPaymentRow type and update payments query
+- Enhance payment and referral queries with null handling
+- Update estimate format descriptions and remove purpose select
+- Implement stripe account existence check and update migration
+- Add status action for Stripe connection and update tests
+- Update estimate line unit styling and add className
+- Enhance dashboard metrics and estimate status display
+- Add conversion destination to estimate approval test
+- Update estimate display based on conversion destination
+- Add validation for estimate purpose changes with payments
+- Add purpose handling for estimates and update UI
+- Update changelog for new features and corrections
 - Add payment milestones handling and validation logic
 - Add Stripe Connect event handling and related tests
+- Configure subscription invoice issuer
 - Implement Stripe Connect webhook handler and tests
+- Prepare quarterly invoice export
 - Add company profile management with validation and UI
+- Prepare subscription invoice drafts
 - Improve company profiles and billing navigation
 - Implement multi-step registration process with progress indicator
 - Introduce standard plan with per-person pricing model
@@ -117,6 +137,7 @@
 
 ### Correcciones
 
+- Show dashboard metrics in two mobile columns
 - Update enterprise pricing and correct test expectations
 - Update pre-push hook to use pnpm typecheck instead of quality
 - Order stylesheet imports
