@@ -43,23 +43,25 @@ export function StatCard({
       <div
         className={`border-border bg-card flex h-full min-w-0 flex-col rounded-xl border p-1 ${className}`}
       >
-        <div className="border-border/70 bg-background/40 flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border px-3 py-3">
+        <div className="border-border/70 bg-background/40 flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border px-3 py-3 max-md:gap-2 max-md:px-2.5 max-md:py-2.5">
           {icon ? (
             <span
-              className={`flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4 ${iconTone[tone]}`}
+              className={`flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4 max-md:size-7 ${iconTone[tone]}`}
             >
               {icon}
             </span>
           ) : null}
           <div className="min-w-0">
-            <p className="text-muted-foreground text-xs leading-4">{label}</p>
-            <p className="mt-1 text-xl leading-tight font-semibold tracking-tight break-words tabular-nums">
+            <p className="text-muted-foreground text-xs leading-4 max-md:text-[0.8125rem] max-md:leading-[1.2]">
+              {label}
+            </p>
+            <p className="mt-1 text-xl leading-tight font-semibold tracking-tight break-words tabular-nums max-md:text-lg">
               {value}
             </p>
           </div>
         </div>
         {hint || (trend && trend.length > 1) ? (
-          <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-2">
+          <div className="flex min-h-9 items-center justify-between gap-2 px-3 py-2 max-md:px-2.5">
             {hint ? <p className="text-muted-foreground text-xs leading-4">{hint}</p> : null}
             {trend && trend.length > 1 ? (
               <Sparkline values={trend} className={lineTone[tone]} />
@@ -100,7 +102,7 @@ function Sparkline({ values, className }: { values: number[]; className: string 
     .map((v, i) => `${(i / (values.length - 1)) * 60},${22 - ((v - min) / range) * 20}`)
     .join(' ')
   return (
-    <svg viewBox="0 0 60 24" className="hidden h-7 w-16 shrink-0 sm:block" aria-hidden="true">
+    <svg viewBox="0 0 60 24" className="hidden h-7 w-16 shrink-0 md:block" aria-hidden="true">
       <polyline
         points={points}
         fill="none"

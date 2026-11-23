@@ -52,11 +52,11 @@ export function ContractsPage() {
   const selected =
     tab === 'trabajos' || (tab === 'plantillas' && canEditTemplates) ? tab : 'contratos'
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 md:space-y-5">
       <WorkspacePageHeading
         title="Contratos"
         actions={
-          <Link to="/trabajos" className="text-primary text-sm underline">
+          <Link to="/trabajos" className="text-primary inline-flex max-md:min-h-11 items-center text-sm underline">
             Ir a planificación
           </Link>
         }
@@ -108,24 +108,27 @@ function ContractsList() {
   })
   const columns = useTableColumns('contratos', contractColumns)
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-6">
+    <div className="min-w-0 space-y-4 md:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <SelectField
-          label="Estado del contrato"
-          hideLabel
-          value={status}
-          options={[
-            { value: 'all', label: 'Todos los contratos' },
-            { value: 'active', label: 'Activos' },
-            { value: 'inactive', label: 'Inactivos' },
-          ]}
-          onChange={(value) => {
-            setStatus(value as ContractStatusFilter)
-            setPage(0)
-          }}
-          className="max-w-xs min-w-0"
-        />
-        <Link to="/presupuestos" className="text-primary text-sm underline">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-muted-foreground text-xs font-medium">Estado</span>
+          <SelectField
+            label="Estado del contrato"
+            hideLabel
+            value={status}
+            options={[
+              { value: 'all', label: 'Todos' },
+              { value: 'active', label: 'Activos' },
+              { value: 'inactive', label: 'Inactivos' },
+            ]}
+            onChange={(value) => {
+              setStatus(value as ContractStatusFilter)
+              setPage(0)
+            }}
+            className="max-w-xs min-w-0"
+          />
+        </div>
+        <Link to="/presupuestos" className="text-primary inline-flex max-md:min-h-11 items-center text-sm underline">
           Ver presupuestos
         </Link>
       </div>
@@ -174,10 +177,10 @@ function ContractsList() {
                     <span className="min-w-0 font-medium break-words">{contract.title}</span>
                     <ContractStatusBadge status={contract.status} />
                   </span>
-                  <span className="text-muted-foreground block text-xs break-words">
+                  <span className="text-muted-foreground block text-xs break-words max-md:text-[0.8125rem]">
                     {clients.find((client) => client.id === contract.client_id)?.name ?? 'Cliente'}
                   </span>
-                  <span className="text-muted-foreground block text-xs">
+                  <span className="text-muted-foreground block text-xs max-md:text-[0.8125rem]">
                     {contract.signed_at ? 'Firmado' : 'Pendiente de firma'} ·{' '}
                     {contractBillingLabels[contract.billing_frequency]}
                   </span>
@@ -271,13 +274,19 @@ function ContractsList() {
       ) : null}
       {query.data && query.data.count > 0 ? (
         <div className="flex items-center justify-between text-sm">
-          <span>{query.data.count} contratos</span>
+          <span aria-live="polite">{query.data.count} contratos</span>
           <div className="flex gap-2">
-            <Button variant="outline" isDisabled={page === 0} onPress={() => setPage(page - 1)}>
+            <Button
+              variant="outline"
+              className="max-md:min-h-11"
+              isDisabled={page === 0}
+              onPress={() => setPage(page - 1)}
+            >
               Anterior
             </Button>
             <Button
               variant="outline"
+              className="max-md:min-h-11"
               isDisabled={(page + 1) * query.data.pageSize >= query.data.count}
               onPress={() => setPage(page + 1)}
             >

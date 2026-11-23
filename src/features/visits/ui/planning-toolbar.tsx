@@ -72,7 +72,7 @@ export function PlanningToolbar({
       aria-label="Controles de planificación"
       className="border-border bg-card min-w-0 divide-y rounded-lg border"
     >
-      <div className="px-3 py-2">
+      <div className="px-2 py-1.5 md:px-3 md:py-2">
         <CalendarToolbar
           value={calendarDate(date)}
           view={period}
@@ -87,6 +87,7 @@ export function PlanningToolbar({
                   <Button
                     key={id}
                     size="sm"
+                    className="max-md:min-h-11"
                     variant={view === id ? 'outline' : 'ghost'}
                     aria-pressed={view === id}
                     onPress={() => onChange({ view: id })}
@@ -95,7 +96,7 @@ export function PlanningToolbar({
                   </Button>
                 ))}
               </fieldset>
-              <Button size="sm" onPress={onCreate}>
+              <Button size="sm" className="max-md:min-h-11" onPress={onCreate}>
                 <PlusIcon aria-hidden="true" />
                 Nueva visita
               </Button>
@@ -103,7 +104,7 @@ export function PlanningToolbar({
           }
         />
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-1.5 md:px-3 md:py-2">
         <div className="relative min-w-36 flex-1 sm:max-w-72">
           <MagnifyingGlassIcon
             aria-hidden="true"
@@ -113,12 +114,12 @@ export function PlanningToolbar({
             type="search"
             aria-label="Buscar cliente o centro"
             placeholder="Buscar cliente o centro…"
-            className="h-9 pl-8"
+            className="h-9 pl-8 max-md:h-11"
             value={filters.q ?? ''}
             onChange={(event) => onChange({ q: event.target.value || undefined }, true)}
           />
         </div>
-        <FilterDisclosure activeCount={active.length}>
+        <FilterDisclosure context="planificación" activeCount={active.length}>
           {selects.map(({ key, label, options }) => (
             <SelectField
               key={key}
@@ -137,7 +138,7 @@ export function PlanningToolbar({
               key={key}
               size="sm"
               variant="outline"
-              className="max-w-full"
+              className="max-w-full max-md:min-h-11"
               aria-label={`Quitar filtro ${label}: ${selected}`}
               onPress={() => onChange({ [key]: undefined })}
             >
@@ -150,6 +151,7 @@ export function PlanningToolbar({
           <Button
             size="sm"
             variant="ghost"
+            className="max-md:min-h-11"
             onPress={() =>
               onChange({ technician: undefined, team: undefined, status: undefined, q: undefined })
             }
@@ -158,7 +160,7 @@ export function PlanningToolbar({
           </Button>
         ) : null}
         {count !== undefined ? (
-          <output className="text-muted-foreground ml-auto text-xs tabular-nums">
+          <output aria-live="polite" className="text-muted-foreground ml-auto text-xs tabular-nums max-md:text-[0.8125rem]">
             {count} {count === 1 ? 'trabajo' : 'trabajos'}
           </output>
         ) : null}

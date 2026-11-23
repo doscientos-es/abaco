@@ -70,12 +70,12 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
     <Button
       variant="outline"
       aria-label={acceptingManually ? 'Aprobando presupuesto' : 'Marcar como aprobado'}
-      className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+      className="max-md:min-h-11 max-md:w-11 max-md:px-0"
       isDisabled={acceptingManually}
       onPress={() => void approve()}
     >
       <CheckCircle aria-hidden="true" className="size-4 shrink-0" />
-      <span className="max-sm:sr-only">
+      <span className="max-md:sr-only">
         {acceptingManually ? 'Aprobando…' : 'Marcar como aprobado'}
       </span>
     </Button>
@@ -107,14 +107,15 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
 
   return (
     <div className="space-y-5">
-      <PageHeader>
+      <PageHeader className="max-md:items-start">
         <PageHeaderHeading>
           <PageHeaderTitle>
             {creation ? (
               'Nuevo presupuesto'
             ) : (
               <>
-                {estimate.number} <StatusBadge status={estimate.status} />
+                <span className="max-md:hidden">Presupuesto </span>{estimate.number}{' '}
+                <StatusBadge status={estimate.status} />
               </>
             )}
           </PageHeaderTitle>
@@ -124,21 +125,21 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
           {!creation ? (
             <Button
               aria-label="Enviar por email"
-              className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+              className="max-md:min-h-11 max-md:w-11 max-md:px-0"
               onPress={() => void sendByEmail()}
             >
               {fieldIcons.mail}
-              <span className="max-sm:sr-only">Enviar por email</span>
+              <span className="max-md:sr-only">Enviar por email</span>
             </Button>
           ) : null}
           <Button
             variant="outline"
             aria-label="Diseño y vista previa"
-            className="max-sm:min-h-11 max-sm:w-11 max-sm:px-0"
+            className="max-md:min-h-11 max-md:w-11 max-md:px-0"
             onPress={() => setPreview(true)}
           >
             <Eye aria-hidden="true" className="size-4" />
-            <span className="max-sm:sr-only">Diseño y vista previa</span>
+            <span className="max-md:sr-only">Diseño y vista previa</span>
           </Button>
           {!creation ? (
             <EstimateOptionsMenu
@@ -221,11 +222,11 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
               {creation.error}
             </p>
           ) : null}
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col-reverse gap-2 md:flex-row md:items-center md:justify-end md:gap-3">
             <Link to="/presupuestos" className="text-sm underline">
               Cancelar
             </Link>
-            <Button type="submit" isDisabled={creation.busy}>
+            <Button type="submit" className="max-md:w-full" isDisabled={creation.busy}>
               {creation.busy
                 ? 'Creando presupuesto…'
                 : creation.submitted

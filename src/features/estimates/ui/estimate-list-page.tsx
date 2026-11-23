@@ -25,6 +25,7 @@ import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, EstimateStatus } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
+import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
@@ -60,14 +61,19 @@ function EstimateActions({
 }) {
   return (
     <div className="inline-flex items-center gap-1">
-      <IconButton label={`Abrir presupuesto ${estimate.number}`} variant="outline" onPress={onOpen}>
+      <IconButton
+        label={`Abrir presupuesto ${estimate.number}`}
+        variant="outline"
+        className="max-md:min-h-11 max-md:min-w-11"
+        onPress={onOpen}
+      >
         <Eye aria-hidden="true" className="size-4" />
       </IconButton>
       {canDelete && estimate.status === 'draft' ? (
         <IconButton
           label={`Eliminar presupuesto ${estimate.number}`}
           variant="ghost"
-          className="text-destructive"
+          className="text-destructive max-md:min-h-11 max-md:min-w-11"
           onPress={onDelete}
         >
           <Trash aria-hidden="true" className="size-4" />
@@ -135,67 +141,119 @@ export function EstimateListPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-8">
+    <div className="min-w-0 space-y-4 md:space-y-8">
       <WorkspacePageHeading
         title="Presupuestos"
         actions={
-          <Button aria-label="Crear presupuesto" onPress={startNew}>
+          <Button aria-label="Crear presupuesto" className="max-md:min-h-11" onPress={startNew}>
             <Plus aria-hidden="true" className="size-4" />
-            <span className="sm:hidden">Nuevo</span>
-            <span className="max-sm:hidden">Crear presupuesto</span>
+            <span className="md:hidden">Nuevo</span>
+            <span className="max-md:hidden">Crear presupuesto</span>
           </Button>
         }
       />
 
-      <div className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
         <Input
           type="search"
           aria-label="Buscar presupuestos"
           maxLength={formLimits.searchQuery}
           placeholder="Buscar por número, obra o cliente…"
-          className="col-span-2 min-w-0 sm:max-w-sm sm:flex-1"
+          className="w-full min-w-0 md:max-w-sm md:flex-1"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <SelectField
-          label="Filtrar por estado"
-          hideLabel
-          className="min-w-0 sm:w-52"
-          value={status}
-          options={[
-            { value: 'all', label: 'Estados' },
-            ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-          ]}
-          onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
-        />
-        <SelectField
-          label="Filtrar por tipo"
-          hideLabel
-          className="min-w-0 sm:w-52"
-          value={purpose}
-          options={[
-            { value: 'all', label: 'Tipos' },
-            { value: 'work', label: 'Instalación' },
-            { value: 'contract', label: 'Mantenimiento' },
-          ]}
-          onChange={(value) => setPurpose(value as 'all' | EstimatePurpose)}
-        />
-        {query || status !== 'all' || purpose !== 'all' ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => {
-              setQuery('')
-              setStatus('all')
-              setPurpose('all')
-            }}
+        <div className="hidden items-center gap-2 md:flex">
+          <SelectField
+            label="Filtrar por estado"
+            hideLabel
+            className="min-w-0 md:w-52"
+            value={status}
+            options={[
+              { value: 'all', label: 'Todos los estados' },
+              ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+            ]}
+            onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
+          />
+          <SelectField
+            label="Filtrar por tipo"
+            hideLabel
+            className="min-w-0 md:w-52"
+            value={purpose}
+            options={[
+              { value: 'all', label: 'Todos los tipos' },
+              { value: 'work', label: 'Instalación' },
+              { value: 'contract', label: 'Mantenimiento' },
+            ]}
+            onChange={(value) => setPurpose(value as 'all' | EstimatePurpose)}
+          />
+          {query || status !== 'all' || purpose !== 'all' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="max-md:min-h-11"
+              onPress={() => {
+                setQuery('')
+                setStatus('all')
+                setPurpose('all')
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          ) : null}
+        </div>
+        <div className="md:hidden">
+          <FilterDisclosure
+            context="presupuestos"
+            activeCount={Number(status !== 'all') + Number(purpose !== 'all')}
           >
-            Limpiar filtros
-          </Button>
+            <SelectField
+              label="Filtrar por estado"
+              className="w-full"
+              value={status}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+              ]}
+              onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
+            />
+            <SelectField
+              label="Filtrar por tipo"
+              className="w-full"
+              value={purpose}
+              options={[
+                { value: 'all', label: 'Todos los tipos' },
+                { value: 'work', label: 'Instalación' },
+                { value: 'contract', label: 'Mantenimiento' },
+              ]}
+              onChange={(value) => setPurpose(value as 'all' | EstimatePurpose)}
+            />
+            {status !== 'all' || purpose !== 'all' ? (
+              <Button
+                variant="ghost"
+                className="min-h-11"
+                onPress={() => {
+                  setStatus('all')
+                  setPurpose('all')
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </FilterDisclosure>
+        </div>
+        {status !== 'all' || purpose !== 'all' ? (
+          <p className="text-muted-foreground basis-full text-xs md:hidden">
+            {status !== 'all' ? `Estado: ${statusLabels[status]}` : ''}
+            {status !== 'all' && purpose !== 'all' ? ' · ' : ''}
+            {purpose !== 'all'
+              ? `Tipo: ${purpose === 'contract' ? 'Mantenimiento' : 'Instalación'}`
+              : ''}
+          </p>
         ) : null}
-        <p className="text-muted-foreground text-sm tabular-nums">
+        <output aria-live="polite" className="text-muted-foreground ml-auto text-sm tabular-nums">
           {visible.length} {visible.length === 1 ? 'presupuesto' : 'presupuestos'}
-        </p>
+        </output>
       </div>
 
       {visible.length === 0 ? (
@@ -239,10 +297,10 @@ export function EstimateListPage() {
                   className="active:bg-muted/60 block space-y-1 rounded-lg px-3 pt-3"
                 >
                   <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0 font-medium">{estimate.title}</span>
+                    <span className="min-w-0 font-medium break-words">{estimate.title}</span>
                     <StatusBadge status={estimate.status} />
                   </span>
-                  <span className="text-muted-foreground block text-xs">
+                  <span className="text-muted-foreground block text-xs max-md:text-[0.8125rem]">
                     {estimate.number} ·{' '}
                     {clients.find((c) => c.id === estimate.clientId)?.name ?? 'Sin cliente'}
                     {' · '}

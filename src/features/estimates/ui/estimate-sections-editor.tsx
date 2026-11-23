@@ -81,6 +81,7 @@ export function EstimateSectionsEditor({
                 <IconButton
                   variant="ghost"
                   label={`Subir sección ${index + 1}`}
+                  className="max-md:min-h-11 max-md:min-w-11"
                   isDisabled={index === 0}
                   onPress={() => setSections(moveEstimateSection(sections, section.id, -1))}
                 >
@@ -89,6 +90,7 @@ export function EstimateSectionsEditor({
                 <IconButton
                   variant="ghost"
                   label={`Bajar sección ${index + 1}`}
+                  className="max-md:min-h-11 max-md:min-w-11"
                   isDisabled={index === sections.length - 1}
                   onPress={() => setSections(moveEstimateSection(sections, section.id, 1))}
                 >

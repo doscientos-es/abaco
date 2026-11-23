@@ -35,7 +35,7 @@ export function MonthlyChart({ data, format }: { data: MonthPoint[]; format: Mon
       </div>
       <ChartPlot option={monthlyChartOption(data, format)} className="h-52 w-full" />
       <details>
-        <summary className="text-muted-foreground w-fit cursor-pointer text-xs">
+        <summary className="text-muted-foreground inline-flex w-fit cursor-pointer items-center text-xs max-md:min-h-11 max-md:text-sm">
           Ver datos por mes
         </summary>
         <div className="mt-2">

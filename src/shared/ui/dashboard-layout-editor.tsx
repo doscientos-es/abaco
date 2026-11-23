@@ -62,15 +62,30 @@ function DashboardLayoutActions({ editor }: { editor: Actions }) {
     <div ref={toolbar} className="flex flex-wrap gap-2">
       {editor.editing ? (
         <>
-          <Button size="sm" variant="outline" onPress={editor.cancel}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="max-md:min-h-11"
+            onPress={editor.cancel}
+          >
             Cancelar
           </Button>
-          <Button size="sm" isDisabled={!editor.changed} onPress={editor.save}>
+          <Button
+            size="sm"
+            className="max-md:min-h-11"
+            isDisabled={!editor.changed}
+            onPress={editor.save}
+          >
             Guardar diseño
           </Button>
         </>
       ) : (
-        <IconButton label="Personalizar resumen" variant="ghost" onPress={editor.start}>
+        <IconButton
+          label="Personalizar resumen"
+          variant="ghost"
+          className="max-md:min-h-11 max-md:min-w-11"
+          onPress={editor.start}
+        >
           <SlidersHorizontal aria-hidden="true" className="size-4" />
         </IconButton>
       )}
@@ -290,7 +305,7 @@ function DashboardModule({
             ref={handleRef}
             type="button"
             aria-label={`Mover ${title}`}
-            className="text-muted-foreground hover:bg-muted focus-visible:ring-ring flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg focus-visible:ring-2 active:cursor-grabbing"
+            className="text-muted-foreground hover:bg-muted focus-visible:ring-ring flex size-9 max-md:size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg focus-visible:ring-2 active:cursor-grabbing"
           >
             <DotsSixVertical aria-hidden="true" className="size-5" />
           </button>
@@ -308,7 +323,12 @@ function DashboardModule({
               onChange={(value) => edit.resize(snapDashboardWidth(Number(value), minWidth, width))}
             />
           ) : null}
-          <IconButton label={`Quitar ${title}`} variant="ghost" onPress={edit.remove}>
+          <IconButton
+            label={`Quitar ${title}`}
+            variant="ghost"
+            className="max-md:min-h-11 max-md:min-w-11"
+            onPress={edit.remove}
+          >
             <X aria-hidden="true" className="size-4" />
           </IconButton>
         </div>

@@ -6,10 +6,13 @@ import type { ReactNode } from 'react'
 export function FilterDisclosure({
   activeCount,
   children,
+  context,
 }: {
   activeCount: number
   children: ReactNode
+  context?: string
 }) {
+  const filterLabel = context ? `Filtros de ${context}` : 'Filtros adicionales'
   return (
     <Popover
       placement="bottom start"
@@ -19,10 +22,10 @@ export function FilterDisclosure({
           variant="outline"
           aria-label={
             activeCount
-              ? `Filtros adicionales, ${activeCount} ${activeCount === 1 ? 'activo' : 'activos'}`
-              : 'Filtros adicionales'
+              ? `${filterLabel}, ${activeCount} ${activeCount === 1 ? 'activo' : 'activos'}`
+              : filterLabel
           }
-          className="h-9 gap-2 px-3"
+          className="h-9 gap-2 px-3 max-md:min-h-11"
         >
           <SlidersHorizontal aria-hidden="true" className="size-4" />
           Filtros {activeCount > 0 ? <span aria-hidden="true">({activeCount})</span> : null}

@@ -446,6 +446,12 @@ h3 {
     padding-inline: 1rem;
   }
 
+  .workspace-section-tabs [data-slot='tabs-trigger'],
+  .workspace-section-tabs nav a,
+  [data-slot='select-trigger'] {
+    min-height: 2.75rem;
+  }
+
   .workspace-tools {
     width: 100%;
   }

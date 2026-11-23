@@ -50,6 +50,7 @@ export function CalendarToolbar({
         <Button
           variant="ghost"
           size="sm"
+          className="max-md:min-h-11 max-md:min-w-11"
           aria-label="Periodo anterior"
           onPress={() => onDateChange(calendarStep(value, view, -1))}
         >
@@ -58,12 +59,18 @@ export function CalendarToolbar({
         <Button
           variant="ghost"
           size="sm"
+          className="max-md:min-h-11 max-md:min-w-11"
           aria-label="Periodo siguiente"
           onPress={() => onDateChange(calendarStep(value, view, 1))}
         >
           <CaretRightIcon aria-hidden="true" />
         </Button>
-        <Button variant="outline" size="sm" onPress={() => onDateChange(today ?? new Date())}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="max-md:min-h-11"
+          onPress={() => onDateChange(today ?? new Date())}
+        >
           Hoy
         </Button>
       </div>
@@ -75,7 +82,7 @@ export function CalendarToolbar({
             variant="ghost"
             size="sm"
             aria-label={`${heading}. Ir a una fecha`}
-            className="max-w-full min-w-0"
+            className="max-w-full min-w-0 max-md:min-h-11"
           >
             <span className="truncate font-semibold first-letter:uppercase">{heading}</span>
             <CaretDownIcon aria-hidden="true" />
@@ -101,6 +108,7 @@ export function CalendarToolbar({
                 <Button
                   key={period}
                   size="sm"
+                  className="max-md:min-h-11"
                   variant={view === period ? 'outline' : 'ghost'}
                   aria-pressed={view === period}
                   onPress={() => onViewChange(period)}

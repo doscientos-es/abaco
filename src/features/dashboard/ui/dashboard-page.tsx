@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { WarningCircle } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
@@ -55,9 +56,11 @@ function DashboardContent({
     .filter((invoice) => invoice.status !== 'paid' && invoice.totalCents > invoice.paidCents)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   const owedTotal = owed.reduce((sum, invoice) => sum + invoice.totalCents - invoice.paidCents, 0)
-  const overdueTotal = owed
-    .filter((invoice) => invoice.dueDate < todayIso)
-    .reduce((sum, invoice) => sum + invoice.totalCents - invoice.paidCents, 0)
+  const overdue = owed.filter((invoice) => invoice.dueDate < todayIso)
+  const overdueTotal = overdue.reduce(
+    (sum, invoice) => sum + invoice.totalCents - invoice.paidCents,
+    0,
+  )
   const open = estimates.filter((estimate) => estimate.status === 'sent')
   const accepted = estimates.filter((estimate) => estimate.status === 'accepted')
   const pendingCollection = accepted.reduce(
@@ -77,6 +80,7 @@ function DashboardContent({
     owed,
     owedTotal,
     overdueTotal,
+    overdueCount: overdue.length,
     sentTotal,
     open,
     pendingCollection,
@@ -85,19 +89,43 @@ function DashboardContent({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <DashboardPageHeading
         title={<>Hola, {tenant.name}</>}
         editor={editor}
         actions={
           <Link
             to="/presupuestos"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex max-md:min-h-11 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
           >
             Ver presupuestos
           </Link>
         }
       />
+
+      {data.overdueCount > 0 ? (
+        <Link
+          to="/facturas"
+          aria-label={`${data.overdueCount} ${
+            data.overdueCount === 1 ? 'factura vencida' : 'facturas vencidas'
+          }, ${formatEuros(data.overdueTotal)} pendientes. Revisar facturas`}
+          className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 outline-none transition-colors focus-visible:ring-2"
+        >
+          <WarningCircle aria-hidden="true" className="text-destructive size-5 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {data.overdueCount}{' '}
+              {data.overdueCount === 1 ? 'factura vencida' : 'facturas vencidas'}
+            </span>
+            <span className="text-muted-foreground block text-xs max-md:text-[0.8125rem]">
+              Revisa los cobros pendientes
+            </span>
+          </span>
+          <span className="shrink-0 text-right text-sm font-semibold tabular-nums">
+            {formatEuros(data.overdueTotal)}
+          </span>
+        </Link>
+      ) : null}
 
       <DashboardLayoutEditor
         label="Bloques del resumen"
@@ -139,6 +167,7 @@ type DashboardData = {
   owed: TenantData['invoices']
   owedTotal: number
   overdueTotal: number
+  overdueCount: number
   sentTotal: number
   open: TenantData['estimates']
   pendingCollection: number
@@ -187,7 +216,7 @@ function DashboardWidget({
     case 'key-metrics': {
       const months = monthlySeries(data.ledger)
       return (
-        <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 @lg:grid-cols-2 @4xl:grid-cols-4 max-md:grid-cols-2 md:gap-3">
           <DashboardMetric
             to="/presupuestos"
             editing={editing}
@@ -262,7 +291,7 @@ function DashboardWidget({
         <Card className="overflow-hidden">
           <CardHeader className="flex-row items-center justify-between gap-3 pb-3">
             <div>
-              <CardTitle>Qué me deben</CardTitle>
+              <CardTitle>Facturas por cobrar</CardTitle>
               <p className="text-muted-foreground text-xs">
                 {formatEuros(data.owedTotal)} por cobrar
                 {data.overdueTotal > 0 ? ` · ${formatEuros(data.overdueTotal)} vencido` : ''}
@@ -270,7 +299,7 @@ function DashboardWidget({
             </div>
             <Link
               to="/facturas"
-              className="text-muted-foreground hover:text-foreground text-sm font-medium"
+              className="text-muted-foreground hover:text-foreground inline-flex max-md:min-h-11 items-center text-sm font-medium"
             >
               Ver facturas →
             </Link>
@@ -284,14 +313,14 @@ function DashboardWidget({
                     key={invoice.id}
                     to="/facturas/$invoiceId"
                     params={{ invoiceId: invoice.id }}
-                    className="border-border hover:bg-muted/60 flex items-center justify-between gap-4 border-t px-6 py-3.5 text-sm first:border-t-0"
+                    className="border-border hover:bg-muted/60 flex items-start justify-between gap-2 border-t px-4 py-3.5 text-sm first:border-t-0 md:items-center md:gap-4 md:px-6"
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-medium">
                         {data.clients.find((client) => client.id === invoice.clientId)?.name ??
                           'Sin cliente'}
                       </span>
-                      <span className="text-muted-foreground block truncate text-xs">
+                      <span className="text-muted-foreground block truncate text-xs max-md:text-[0.8125rem]">
                         {invoice.number} · {invoice.concept}
                       </span>
                     </span>
@@ -327,10 +356,10 @@ function DashboardWidget({
       return (
         <Card className="overflow-hidden">
           <CardHeader className="flex-row items-center justify-between gap-3 pb-3">
-            <CardTitle>Últimos presupuestos</CardTitle>
+            <CardTitle>Presupuestos recientes</CardTitle>
             <Link
               to="/presupuestos"
-              className="text-muted-foreground hover:text-foreground text-sm font-medium"
+              className="text-muted-foreground hover:text-foreground inline-flex max-md:min-h-11 items-center text-sm font-medium"
             >
               Ver todos →
             </Link>
@@ -341,17 +370,17 @@ function DashboardWidget({
                 key={estimate.id}
                 to="/presupuestos/$estimateId"
                 params={{ estimateId: estimate.id }}
-                className="border-border hover:bg-muted/60 flex items-center justify-between gap-4 border-t px-6 py-3.5 text-sm first:border-t-0"
+                className="border-border hover:bg-muted/60 flex items-start justify-between gap-2 border-t px-4 py-3.5 text-sm first:border-t-0 md:items-center md:gap-4 md:px-6"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{estimate.title}</span>
-                  <span className="text-muted-foreground block truncate text-xs">
+                  <span className="text-muted-foreground block truncate text-xs max-md:text-[0.8125rem]">
                     {estimate.number} ·{' '}
                     {data.clients.find((client) => client.id === estimate.clientId)?.name ??
                       'Sin cliente'}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-4 tabular-nums">
+                <span className="flex shrink-0 flex-col items-end gap-1 tabular-nums md:flex-row md:items-center md:gap-4">
                   <span className="font-medium">{formatEuros(estimateTotalCents(estimate))}</span>
                   <StatusBadge status={estimate.status} />
                 </span>
@@ -388,7 +417,10 @@ function DashboardWidget({
               <p className="text-3xl font-semibold tabular-nums">{activeClients}</p>
               <p className="text-muted-foreground text-xs">clientes activos</p>
             </div>
-            <Link to="/clientes" className="text-primary text-sm font-medium hover:underline">
+            <Link
+              to="/clientes"
+              className="text-primary inline-flex max-md:min-h-11 items-center text-sm font-medium hover:underline"
+            >
               Ver clientes →
             </Link>
           </CardContent>
@@ -408,11 +440,11 @@ function DashboardWidget({
       return (
         <Card>
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Últimos movimientos</CardTitle>
+            <CardTitle>Movimientos recientes</CardTitle>
             <Link
               to="/contabilidad"
               search={{ tab: 'apuntes' }}
-              className="text-primary text-sm font-medium hover:underline"
+              className="text-primary inline-flex max-md:min-h-11 items-center text-sm font-medium hover:underline"
             >
               Ver apuntes →
             </Link>

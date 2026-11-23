@@ -17,15 +17,15 @@ export function ChartCard({
   className?: string
 }) {
   return (
-    <section className={`border-border bg-card rounded-xl border p-4 ${className}`}>
+    <section className={`border-border bg-card rounded-xl border p-3 md:p-4 ${className}`}>
       <h2 className="text-sm font-semibold">{title}</h2>
       {description ? (
-        <p className="text-muted-foreground mb-3 text-xs">{description}</p>
+        <p className="text-muted-foreground mb-3 text-xs max-md:mb-2">{description}</p>
       ) : (
         <div className="mb-3" />
       )}
       {settings ? (
-        <fieldset className="border-border mb-3 flex min-w-0 flex-wrap gap-2 border-b pb-3">
+        <fieldset className="border-border mb-3 flex min-w-0 flex-wrap items-center gap-2 border-b pb-3 max-md:mb-2 max-md:gap-1.5 max-md:pb-2">
           <legend className="sr-only">{`Personalizar ${title}`}</legend>
           {settings}
         </fieldset>

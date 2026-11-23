@@ -192,7 +192,7 @@ export function LinesEditor({
                   aria-label="Descripción"
                   maxLength={formLimits.estimateLineDescription}
                   placeholder="Describe el trabajo o material"
-                  className="estimate-line__description h-8 min-w-0 px-2"
+                  className="estimate-line__description h-8 min-h-11 min-w-0 px-2 md:min-h-8"
                   value={line.description}
                   onChange={(event) => updateLine(line.id, { description: event.target.value })}
                 />
@@ -205,7 +205,7 @@ export function LinesEditor({
                     min={0}
                     max={formLimits.quantity}
                     step="0.001"
-                    className="h-8 min-w-0 px-2 text-right tabular-nums"
+                    className="h-8 min-h-11 min-w-0 px-2 text-right tabular-nums md:min-h-8"
                     value={line.quantity}
                     onChange={(event) =>
                       updateLine(line.id, {
@@ -229,6 +229,7 @@ export function LinesEditor({
                     options={lineUnitOptions(line.unit)}
                     searchable={false}
                     className="estimate-line__unit min-w-0"
+                    controlClassName="max-md:min-h-11"
                     onChange={(unit) => updateLine(line.id, { unit })}
                   />
                 </div>
@@ -237,7 +238,7 @@ export function LinesEditor({
                   <PriceInput
                     label="Precio unitario"
                     cents={line.unitPriceCents}
-                    className="h-8 min-w-0 px-2"
+                    className="h-8 min-h-11 min-w-0 px-2 md:min-h-8"
                     onCommit={(unitPriceCents) => updateLine(line.id, { unitPriceCents })}
                   />
                 </div>
@@ -250,7 +251,7 @@ export function LinesEditor({
                     min={0}
                     max={100}
                     step="0.01"
-                    className="h-8 min-w-0 px-2 text-right tabular-nums"
+                    className="h-8 min-h-11 min-w-0 px-2 text-right tabular-nums md:min-h-8"
                     value={line.discountPercent || ''}
                     placeholder="0"
                     onChange={(event) =>
@@ -279,6 +280,7 @@ export function LinesEditor({
                       size="icon-sm"
                       variant="ghost"
                       aria-label={`Más opciones de ${line.description || 'partida'}`}
+                      className="max-md:min-h-11 max-md:min-w-11"
                     >
                       <DotsThree aria-hidden="true" weight="bold" className="size-4" />
                     </Button>

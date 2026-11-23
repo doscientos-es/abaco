@@ -215,6 +215,7 @@ export function SelectField({
   onChange,
   placeholder,
   className,
+  controlClassName,
   searchable,
 }: {
   label: string
@@ -225,6 +226,7 @@ export function SelectField({
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  controlClassName?: string
   searchable?: boolean
 }) {
   const hasEmpty = options.some((option) => option.value === '')
@@ -278,7 +280,7 @@ export function SelectField({
         }}
         {...(placeholder ? { placeholder } : {})}
       >
-        <SelectTrigger>
+        <SelectTrigger className={controlClassName}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

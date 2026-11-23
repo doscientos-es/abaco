@@ -44,7 +44,12 @@ export function ContractActions({ contract }: { contract: ServiceContract }) {
   return (
     <>
       <DropdownMenuTrigger>
-        <IconButton label={`Acciones de ${contract.title}`} variant="outline" isDisabled={opening}>
+        <IconButton
+          label={`Acciones de ${contract.title}`}
+          variant="outline"
+          className="max-md:min-h-11 max-md:min-w-11"
+          isDisabled={opening}
+        >
           <DotsThree aria-hidden="true" weight="bold" className="size-5" />
         </IconButton>
         <DropdownMenuContent placement="bottom end">
