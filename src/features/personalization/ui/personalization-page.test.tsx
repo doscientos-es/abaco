@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   search: vi.fn(),
   tabs: vi.fn(),
+  tabsContent: vi.fn(),
   uploadLogo: vi.fn(),
   uploadField: vi.fn(),
 }))
@@ -34,7 +35,7 @@ vi.mock('@doscientos/ui', () => ({
   PageHeaderTitle: ({ children }: { children: React.ReactNode }) => <h1>{children}</h1>,
   PageHeaderDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Tabs: mocks.tabs,
-  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsContent: mocks.tabsContent,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
@@ -71,11 +72,21 @@ vi.mock('@/shared/store/store', () => ({
 }))
 
 describe('personalization sections', () => {
-  let values: unknown[]
-  let cursor: number
+  let values: Map<string, unknown>
+  let scope: string
+  let cursors: Map<string, number>
   let tab: 'marca' | 'documentos' | 'correos' | 'listas'
+  function ScopeEnter({ id }: { id: string }) {
+    scope = id
+    return null
+  }
+  function ScopeExit() {
+    scope = 'root'
+    return null
+  }
   function render() {
-    cursor = 0
+    scope = 'root'
+    cursors = new Map()
     mocks.button.mockClear()
     mocks.checkbox.mockClear()
     mocks.field.mockClear()
@@ -90,17 +101,20 @@ describe('personalization sections', () => {
   }
   beforeEach(() => {
     vi.clearAllMocks()
-    values = []
-    cursor = 0
+    values = new Map()
+    scope = 'root'
+    cursors = new Map()
     tab = 'marca'
     mocks.search.mockImplementation(() => ({ tab }))
     mocks.state.mockImplementation((initial: unknown) => {
-      const index = cursor++
-      if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial
+      const index = cursors.get(scope) ?? 0
+      cursors.set(scope, index + 1)
+      const key = `${scope}:${index}`
+      if (!values.has(key)) values.set(key, typeof initial === 'function' ? initial() : initial)
       const set = (next: unknown) => {
-        values[index] = typeof next === 'function' ? next(values[index]) : next
+        values.set(key, typeof next === 'function' ? next(values.get(key)) : next)
       }
-      return [values[index], set]
+      return [values.get(key), set]
     })
     mocks.button.mockImplementation(
       ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
@@ -114,6 +128,15 @@ describe('personalization sections', () => {
     mocks.tabs.mockImplementation(({ children }: { children: React.ReactNode }) => (
       <div>{children}</div>
     ))
+    mocks.tabsContent.mockImplementation(
+      ({ id, children }: { id?: string; children: React.ReactNode }) => (
+        <div>
+          <ScopeEnter id={id ?? 'root'} />
+          {children}
+          <ScopeExit />
+        </div>
+      ),
+    )
   })
 
   it('keeps messages and configurable lists in their own sections', () => {

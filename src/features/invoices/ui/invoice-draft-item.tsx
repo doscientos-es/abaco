@@ -79,7 +79,7 @@ function DraftItemFields({
   const chosenTemplate = availableTemplates.find(({ id }) => id === templateId)
 
   async function save() {
-    if (!changed || busy) return
+    if (!changed || busy || !dueDate) return
     setBusy(true)
     try {
       await updateInvoiceDraft({ ...position, concept, dueDate })
@@ -95,7 +95,7 @@ function DraftItemFields({
   }
 
   async function issue() {
-    if (changed || busy) return
+    if (changed || busy || !dueDate) return
     issueOperationId.current ??= crypto.randomUUID()
     setBusy(true)
     try {
@@ -176,16 +176,19 @@ function DraftItemFields({
       <p className="text-muted-foreground text-xs">
         El importe y el IVA proceden del {origin.description}. La numeración se asignará al emitir.
       </p>
+      {!dueDate ? (
+        <p className="text-muted-foreground text-xs">Indica el vencimiento antes de emitir.</p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
           variant="outline"
-          isDisabled={!changed || busy}
+          isDisabled={!changed || busy || !dueDate}
           onPress={() => void save()}
         >
           Guardar borrador
         </Button>
-        <Button size="sm" isDisabled={changed || busy} onPress={() => void issue()}>
+        <Button size="sm" isDisabled={changed || busy || !dueDate} onPress={() => void issue()}>
           Emitir factura
         </Button>
       </div>

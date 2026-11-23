@@ -119,6 +119,27 @@ export function milestonePercentSum(milestones: Milestone[]): number {
   return milestones.reduce((sum, milestone) => sum + milestone.percent, 0)
 }
 
+/** A work estimate must describe the whole agreed price before it is published. */
+export function paymentMilestonesError(estimate: Estimate): string | null {
+  if (estimate.conversionDestination === 'contract') return null
+  if (
+    !estimate.milestones.length ||
+    estimate.milestones.some(
+      (milestone) =>
+        !milestone.label.trim() ||
+        !Number.isFinite(milestone.percent) ||
+        milestone.percent < 0 ||
+        milestone.percent > 100,
+    ) ||
+    Math.abs(milestonePercentSum(estimate.milestones) - 100) >= 0.001
+  )
+    return 'Indica los plazos de pago y comprueba que sus porcentajes sumen el 100 %.'
+  const totalCents = estimateTotals(estimate).totalCents
+  if (milestoneAmounts(estimate.milestones, totalCents).some(({ amountCents }) => amountCents < 0))
+    return 'El reparto no se puede representar en céntimos. Ajusta los plazos de pago.'
+  return null
+}
+
 export function defaultMilestones(depositPercent: number): Milestone[] {
   const rest = 100 - depositPercent
   const mid = Math.round(rest / 2)

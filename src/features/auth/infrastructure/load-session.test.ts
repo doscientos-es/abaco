@@ -51,6 +51,7 @@ describe('welcome state in the session', () => {
     expect(updateUser).toHaveBeenCalledWith({
       data: {
         company_name: null,
+        abaco_referral_code: null,
         active_company_id: 'company-1',
       },
     })

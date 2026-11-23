@@ -2,10 +2,18 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-20 — Sin publicar
+## 2026-11-23 — Sin publicar
 
 ### Nuevas funciones
 
+- Add payment milestones handling and validation logic
+- Add Stripe Connect event handling and related tests
+- Implement Stripe Connect webhook handler and tests
+- Add company profile management with validation and UI
+- Improve company profiles and billing navigation
+- Implement multi-step registration process with progress indicator
+- Introduce standard plan with per-person pricing model
+- Add referral code handling in signup and session management
 - Add seat pricing for scale plan and update catalog
 - Add signature handling and validation for public estimates
 - Add client signature feature for public estimates
@@ -109,6 +117,7 @@
 
 ### Correcciones
 
+- Update enterprise pricing and correct test expectations
 - Update pre-push hook to use pnpm typecheck instead of quality
 - Order stylesheet imports
 - Adjust search width for better layout consistency
