@@ -8,8 +8,8 @@ proyecto OAuth identifica la aplicación; no es la cuenta propietaria del calend
 Solo se copia el horario con un título genérico, no los datos completos del trabajo.
 
 La cola y el disparo inmediato están preparados en la base de datos, pero el
-worker y OAuth aún no están desplegados ni configurados y el cron de recuperación
-está pausado. Antes de activarlos hay que resolver la conservación de visitas
+worker y OAuth aún no están desplegados, falta verificar la configuración de
+Google y el cron de recuperación está pausado. Antes de activarlos hay que resolver la conservación de visitas
 finalizadas como historial y el cambio de cuenta Google al reconectar: el worker
 actual elimina eventos de visitas finalizadas y la reconexión reutiliza el ID del
 calendario anterior sin verificar que pertenezca a la nueva cuenta autorizada.
