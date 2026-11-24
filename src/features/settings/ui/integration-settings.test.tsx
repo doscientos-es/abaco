@@ -71,6 +71,14 @@ describe('Stripe settings', () => {
 })
 
 describe('Google Calendar settings', () => {
+  it('does not allow connecting while the current status cannot be checked', () => {
+    dialog.open = true
+    query.mockReturnValue({ isError: true })
+    const html = renderToStaticMarkup(<GoogleCalendarSettings />)
+    expect(html).toContain('No se pudo consultar el estado de Google Calendar.')
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Continuar con Google<\/button>/)
+  })
+
   it('puts data sharing, quotas and authorization in the reconnect dialog', () => {
     query.mockReturnValue({ data: { status: 'reauthorize', lastError: 'reauthorize' } })
     const render = () => renderToStaticMarkup(<GoogleCalendarSettings />)

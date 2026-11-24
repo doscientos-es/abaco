@@ -48,7 +48,7 @@ export function GoogleCalendarSettings() {
   const completing = useRef(false)
   const connection = status.data
   const connected = connection?.status === 'connected'
-  const canConnect = Boolean(tenantId && !connected && !status.isPending)
+  const canConnect = Boolean(tenantId && !connected && !status.isPending && !status.isError)
   const reconnect = connection?.status === 'reauthorize'
   const statusLabel = status.isError
     ? 'Estado no disponible'
