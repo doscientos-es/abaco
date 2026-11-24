@@ -54,7 +54,7 @@ describe('Google Calendar membership and subscription access', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../supabase/migrations/20261124220000_google_calendar_all_roles.sql',
+          '../../supabase/migrations/20261124211802_google_calendar_all_roles.sql',
           import.meta.url,
         ),
         'utf8',
