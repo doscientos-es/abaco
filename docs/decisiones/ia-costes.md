@@ -21,13 +21,12 @@ Fuente: [precios de Gemini](https://ai.google.dev/gemini-api/docs/pricing).
 
 ## Escenario ilustrativo por usuario y mes
 
-Suponiendo 200 solicitudes, con un máximo de 4.000 tokens de entrada y 1.000 de salida
-por solicitud, sin búsquedas ni herramientas de pago:
+Suponiendo 500 solicitudes, con 3.000 tokens de entrada y 1.000 de salida por solicitud,
+sin búsquedas ni herramientas de pago:
 
-- Entrada: 800.000 tokens × 0,25 USD/millón = 0,20 USD.
-- Salida: 200.000 tokens × 1,50 USD/millón = 0,30 USD.
-- Coste de inferencia máximo bajo estos supuestos: 0,50 USD.
-- Triple del coste: 1,50 USD; con un descuento del 50 %, 0,75 USD, antes de otros costes.
+- Entrada: 1.500.000 tokens × 0,25 USD/millón = 0,375 USD.
+- Salida: 500.000 tokens × 1,50 USD/millón = 0,75 USD.
+- Coste de inferencia estimado bajo estos supuestos: 1,125 USD.
 
 El precio comercial en euros debe considerar la conversión de divisa, infraestructura,
 impuestos, comisiones, soporte y cambios de precios. El margen real no está garantizado por
@@ -36,9 +35,11 @@ también cuentan. El límite debe aplicarse en el servidor, con reservas atómic
 concurrentes y facturación de intentos que consuman proveedor; un límite solo por número de
 solicitudes no garantiza el coste. El tope de entrada debe incluir archivos y contexto completo.
 
-Existe un límite de 200 reservas mensuales por usuario en la base de datos. La selección de
-usuarios y la integración con el cobro todavía no están implementadas. No activar ni cobrar el
-módulo hasta probar todos los controles y los flujos reales.
+La base de datos permite 500 reservas mensuales por usuario autorizado y empresa. En empresas
+de cortesía se concede acceso a los roles autorizados; para las demás se requiere una asignación
+vigente. Los créditos extra se consumirán tras la cuota mensual, pero su compra y facturación
+todavía no están implementadas. La selección de usuarios y el cobro del módulo también están
+pendientes. No cobrar hasta probar los controles y los flujos reales.
 
 Una función interna calcula la ampliación de IA para un ciclo pagado conocido y distingue una
 reactivación ya pagada. Los administradores pueden consultar esa estimación; una futura reserva
@@ -57,11 +58,10 @@ retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.
 
 El endpoint exige sesión y una reserva de consumo. La función de base de datos que autoriza y
 reserva ya está desplegada; las asignaciones solo pueden gestionarse desde código de confianza.
-La interfaz de gastos y presupuestos permanece inaccesible sin una asignación válida. En
-PostgreSQL se comprobó que dos reservas solapadas respetan la última petición disponible:
-la segunda esperó al bloqueo y recibió la respuesta de límite. Falta implementar la activación
-por usuario y la facturación. Tampoco se ha probado con una clave real. No debe exponerse a
-clientes hasta completar esos controles.
+La interfaz de gastos y presupuestos requiere una asignación válida o acceso de cortesía.
+Las reservas se serializan con bloqueos de base de datos. Falta implementar la activación
+por usuario, las recargas y la facturación. Tampoco se ha probado con una clave real. No debe
+exponerse a clientes hasta completar esos controles.
 La clave debe configurarse solo en el entorno del servidor, nunca con el prefijo `VITE_`.
 Antes de enviar documentos reales hay que revisar las condiciones de protección de datos y
 usar una cuenta de pago: el tratamiento del contenido difiere en el nivel gratuito.

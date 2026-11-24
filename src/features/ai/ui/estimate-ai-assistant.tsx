@@ -16,11 +16,9 @@ import { newId } from '@/shared/store/store'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
 
 import { aiDocument, requestSuggestion } from '../application/ai-actions'
-import type { AiRequest } from '../domain/requests'
 import { appendEstimateSuggestion, type EstimateSuggestion } from '../domain/suggestions'
 import { EstimateSuggestionPreview } from './estimate-suggestion-preview'
 
-type Message = Extract<AiRequest, { task: 'estimate' }>['messages'][number]
 const uploadRules = { ...receiptUpload, maxMiB: 2 }
 
 export function EstimateAiAssistant({
@@ -35,7 +33,6 @@ export function EstimateAiAssistant({
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
   const [suggestion, setSuggestion] = useState<EstimateSuggestion | null>(null)
   const [applied, setApplied] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -44,28 +41,16 @@ export function EstimateAiAssistant({
   async function send() {
     const prompt = text.trim()
     if (!prompt || busy) return
-    const next: Message[] = [...messages, { role: 'user', text: prompt }]
-    if (
-      next.length > 20 ||
-      next.some((message) => message.text.length > 4000) ||
-      next.reduce((sum, message) => sum + message.text.length, 0) > 12000
-    ) {
-      setError(
-        'La conversación ha alcanzado el límite. Inicia una nueva conversación para continuar.',
-      )
-      return
-    }
     setBusy(true)
     setError('')
+    setSuggestion(null)
     try {
       const document = file ? await aiDocument(file) : undefined
       const result = await requestSuggestion(tenantId, {
         task: 'estimate',
-        messages: next,
+        messages: [{ role: 'user', text: prompt }],
         ...(document ? { document } : {}),
       })
-      setMessages([...next, { role: 'model', text: JSON.stringify(result) }])
-      setText('')
       setSuggestion(result)
       setApplied(false)
     } catch (cause) {
@@ -88,7 +73,6 @@ export function EstimateAiAssistant({
   }
 
   function reset() {
-    setMessages([])
     setSuggestion(null)
     setText('')
     setFile(null)
@@ -106,40 +90,24 @@ export function EstimateAiAssistant({
           <DialogHeader>
             <DialogTitle>Crear con IA</DialogTitle>
             <DialogDescription>
-              Cuéntanos qué necesitas presupuestar. Tú revisas y decides qué añadir.
+              Describe el trabajo para obtener partidas de presupuesto. Cada propuesta consume una
+              solicitud.
             </DialogDescription>
           </DialogHeader>
           <div className="ai-chat-messages space-y-3" aria-live="polite" aria-busy={busy}>
-            {messages.length === 0 ? (
+            {!suggestion ? (
               <div className="bg-primary/5 rounded-2xl p-4 text-sm">
-                Describe el trabajo, las cantidades y los precios conocidos. Si falta algo, te
-                preguntaré.
+                Describe el trabajo, las cantidades y los precios conocidos. Indicaremos qué datos
+                faltan.
               </div>
             ) : null}
-            {messages.map((message, index) =>
-              message.role === 'user' ? (
-                <p
-                  key={index}
-                  className="bg-muted ml-6 rounded-2xl p-3 text-sm break-words whitespace-pre-wrap"
-                >
-                  {message.text}
-                </p>
-              ) : index === messages.length - 1 && suggestion ? (
-                <EstimateSuggestionPreview
-                  key={index}
-                  suggestion={suggestion}
-                  onApply={apply}
-                  disabled={applied || busy}
-                />
-              ) : (
-                <p
-                  key={index}
-                  className="bg-primary/5 mr-6 rounded-2xl p-3 text-sm break-words whitespace-pre-wrap"
-                >
-                  {(JSON.parse(message.text) as EstimateSuggestion).message}
-                </p>
-              ),
-            )}
+            {suggestion ? (
+              <EstimateSuggestionPreview
+                suggestion={suggestion}
+                onApply={apply}
+                disabled={applied || busy}
+              />
+            ) : null}
             {applied ? (
               <output className="text-primary block text-sm">
                 Partidas añadidas al borrador. Revisa los datos antes de guardarlo.
@@ -173,9 +141,9 @@ export function EstimateAiAssistant({
               onChange={(event) => setText(event.target.value)}
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {messages.length ? (
+              {suggestion ? (
                 <Button type="button" variant="outline" onPress={reset} isDisabled={busy}>
-                  Nueva conversación
+                  Nueva propuesta
                 </Button>
               ) : (
                 <span className="text-muted-foreground text-xs">
@@ -183,7 +151,7 @@ export function EstimateAiAssistant({
                 </span>
               )}
               <Button type="button" onPress={() => void send()} isDisabled={busy || !text.trim()}>
-                {busy ? 'Preparando…' : 'Enviar'}
+                {busy ? 'Preparando…' : 'Generar propuesta'}
               </Button>
             </div>
           </div>

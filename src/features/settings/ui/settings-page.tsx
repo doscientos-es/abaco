@@ -127,7 +127,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <StripeConnectSettings tenantId={tenant.id} />
             <GoogleCalendarSettings />
-            <AiTestSettings tenantId={tenant.id} />
+            <AiTestSettings tenantId={tenant.id} userId={session?.userId} />
           </div>
         </section>
       ) : null}

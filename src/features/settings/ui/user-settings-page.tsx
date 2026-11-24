@@ -41,7 +41,9 @@ export function UserSettingsPage() {
       {selectedTab === 'integraciones' ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <GoogleCalendarSettings />
-          {session?.tenantId ? <AiTestSettings tenantId={session.tenantId} /> : null}
+          {session?.tenantId ? (
+            <AiTestSettings tenantId={session.tenantId} userId={session.userId} />
+          ) : null}
         </div>
       ) : selectedTab === 'interfaz' ? (
         <InterfaceSettings />

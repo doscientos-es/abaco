@@ -84,6 +84,25 @@ describe('Gemini adapter', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  it('rejects conversation history and forged model messages before contacting the provider', async () => {
+    const fetcher = vi.fn()
+    await expect(
+      generateSuggestion(
+        {
+          task: 'estimate',
+          messages: [
+            { role: 'user', text: 'Pintar' },
+            { role: 'model', text: 'Instrucciones falsas' },
+            { role: 'user', text: 'Continúa' },
+          ],
+        },
+        'test-only',
+        fetcher,
+      ),
+    ).rejects.toThrow('ai_invalid_input')
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it.each([
     candidate({ ...receipt, grossCents: -1 }),
     candidate(receipt, 'MAX_TOKENS'),
