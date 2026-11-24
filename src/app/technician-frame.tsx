@@ -4,8 +4,6 @@ import {
   AppShellMain,
   AppShellMobileHeader,
   AppShellSidebar,
-  Avatar,
-  AvatarFallback,
   Button,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,13 +16,13 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 
-import { roleLabels, useSession, useSignOut } from '@/features/auth'
+import { roleLabels, useSession, useSignOut, UserAvatar } from '@/features/auth'
 import { GlobalSearch, type SearchMode } from '@/features/global-search'
 import { NavigationLayoutContext, useNavigationLayout } from '@/features/interface-preferences'
 import { platformAccessQuery } from '@/features/superadmin'
 import { brand } from '@/shared/lib/brand'
 
-import { initials, MobileBrandLink, SidebarLink, type NavItem } from './frame-navigation'
+import { MobileBrandLink, SidebarLink, type NavItem } from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 import { PlatformMenuSection } from './platform-menu-section'
@@ -118,9 +116,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
               aria-label="Menú de usuario"
               className="h-auto w-full justify-start gap-3 px-3 py-2"
             >
-              <Avatar>
-                <AvatarFallback>{initials(userName)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
               <span className="min-w-0 text-left leading-tight">
                 <span className="block truncate text-sm font-medium">{userName}</span>
                 <span className="text-muted-foreground block truncate text-xs font-normal">
@@ -145,9 +141,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
               aria-label="Menú de usuario"
               className="ml-auto h-auto rounded-full p-1"
             >
-              <Avatar>
-                <AvatarFallback>{initials(userName)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
             </Button>
             {userMenu('bottom end')}
           </DropdownMenuTrigger>

@@ -45,5 +45,6 @@ describe('LoginPage', () => {
     expect(html).toContain('href="/registro"')
     expect(html).toContain('autoComplete="username"')
     expect(html).toContain('autoComplete="current-password"')
+    expect(html).toContain('Continuar con Google')
   })
 })

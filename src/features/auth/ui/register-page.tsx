@@ -10,6 +10,7 @@ import { sessionQuery, signUp } from '../application/auth-actions'
 import { clearReferral, rememberReferral } from '../application/referral-actions'
 import { firstError, passwordRules, signupSchema, signupStepError } from '../domain/credentials'
 import { AuthLayout, FormError } from './auth-layout'
+import { GoogleAuthButton } from './google-auth-button'
 
 const toLogin = (
   <Link to="/entrar" className="hover:text-foreground underline">
@@ -114,6 +115,9 @@ export function RegisterPage() {
         <p className="text-muted-foreground text-sm">
           Enlace de invitación detectado. Lo comprobaremos al crear tu empresa.
         </p>
+      ) : null}
+      {step === 2 ? (
+        <GoogleAuthButton signup={{ fullName, companyName, referralCode: invitation }} />
       ) : null}
       <form ref={formRef} onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         {step === 0 ? (

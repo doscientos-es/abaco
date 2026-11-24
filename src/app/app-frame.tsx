@@ -1,6 +1,4 @@
 import {
-  Avatar,
-  AvatarFallback,
   Button,
   IconButton,
   DropdownMenuContent,
@@ -26,6 +24,7 @@ import {
   useCompanyActions,
   useSession,
   useSignOut,
+  UserAvatar,
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
@@ -44,13 +43,7 @@ import { retryStoreSaves, useSaveStatus, useTenantData } from '@/shared/store/st
 import { brandThemeStyle } from '@/shared/ui/brand-theme'
 import { WorkspaceChromeContext } from '@/shared/ui/workspace-page-chrome'
 
-import {
-  initials,
-  MobileBrandLink,
-  SidebarLink,
-  type NavItem,
-  type NavTo,
-} from './frame-navigation'
+import { MobileBrandLink, SidebarLink, type NavItem, type NavTo } from './frame-navigation'
 import { MobileNavigation } from './mobile-navigation'
 import { navIcons } from './nav-icons'
 import { PlatformMenuSection } from './platform-menu-section'
@@ -347,9 +340,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 aria-label="Menú de usuario"
                 className="h-auto w-full justify-start gap-3 px-3 py-2"
               >
-                <Avatar>
-                  <AvatarFallback>{initials(userName)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
                 <span className="min-w-0 text-left leading-tight">
                   <span className="block truncate text-sm font-medium">{userName}</span>
                   <span className="text-muted-foreground block truncate text-xs font-normal">
@@ -379,9 +370,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
               aria-label="Menú de usuario"
               className="h-auto rounded-full p-1"
             >
-              <Avatar>
-                <AvatarFallback>{initials(userName)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
             </Button>
             {userMenu('bottom end')}
           </DropdownMenuTrigger>

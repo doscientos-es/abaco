@@ -9,6 +9,7 @@ import { PasswordField, TextField } from '@/shared/ui/form'
 import { sessionQuery, signIn } from '../application/auth-actions'
 import { firstError, loginSchema } from '../domain/credentials'
 import { AuthLayout, FormError } from './auth-layout'
+import { GoogleAuthButton } from './google-auth-button'
 
 export function LoginPage({ redirect }: { redirect?: string | undefined }) {
   const navigate = useNavigate()
@@ -61,6 +62,7 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
         </span>
       }
     >
+      <GoogleAuthButton redirect={redirect} />
       <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
         <TextField
           label="Correo"

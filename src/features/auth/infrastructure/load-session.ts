@@ -20,6 +20,7 @@ export type AuthSession = {
   userId: string
   email: string
   fullName: string
+  avatarUrl?: string | null
   /** Company being worked on now. Null when the account has not been added to any company yet. */
   tenantId: string | null
   /** The user's role in that company. */
@@ -28,6 +29,22 @@ export type AuthSession = {
   companies: Company[]
   /** New signup admins see the trial/payment choice once. Existing and invited accounts do not. */
   needsWelcome: boolean
+}
+
+/** Supabase user metadata is editable, so never load arbitrary URLs as profile images. */
+function googleAvatar(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 2048) return null
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' &&
+      url.hostname.endsWith('.googleusercontent.com') &&
+      !url.username &&
+      !url.password
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
 }
 
 /** One row per company the user belongs to; the role can differ in each one. */
@@ -95,6 +112,7 @@ export async function loadSession(): Promise<AuthSession | null> {
     userId: user.id,
     email: user.email ?? '',
     fullName,
+    avatarUrl: googleAvatar(user.user_metadata?.avatar_url ?? user.user_metadata?.picture),
     tenantId: active?.id ?? null,
     role: active?.role ?? null,
     companies,

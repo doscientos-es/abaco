@@ -87,5 +87,6 @@ describe('RegisterPage', () => {
     expect(html).toContain('Activa tu suscripción para empezar a usar Ábaco')
     expect(html).toContain('Crear cuenta')
     expect(html).toContain('autoComplete="new-password"')
+    expect(html).toContain('Continuar con Google')
   })
 })

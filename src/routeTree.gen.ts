@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccesoGoogleRouteImport } from './routes/acceso-google'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as AjustesRouteImport } from './routes/ajustes'
 import { Route as BienvenidaRouteImport } from './routes/bienvenida'
@@ -52,6 +53,11 @@ import { Route as ClientesClientIdEditarRouteImport } from './routes/clientes.$c
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccesoGoogleRoute = AccesoGoogleRouteImport.update({
+  id: '/acceso-google',
+  path: '/acceso-google',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaRoute = AgendaRouteImport.update({
@@ -247,6 +253,7 @@ const ClientesClientIdEditarRoute = ClientesClientIdEditarRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/acceso-google': typeof AccesoGoogleRoute
   '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/acceso-google': typeof AccesoGoogleRoute
   '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
@@ -326,6 +334,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/acceso-google': typeof AccesoGoogleRoute
   '/agenda': typeof AgendaRoute
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
@@ -369,6 +378,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/acceso-google'
     | '/agenda'
     | '/ajustes'
     | '/bienvenida'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/acceso-google'
     | '/agenda'
     | '/ajustes'
     | '/bienvenida'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/acceso-google'
     | '/agenda'
     | '/ajustes'
     | '/bienvenida'
@@ -489,6 +501,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccesoGoogleRoute: typeof AccesoGoogleRoute
   AgendaRoute: typeof AgendaRoute
   AjustesRoute: typeof AjustesRoute
   BienvenidaRoute: typeof BienvenidaRoute
@@ -526,6 +539,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acceso-google': {
+      id: '/acceso-google'
+      path: '/acceso-google'
+      fullPath: '/acceso-google'
+      preLoaderRoute: typeof AccesoGoogleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda': {
@@ -859,6 +879,7 @@ const TrabajosRouteWithChildren = TrabajosRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccesoGoogleRoute: AccesoGoogleRoute,
   AgendaRoute: AgendaRoute,
   AjustesRoute: AjustesRoute,
   BienvenidaRoute: BienvenidaRoute,

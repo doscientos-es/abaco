@@ -116,6 +116,23 @@ describe('welcome state in the session', () => {
     expect(await loadSession()).toMatchObject({ tenantId: 'company-1', role: 'user' })
   })
 
+  it('uses Google profile details but rejects arbitrary avatar URLs', async () => {
+    const metadata = {
+      full_name: 'Ana Google',
+      avatar_url: 'https://lh3.googleusercontent.com/photo',
+    }
+    getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1', user_metadata: metadata } } },
+    })
+    rpc.mockResolvedValue({ data: [membership], error: null })
+    expect(await loadSession()).toMatchObject({
+      fullName: 'Ana Google',
+      avatarUrl: metadata.avatar_url,
+    })
+    metadata.avatar_url = 'https://googleusercontent.com.evil.test/tracker'
+    expect(await loadSession()).toMatchObject({ avatarUrl: null })
+  })
+
   it('reports a failure to save the selected company', async () => {
     updateUser.mockResolvedValue({ error: { message: 'Unavailable' } })
     await expect(setPreferredCompanyId('company-2')).rejects.toThrow(
