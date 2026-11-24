@@ -41,8 +41,9 @@ usuarios y la integración con el cobro todavía no están implementadas. No act
 módulo hasta probar todos los controles y los flujos reales.
 
 Una función interna calcula la ampliación de IA para un ciclo pagado conocido y distingue una
-reactivación ya pagada. Es solo una estimación: una futura reserva debe volver a comprobarla bajo
-el bloqueo de la empresa antes de cobrar. No crea pagos ni activa accesos.
+reactivación ya pagada. Los administradores pueden consultar esa estimación; una futura reserva
+debe volver a comprobarla bajo el bloqueo de la empresa antes de cobrar. La consulta no crea
+pagos ni activa accesos.
 
 ## Estado de la integración
 

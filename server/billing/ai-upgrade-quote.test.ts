@@ -20,7 +20,8 @@ describe('AI upgrade quote', () => {
     await db.exec(`
       create role anon; create role authenticated; create role service_role;
       create schema app_private; create schema auth;
-      create function auth.uid() returns uuid language sql as $$ select null::uuid $$;
+      create function auth.uid() returns uuid language sql as $$
+        select nullif(current_setting('test.uid', true), '')::uuid $$;
       create table public.tenants (id uuid primary key, is_complimentary boolean not null,
         subscription_status text not null, cancel_at_period_end boolean not null,
         current_period_end timestamptz, billing_interval text not null, billing_vat_percent integer);
@@ -37,6 +38,7 @@ describe('AI upgrade quote', () => {
       '20261123215616_prorated_upgrade_calculation.sql',
       '20261123221018_ai_access_reservations.sql',
       '20261123223704_ai_upgrade_quote.sql',
+      '20261124074348_ai_upgrade_quote_for_admin.sql',
     ]) {
       await db.exec(
         await readFile(new URL(`../../supabase/migrations/${migration}`, import.meta.url), 'utf8'),
@@ -54,6 +56,7 @@ describe('AI upgrade quote', () => {
       insert into app_private.billing_paid_cycles values
         ('${tenant}',now()-interval '180 days'+interval '1 hour',now()+interval '180 days');
       insert into public.memberships values ('${tenant}','${user}','admin'),('${tenant}','${other}','user');
+      select set_config('test.uid', '${user}', false);
     `)
   })
 
@@ -129,5 +132,30 @@ describe('AI upgrade quote', () => {
         and not has_function_privilege('authenticated','app_private.ai_upgrade_quote(uuid,uuid)','execute')
         and not has_function_privilege('service_role','app_private.ai_upgrade_quote(uuid,uuid)','execute') as blocked`)
     expect(rows[0]?.blocked).toBe(true)
+  })
+
+  it('lets only tenant admins request a quote for an eligible member', async () => {
+    const publicQuote = () =>
+      db.query<{ quote: Record<string, unknown> }>(
+        'select public.quote_ai_upgrade($1,$2) as quote',
+        [tenant, user],
+      )
+    expect((await publicQuote()).rows[0]?.quote).toMatchObject({ net_cents: 188, total_cents: 227 })
+    await db.query("select set_config('test.uid',$1,false)", [other])
+    await expect(publicQuote()).rejects.toThrow('Solo un administrador')
+    await db.query("select set_config('test.uid','',false)")
+    await expect(publicQuote()).rejects.toThrow('Solo un administrador')
+    await db.query("select set_config('test.uid',$1,false)", [user])
+    await expect(
+      db.query('select public.quote_ai_upgrade($1,$2)', [tenant, other]),
+    ).rejects.toThrow('permisos')
+  })
+
+  it('grants quote access only to authenticated callers', async () => {
+    const { rows } = await db.query<{ allowed: boolean }>(`
+      select not has_function_privilege('anon','public.quote_ai_upgrade(uuid,uuid)','execute')
+        and has_function_privilege('authenticated','public.quote_ai_upgrade(uuid,uuid)','execute')
+        and not has_function_privilege('service_role','public.quote_ai_upgrade(uuid,uuid)','execute') as allowed`)
+    expect(rows[0]?.allowed).toBe(true)
   })
 })
