@@ -91,6 +91,7 @@ describe('Google Calendar settings', () => {
     dialog.open = true
     const details = render()
     expect(details).toContain('Qué se sincroniza')
+    expect(details).toContain('Los cambios en Google Calendar no modifican Ábaco.')
     expect(details).toContain('Tu calendario y las cuotas')
     expect(details).toContain('Qué pasa al desconectar')
     expect(details).toContain('Continuar con Google')

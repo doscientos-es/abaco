@@ -182,7 +182,7 @@ export function GoogleCalendarSettings() {
             <dt className="font-medium">Qué se sincroniza</dt>
             <dd className="text-muted-foreground">
               Solo el horario y un título genérico. No se envían nombres de clientes, direcciones,
-              notas ni partes de trabajo.
+              notas ni partes de trabajo. Los cambios en Google Calendar no modifican Ábaco.
             </dd>
           </div>
           <div>
