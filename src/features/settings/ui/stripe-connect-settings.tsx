@@ -44,7 +44,11 @@ export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
           <Badge variant={!status.isError && connection?.connected ? 'success' : 'neutral'}>
             {statusLabel}
           </Badge>
-          {connection?.liveMode === false ? <Badge variant="warning">Modo de pruebas</Badge> : null}
+          {!status.isError && connection ? (
+            <Badge variant={connection.liveMode ? 'neutral' : 'warning'}>
+              {connection.liveMode ? 'Modo real' : 'Modo de pruebas'}
+            </Badge>
+          ) : null}
         </>
       }
       feedback={
@@ -79,6 +83,12 @@ export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
           Conectar la cuenta no activa los cobros con Stripe en Ábaco.
         </p>
       </div>
+      {connection?.connected && !status.isError ? (
+        <p className="text-muted-foreground text-sm">
+          La cuenta está vinculada. Por ahora no hay más opciones de configuración de Stripe en
+          Ábaco.
+        </p>
+      ) : null}
       {status.isError ? (
         <p role="alert" className="text-destructive">
           No se pudo consultar la conexión con Stripe.

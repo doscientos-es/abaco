@@ -79,6 +79,11 @@ export function IntegrationCard({
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription id={descriptionId}>{description}</DialogDescription>
         </DialogHeader>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Estado:</span>
+          <output className="flex flex-wrap gap-1.5">{status}</output>
+        </div>
+        {feedback ? <div className="space-y-1.5 text-sm">{feedback}</div> : null}
         {children}
         {dialogActions ? <DialogFooter>{dialogActions}</DialogFooter> : null}
       </DialogContent>

@@ -47,6 +47,8 @@ describe('Stripe settings', () => {
     dialog.open = true
     const details = render()
     expect(details).toContain('>Conectar Stripe</')
+    expect(details.split('<dialog ')[1]).toContain('Sin conectar')
+    expect(details.split('<dialog ')[1]).toContain('Modo de pruebas')
     expect(details).toContain('Conectar la cuenta no activa los cobros con Stripe en Ábaco.')
     expect(details).toContain('Continuar con Stripe')
   })
@@ -56,6 +58,9 @@ describe('Stripe settings', () => {
     query.mockReturnValue({ data: { connected: true, liveMode: true } })
     const html = renderToStaticMarkup(<StripeConnectSettings tenantId="tenant-a" />)
     expect(html).toContain('Cuenta vinculada')
+    expect(html.split('<dialog ')[1]).toContain('Cuenta vinculada')
+    expect(html.split('<dialog ')[1]).toContain('Modo real')
+    expect(html).toContain('no hay más opciones de configuración de Stripe')
     expect(html).toContain('Ver detalles: Stripe')
     expect(html).not.toContain('Continuar con Stripe')
     expect(html).not.toContain('Modo de pruebas')
@@ -101,6 +106,7 @@ describe('Google Calendar settings', () => {
 
     dialog.open = true
     const details = render()
+    expect(details.split('<dialog ')[1]).toContain('Requiere acceso')
     expect(details).toContain('Qué se sincroniza')
     expect(details).toContain('Los cambios en Google Calendar no modifican Ábaco.')
     expect(details).toContain('Tu calendario y las cuotas')
@@ -116,6 +122,7 @@ describe('Google Calendar settings', () => {
 
     dialog.open = true
     const details = render()
+    expect(details.split('<dialog ')[1]).toContain('Conectado')
     expect(details).toContain('Sincronizar ahora')
     expect(details).toContain('>Desconectar</button>')
     expect(details).toMatch(/Sincronizando .*2.* visitas…/)
@@ -127,8 +134,19 @@ describe('Google Calendar settings', () => {
     query.mockReturnValue({ data: { status: 'connected', pendingJobs: 2, accessActive: false } })
     const html = renderToStaticMarkup(<GoogleCalendarSettings />)
     expect(html).toContain('La sincronización está en pausa')
+    expect(html).toContain('Sincronizaciones pendientes: 2.')
     expect(html).toMatch(/<button[^>]*disabled[^>]*>Sincronizar ahora<\/button>/)
     expect(html).toContain('>Desconectar</button>')
     expect(html).not.toContain('Sincronizando')
+  })
+
+  it('explains when a connected calendar has no recorded or pending synchronization', () => {
+    dialog.open = true
+    query.mockReturnValue({
+      data: { status: 'connected', pendingJobs: 0, lastSyncedAt: null, accessActive: true },
+    })
+    const html = renderToStaticMarkup(<GoogleCalendarSettings />)
+    expect(html).toContain('Aún no hay ninguna sincronización registrada.')
+    expect(html).toContain('No hay sincronizaciones pendientes.')
   })
 })

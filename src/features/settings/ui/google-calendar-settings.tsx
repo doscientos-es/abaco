@@ -237,13 +237,15 @@ export function GoogleCalendarSettings() {
             </Button>
           </div>
         ) : null}
-        {connection?.pendingJobs || connection?.lastSyncedAt || syncError ? (
+        {connected || connection?.pendingJobs || connection?.lastSyncedAt || syncError ? (
           <div className="bg-muted text-muted-foreground space-y-1 rounded-lg p-3">
             {connection?.pendingJobs && connection.accessActive ? (
               <output>
                 Sincronizando {connection.pendingJobs}{' '}
                 {connection.pendingJobs === 1 ? 'visita' : 'visitas'}…
               </output>
+            ) : connection?.pendingJobs ? (
+              <p>Sincronizaciones pendientes: {connection.pendingJobs}.</p>
             ) : null}
             {connection?.lastSyncedAt ? (
               <p>
@@ -252,6 +254,11 @@ export function GoogleCalendarSettings() {
                   {dateFormatter.format(new Date(connection.lastSyncedAt))}
                 </time>
               </p>
+            ) : connected ? (
+              <p>Aún no hay ninguna sincronización registrada.</p>
+            ) : null}
+            {connected && connection?.pendingJobs === 0 ? (
+              <p>No hay sincronizaciones pendientes.</p>
             ) : null}
             {syncError ? <p>{syncError}</p> : null}
           </div>
