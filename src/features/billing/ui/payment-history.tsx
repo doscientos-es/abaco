@@ -1,13 +1,16 @@
 import { Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 
 import { downloadTextFile } from '@/shared/domain/csv'
+import { SelectField } from '@/shared/ui/form'
 
 import {
   billingCatalogQuery,
   billingPreviewQuery,
   paymentsQuery,
   type Payment,
+  type PaymentStatus,
   type Subscription,
 } from '../application/billing-actions'
 import { billingVatLabel, formatEuros, planLabel, type CatalogRate } from '../domain/plans'
@@ -51,15 +54,17 @@ ${
   downloadTextFile(`justificante-abaco-${payment.order}.html`, html, 'text/html')
 }
 
-/** What the company has contracted, what it has paid so far and what comes next. Owner only. */
+/** Current plan, upcoming charge and payment attempts. Admin only. */
 export function PaymentHistory({
   tenantId,
   companyName,
   subscription,
+  subscriptionUnavailable = false,
 }: {
   tenantId: string
   companyName: string
   subscription: Subscription | undefined
+  subscriptionUnavailable?: boolean
 }) {
   const {
     data: payments,
@@ -70,6 +75,16 @@ export function PaymentHistory({
   } = useQuery(paymentsQuery(tenantId))
   const preview = useQuery(billingPreviewQuery(tenantId))
   const { data: rates } = useQuery(billingCatalogQuery)
+  const [status, setStatus] = useState<'all' | PaymentStatus>('all')
+  const [year, setYear] = useState('all')
+  const years = [
+    ...new Set((payments ?? []).map((p) => (p.settledAt ?? p.createdAt).getFullYear())),
+  ].sort((a, b) => b - a)
+  const filtered = (payments ?? []).filter(
+    (p) =>
+      (status === 'all' || p.status === status) &&
+      (year === 'all' || String((p.settledAt ?? p.createdAt).getFullYear()) === year),
+  )
   const active =
     subscription &&
     !subscription.isComplimentary &&
@@ -85,31 +100,47 @@ export function PaymentHistory({
         <div className="border-border rounded-lg border p-3">
           <dt className="text-muted-foreground text-xs">Plan contratado</dt>
           <dd className="font-medium">
-            {subscription?.isComplimentary
-              ? 'Cortesía'
-              : active && current
-                ? `${planLabel(current.plan, rates)} · hasta ${current.seats} · ${current.period === 'year' ? 'anual' : 'mensual'}`
-                : active
-                  ? 'Pendiente de verificar'
-                  : 'Ninguno todavía'}
+            {!subscription
+              ? subscriptionUnavailable
+                ? 'No se pudo verificar'
+                : 'Consultando…'
+              : subscription.isComplimentary
+                ? 'Cortesía'
+                : active && current
+                  ? `${planLabel(current.plan, rates)} · hasta ${current.seats} personas · ${current.period === 'year' ? 'anual' : 'mensual'}`
+                  : active
+                    ? preview.isError
+                      ? 'No se pudo verificar'
+                      : 'Consultando…'
+                    : 'Ninguno todavía'}
           </dd>
+          {active && current ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {cents(current.amount_cents)} {billingVatLabel(current.vat_percent)}{' '}
+              {current.period === 'year' ? 'al año' : 'al mes'}
+            </p>
+          ) : null}
         </div>
         <div className="border-border rounded-lg border p-3">
           <dt className="text-muted-foreground text-xs">Próximo cobro</dt>
           <dd className="font-medium">
-            {active && preview.data?.pending
-              ? 'Pago en verificación'
-              : active && preview.isError
+            {!subscription
+              ? subscriptionUnavailable
                 ? 'No se pudo verificar'
-                : active && !preview.data
-                  ? 'Consultando…'
-                  : subscription?.status === 'past_due' && next
-                    ? `Cuota pendiente: ${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)}`
-                    : willRenew && periodEnd && next
-                      ? `${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)} el ${day.format(periodEnd)}`
-                      : active && subscription.cancelAtPeriodEnd
-                        ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
-                        : 'Ninguno'}
+                : 'Consultando…'
+              : active && preview.data?.pending
+                ? 'Pago en verificación'
+                : active && preview.isError
+                  ? 'No se pudo verificar'
+                  : active && !preview.data
+                    ? 'Consultando…'
+                    : subscription?.status === 'past_due' && next
+                      ? `Cuota pendiente: ${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)}`
+                      : willRenew && periodEnd && next
+                        ? `${cents(next.amount_cents)} ${billingVatLabel(next.vat_percent)} el ${day.format(periodEnd)}`
+                        : active && subscription.cancelAtPeriodEnd
+                          ? `Ninguno: termina el ${periodEnd ? day.format(periodEnd) : 'periodo'}`
+                          : 'Ninguno'}
           </dd>
         </div>
       </dl>
@@ -135,63 +166,110 @@ export function PaymentHistory({
             </Button>
           </div>
         ) : isPending ? (
-          <p className="text-muted-foreground text-sm">Cargando…</p>
+          <div role="status" className="border-border rounded-lg border p-4">
+            <p className="text-muted-foreground text-sm">Cargando…</p>
+          </div>
         ) : !payments?.length ? (
-          <p className="text-muted-foreground text-sm">
-            Todavía no has hecho ningún pago. Aquí aparecerán con su justificante.
-          </p>
+          <div className="border-border rounded-lg border border-dashed p-4">
+            <p className="text-sm font-medium">Todavía no has hecho ningún pago.</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Aquí aparecerán tus operaciones y los justificantes de los pagos completados.
+            </p>
+          </div>
         ) : (
-          <ul className="divide-border border-border divide-y rounded-lg border text-sm">
-            {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-              >
-                <div>
-                  <p className="font-medium">{concept(p, rates)}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
-                  </p>
-                  {p.status === 'succeeded' &&
-                  p.referralCreditCents !== null &&
-                  p.referralCreditCents > 0 &&
-                  p.chargedCents !== null ? (
-                    <p className="text-muted-foreground text-xs">
-                      Descuento por referidos {cents(p.referralCreditCents)}
-                    </p>
-                  ) : null}
-                  {p.status === 'succeeded' &&
-                    (p.invoicePortalUrl && p.invoiceNumber ? (
-                      <a
-                        className="text-primary text-xs underline"
-                        href={p.invoicePortalUrl}
-                        target="_blank"
-                        rel="noreferrer"
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <SelectField
+                label="Estado del pago"
+                value={status}
+                onChange={(value) => setStatus(value as 'all' | PaymentStatus)}
+                options={[
+                  { value: 'all', label: 'Todos los estados' },
+                  ...Object.entries(statusLabel).map(([value, label]) => ({ value, label })),
+                ]}
+              />
+              <SelectField
+                label="Año"
+                value={year}
+                onChange={setYear}
+                options={[
+                  { value: 'all', label: 'Todos los años' },
+                  ...years.map((value) => ({ value: String(value), label: String(value) })),
+                ]}
+              />
+              {status !== 'all' || year !== 'all' ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => {
+                    setStatus('all')
+                    setYear('all')
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              ) : null}
+            </div>
+            {!filtered.length ? (
+              <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+                No hay pagos que coincidan con estos filtros.
+              </p>
+            ) : (
+              <ul className="divide-border border-border divide-y rounded-lg border text-sm">
+                {filtered.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                  >
+                    <div>
+                      <p className="font-medium">{concept(p, rates)}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {day.format(p.settledAt ?? p.createdAt)} · ref. {p.order}
+                      </p>
+                      {p.status === 'succeeded' &&
+                      p.referralCreditCents !== null &&
+                      p.referralCreditCents > 0 &&
+                      p.chargedCents !== null ? (
+                        <p className="text-muted-foreground text-xs">
+                          Descuento por referidos {cents(p.referralCreditCents)}
+                        </p>
+                      ) : null}
+                      {p.status === 'succeeded' &&
+                        (p.invoicePortalUrl && p.invoiceNumber ? (
+                          <a
+                            className="text-primary text-xs underline"
+                            href={p.invoicePortalUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Factura {p.invoiceNumber}
+                          </a>
+                        ) : (
+                          <p className="text-muted-foreground text-xs">Factura aún no disponible</p>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] ${statusStyle[p.status]}`}
                       >
-                        Factura {p.invoiceNumber}
-                      </a>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">Factura aún no disponible</p>
-                    ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${statusStyle[p.status]}`}>
-                    {statusLabel[p.status]}
-                  </span>
-                  <span className="w-24 text-right font-medium">{cents(p.amountCents)}</span>
-                  {p.status === 'succeeded' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={() => downloadReceipt(p, companyName, concept(p, rates))}
-                    >
-                      Justificante
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+                        {statusLabel[p.status]}
+                      </span>
+                      <span className="w-24 text-right font-medium">{cents(p.amountCents)}</span>
+                      {p.status === 'succeeded' ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onPress={() => downloadReceipt(p, companyName, concept(p, rates))}
+                        >
+                          Justificante
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </div>

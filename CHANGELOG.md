@@ -2,10 +2,45 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-23 — Sin publicar
+## 2026-11-24 — Sin publicar
 
 ### Nuevas funciones
 
+- Improve synchronization status messages and logic
+- Enhance Google Calendar status query with dynamic refresh
+- Add new tests for scheduling and team assignment logic
+- Add GoogleCalendarAccessInactiveError handling
+- Add accessActive field and update related logic
+- Add Google Calendar permission error handling
+- Add worker avatar management and integrate into settings
+- Add AI credits management and update settings integration
+- Update generation configuration with minimal thinking level
+- Add AiTestSettings component and integrate into settings pages
+- Add Buffer import for encryption and decryption tests
+- Enhance Google authentication flow and profile handling
+- Implement Google authentication flow and user avatar display
+- Add new image asset for Abaco branding
+- Add immediate dispatch tests and sync worker functions
+- Enhance OAuth flow with state validation and completion
+- Implement moveAndSelect function for mobile shortcuts
+- Add mobile bottom bar settings component
+- Implement mobile bottom navigation bar and item components
+- Update Google Calendar integration UI and logic
+- Enhance integration settings layout and add card component
+- Expose AI upgrade quotes to admins
+- Add internal AI upgrade quote
+- Implement paid billing cycle table and related tests
+- Version access reservations and tests
+- Implement AI access reservation system with security checks
+- Add session guard for unpaid workers and subscription checks
+- Add prorated upgrade calculation function and tests
+- Enhance estimate assistant with conversation limits and reset option
+- Add AI assistant for estimate generation and suggestions
+- Update subscription messages and trial status handling
+- Update registration and welcome pages for subscription activation
+- Implement referral discounts and invoice reservations
+- Implement AI suggestion handler and request validation
+- Add work days planning feature for work orders
 - Improve mobile dashboard and workflows
 - Improve mobile workflows and referral management
 - Improve accessibility and UI for estimate approval
@@ -137,6 +172,8 @@
 
 ### Correcciones
 
+- Clarify synchronization impact on Ábaco
+- Prevent connection when status cannot be checked
 - Show dashboard metrics in two mobile columns
 - Update enterprise pricing and correct test expectations
 - Update pre-push hook to use pnpm typecheck instead of quality

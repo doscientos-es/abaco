@@ -2,12 +2,47 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-23",
+      "date": "2026-11-24",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Improve synchronization status messages and logic",
+            "Enhance Google Calendar status query with dynamic refresh",
+            "Add new tests for scheduling and team assignment logic",
+            "Add GoogleCalendarAccessInactiveError handling",
+            "Add accessActive field and update related logic",
+            "Add Google Calendar permission error handling",
+            "Add worker avatar management and integrate into settings",
+            "Add AI credits management and update settings integration",
+            "Update generation configuration with minimal thinking level",
+            "Add AiTestSettings component and integrate into settings pages",
+            "Add Buffer import for encryption and decryption tests",
+            "Enhance Google authentication flow and profile handling",
+            "Implement Google authentication flow and user avatar display",
+            "Add new image asset for Abaco branding",
+            "Add immediate dispatch tests and sync worker functions",
+            "Enhance OAuth flow with state validation and completion",
+            "Implement moveAndSelect function for mobile shortcuts",
+            "Add mobile bottom bar settings component",
+            "Implement mobile bottom navigation bar and item components",
+            "Update Google Calendar integration UI and logic",
+            "Enhance integration settings layout and add card component",
+            "Expose AI upgrade quotes to admins",
+            "Add internal AI upgrade quote",
+            "Implement paid billing cycle table and related tests",
+            "Version access reservations and tests",
+            "Implement AI access reservation system with security checks",
+            "Add session guard for unpaid workers and subscription checks",
+            "Add prorated upgrade calculation function and tests",
+            "Enhance estimate assistant with conversation limits and reset option",
+            "Add AI assistant for estimate generation and suggestions",
+            "Update subscription messages and trial status handling",
+            "Update registration and welcome pages for subscription activation",
+            "Implement referral discounts and invoice reservations",
+            "Implement AI suggestion handler and request validation",
+            "Add work days planning feature for work orders",
             "Improve mobile dashboard and workflows",
             "Improve mobile workflows and referral management",
             "Improve accessibility and UI for estimate approval",
@@ -141,6 +176,8 @@
         {
           "title": "Correcciones",
           "items": [
+            "Clarify synchronization impact on Ábaco",
+            "Prevent connection when status cannot be checked",
             "Show dashboard metrics in two mobile columns",
             "Update enterprise pricing and correct test expectations",
             "Update pre-push hook to use pnpm typecheck instead of quality",
@@ -152,6 +189,265 @@
         }
       ],
       "changes": [
+        {
+          "sha": "b23855f340dae2be2b763f02b53f2695dd503c87",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Improve synchronization status messages and logic"
+        },
+        {
+          "sha": "16a3b7b1f0db489e3d25126a564e869a5b816a49",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Enhance Google Calendar status query with dynamic refresh"
+        },
+        {
+          "sha": "301525f2b1fa5eaee419312f266a181310e81c51",
+          "type": "feat",
+          "scope": "tests",
+          "breaking": false,
+          "description": "Add new tests for scheduling and team assignment logic"
+        },
+        {
+          "sha": "4791c1655ccf94cd2f407ed4f4df996e5afe005d",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add GoogleCalendarAccessInactiveError handling"
+        },
+        {
+          "sha": "3a978ece7f7214a14ff5a331d7230bd67a7cb117",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add accessActive field and update related logic"
+        },
+        {
+          "sha": "c72245e261ccdcc3ee53b19ce59ec9857268b144",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Add Google Calendar permission error handling"
+        },
+        {
+          "sha": "79dda2f1e3dcddfba754d640e661b27678398d68",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Add worker avatar management and integrate into settings"
+        },
+        {
+          "sha": "55fcbe15fbb906088b53e1efc2179c66ae64f53d",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add AI credits management and update settings integration"
+        },
+        {
+          "sha": "33626e15682626fb8cc62336032fff0a5ce313ed",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Update generation configuration with minimal thinking level"
+        },
+        {
+          "sha": "108874252923a1e4a1f4fc553923b5e7fb40aca9",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add AiTestSettings component and integrate into settings pages"
+        },
+        {
+          "sha": "49a79ee940a5cfb24129ab25be300363ce333336",
+          "type": "feat",
+          "scope": "oauth",
+          "breaking": false,
+          "description": "Add Buffer import for encryption and decryption tests"
+        },
+        {
+          "sha": "0bfb723988c36b33090f3d8ed244a4ffe0bb6ccc",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Enhance Google authentication flow and profile handling"
+        },
+        {
+          "sha": "064222085b9472f980b50c70c570c542cb2175cb",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Implement Google authentication flow and user avatar display"
+        },
+        {
+          "sha": "c3629c3edb3a4229b5f8f324cb0757a4197206b2",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add new image asset for Abaco branding"
+        },
+        {
+          "sha": "19cff21295d64333d47f60306007e7e4b5b94a3e",
+          "type": "fix",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Clarify synchronization impact on Ábaco"
+        },
+        {
+          "sha": "530579e3250c2a970b80f5773295e1fac341d38a",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Add immediate dispatch tests and sync worker functions"
+        },
+        {
+          "sha": "c0a8318f6bb24a0717b19bc1b7900c67017fe2ea",
+          "type": "fix",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Prevent connection when status cannot be checked"
+        },
+        {
+          "sha": "8128b5976368c6aebcfad170535eb64693b33e43",
+          "type": "feat",
+          "scope": "google-calendar",
+          "breaking": false,
+          "description": "Enhance OAuth flow with state validation and completion"
+        },
+        {
+          "sha": "7432d41f4a3756a287c4af87cec80def792c4186",
+          "type": "feat",
+          "scope": "interface",
+          "breaking": false,
+          "description": "Implement moveAndSelect function for mobile shortcuts"
+        },
+        {
+          "sha": "43d588c528b7021a060849bd78bae0cc4b92b272",
+          "type": "feat",
+          "scope": "interface",
+          "breaking": false,
+          "description": "Add mobile bottom bar settings component"
+        },
+        {
+          "sha": "a7131c18614ade0421f2ec5cccd040fbeb40d308",
+          "type": "feat",
+          "scope": "navigation",
+          "breaking": false,
+          "description": "Implement mobile bottom navigation bar and item components"
+        },
+        {
+          "sha": "645ef9e3aabd3ca1f90a5fc2659ac4965785dbae",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Update Google Calendar integration UI and logic"
+        },
+        {
+          "sha": "5dea1ff34ebaf04c6a655c8b40e2f4c40c8901c7",
+          "type": "feat",
+          "scope": "settings",
+          "breaking": false,
+          "description": "Enhance integration settings layout and add card component"
+        },
+        {
+          "sha": "c5b91197ca0acf3f737ac182506029283183175c",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Expose AI upgrade quotes to admins"
+        },
+        {
+          "sha": "0bc15dbbe42d87faeac29be2b28be7b94eddf95c",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add internal AI upgrade quote"
+        },
+        {
+          "sha": "c9144692eda330a0c8b0bc7e0f2ecec1c2ad4ec6",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement paid billing cycle table and related tests"
+        },
+        {
+          "sha": "65487fb13e171281f51db75401c8dde844c79763",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Version access reservations and tests"
+        },
+        {
+          "sha": "5ca0dc480ffb61312a7bf8be315bb2f205673a5d",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Implement AI access reservation system with security checks"
+        },
+        {
+          "sha": "8d12d70a945edf4c934b685504308a696c6ffc9a",
+          "type": "feat",
+          "scope": "session",
+          "breaking": false,
+          "description": "Add session guard for unpaid workers and subscription checks"
+        },
+        {
+          "sha": "bcdf1d279eec6dee5cdbce91aca919d45795330e",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add prorated upgrade calculation function and tests"
+        },
+        {
+          "sha": "99065b9dc618a2d202590019a41429f9228db4bc",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Enhance estimate assistant with conversation limits and reset option"
+        },
+        {
+          "sha": "fda501a8511f14ba83e613da20815a3220147e95",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add AI assistant for estimate generation and suggestions"
+        },
+        {
+          "sha": "026a26d5eb565582dfcb67c3eaaf4075ca68d8c1",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Update subscription messages and trial status handling"
+        },
+        {
+          "sha": "61094f61720f0e9f7690e2fe48328cb662809195",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Update registration and welcome pages for subscription activation"
+        },
+        {
+          "sha": "9fee5ca635cefdb07d87b2af071ee9291ad5485c",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement referral discounts and invoice reservations"
+        },
+        {
+          "sha": "6af4b443ca3cba7cc037151c207fe4bbd7f4c6d8",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Implement AI suggestion handler and request validation"
+        },
+        {
+          "sha": "83fcc074a511160d1c0870f2c32819934c58eef7",
+          "type": "feat",
+          "scope": "work-orders",
+          "breaking": false,
+          "description": "Add work days planning feature for work orders"
+        },
         {
           "sha": "73ee503c876c8e6c81f82019e51a87b663f20a3c",
           "type": "fix",

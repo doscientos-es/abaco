@@ -40,6 +40,7 @@ export const Route = createFileRoute('/ajustes')({
     pago?: string
     calendar?: 'connected' | 'error'
     stripe?: 'connected' | 'error'
+    seccion?: 'referidos'
   } => {
     const pago = typeof search.pago === 'string' ? search.pago : undefined
     const tab = tabs.find((t) => t === search.tab) ?? (pago ? 'plan' : undefined)
@@ -47,11 +48,13 @@ export const Route = createFileRoute('/ajustes')({
       search.calendar === 'connected' || search.calendar === 'error' ? search.calendar : undefined
     const stripe =
       search.stripe === 'connected' || search.stripe === 'error' ? search.stripe : undefined
+    const seccion = tab === 'plan' && search.seccion === 'referidos' ? 'referidos' : undefined
     return {
       ...(tab ? { tab } : {}),
       ...(pago ? { pago } : {}),
       ...(calendar ? { calendar } : {}),
       ...(stripe ? { stripe } : {}),
+      ...(seccion ? { seccion } : {}),
     }
   },
   component: SettingsRoute,

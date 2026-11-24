@@ -1,6 +1,6 @@
 import { Button } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useRouter, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useCompanyActions, useSession, useSignOut } from '@/features/auth'
@@ -14,6 +14,7 @@ export function SubscriptionAccessPage() {
   const { switchTo } = useCompanyActions()
   const signOut = useSignOut()
   const router = useRouter()
+  const search = useRouterState({ select: (state) => state.location.search })
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
   const tenantId = session?.tenantId ?? ''
@@ -42,7 +43,11 @@ export function SubscriptionAccessPage() {
           {subscription.data?.canWrite ? (
             <Button onPress={() => void enter()}>Entrar en Ábaco</Button>
           ) : null}
-          <BillingSection tenantId={tenantId} companyName={companyName} />
+          <BillingSection
+            tenantId={tenantId}
+            companyName={companyName}
+            referralView={search.tab === 'plan' && search.seccion === 'referidos'}
+          />
         </>
       ) : (
         <p>Pide a un administrador de la empresa que active la suscripción.</p>

@@ -1,5 +1,6 @@
 import { Button } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 
 import {
@@ -50,24 +51,26 @@ function currentLine(sub: Subscription, name: string): string {
   if (sub.status === 'past_due')
     return `Plan ${name}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
   if (sub.cancelAtPeriodEnd)
-    return `Plan ${name}: se cancela el ${until}. Hasta entonces sigue todo igual.`
-  return `Plan ${name}, ${sub.interval === 'year' ? 'anual' : 'mensual'}. Próxima renovación: ${until}.`
+    return `Plan ${name}: se cancela ${until ? `el ${until}` : 'al final del periodo'}. Hasta entonces sigue todo igual.`
+  return `Plan ${name}${sub.interval ? `, ${sub.interval === 'year' ? 'anual' : 'mensual'}` : ''}.${until ? ` Próxima renovación: ${until}.` : ''}`
 }
 
 /** Plan and payment. Only rendered for admins. */
 export function BillingSection({
   tenantId,
   companyName,
+  referralView = false,
 }: {
   tenantId: string
   companyName: string
+  referralView?: boolean
 }) {
   const subscriptionState = useQuery(subscriptionQuery(tenantId))
   const subscription = subscriptionState.data
   const preview = useQuery(billingPreviewQuery(tenantId))
   const { data: rates } = useQuery(billingCatalogQuery)
   const team = useQuery(memberCountQuery(tenantId))
-  const referral = useQuery(referralOverviewQuery(tenantId))
+  const referral = useQuery({ ...referralOverviewQuery(tenantId), enabled: referralView })
   const moduleSubscriptionsState = useQuery(moduleSubscriptionsQuery(tenantId))
   const [selection, setSelection] = useState<{
     terms: BillingTerms
@@ -86,7 +89,11 @@ export function BillingSection({
   )
   const activated = subscription?.status === 'active'
   useEffect(() => {
-    if (returned) window.history.replaceState(null, '', window.location.pathname)
+    if (returned) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('pago')
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    }
   }, [returned])
   useEffect(() => {
     if (returned !== 'ok') return
@@ -163,6 +170,22 @@ export function BillingSection({
     !busy,
   )
 
+  if (referralView) {
+    return (
+      <div className="space-y-4">
+        <Link to="/ajustes" search={{ tab: 'plan' }} className="text-primary text-sm underline">
+          Volver a la suscripción
+        </Link>
+        <ReferralProgram
+          summary={referral.data}
+          isPending={referral.isPending}
+          isError={referral.isError}
+          onRetry={() => void referral.refetch()}
+        />
+      </div>
+    )
+  }
+
   if (subscription?.isComplimentary) {
     return (
       <section className="border-border bg-card rounded-xl border px-5 py-4">
@@ -171,17 +194,12 @@ export function BillingSection({
           Acceso de cortesía: sin caducidad ni renovaciones automáticas.
         </p>
         <div className="mt-5 space-y-5">
-          <ReferralProgram
-            summary={referral.data}
-            isPending={referral.isPending}
-            isError={referral.isError}
-            onRetry={() => void referral.refetch()}
-          />
           <PaymentHistory
             tenantId={tenantId}
             companyName={companyName}
             subscription={subscription}
           />
+          <ReferralLink />
         </div>
       </section>
     )
@@ -194,7 +212,9 @@ export function BillingSection({
         <p className="text-muted-foreground text-xs">
           {subscription
             ? currentLine(subscription, planLabel(subscription.plan, rates))
-            : 'Cargando…'}
+            : subscriptionState.isError
+              ? 'No se pudo cargar la suscripción.'
+              : 'Cargando suscripción…'}
         </p>
       </div>
 
@@ -216,13 +236,15 @@ export function BillingSection({
             El descuento por referidos cubre tu suscripción. Estamos preparando la factura.
           </output>
         ) : null}
-        <PaymentHistory tenantId={tenantId} companyName={companyName} subscription={subscription} />
-        <ReferralProgram
-          summary={referral.data}
-          isPending={referral.isPending}
-          isError={referral.isError}
-          onRetry={() => void referral.refetch()}
+        <PaymentHistory
+          tenantId={tenantId}
+          companyName={companyName}
+          subscription={subscription}
+          subscriptionUnavailable={
+            subscriptionState.isError || subscriptionState.fetchStatus === 'paused'
+          }
         />
+        <ReferralLink />
         <SubscriptionBillingProfileForm key={tenantId} tenantId={tenantId} />
         <hr className="border-border" />
         {subscriptionState.isError ||
@@ -429,5 +451,20 @@ export function BillingSection({
         </div>
       </div>
     </section>
+  )
+}
+
+function ReferralLink() {
+  return (
+    <div className="border-border flex flex-wrap items-center justify-between gap-2 rounded-lg border p-4">
+      <p className="text-sm font-medium">¿Conoces otra empresa que pueda usar Ábaco?</p>
+      <Link
+        to="/ajustes"
+        search={{ tab: 'plan', seccion: 'referidos' }}
+        className="text-primary text-sm font-medium underline"
+      >
+        Invitar a otra empresa
+      </Link>
+    </div>
   )
 }

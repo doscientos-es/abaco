@@ -57,7 +57,7 @@ export function SettingsPage() {
 function SettingsContent({ tenant }: { tenant: Tenant }) {
   const session = useSession()
   const navigate = useNavigate()
-  const requested = useSearch({ from: '/ajustes' }).tab
+  const { tab: requested, seccion } = useSearch({ from: '/ajustes' })
   const [form, setForm] = useState<Form>(() => toForm(tenant))
   const [saved, setSaved] = useState(false)
 
@@ -132,7 +132,11 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
         </section>
       ) : null}
       {tab === 'plan' && session?.tenantId ? (
-        <BillingSection tenantId={session.tenantId} companyName={tenant.name} />
+        <BillingSection
+          tenantId={session.tenantId}
+          companyName={tenant.name}
+          referralView={seccion === 'referidos'}
+        />
       ) : null}
       {tab === 'novedades' ? <ChangelogSection /> : null}
 
