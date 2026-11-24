@@ -3,7 +3,8 @@ import { z } from 'zod'
 import type { Estimate, EstimateLine } from '@/shared/domain/types'
 
 import { formLimits } from '../../../shared/domain/form-limits.js'
-import { centsToInput } from '../../../shared/domain/money.js'
+import { ledgerVatBreakdownSchema, type LedgerVatInput } from '../../../shared/domain/ledger-vat.js'
+import { centsToInput, parseEuros } from '../../../shared/domain/money.js'
 
 const optionalText = (max: number) => z.string().trim().min(1).max(max).nullable()
 const date = z
@@ -20,6 +21,12 @@ export const receiptSuggestionSchema = z
     date: date.nullable(),
     concept: optionalText(formLimits.ledgerConcept),
     category: optionalText(formLimits.ledgerCategory),
+    issuerName: optionalText(200),
+    issuerTaxId: optionalText(40),
+    recipientName: optionalText(200),
+    recipientTaxId: optionalText(40),
+    documentNumber: optionalText(100),
+    vatLines: ledgerVatBreakdownSchema.nullable(),
     grossCents: z
       .number()
       .int()
@@ -32,11 +39,16 @@ export const receiptSuggestionSchema = z
 
 export type ReceiptSuggestion = z.infer<typeof receiptSuggestionSchema>
 export type ReceiptFields = {
+  kind: 'income' | 'expense'
   date: string
   concept: string
   category: string
   amount: string
   vatRate: string
+  counterpartyName: string
+  counterpartyTaxId: string
+  documentNumber: string
+  vatLines: LedgerVatInput[]
 }
 
 /** Preserve user edits; an unknown VAT rate must be explicitly entered. */
@@ -45,20 +57,44 @@ export function applyReceiptSuggestion<T extends ReceiptFields>(
   suggestion: ReceiptSuggestion,
   edited: ReadonlySet<keyof ReceiptFields> = new Set(),
 ): T {
+  const amount =
+    edited.has('amount') || suggestion.grossCents === null
+      ? form.amount
+      : centsToInput(suggestion.grossCents)
+  const lines = suggestion.vatLines
+  const linesTotal = lines?.reduce((sum, line) => sum + line.baseCents + line.vatCents, 0)
+  const applicable = lines && linesTotal === parseEuros(amount)
   return {
     ...form,
     date: edited.has('date') ? form.date : (suggestion.date ?? form.date),
     concept: edited.has('concept') ? form.concept : (suggestion.concept ?? form.concept),
     category: edited.has('category') ? form.category : (suggestion.category ?? form.category),
-    amount:
-      edited.has('amount') || suggestion.grossCents === null
-        ? form.amount
-        : centsToInput(suggestion.grossCents),
+    amount,
     vatRate: edited.has('vatRate')
       ? form.vatRate
       : suggestion.vatRate === null
         ? ''
         : String(suggestion.vatRate),
+    counterpartyName: edited.has('counterpartyName')
+      ? form.counterpartyName
+      : ((form.kind === 'expense' ? suggestion.issuerName : suggestion.recipientName) ??
+        form.counterpartyName),
+    counterpartyTaxId: edited.has('counterpartyTaxId')
+      ? form.counterpartyTaxId
+      : ((form.kind === 'expense' ? suggestion.issuerTaxId : suggestion.recipientTaxId) ??
+        form.counterpartyTaxId),
+    documentNumber: edited.has('documentNumber')
+      ? form.documentNumber
+      : (suggestion.documentNumber ?? form.documentNumber),
+    vatLines: edited.has('vatLines')
+      ? form.vatLines
+      : applicable
+        ? lines.map((line) => ({
+            rate: String(line.rate),
+            base: centsToInput(line.baseCents),
+            vat: centsToInput(line.vatCents),
+          }))
+        : [],
   }
 }
 
@@ -75,6 +111,14 @@ export function resetReceiptAutofill<T extends ReceiptFields>(
     category: edited.has('category') ? form.category : defaults.category,
     amount: edited.has('amount') ? form.amount : defaults.amount,
     vatRate: edited.has('vatRate') ? form.vatRate : defaults.vatRate,
+    counterpartyName: edited.has('counterpartyName')
+      ? form.counterpartyName
+      : defaults.counterpartyName,
+    counterpartyTaxId: edited.has('counterpartyTaxId')
+      ? form.counterpartyTaxId
+      : defaults.counterpartyTaxId,
+    documentNumber: edited.has('documentNumber') ? form.documentNumber : defaults.documentNumber,
+    vatLines: edited.has('vatLines') ? form.vatLines : defaults.vatLines,
   }
 }
 

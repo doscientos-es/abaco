@@ -170,6 +170,12 @@ export function ledgerNetCents(entry: LedgerEntry): Cents {
 
 /** Ledger amounts are gross; VAT is extracted from them. */
 export function ledgerVatCents(entry: LedgerEntry): Cents {
+  if (entry.vatBreakdown?.length) {
+    return (
+      Math.sign(entry.amountCents) *
+      entry.vatBreakdown.reduce((sum, line) => sum + line.vatCents, 0)
+    )
+  }
   const magnitude = Math.abs(entry.amountCents)
   const vat = Math.round(magnitude - magnitude / (1 + entry.vatRate / 100))
   return Math.sign(entry.amountCents) * vat

@@ -151,6 +151,12 @@ export type Estimate = {
 
 export type LedgerKind = 'income' | 'expense'
 
+export type LedgerVatLine = {
+  rate: number
+  baseCents: Cents
+  vatCents: Cents
+}
+
 export type LedgerEntry = {
   id: string
   tenantId: string
@@ -161,6 +167,10 @@ export type LedgerEntry = {
   amountCents: Cents
   /** Gross amount including VAT. */
   vatRate: number
+  counterpartyName?: string
+  counterpartyTaxId?: string
+  documentNumber?: string
+  vatBreakdown?: LedgerVatLine[]
   estimateId: string | null
   milestoneId: string | null
 }

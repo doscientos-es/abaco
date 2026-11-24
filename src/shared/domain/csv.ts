@@ -1,7 +1,7 @@
 import { writeCsv } from '../lib/write-csv'
 import { ledgerNetCents, ledgerVatCents } from './estimate'
 import { centsToPlain } from './money'
-import type { LedgerEntry } from './types'
+import type { LedgerEntry, LedgerVatLine } from './types'
 
 export type ExportClient = {
   id: string
@@ -54,6 +54,10 @@ export type ExportExpense = {
   vatRate: number
   estimateId: string
   milestoneId: string
+  counterpartyName?: string
+  counterpartyTaxId?: string
+  documentNumber?: string
+  vatBreakdown?: LedgerVatLine[]
 }
 
 const netFromGross = (grossCents: number, vatRate: number) =>
@@ -177,41 +181,72 @@ export function buildExpensesCsv(expenses: ExportExpense[]): string {
       'total_eur',
       'presupuesto_id',
       'hito_id',
+      'proveedor',
+      'nif_proveedor',
+      'numero_documento',
     ],
-    expenses.map((expense) => {
+    expenses.flatMap((expense) => {
       const net = netFromGross(expense.amountCents, expense.vatRate)
-      return [
+      const lines = expense.vatBreakdown ?? [
+        { rate: expense.vatRate, baseCents: net, vatCents: expense.amountCents - net },
+      ]
+      return lines.map((line) => [
         expense.id,
         expense.date,
         expense.concept,
         expense.category,
-        centsToPlain(net),
-        expense.vatRate.toFixed(2),
-        centsToPlain(expense.amountCents - net),
-        centsToPlain(expense.amountCents),
+        centsToPlain(line.baseCents),
+        line.rate.toFixed(2),
+        centsToPlain(line.vatCents),
+        centsToPlain(line.baseCents + line.vatCents),
         expense.estimateId,
         expense.milestoneId,
-      ]
+        expense.counterpartyName ?? '',
+        expense.counterpartyTaxId ?? '',
+        expense.documentNumber ?? '',
+      ])
     }),
   )
 }
 
 /** Semicolon-separated with BOM so Spanish Excel and gestorías open it directly. */
 export function buildLedgerCsv(entries: LedgerEntry[]): string {
-  const header = ['Fecha', 'Tipo', 'Concepto', 'Categoría', 'Base', 'IVA %', 'Total']
+  const header = [
+    'Fecha',
+    'Tipo',
+    'Concepto',
+    'Categoría',
+    'Base',
+    'IVA %',
+    'Total',
+    'Contraparte',
+    'NIF',
+    'Nº documento',
+  ]
   const rows = [...entries]
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((entry) => {
+    .flatMap((entry) => {
       const sign = entry.kind === 'expense' ? -1 : 1
-      return [
+      const amountSign = Math.sign(entry.amountCents)
+      const lines = entry.vatBreakdown ?? [
+        {
+          rate: entry.vatRate,
+          baseCents: Math.abs(ledgerNetCents(entry)),
+          vatCents: Math.abs(ledgerVatCents(entry)),
+        },
+      ]
+      return lines.map((line) => [
         entry.date,
         entry.kind === 'income' ? (entry.amountCents < 0 ? 'Reembolso' : 'Ingreso') : 'Gasto',
         entry.concept,
         entry.category,
-        centsToPlain(sign * ledgerNetCents(entry)),
-        entry.vatRate.toFixed(2),
-        centsToPlain(sign * entry.amountCents),
-      ]
+        centsToPlain(sign * amountSign * line.baseCents),
+        line.rate.toFixed(2),
+        centsToPlain(sign * amountSign * (line.baseCents + line.vatCents)),
+        entry.counterpartyName ?? '',
+        entry.counterpartyTaxId ?? '',
+        entry.documentNumber ?? '',
+      ])
     })
   return writeCsv(header, rows)
 }

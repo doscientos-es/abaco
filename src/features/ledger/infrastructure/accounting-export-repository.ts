@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import type { ExportClient, ExportExpense, ExportInvoice, ExportPayment } from '@/shared/domain/csv'
+import { ledgerVatBreakdownSchema } from '@/shared/domain/ledger-vat'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 type ExportTable =
@@ -93,7 +94,7 @@ export async function loadAccountingExport(
           db,
           'ledger_entries',
           tenantId,
-          'id,entry_date,concept,category,amount_cents,vat_rate,estimate_id,milestone_id',
+          'id,entry_date,concept,category,amount_cents,vat_rate,estimate_id,milestone_id,counterparty_name,counterparty_tax_id,document_number,vat_breakdown',
           true,
         )
       : [],
@@ -168,6 +169,12 @@ export async function loadAccountingExport(
       vatRate: number(row.vat_rate),
       estimateId: string(row.estimate_id),
       milestoneId: string(row.milestone_id),
+      counterpartyName: string(row.counterparty_name),
+      counterpartyTaxId: string(row.counterparty_tax_id),
+      documentNumber: string(row.document_number),
+      ...(row.vat_breakdown == null
+        ? {}
+        : { vatBreakdown: ledgerVatBreakdownSchema.parse(row.vat_breakdown) }),
     })),
   }
 }

@@ -5,6 +5,7 @@ import { estimateDesignSchema } from '../domain/estimate-design'
 import { estimateSectionsSchema } from '../domain/estimate-document'
 import { isEstimateSignature } from '../domain/estimate-signature'
 import { invoiceDesignSchema } from '../domain/invoice-design'
+import { ledgerVatBreakdownSchema } from '../domain/ledger-vat'
 import type {
   CatalogItem,
   Client,
@@ -274,6 +275,8 @@ export const milestoneToRow = (e: Estimate, m: Milestone, position: number): Row
 })
 
 export function ledgerFromRow(row: Row): LedgerEntry {
+  const breakdown =
+    row.vat_breakdown == null ? undefined : ledgerVatBreakdownSchema.parse(row.vat_breakdown)
   return {
     id: str(row.id),
     tenantId: str(row.tenant_id),
@@ -283,6 +286,10 @@ export function ledgerFromRow(row: Row): LedgerEntry {
     category: str(row.category),
     amountCents: num(row.amount_cents),
     vatRate: num(row.vat_rate),
+    ...present('counterpartyName', row.counterparty_name),
+    ...present('counterpartyTaxId', row.counterparty_tax_id),
+    ...present('documentNumber', row.document_number),
+    ...(breakdown ? { vatBreakdown: breakdown } : {}),
     estimateId: typeof row.estimate_id === 'string' ? row.estimate_id : null,
     milestoneId: typeof row.milestone_id === 'string' ? row.milestone_id : null,
   }
@@ -297,6 +304,10 @@ export const ledgerToRow = (l: LedgerEntry): Row => ({
   category: l.category,
   amount_cents: l.amountCents,
   vat_rate: l.vatRate,
+  ...(l.counterpartyName !== undefined ? { counterparty_name: l.counterpartyName } : {}),
+  ...(l.counterpartyTaxId !== undefined ? { counterparty_tax_id: l.counterpartyTaxId } : {}),
+  ...(l.documentNumber !== undefined ? { document_number: l.documentNumber } : {}),
+  ...(l.vatBreakdown !== undefined ? { vat_breakdown: l.vatBreakdown } : {}),
   estimate_id: l.estimateId,
   milestone_id: l.milestoneId,
 })
