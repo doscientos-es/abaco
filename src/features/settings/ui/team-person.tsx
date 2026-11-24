@@ -2,24 +2,18 @@ import { Badge, Button } from '@doscientos/ui'
 import { ShieldCheck } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
 
-import { isRole, roleDescriptions, roleLabels, type Role } from '@/features/auth'
+import { isRole, roleDescriptions, roleLabels, UserAvatar, type Role } from '@/features/auth'
 import { SelectField } from '@/shared/ui/form'
 
 import type { TeamMember } from '../application/team-actions'
 
 function PersonAvatar({ member }: { member: TeamMember }) {
-  const initials = (member.fullName.trim() || member.email)
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toLocaleUpperCase())
-    .join('')
   return (
-    <span
-      aria-hidden="true"
-      className="bg-secondary text-secondary-foreground flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-    >
-      {initials}
-    </span>
+    <UserAvatar
+      name={member.fullName || member.email}
+      userId={member.userId}
+      className="size-11 shrink-0"
+    />
   )
 }
 

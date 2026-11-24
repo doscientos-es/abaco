@@ -16,6 +16,7 @@ import { useCompanyActions, useSession } from '@/features/auth'
 import { InterfaceSettings } from '@/features/interface-preferences'
 
 import { GoogleCalendarSettings } from './google-calendar-settings'
+import { WorkerPhotoSettings } from './worker-photo-settings'
 
 export function UserSettingsPage() {
   const { tab } = useSearch({ from: '/ajustes' })
@@ -82,6 +83,9 @@ export function AccountSettings() {
           <CardTitle>Cuenta y seguridad</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {session?.tenantId ? (
+            <WorkerPhotoSettings userId={session.userId} name={session.fullName || session.email} />
+          ) : null}
           {session?.fullName ? <p className="font-medium">{session.fullName}</p> : null}
           <p className="text-muted-foreground text-sm">{session?.email}</p>
           <Link to="/nueva-contrasena" className="text-sm font-medium underline">

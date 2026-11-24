@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/features/auth'
 import { servicePeriodicityLabels } from '@/shared/domain/service-periodicity'
 import { SelectField } from '@/shared/ui/form'
 
@@ -145,18 +146,7 @@ function ResponsiblePicker({
                 key={person.id}
                 className="bg-muted inline-flex items-center gap-2 rounded-full pr-3 text-sm"
               >
-                <span
-                  aria-hidden="true"
-                  className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold"
-                >
-                  {person.label
-                    .trim()
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join('')
-                    .toLocaleUpperCase()}
-                </span>
+                <UserAvatar name={person.label} userId={person.id} className="size-8" />
                 {person.label}
               </span>
             ))}
@@ -175,18 +165,7 @@ function ResponsiblePicker({
                   key={person.id}
                   className="bg-muted inline-flex items-center gap-2 rounded-full pr-3 text-sm"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full text-xs font-semibold"
-                  >
-                    {person.label
-                      .trim()
-                      .split(/\s+/)
-                      .slice(0, 2)
-                      .map((part) => part[0])
-                      .join('')
-                      .toLocaleUpperCase()}
-                  </span>
+                  <UserAvatar name={person.label} userId={person.id} className="size-8" />
                   {person.label}
                 </span>
               ))}

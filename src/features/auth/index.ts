@@ -1,4 +1,9 @@
 export { sessionQuery, useCan, useSession } from './application/auth-actions'
+export {
+  saveWorkerAvatar,
+  useWorkerAvatar,
+  workerAvatarKey,
+} from './application/worker-avatar-actions'
 export type { ActionResult } from './application/auth-actions'
 export { requirePermission } from './application/guards'
 export { completeWelcome, welcomeRedirect } from './application/welcome-actions'

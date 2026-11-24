@@ -44,6 +44,7 @@ import { PendingTeamActivations } from './pending-team-activations'
 import { TeamImportDialog } from './team-import-dialog'
 import { TeamPersonCard, TeamPersonDetails } from './team-person'
 import { WorkerPersonalDataSection } from './worker-personal-data'
+import { WorkerPhotoSettings } from './worker-photo-settings'
 
 /** Members of the company. Only rendered for people allowed to manage the team. */
 export function TeamSection({
@@ -271,6 +272,12 @@ export function TeamSection({
                     }
                     onRemove={() => setRemoving(member)}
                   />
+                  <div className="border-border bg-card mt-5 rounded-xl border p-4">
+                    <WorkerPhotoSettings
+                      userId={member.userId}
+                      name={member.fullName || member.email}
+                    />
+                  </div>
                   <fieldset
                     className="border-border bg-card mt-5 rounded-xl border p-4"
                     disabled={busy}

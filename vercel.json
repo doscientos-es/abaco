@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then pnpm build; else pnpm typecheck && pnpm exec vite build; fi",
   "rewrites": [{ "source": "/:path((?!api/).*)", "destination": "/index.html" }],
   "headers": [
     {

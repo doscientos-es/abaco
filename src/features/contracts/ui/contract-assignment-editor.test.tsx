@@ -15,6 +15,9 @@ type SelectProps = {
   options: Array<{ value: string; label: string }>
 }
 const mocks = vi.hoisted(() => ({ controls: [] as SelectProps[] }))
+vi.mock('@/features/auth', () => ({
+  UserAvatar: ({ name }: { name: string }) => <span>{name}</span>,
+}))
 vi.mock('@/shared/ui/form', () => ({
   SelectField: (props: SelectProps) => {
     mocks.controls.push(props)
