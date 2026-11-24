@@ -113,6 +113,7 @@ export async function beginCalendarAuthorization(
 export async function completeCalendarAuthorization(
   state: string,
   code: string,
+  expectedActor: CalendarActor,
   config: OAuthConfig,
   store: OAuthStore,
   authorize: (actor: CalendarActor) => Promise<boolean>,
@@ -120,11 +121,14 @@ export async function completeCalendarAuthorization(
   now = Date.now(),
 ) {
   validateConfig(config)
+  validateActor(expectedActor)
   if (!statePattern.test(state)) throw new Error('Invalid authorization state')
   const pending = await store.consumeState(digest(state))
   if (pending) validateActor(pending.actor)
   if (
     !pending ||
+    pending.actor.tenantId !== expectedActor.tenantId ||
+    pending.actor.userId !== expectedActor.userId ||
     !Number.isFinite(pending.expiresAt) ||
     pending.expiresAt <= now ||
     !statePattern.test(pending.verifier) ||

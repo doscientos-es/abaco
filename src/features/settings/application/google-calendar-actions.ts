@@ -10,11 +10,17 @@ export type GoogleCalendarStatus = {
 }
 
 type FunctionPayload = Record<string, unknown>
+const calendarStateKey = 'abaco-google-calendar-state'
+const statePattern = /^[A-Za-z0-9_-]{43}$/
 
-async function invokeCalendar<T extends FunctionPayload>(action: string, tenantId: string) {
+async function invokeCalendar<T extends FunctionPayload>(
+  action: string,
+  tenantId: string,
+  extra: FunctionPayload = {},
+) {
   const { data, error } = await createBrowserSupabaseClient().functions.invoke<FunctionPayload>(
     'google-calendar-oauth',
-    { body: { action, tenantId } },
+    { body: { ...extra, action, tenantId } },
   )
   if (error || !data || typeof data !== 'object')
     throw new Error('Google Calendar no está disponible.')
@@ -50,7 +56,41 @@ export async function beginGoogleCalendarConnection(tenantId: string): Promise<s
   const url = new URL(payload.authorizationUrl)
   if (url.protocol !== 'https:' || url.origin !== 'https://accounts.google.com')
     throw new Error('Google devolvió una dirección de conexión no válida.')
+  const state = url.searchParams.get('state') ?? ''
+  if (!statePattern.test(state)) throw new Error('Google devolvió un estado de conexión no válido.')
+  sessionStorage.setItem(calendarStateKey, state)
   return url.toString()
+}
+
+export async function completeGoogleCalendarConnection(tenantId: string): Promise<boolean> {
+  const fragment = new URLSearchParams(window.location.hash.slice(1))
+  if (!fragment.has('calendar_state') && !fragment.has('calendar_code')) return false
+
+  // Remove the authorization code from the address bar before any asynchronous work.
+  window.history.replaceState(
+    window.history.state,
+    '',
+    window.location.pathname + window.location.search,
+  )
+  const expected = sessionStorage.getItem(calendarStateKey)
+  sessionStorage.removeItem(calendarStateKey)
+  const states = fragment.getAll('calendar_state')
+  const codes = fragment.getAll('calendar_code')
+  const state = states[0] ?? ''
+  const code = codes[0] ?? ''
+  if (
+    states.length !== 1 ||
+    codes.length !== 1 ||
+    !statePattern.test(state) ||
+    state !== expected ||
+    !code ||
+    code.length > 4096
+  )
+    throw new Error('La conexión de Google no corresponde a esta sesión.')
+
+  const payload = await invokeCalendar<FunctionPayload>('complete', tenantId, { state, code })
+  if (payload.connected !== true) throw new Error('No se pudo completar la conexión con Google.')
+  return true
 }
 
 export async function disconnectGoogleCalendar(tenantId: string): Promise<void> {

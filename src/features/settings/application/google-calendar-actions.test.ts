@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   beginGoogleCalendarConnection,
+  completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
   getGoogleCalendarStatus,
   queueGoogleCalendarSync,
@@ -14,9 +15,20 @@ vi.mock('@/shared/lib/supabase/client', () => ({
 }))
 
 describe('Google Calendar settings actions', () => {
+  const state = 'a'.repeat(43)
+  const memory = new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => memory.set(key, value),
+    removeItem: (key: string) => memory.delete(key),
+  }
+
   beforeEach(() => {
     vi.resetAllMocks()
+    memory.clear()
+    vi.stubGlobal('sessionStorage', storage)
   })
+  afterEach(() => vi.unstubAllGlobals())
 
   it('reads only a valid connection status payload', async () => {
     invoke.mockResolvedValue({
@@ -39,7 +51,7 @@ describe('Google Calendar settings actions', () => {
 
   it('accepts only the Google OAuth origin before redirecting', async () => {
     invoke.mockResolvedValue({
-      data: { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=x' },
+      data: { authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?state=${state}` },
       error: null,
     })
     await expect(beginGoogleCalendarConnection('tenant-id')).resolves.toContain(
@@ -50,6 +62,43 @@ describe('Google Calendar settings actions', () => {
       error: null,
     })
     await expect(beginGoogleCalendarConnection('tenant-id')).rejects.toThrow('dirección')
+  })
+
+  it('completes only the authorization started in this tab and removes the code from the URL', async () => {
+    invoke.mockResolvedValueOnce({
+      data: { authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?state=${state}` },
+      error: null,
+    })
+    await beginGoogleCalendarConnection('tenant-id')
+    const replaceState = vi.fn()
+    vi.stubGlobal('window', {
+      location: {
+        hash: `#calendar_state=${state}&calendar_code=test-code`,
+        pathname: '/ajustes',
+        search: '?tab=integraciones',
+      },
+      history: { state: null, replaceState },
+    })
+    invoke.mockResolvedValueOnce({ data: { connected: true }, error: null })
+    await expect(completeGoogleCalendarConnection('tenant-id')).resolves.toBe(true)
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/ajustes?tab=integraciones')
+    expect(invoke).toHaveBeenLastCalledWith('google-calendar-oauth', {
+      body: { action: 'complete', tenantId: 'tenant-id', state, code: 'test-code' },
+    })
+    await expect(completeGoogleCalendarConnection('tenant-id')).rejects.toThrow('sesión')
+  })
+
+  it('rejects a callback started in a different browser before calling the server', async () => {
+    vi.stubGlobal('window', {
+      location: {
+        hash: `#calendar_state=${state}&calendar_code=test-code`,
+        pathname: '/ajustes',
+        search: '',
+      },
+      history: { state: null, replaceState: vi.fn() },
+    })
+    await expect(completeGoogleCalendarConnection('tenant-id')).rejects.toThrow('sesión')
+    expect(invoke).not.toHaveBeenCalled()
   })
 
   it('reports disconnect and queues a manual synchronization through authenticated RPCs', async () => {

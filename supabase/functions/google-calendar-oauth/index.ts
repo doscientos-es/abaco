@@ -5,6 +5,7 @@ import {
   beginCalendarAuthorization,
   completeCalendarAuthorization,
   refreshCalendarAccess,
+  type CalendarActor,
   type OAuthConfig,
 } from '../_shared/google-calendar/oauth.ts'
 import {
@@ -21,6 +22,7 @@ const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET')
 const encryptionKey = decodeEncryptionKey(Deno.env.get('GOOGLE_CALENDAR_ENCRYPTION_KEY') ?? '')
 const redirectUri = supabaseUrl ? `${supabaseUrl}/functions/v1/google-calendar-oauth` : ''
 const appOrigin = safeOrigin(appUrl)
+const integrationEnabled = Deno.env.get('GOOGLE_CALENDAR_ENABLED') === 'true'
 const corsHeaders = {
   'Access-Control-Allow-Origin': appOrigin ?? '',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
@@ -62,63 +64,88 @@ function adminClient(): SupabaseClient {
   return createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
 }
 
-function callbackRedirect(result: 'connected' | 'error') {
+function callbackRedirect(result: 'error', params?: { state: string; code: string }) {
   if (!appOrigin) return new Response(null, { status: 503 })
   const url = new URL('/ajustes', `${appOrigin}/`)
   url.searchParams.set('tab', 'integraciones')
-  url.searchParams.set('calendar', result)
-  return Response.redirect(url, 303)
+  if (params) {
+    url.hash = new URLSearchParams({
+      calendar_state: params.state,
+      calendar_code: params.code,
+    }).toString()
+  } else {
+    url.searchParams.set('calendar', result)
+  }
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: url.toString(),
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'no-referrer',
+    },
+  })
 }
 
-async function handleCallback(request: Request) {
+function handleCallback(request: Request) {
   const url = new URL(request.url)
   const state = url.searchParams.get('state') ?? ''
   const code = url.searchParams.get('code') ?? ''
   if (!appOrigin) return new Response(null, { status: 503 })
-  if (url.searchParams.has('error') || !state || !code) return callbackRedirect('error')
-  try {
-    const admin = adminClient()
-    const store = createCalendarOAuthStore(admin, appOrigin ?? '')
-    const actor = await completeCalendarAuthorization(
-      state,
-      code,
-      config(),
-      store,
-      (pendingActor) => authorizeCalendarActor(admin, pendingActor),
-    )
-    const { data: connection, error } = await admin
-      .from('google_calendar_connections')
-      .select('refresh_token_ciphertext,calendar_id')
-      .eq('tenant_id', actor.tenantId)
-      .eq('user_id', actor.userId)
-      .eq('status', 'provisioning')
-      .maybeSingle()
-    if (error || !connection?.refresh_token_ciphertext) throw new Error('Calendar setup failed')
-    const { accessToken } = await refreshCalendarAccess(
-      actor,
-      connection.refresh_token_ciphertext,
-      config(),
-      store,
-    )
-    const calendar = new GoogleCalendarClient(accessToken)
-    // Reuse an existing secondary calendar after reauthorization; never create one on every login.
-    const calendarId = connection.calendar_id ?? (await calendar.createSecondaryCalendar())
-    if (!connection.calendar_id) {
-      const { data: saved, error: saveError } = await admin.rpc(
-        'save_google_calendar_calendar_id',
-        { p_tenant_id: actor.tenantId, p_user_id: actor.userId, p_calendar_id: calendarId },
-      )
-      if (saveError || saved !== true) throw new Error('Calendar ID was not persisted')
-    }
-    const { data: completed, error: completeError } = await admin.rpc(
-      'complete_google_calendar_connection',
-      { p_tenant_id: actor.tenantId, p_user_id: actor.userId, p_calendar_id: calendarId },
-    )
-    if (completeError || completed !== true) throw new Error('Calendar setup was not confirmed')
-    return callbackRedirect('connected')
-  } catch {
+  if (
+    url.searchParams.has('error') ||
+    !/^[A-Za-z0-9_-]{43}$/.test(state) ||
+    !code ||
+    code.length > 4096
+  )
     return callbackRedirect('error')
+  return callbackRedirect('error', { state, code })
+}
+
+async function completeConnection(
+  admin: SupabaseClient,
+  expectedActor: CalendarActor,
+  state: string,
+  code: string,
+) {
+  const store = createCalendarOAuthStore(admin, appOrigin ?? '')
+  const actor = await completeCalendarAuthorization(
+    state,
+    code,
+    expectedActor,
+    config(),
+    store,
+    (pendingActor) => authorizeCalendarActor(admin, pendingActor),
+  )
+  const { data: connection, error } = await admin
+    .from('google_calendar_connections')
+    .select('refresh_token_ciphertext,calendar_id')
+    .eq('tenant_id', actor.tenantId)
+    .eq('user_id', actor.userId)
+    .eq('status', 'provisioning')
+    .maybeSingle()
+  if (error || !connection?.refresh_token_ciphertext) throw new Error('Calendar setup failed')
+  const { accessToken } = await refreshCalendarAccess(
+    actor,
+    connection.refresh_token_ciphertext,
+    config(),
+    store,
+  )
+  const calendar = new GoogleCalendarClient(accessToken)
+  // Reuse an existing secondary calendar after reauthorization; never create one on every login.
+  const calendarId = connection.calendar_id ?? (await calendar.createSecondaryCalendar())
+  if (!connection.calendar_id) {
+    const { data: saved, error: saveError } = await admin.rpc('save_google_calendar_calendar_id', {
+      p_tenant_id: actor.tenantId,
+      p_user_id: actor.userId,
+      p_calendar_id: calendarId,
+    })
+    if (saveError || saved !== true) throw new Error('Calendar ID was not persisted')
   }
+  const { data: completed, error: completeError } = await admin.rpc(
+    'complete_google_calendar_connection',
+    { p_tenant_id: actor.tenantId, p_user_id: actor.userId, p_calendar_id: calendarId },
+  )
+  if (completeError || completed !== true) throw new Error('Calendar setup was not confirmed')
 }
 
 async function handleAction(request: Request) {
@@ -137,7 +164,16 @@ async function handleAction(request: Request) {
   if (
     typeof input.tenantId !== 'string' ||
     !uuidPattern.test(input.tenantId) ||
-    !['start', 'status', 'disconnect'].includes(String(input.action))
+    !['start', 'complete', 'status', 'disconnect'].includes(String(input.action))
+  )
+    return json(400, { error: 'invalid_request' })
+  if (
+    input.action === 'complete' &&
+    (typeof input.state !== 'string' ||
+      !/^[A-Za-z0-9_-]{43}$/.test(input.state) ||
+      typeof input.code !== 'string' ||
+      !input.code ||
+      input.code.length > 4096)
   )
     return json(400, { error: 'invalid_request' })
   try {
@@ -148,6 +184,8 @@ async function handleAction(request: Request) {
     const actor = { tenantId: input.tenantId, userId }
     if (!(await authorizeCalendarActor(admin, actor))) return json(403, { error: 'not_allowed' })
 
+    if ((input.action === 'start' || input.action === 'complete') && !integrationEnabled)
+      return json(503, { error: 'integration_not_ready' })
     if (input.action === 'start') {
       const url = await beginCalendarAuthorization(
         actor,
@@ -156,6 +194,10 @@ async function handleAction(request: Request) {
         (pendingActor) => authorizeCalendarActor(admin, pendingActor),
       )
       return json(200, { authorizationUrl: url })
+    }
+    if (input.action === 'complete') {
+      await completeConnection(admin, actor, input.state as string, input.code as string)
+      return json(200, { connected: true })
     }
     if (input.action === 'disconnect') {
       const { error } = await admin.rpc('disconnect_google_calendar_connection', {

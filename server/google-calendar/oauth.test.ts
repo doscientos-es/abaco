@@ -79,11 +79,29 @@ describe('server OAuth preparation', () => {
       expect(body.get('redirect_uri')).toBe(config.redirectUri)
       return json({ refresh_token: 'refresh-test', scope: calendarScope })
     })
-    await completeCalendarAuthorization(state, 'code-test', config, store, allowed, fetcher, 2000)
+    await completeCalendarAuthorization(
+      state,
+      'code-test',
+      actor,
+      config,
+      store,
+      allowed,
+      fetcher,
+      2000,
+    )
     expect(saved()).not.toContain('refresh-test')
     expect(decryptRefreshToken(saved(), config.encryptionKey, actor)).toBe('refresh-test')
     await expect(
-      completeCalendarAuthorization(state, 'code-test', config, store, allowed, fetcher, 2000),
+      completeCalendarAuthorization(
+        state,
+        'code-test',
+        actor,
+        config,
+        store,
+        allowed,
+        fetcher,
+        2000,
+      ),
     ).rejects.toThrow('state')
     expect(fetcher).toHaveBeenCalledTimes(1)
   })
@@ -97,9 +115,25 @@ describe('server OAuth preparation', () => {
       const state = (await begin(store)).searchParams.get('state') ?? ''
       const fetcher = vi.fn<typeof fetch>()
       await expect(
-        completeCalendarAuthorization(state, 'code', config, store, authorize, fetcher, now),
+        completeCalendarAuthorization(state, 'code', actor, config, store, authorize, fetcher, now),
       ).rejects.toThrow('state')
       expect(fetcher).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects a callback from a different user or company before exchanging the code', async () => {
+    for (const other of [
+      { ...actor, tenantId: '5c000000-0000-4000-8000-000000000004' },
+      { ...actor, userId: '5c000000-0000-4000-8000-000000000004' },
+    ]) {
+      const { store, saved } = memoryStore()
+      const state = (await begin(store)).searchParams.get('state') ?? ''
+      const fetcher = vi.fn<typeof fetch>()
+      await expect(
+        completeCalendarAuthorization(state, 'code', other, config, store, allowed, fetcher, 2000),
+      ).rejects.toThrow('state')
+      expect(fetcher).not.toHaveBeenCalled()
+      expect(saved()).toBe('')
     }
   })
 
@@ -114,6 +148,7 @@ describe('server OAuth preparation', () => {
         completeCalendarAuthorization(
           state,
           'code',
+          actor,
           config,
           store,
           allowed,
@@ -132,6 +167,7 @@ describe('server OAuth preparation', () => {
       completeCalendarAuthorization(
         state,
         'code',
+        actor,
         config,
         store,
         allowed,

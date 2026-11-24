@@ -1,12 +1,13 @@
 import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 
 import {
   beginGoogleCalendarConnection,
+  completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
   googleCalendarStatusQuery,
   queueGoogleCalendarSync,
@@ -44,6 +45,7 @@ export function GoogleCalendarSettings() {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const completing = useRef(false)
   const connection = status.data
   const connected = connection?.status === 'connected'
   const canConnect = Boolean(tenantId && !connected && !status.isPending)
@@ -57,6 +59,24 @@ export function GoogleCalendarSettings() {
   const feedback =
     message ??
     (callback === 'connected' ? 'Tu cuenta de Google se ha conectado correctamente.' : null)
+
+  useEffect(() => {
+    if (!tenantId || completing.current || !window.location.hash.includes('calendar_')) return
+    completing.current = true
+    setBusy(true)
+    void completeGoogleCalendarConnection(tenantId)
+      .then(async (completed) => {
+        if (!completed) return
+        setMessage('Tu cuenta de Google se ha conectado correctamente.')
+        await queryClient.invalidateQueries({
+          queryKey: googleCalendarStatusQuery(tenantId).queryKey,
+        })
+      })
+      .catch(() =>
+        setActionError('No se pudo completar la conexión con Google. Vuelve a intentarlo.'),
+      )
+      .finally(() => setBusy(false))
+  }, [tenantId, queryClient])
 
   async function connect() {
     if (!canConnect || busy) return
