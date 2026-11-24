@@ -31,7 +31,7 @@ describe('Google Calendar immediate dispatch', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../supabase/migrations/20261124180343_google_calendar_immediate_sync.sql',
+          '../../supabase/migrations/20261124180513_google_calendar_immediate_sync.sql',
           import.meta.url,
         ),
         'utf8',
