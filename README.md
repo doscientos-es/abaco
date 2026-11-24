@@ -124,6 +124,22 @@ Nunca pongas la clave `service_role`, secretos de Redsys o Resend ni otras
 credenciales en variables `VITE_*` o en archivos versionados. Configura los
 secretos exclusivamente en el entorno de servidor correspondiente.
 
+### Proveedor de IA
+
+La función de servidor usa AI SDK directamente, sin Vercel AI Gateway. Configura en el
+entorno de Vercel `AI_PROVIDER` (`google` u `openai`), `AI_MODEL` y la clave de servidor
+correspondiente (`GEMINI_API_KEY` u `OPENAI_API_KEY`). Sin `AI_PROVIDER` ni `AI_MODEL`
+se mantiene Gemini `gemini-3.1-flash-lite`; para OpenAI el modelo es obligatorio.
+Actualiza las variables del entorno de destino y redespliega para aplicar el cambio.
+La clave nunca debe llevar el prefijo `VITE_`. No hay cambio automático de proveedor.
+
+El modelo elegido debe admitir salida JSON estructurada y, para adjuntos, imágenes y
+PDF. Comprueba calidad, compatibilidad, condiciones de tratamiento de datos y precio
+antes de activarlo. Se cuentan los tokens de entrada antes de generar y se limita la
+salida, pero esto no garantiza un precio máximo. Configura también presupuestos y
+alertas en el proveedor. Las reservas de créditos de Ábaco se mantienen incluso si
+el proveedor falla después de la reserva.
+
 ### Integraciones de informes e invitaciones
 
 - **Invitaciones:** `APP_URL` determina el enlace. Para permitir otros orígenes,

@@ -335,7 +335,10 @@ describe('PaymentHistory', () => {
     expect(render()).not.toContain('PAID2026')
     filters.controls.get('Año')?.('2026')
     expect(render()).toContain('No hay pagos que coincidan con estos filtros.')
-    button.mock.calls.findLast(([props]) => props.children === 'Limpiar filtros')?.[0].onPress()
+    ;[...button.mock.calls]
+      .reverse()
+      .find(([props]) => props.children === 'Limpiar filtros')?.[0]
+      .onPress()
     const reset = render()
     expect(reset).toContain('PAID2026')
     expect(reset).toContain('FAILED2025')

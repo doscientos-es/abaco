@@ -15,8 +15,11 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
     symlinkSync(join(root, 'node_modules'), join(output, 'node_modules'), 'junction')
     for (const source of [
       'api/ai_suggestion.ts',
-      'server/ai/gemini.ts',
       'server/ai/http.ts',
+      'server/ai/provider-config.ts',
+      'server/ai/provider.ts',
+      'server/ai/request.ts',
+      'server/ai/token-budget.ts',
       'server/visit-report-pdf/http.ts',
       'src/features/ai/domain/suggestions.ts',
       'src/shared/domain/form-limits.ts',
@@ -24,7 +27,10 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
     ]) {
       const target = join(output, source.replace(/\.ts$/, '.js'))
       mkdirSync(dirname(target), { recursive: true })
-      writeFileSync(target, stripTypeScriptTypes(readFileSync(join(root, source), 'utf8')))
+      writeFileSync(
+        target,
+        stripTypeScriptTypes(readFileSync(join(root, source), 'utf8'), { mode: 'transform' }),
+      )
     }
     expect(() =>
       execFileSync(

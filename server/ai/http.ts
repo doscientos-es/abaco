@@ -3,7 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { z } from 'zod'
 
 import { readJson, reply } from '../visit-report-pdf/http.js'
-import { AiProviderHttpError, parseAiRequest, type AiRequest } from './gemini.js'
+import { parseAiRequest, type AiRequest } from './request.js'
+import { AiProviderHttpError } from './token-budget.js'
 
 type Reservation = 'allowed' | 'forbidden' | 'limit'
 type Dependencies = {
@@ -61,8 +62,6 @@ export function createAiHandler(dependencies: Dependencies) {
       if (error instanceof AiProviderHttpError) {
         if (error.status === 402 || error.status === 429)
           return reply(response, 503, { error: 'provider_limit' })
-      } else if (error instanceof Error && error.message === 'ai_provider_response_invalid') {
-      } else {
       }
       return reply(response, 503, { error: 'unavailable' })
     }

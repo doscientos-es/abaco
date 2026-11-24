@@ -2,15 +2,17 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { createClient } from '@supabase/supabase-js'
 
-import { generateSuggestion } from '../server/ai/gemini.js'
 import { createAiHandler } from '../server/ai/http.js'
+import { aiConfig } from '../server/ai/provider-config.js'
+import { generateSuggestion } from '../server/ai/provider.js'
 import { reply } from '../server/visit-report-pdf/http.js'
 
 export const config = { api: { bodyParser: false } }
 
 export default async function handler(request: IncomingMessage, response: ServerResponse) {
-  const { APP_ORIGIN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY } = process.env
-  if (!APP_ORIGIN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY?.trim())
+  const { APP_ORIGIN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env
+  const config = aiConfig(process.env)
+  if (!APP_ORIGIN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !config)
     return reply(response, 503, { error: 'not_configured' })
   try {
     const origin = new URL(APP_ORIGIN)
@@ -38,6 +40,6 @@ export default async function handler(request: IncomingMessage, response: Server
         throw new Error('reservation_unavailable')
       return data
     },
-    generate: (input) => generateSuggestion(input, GEMINI_API_KEY),
+    generate: (input) => generateSuggestion(input, config),
   })(request, response)
 }
