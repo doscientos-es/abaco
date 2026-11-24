@@ -17,7 +17,8 @@ describe('Google Calendar membership and subscription access', () => {
       create role anon; create role authenticated; create role service_role;
       create schema app_private; create schema auth; create schema cron;
       create table cron.job(jobname text);
-      create function cron.schedule(text, text, text) returns bigint language sql as $$ select 1::bigint $$;
+      create function cron.schedule(text, text, text) returns bigint language sql as $$
+        insert into cron.job values ($1) returning 1::bigint $$;
       create function auth.uid() returns uuid language sql as $$
         select nullif(current_setting('test.user_id', true), '')::uuid $$;
       create function auth.role() returns text language sql as $$
@@ -76,6 +77,12 @@ describe('Google Calendar membership and subscription access', () => {
   })
   afterAll(async () => db.close())
 
+  it('schedules periodic retries for pending work', async () => {
+    expect((await db.query('select jobname from cron.job')).rows).toEqual([
+      { jobname: 'google-calendar-sync' },
+    ])
+  })
+
   it('authorizes all members only in their own tenant with active access', async () => {
     for (const id of [admin, user, tech]) {
       const { rows } = await db.query<{ allowed: boolean }>(
@@ -131,6 +138,21 @@ describe('Google Calendar membership and subscription access', () => {
     expect(
       (await db.query('select * from public.claim_google_calendar_sync_job()')).rows,
     ).toHaveLength(1)
+  })
+
+  it('includes team assignments only when the visit has no individual assignee', async () => {
+    await db.exec(`
+      insert into public.work_team_members values
+        ('${tenant}', '40000000-0000-4000-8000-000000000001', '${admin}');
+      insert into public.service_visits values
+        ('${visit}', '${tenant}', null, '40000000-0000-4000-8000-000000000001', 'scheduled'),
+        ('30000000-0000-4000-8000-000000000002', '${tenant}', '${user}',
+          '40000000-0000-4000-8000-000000000001', 'scheduled');
+      select public.queue_my_google_calendar_sync('${tenant}');
+    `)
+    expect((await db.query('select visit_id from public.google_calendar_sync_jobs')).rows).toEqual([
+      { visit_id: visit },
+    ])
   })
 
   it('allows members to disconnect after access expires', async () => {
