@@ -54,9 +54,10 @@ export function applyReceiptSuggestion<T extends ReceiptFields>(
       edited.has('amount') || suggestion.grossCents === null
         ? form.amount
         : centsToInput(suggestion.grossCents),
-    vatRate:
-      edited.has('vatRate') || suggestion.vatRate === null
-        ? form.vatRate
+    vatRate: edited.has('vatRate')
+      ? form.vatRate
+      : suggestion.vatRate === null
+        ? ''
         : String(suggestion.vatRate),
   }
 }

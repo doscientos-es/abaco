@@ -16,9 +16,15 @@ import {
 } from '@doscientos/ui'
 import { Paperclip, Plus } from '@phosphor-icons/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-import { applyReceiptSuggestion, ReceiptAiReview, useAiAccess } from '@/features/ai'
+import {
+  applyReceiptSuggestion,
+  ReceiptAiReview,
+  resetReceiptAutofill,
+  useAiAccess,
+  type ReceiptFields,
+} from '@/features/ai'
 import { useSession } from '@/features/auth'
 import { quarterlyVat } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
@@ -26,7 +32,6 @@ import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import type { LedgerEntry, LedgerKind, TenantData } from '@/shared/domain/types'
-import { receiptUpload } from '@/shared/domain/upload-file'
 import {
   currentTenantData,
   newId,
@@ -42,7 +47,6 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { ImportDialog } from '@/shared/ui/import-dialog'
 import { EmptyPanel } from '@/shared/ui/page-states'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
-import { UploadFileField } from '@/shared/ui/upload-file-field'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
@@ -146,7 +150,8 @@ function LedgerContent({
   const [toDelete, setToDelete] = useState<LedgerEntry | null>(null)
   const [toAllocate, setToAllocate] = useState<LedgerEntry | null>(null)
   const [receipt, setReceipt] = useState<File | null>(null)
-  const [receiptVersion, setReceiptVersion] = useState(0)
+  const [analyzingReceipt, setAnalyzingReceipt] = useState(false)
+  const editedReceiptFields = useRef(new Set<keyof ReceiptFields>())
   const [adding, setAdding] = useState(false)
   const [attachments, setAttachments] = useState<{
     entry: LedgerEntry
@@ -197,16 +202,35 @@ function LedgerContent({
   })
   const vatExport = exportAction('vat')
 
+  function resetAutofill() {
+    const edited = new Set(editedReceiptFields.current)
+    setForm((current) =>
+      resetReceiptAutofill(
+        current,
+        {
+          date: today(),
+          concept: '',
+          category: 'Materiales',
+          amount: '',
+          vatRate: String(tenant.defaultVatRate),
+        },
+        edited,
+      ),
+    )
+  }
+
   async function add() {
     const amountCents = parseEuros(form.amount)
     const vatRate = Number(form.vatRate.replace(',', '.'))
     if (
       adding ||
+      analyzingReceipt ||
       !form.concept.trim() ||
       form.concept.trim().length > formLimits.ledgerConcept ||
       form.category.trim().length > formLimits.ledgerCategory ||
       amountCents <= 0 ||
       amountCents > formLimits.monetaryAmount * 100 ||
+      !form.vatRate.trim() ||
       !Number.isFinite(vatRate) ||
       vatRate < 0 ||
       vatRate > 100 ||
@@ -241,7 +265,15 @@ function LedgerContent({
         setAdding(false)
       }
     }
-    setForm({ ...form, concept: '', amount: '' })
+    editedReceiptFields.current.clear()
+    setForm({
+      kind: form.kind,
+      date: today(),
+      concept: '',
+      category: 'Materiales',
+      amount: '',
+      vatRate: String(tenant.defaultVatRate),
+    })
     setReceipt(null)
     setDialogOpen(false)
   }
@@ -476,7 +508,11 @@ function LedgerContent({
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open)
-          if (!open) setReceipt(null)
+          if (!open) {
+            setReceipt(null)
+            setAnalyzingReceipt(false)
+            resetAutofill()
+          }
         }}
         title="Nuevo apunte"
         description="Registra un ingreso o un gasto en el libro."
@@ -484,11 +520,13 @@ function LedgerContent({
         isSubmitting={adding}
         isDirty={!!receipt}
         submitDisabled={
+          analyzingReceipt ||
           !form.concept.trim() ||
           form.concept.trim().length > formLimits.ledgerConcept ||
           form.category.trim().length > formLimits.ledgerCategory ||
           parseEuros(form.amount) <= 0 ||
           parseEuros(form.amount) > formLimits.monetaryAmount * 100 ||
+          !form.vatRate.trim() ||
           !Number.isFinite(Number(form.vatRate.replace(',', '.'))) ||
           Number(form.vatRate.replace(',', '.')) < 0 ||
           Number(form.vatRate.replace(',', '.')) > 100
@@ -502,14 +540,17 @@ function LedgerContent({
             { value: 'expense', label: 'Gasto' },
             { value: 'income', label: 'Ingreso' },
           ]}
-          onChange={(kind) => setForm({ ...form, kind: kind as LedgerKind })}
+          onChange={(kind) => setForm((current) => ({ ...current, kind: kind as LedgerKind }))}
         />
         <TextField
           label="Fecha"
           type="date"
           placeholder="dd/mm/aaaa"
           value={form.date}
-          onChange={(date) => setForm({ ...form, date })}
+          onChange={(date) => {
+            editedReceiptFields.current.add('date')
+            setForm((current) => ({ ...current, date }))
+          }}
         />
         <TextField
           label="Importe con IVA (€)"
@@ -517,7 +558,10 @@ function LedgerContent({
           placeholder="0,00"
           icon={fieldIcons.euro}
           value={form.amount}
-          onChange={(amount) => setForm({ ...form, amount })}
+          onChange={(amount) => {
+            editedReceiptFields.current.add('amount')
+            setForm((current) => ({ ...current, amount }))
+          }}
         />
         <TextField
           label="Concepto"
@@ -526,7 +570,10 @@ function LedgerContent({
           className="sm:col-span-2"
           placeholder="Ej. Compra de material en Leroy Merlin"
           value={form.concept}
-          onChange={(concept) => setForm({ ...form, concept })}
+          onChange={(concept) => {
+            editedReceiptFields.current.add('concept')
+            setForm((current) => ({ ...current, concept }))
+          }}
         />
         <TextField
           label="Categoría"
@@ -534,7 +581,10 @@ function LedgerContent({
           placeholder="Ej. Materiales"
           icon={fieldIcons.tag}
           value={form.category}
-          onChange={(category) => setForm({ ...form, category })}
+          onChange={(category) => {
+            editedReceiptFields.current.add('category')
+            setForm((current) => ({ ...current, category }))
+          }}
         />
         <TextField
           label="IVA %"
@@ -546,31 +596,29 @@ function LedgerContent({
           icon={fieldIcons.percent}
           helper="Entre 0 y 100. El importe ya incluye este IVA."
           value={form.vatRate}
-          onChange={(vatRate) => setForm({ ...form, vatRate })}
+          onChange={(vatRate) => {
+            editedReceiptFields.current.add('vatRate')
+            setForm((current) => ({ ...current, vatRate }))
+          }}
         />
-        {isAdmin ? (
+        {isAdmin && dialogOpen ? (
           <div className="sm:col-span-2">
-            <UploadFileField
-              label="Justificante (opcional)"
-              rules={receiptUpload}
+            <ReceiptAiReview
+              tenantId={tenant.id}
               file={receipt}
-              onChange={(file) => {
+              canAnalyze={aiAccess.data === true}
+              checkingAccess={aiAccess.isPending && aiAccess.fetchStatus === 'fetching'}
+              onBusyChange={setAnalyzingReceipt}
+              onAnalysisStart={resetAutofill}
+              onFileChange={(file) => {
                 setReceipt(file)
-                setReceiptVersion((version) => version + 1)
+                resetAutofill()
+              }}
+              onApply={(suggestion) => {
+                const edited = new Set(editedReceiptFields.current)
+                setForm((current) => applyReceiptSuggestion(current, suggestion, edited))
               }}
             />
-            {dialogOpen && form.kind === 'expense' && receipt && aiAccess.data ? (
-              <div className="mt-3">
-                <ReceiptAiReview
-                  key={receiptVersion}
-                  tenantId={tenant.id}
-                  file={receipt}
-                  onApply={(suggestion) =>
-                    setForm((current) => applyReceiptSuggestion(current, suggestion))
-                  }
-                />
-              </div>
-            ) : null}
           </div>
         ) : null}
       </FormDialog>

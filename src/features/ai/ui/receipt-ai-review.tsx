@@ -1,79 +1,87 @@
 import { Button } from '@doscientos/ui'
 import { Sparkle } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { formatEuros } from '@/shared/domain/money'
+import { receiptUpload } from '@/shared/domain/upload-file'
+import { UploadFileField } from '@/shared/ui/upload-file-field'
 
-import { aiDocument, requestSuggestion } from '../application/ai-actions'
+import { createReceiptAnalysis } from '../application/receipt-analysis'
 import type { ReceiptSuggestion } from '../domain/suggestions'
 
 export function ReceiptAiReview({
   tenantId,
   file,
+  onFileChange,
   onApply,
+  canAnalyze,
+  checkingAccess,
+  onBusyChange,
+  onAnalysisStart,
 }: {
   tenantId: string
-  file: File
+  file: File | null
+  onFileChange: (file: File | null) => void
   onApply: (suggestion: ReceiptSuggestion) => void
+  canAnalyze: boolean
+  checkingAccess: boolean
+  onBusyChange: (busy: boolean) => void
+  onAnalysisStart: () => void
 }) {
+  const analyzer = useMemo(() => createReceiptAnalysis(tenantId), [tenantId])
   const [suggestion, setSuggestion] = useState<ReceiptSuggestion | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function analyze() {
-    if (busy) return
+  useEffect(() => () => analyzer.cancel(), [analyzer])
+
+  async function analyze(selected: File) {
+    onAnalysisStart()
+    onBusyChange(true)
     setBusy(true)
     setError('')
     setSuggestion(null)
-    try {
-      const document = await aiDocument(file)
-      setSuggestion(await requestSuggestion(tenantId, { task: 'receipt', document }))
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No se pudo analizar la factura.')
-    } finally {
-      setBusy(false)
+    const result = await analyzer.analyze(selected)
+    if (result.status === 'obsolete') return
+    setBusy(false)
+    onBusyChange(false)
+    if (result.status === 'error') {
+      setError(result.message)
+      return
     }
+    setSuggestion(result.suggestion)
+    onApply(result.suggestion)
   }
 
-  const fields = suggestion
-    ? [
-        ['Fecha', suggestion.date],
-        ['Concepto', suggestion.concept],
-        ['Categoría', suggestion.category],
-        [
-          'Total con IVA',
-          suggestion.grossCents === null ? null : formatEuros(suggestion.grossCents),
-        ],
-        ['IVA', suggestion.vatRate === null ? null : `${suggestion.vatRate} %`],
-      ].filter(([, value]) => value !== null)
-    : []
+  const detected = suggestion && Object.values(suggestion).some((value) => value !== null)
 
   return (
-    <section
-      className="border-primary/20 bg-primary/5 space-y-3 rounded-xl border p-4"
-      aria-label="Análisis de factura con IA"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">Completar con IA</p>
-          <p className="text-muted-foreground text-xs">
-            Revisa los datos detectados antes de aplicarlos.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          isDisabled={busy}
-          onPress={() => void analyze()}
-        >
-          <Sparkle aria-hidden="true" className="size-4" />{' '}
-          {busy ? 'Analizando…' : suggestion ? 'Analizar de nuevo' : 'Analizar factura'}
-        </Button>
-      </div>
+    <section className="space-y-2" aria-label="Justificante y análisis con IA">
+      <p className="text-muted-foreground text-xs">
+        {canAnalyze
+          ? 'Al adjuntar un justificante se enviará al proveedor de IA para completar el apunte y se consumirá una solicitud. Máximo 2 MB para el análisis.'
+          : 'Puedes adjuntar el justificante y completar el apunte manualmente.'}
+      </p>
+      <UploadFileField
+        label="Justificante (opcional)"
+        rules={receiptUpload}
+        file={file}
+        disabled={checkingAccess}
+        onChange={(selected) => {
+          analyzer.cancel()
+          setBusy(false)
+          onBusyChange(false)
+          setError('')
+          setSuggestion(null)
+          onFileChange(selected)
+          if (selected && canAnalyze) void analyze(selected)
+        }}
+      />
+      {checkingAccess ? (
+        <p className="text-muted-foreground text-xs">Comprobando acceso a IA…</p>
+      ) : null}
       {busy ? (
-        <output className="text-muted-foreground block text-sm">
-          Leyendo la factura y comprobando sus importes…
+        <output className="text-muted-foreground block text-sm" aria-live="polite">
+          Analizando el justificante y completando el apunte…
         </output>
       ) : null}
       {error ? (
@@ -82,34 +90,23 @@ export function ReceiptAiReview({
         </p>
       ) : null}
       {suggestion && !busy ? (
-        <>
-          {fields.length ? (
-            <dl className="divide-border bg-card divide-y rounded-lg border">
-              {fields.map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-3 p-2 text-sm">
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="text-right break-words">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              No se han detectado datos fiables. Puedes completarlos manualmente.
-            </p>
-          )}
-          {fields.length ? (
-            <Button
-              type="button"
-              size="sm"
-              onPress={() => {
-                onApply(suggestion)
-                setSuggestion(null)
-              }}
-            >
-              Aplicar datos revisados
-            </Button>
-          ) : null}
-        </>
+        <p className="text-muted-foreground text-sm" role="status">
+          {detected
+            ? 'Datos completados. Revisa todos los campos antes de guardar.'
+            : 'No se han detectado datos fiables. Completa el apunte manualmente.'}
+          {suggestion.date === null ? ' No se ha identificado la fecha.' : ''}
+          {suggestion.vatRate === null
+            ? ' No se ha identificado un único tipo de IVA. El libro solo admite un tipo: revisa el justificante antes de guardar.'
+            : ''}
+        </p>
+      ) : null}
+      {file && canAnalyze && !busy ? (
+        <Button type="button" variant="outline" size="sm" onPress={() => void analyze(file)}>
+          <Sparkle aria-hidden="true" className="size-4" />{' '}
+          {error || suggestion
+            ? 'Analizar de nuevo (consume otra solicitud)'
+            : 'Analizar con IA (consume una solicitud)'}
+        </Button>
       ) : null}
     </section>
   )
