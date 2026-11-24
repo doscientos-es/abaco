@@ -3,6 +3,7 @@ import { Readable } from 'node:stream'
 
 import { describe, expect, it, vi } from 'vitest'
 
+import { AiProviderHttpError } from './gemini'
 import { createAiHandler } from './http'
 
 const tenantId = '00000000-0000-4000-8000-000000000001'
@@ -117,5 +118,38 @@ describe('AI HTTP boundary', () => {
       .mockRejectedValueOnce(new Error('ai_input_too_large'))
     expect(await invoke(handler)).toMatchObject({ status: 503, body: { error: 'unavailable' } })
     expect(await invoke(handler)).toMatchObject({ status: 413, body: { error: 'input_too_large' } })
+  })
+
+  it.each([402, 429])(
+    'distinguishes provider limits from company credits on HTTP %i',
+    async (status) => {
+      const { handler, generate } = setup()
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        generate.mockRejectedValueOnce(new AiProviderHttpError('generateContent', status))
+        expect(await invoke(handler)).toMatchObject({
+          status: 503,
+          body: { error: 'provider_limit' },
+        })
+        expect(log).toHaveBeenCalledWith('ai_provider_http_error', {
+          operation: 'generateContent',
+          status,
+        })
+      } finally {
+        log.mockRestore()
+      }
+    },
+  )
+
+  it('never logs unknown error details', async () => {
+    const { handler, generate } = setup()
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      generate.mockRejectedValueOnce(new Error('private provider details'))
+      expect(await invoke(handler)).toMatchObject({ status: 503, body: { error: 'unavailable' } })
+      expect(log).toHaveBeenCalledWith('ai_generation_unavailable')
+    } finally {
+      log.mockRestore()
+    }
   })
 })

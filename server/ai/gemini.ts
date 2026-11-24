@@ -12,6 +12,15 @@ const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${mode
 export const maxCountedInputTokens = 3000
 export const maxOutputTokens = 1000
 
+export class AiProviderHttpError extends Error {
+  constructor(
+    readonly operation: 'countTokens' | 'generateContent',
+    readonly status: number,
+  ) {
+    super('ai_provider_unavailable')
+  }
+}
+
 const nullableString = { type: ['string', 'null'] }
 const nullableNumber = { type: ['number', 'null'] }
 const nullableInteger = { type: ['integer', 'null'] }
@@ -139,13 +148,11 @@ export async function generateSuggestion(
     },
   }
   const headers = { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }
-  const count = await postJson(fetcher, `${endpoint}:countTokens`, headers, {
-    generateContentRequest: body,
-  })
+  const count = await postJson(fetcher, 'countTokens', headers, { generateContentRequest: body })
   const tokens = z.object({ totalTokens: z.number().int().nonnegative() }).safeParse(count)
   if (!tokens.success) throw new Error('ai_provider_response_invalid')
   if (tokens.data.totalTokens > maxCountedInputTokens) throw new Error('ai_input_too_large')
-  const response = await postJson(fetcher, `${endpoint}:generateContent`, headers, body)
+  const response = await postJson(fetcher, 'generateContent', headers, body)
   const envelope = z
     .object({
       candidates: z
@@ -202,13 +209,13 @@ function validateDocument(document: AiDocument) {
 
 async function postJson(
   fetcher: typeof fetch,
-  url: string,
+  operation: 'countTokens' | 'generateContent',
   headers: Record<string, string>,
   body: object,
 ): Promise<unknown> {
   let response: Response
   try {
-    response = await fetcher(url, {
+    response = await fetcher(`${endpoint}:${operation}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -217,7 +224,7 @@ async function postJson(
   } catch {
     throw new Error('ai_provider_unavailable')
   }
-  if (!response.ok) throw new Error('ai_provider_unavailable')
+  if (!response.ok) throw new AiProviderHttpError(operation, response.status)
   try {
     return (await response.json()) as unknown
   } catch {

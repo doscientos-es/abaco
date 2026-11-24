@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { z } from 'zod'
 
 import { readJson, reply } from '../visit-report-pdf/http.js'
-import { parseAiRequest, type AiRequest } from './gemini.js'
+import { AiProviderHttpError, parseAiRequest, type AiRequest } from './gemini.js'
 
 type Reservation = 'allowed' | 'forbidden' | 'limit'
 type Dependencies = {
@@ -41,16 +41,29 @@ export function createAiHandler(dependencies: Dependencies) {
     } catch {
       return reply(response, 400, { error: 'invalid_input' })
     }
+    let reservation: Reservation
     try {
-      const reservation = await dependencies.reserve(tenantId, userId, input.task)
-      if (reservation === 'forbidden') return reply(response, 403, { error: 'forbidden' })
-      if (reservation === 'limit') return reply(response, 429, { error: 'limit_reached' })
-      // Unknown values must never grant access, even if the backing RPC changes.
-      if (reservation !== 'allowed') return reply(response, 503, { error: 'unavailable' })
+      reservation = await dependencies.reserve(tenantId, userId, input.task)
+    } catch {
+      return reply(response, 503, { error: 'unavailable' })
+    }
+    if (reservation === 'forbidden') return reply(response, 403, { error: 'forbidden' })
+    if (reservation === 'limit') return reply(response, 429, { error: 'limit_reached' })
+    // Unknown values must never grant access, even if the backing RPC changes.
+    if (reservation !== 'allowed') {
+      return reply(response, 503, { error: 'unavailable' })
+    }
+    try {
       return reply(response, 200, { suggestion: await dependencies.generate(input) })
     } catch (error) {
       if (error instanceof Error && error.message === 'ai_input_too_large')
         return reply(response, 413, { error: 'input_too_large' })
+      if (error instanceof AiProviderHttpError) {
+        if (error.status === 402 || error.status === 429)
+          return reply(response, 503, { error: 'provider_limit' })
+      } else if (error instanceof Error && error.message === 'ai_provider_response_invalid') {
+      } else {
+      }
       return reply(response, 503, { error: 'unavailable' })
     }
   }

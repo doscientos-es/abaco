@@ -1,4 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
+import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -8,7 +9,9 @@ import {
   getGoogleCalendarStatus,
   GoogleCalendarAccessInactiveError,
   GoogleCalendarPermissionError,
+  googleCalendarStatusQuery,
   queueGoogleCalendarSync,
+  type GoogleCalendarStatus,
 } from './google-calendar-actions'
 
 const { invoke, rpc } = vi.hoisted(() => ({ invoke: vi.fn(), rpc: vi.fn() }))
@@ -51,6 +54,32 @@ describe('Google Calendar settings actions', () => {
     expect(invoke).toHaveBeenCalledWith('google-calendar-oauth', {
       body: { action: 'status', tenantId: 'tenant-id' },
     })
+  })
+
+  it('refreshes while provisioning or syncing and stops when settled', () => {
+    const client = new QueryClient()
+    const options = googleCalendarStatusQuery('tenant-id')
+    const query = client
+      .getQueryCache()
+      .build<GoogleCalendarStatus, Error, GoogleCalendarStatus, string[]>(client, options)
+    const interval = options.refetchInterval
+    if (typeof interval !== 'function') throw new Error('Expected dynamic refresh interval')
+    const base = {
+      lastSyncedAt: null,
+      lastError: null,
+      pendingJobs: 0,
+      accessActive: true,
+    } as const
+
+    query.setData({ ...base, status: 'provisioning' })
+    expect(interval(query)).toBe(5_000)
+    query.setData({ ...base, status: 'connected', pendingJobs: 1 })
+    expect(interval(query)).toBe(5_000)
+    query.setData({ ...base, status: 'connected' })
+    expect(interval(query)).toBe(false)
+    query.setData({ ...base, status: 'provisioning', accessActive: false })
+    expect(interval(query)).toBe(false)
+    client.clear()
   })
 
   it('distinguishes an explicit permission denial from other service errors', async () => {

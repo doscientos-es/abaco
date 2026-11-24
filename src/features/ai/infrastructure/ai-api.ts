@@ -49,6 +49,11 @@ export async function requestSuggestion(tenantId: string, request: AiRequest) {
       throw new Error('Has alcanzado el límite de uso de IA de este periodo.')
     if (response.status === 413)
       throw new Error('El documento o la conversación son demasiado largos.')
+    if (response.status === 503) {
+      const body: unknown = await response.json().catch(() => null)
+      if (body && typeof body === 'object' && 'error' in body && body.error === 'provider_limit')
+        throw new Error('El proveedor de IA ha alcanzado un límite. Contacta con soporte.')
+    }
     throw new Error('No se pudo generar la propuesta. Inténtalo de nuevo.')
   }
   const body: unknown = await response.json()

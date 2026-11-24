@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { generateSuggestion, maxCountedInputTokens } from './gemini'
+import { AiProviderHttpError, generateSuggestion, maxCountedInputTokens } from './gemini'
 
 const document = {
   mimeType: 'application/pdf' as const,
@@ -149,5 +149,39 @@ describe('Gemini adapter', () => {
     await expect(
       generateSuggestion({ task: 'receipt', document }, 'test-only', fetcher),
     ).rejects.toThrow('ai_provider_unavailable')
+  })
+
+  it.each([402, 429, 500])(
+    'classifies provider HTTP %i without retaining its response',
+    async (status) => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(new Response('private provider details', { status }))
+      const error = await generateSuggestion(
+        { task: 'receipt', document },
+        'test-only',
+        fetcher,
+      ).catch((cause: unknown) => cause)
+      expect(error).toBeInstanceOf(AiProviderHttpError)
+      expect(error).toMatchObject({
+        operation: 'countTokens',
+        status,
+        message: 'ai_provider_unavailable',
+      })
+      expect(JSON.stringify(error)).not.toContain('private provider details')
+    },
+  )
+
+  it('identifies errors from generation separately from token counting', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(reply({ totalTokens: 100 }))
+      .mockResolvedValueOnce(new Response('private provider details', { status: 402 }))
+    await expect(
+      generateSuggestion({ task: 'receipt', document }, 'test-only', fetcher),
+    ).rejects.toMatchObject({
+      operation: 'generateContent',
+      status: 402,
+    })
   })
 })

@@ -136,6 +136,10 @@ export function googleCalendarStatusQuery(tenantId: string) {
     queryKey: ['settings', 'google-calendar', tenantId],
     queryFn: () => getGoogleCalendarStatus(tenantId),
     enabled: Boolean(tenantId),
-    refetchInterval: (query) => (query.state.data?.pendingJobs ? 5_000 : false),
+    refetchInterval: (query) =>
+      query.state.data?.pendingJobs ||
+      (query.state.data?.status === 'provisioning' && query.state.data.accessActive)
+        ? 5_000
+        : false,
   })
 }

@@ -63,6 +63,24 @@ describe('AI client', () => {
     ).rejects.toThrow('límite de uso')
   })
 
+  it('explains provider limits without confusing them with company credit limits', async () => {
+    getSession.mockResolvedValueOnce({
+      data: { session: { access_token: 'session-test' } },
+      error: null,
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ error: 'provider_limit' }), { status: 503 }),
+        ),
+    )
+    await expect(
+      requestSuggestion('tenant', { task: 'estimate', messages: [{ role: 'user', text: 'hola' }] }),
+    ).rejects.toThrow('proveedor de IA ha alcanzado un límite')
+  })
+
   it('never accepts malformed provider data or sends requests without a session', async () => {
     const fetcher = vi
       .fn()
