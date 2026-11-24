@@ -1,6 +1,7 @@
 import { Button } from '@doscientos/ui'
 import { Sparkle } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { receiptUpload } from '@/shared/domain/upload-file'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
@@ -28,6 +29,8 @@ export function ReceiptAiReview({
   onAnalysisStart: () => void
 }) {
   const analyzer = useMemo(() => createReceiptAnalysis(tenantId), [tenantId])
+  const queryClient = useQueryClient()
+  const analyzing = useRef(false)
   const [suggestion, setSuggestion] = useState<ReceiptSuggestion | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -35,13 +38,17 @@ export function ReceiptAiReview({
   useEffect(() => () => analyzer.cancel(), [analyzer])
 
   async function analyze(selected: File) {
+    if (analyzing.current) return
+    analyzing.current = true
     onAnalysisStart()
     onBusyChange(true)
     setBusy(true)
     setError('')
     setSuggestion(null)
     const result = await analyzer.analyze(selected)
+    void queryClient.invalidateQueries({ queryKey: ['ai-credits', tenantId] })
     if (result.status === 'obsolete') return
+    analyzing.current = false
     setBusy(false)
     onBusyChange(false)
     if (result.status === 'error') {
@@ -68,6 +75,7 @@ export function ReceiptAiReview({
         disabled={checkingAccess}
         onChange={(selected) => {
           analyzer.cancel()
+          analyzing.current = false
           setBusy(false)
           onBusyChange(false)
           setError('')
@@ -90,15 +98,15 @@ export function ReceiptAiReview({
         </p>
       ) : null}
       {suggestion && !busy ? (
-        <p className="text-muted-foreground text-sm" role="status">
+        <output className="text-muted-foreground block text-sm">
           {detected
-            ? 'Datos completados. Revisa todos los campos antes de guardar.'
+            ? 'Análisis finalizado. Revisa todos los campos antes de guardar.'
             : 'No se han detectado datos fiables. Completa el apunte manualmente.'}
           {suggestion.date === null ? ' No se ha identificado la fecha.' : ''}
           {suggestion.vatRate === null
             ? ' No se ha identificado un único tipo de IVA. El libro solo admite un tipo: revisa el justificante antes de guardar.'
             : ''}
-        </p>
+        </output>
       ) : null}
       {file && canAnalyze && !busy ? (
         <Button type="button" variant="outline" size="sm" onPress={() => void analyze(file)}>

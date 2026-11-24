@@ -39,7 +39,7 @@ export type ReceiptFields = {
   vatRate: string
 }
 
-/** Missing values and fields edited by the user leave the current form untouched. */
+/** Preserve user edits; an unknown VAT rate must be explicitly entered. */
 export function applyReceiptSuggestion<T extends ReceiptFields>(
   form: T,
   suggestion: ReceiptSuggestion,
