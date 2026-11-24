@@ -16,7 +16,7 @@ import {
 
 export type MobileDestination = Destination & { icon: ReactNode; mobileLabel?: string }
 
-type NavigationLayout = {
+export type NavigationLayout = {
   mobile: readonly MobileDestination[]
   desktop: readonly NavigationGroup[]
   choices: readonly Destination[]
@@ -76,7 +76,7 @@ export function useNavigationLayout<T extends MobileDestination>({
     moveShortcut(to: string, index: number) {
       const current = layout.mobile.map((item) => item.to)
       const next = reorderShortcuts(current, to, index)
-      if (next !== current) update({ mobile: [...next] })
+      if (next !== current) update({ mobile: next })
     },
     setDesktopGroups(ids: string[]) {
       update({ desktopGroups: keepHiddenOrder(ids, prefs.desktopGroups) })

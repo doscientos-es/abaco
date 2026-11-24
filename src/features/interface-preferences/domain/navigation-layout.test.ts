@@ -5,6 +5,7 @@ import {
   defaultNavigationPreferences,
   moveNavigationItem,
   parseNavigationPreferences,
+  reorderShortcuts,
   resolveNavigationLayout,
 } from './navigation-layout'
 
@@ -60,6 +61,20 @@ describe('navigation layout', () => {
       estimates.to,
     ])
     expect(defaults[1]).toBe(clients.to)
+  })
+
+  it('moves a shortcut across slots by shifting the others without mutating the original order', () => {
+    const moved = reorderShortcuts(defaults, home.to, 2)
+    expect(moved).toEqual([clients.to, work.to, home.to, estimates.to])
+    expect(reorderShortcuts(moved, home.to, 0)).toEqual(defaults)
+    expect(defaults[0]).toBe(home.to)
+  })
+
+  it('ignores unknown routes, unchanged positions and drops outside the editable slots', () => {
+    expect(reorderShortcuts(defaults, ledger.to, 0)).toBe(defaults)
+    expect(reorderShortcuts(defaults, home.to, 0)).toBe(defaults)
+    expect(reorderShortcuts(defaults, home.to, -1)).toBe(defaults)
+    expect(reorderShortcuts(defaults, home.to, defaults.length)).toBe(defaults)
   })
 
   it('reorders desktop groups and their own items, leaving newly available sections in default order', () => {

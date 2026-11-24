@@ -72,7 +72,7 @@ export function chooseShortcut(current: readonly string[], index: number, choice
   return next
 }
 
-export function reorderShortcuts(current: readonly string[], to: string, index: number) {
+export function reorderShortcuts(current: string[], to: string, index: number) {
   const from = current.indexOf(to)
   if (
     from < 0 ||
@@ -83,7 +83,8 @@ export function reorderShortcuts(current: readonly string[], to: string, index: 
   )
     return current
 
-  const next = current.filter((item) => item !== to)
+  const next = [...current]
+  next.splice(from, 1)
   next.splice(index, 0, to)
   return next
 }
