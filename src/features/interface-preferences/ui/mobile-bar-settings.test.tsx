@@ -57,6 +57,8 @@ describe('mobile bar settings', () => {
     expect(preview).toMatch(
       />Presup\.<\/span>.*data-icon="home".*>Resumen<\/span>.*>Buscar<\/span>/,
     )
+    expect(preview).toContain('aria-label="Presupuestos" aria-current="true"')
+    expect(preview).not.toContain('aria-label="Resumen" aria-current=')
     expect(drag.sortable.mock.calls).toEqual([
       [{ id: estimates.to, index: 0, disabled: false }],
       [{ id: home.to, index: 1, disabled: false }],

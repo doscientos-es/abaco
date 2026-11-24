@@ -36,6 +36,11 @@ export function MobileBarSettings({
   )
   const selected = mobile[index]
 
+  function moveAndSelect(to: string, position: number) {
+    moveShortcut(to, position)
+    setSelectedRoute(to)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -60,8 +65,7 @@ export function MobileBarSettings({
             sensors={sensors}
             onDragEnd={({ canceled, operation: { source } }) => {
               if (canceled || !isSortable(source) || typeof source.id !== 'string') return
-              moveShortcut(source.id, source.index)
-              setSelectedRoute(source.id)
+              moveAndSelect(source.id, source.index)
             }}
           >
             <MobileBottomBar shortcuts={mobile.length} preview>
@@ -102,7 +106,7 @@ export function MobileBarSettings({
                 variant="outline"
                 aria-label={`Mover ${selected.label} a la izquierda`}
                 isDisabled={index === 0}
-                onPress={() => moveShortcut(selected.to, index - 1)}
+                onPress={() => moveAndSelect(selected.to, index - 1)}
               >
                 <ArrowLeft aria-hidden="true" />
               </Button>
@@ -111,7 +115,7 @@ export function MobileBarSettings({
                 variant="outline"
                 aria-label={`Mover ${selected.label} a la derecha`}
                 isDisabled={index === mobile.length - 1}
-                onPress={() => moveShortcut(selected.to, index + 1)}
+                onPress={() => moveAndSelect(selected.to, index + 1)}
               >
                 <ArrowRight aria-hidden="true" />
               </Button>
@@ -158,7 +162,7 @@ function PreviewShortcut({
       ref={ref}
       type="button"
       aria-label={item.label}
-      aria-pressed={selected}
+      aria-current={selected || undefined}
       aria-describedby={instructionsId}
       className={`mobile-bottom-nav__link hover:bg-muted ${sortable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${selected ? 'mobile-bottom-nav__link--active' : ''} ${isDragging ? 'bg-sidebar relative z-10 opacity-80' : ''}`}
       onClick={onSelect}
