@@ -1,5 +1,4 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, ConfirmDialog } from '@doscientos/ui'
-import { CalendarCheck, GoogleLogo, WarningCircle } from '@phosphor-icons/react'
+import { Badge, Button, ConfirmDialog } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -12,8 +11,18 @@ import {
   googleCalendarStatusQuery,
   queueGoogleCalendarSync,
 } from '../application/google-calendar-actions'
+import calendarLogo from './google-calendar-logo.svg'
+import { IntegrationCard } from './integration-card'
 
 const dateFormatter = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
+const connectionLabels = {
+  connected: 'Conectado',
+  disconnected: 'Sin conectar',
+  provisioning: 'Preparando',
+  reauthorize: 'Requiere acceso',
+}
+const disconnectDescription =
+  'Ábaco deja de sincronizar y elimina la credencial guardada. Los eventos siguen en tu calendario. Puedes borrar los eventos en Calendar y retirar el permiso desde tu cuenta de Google.'
 
 function errorMessage(code: string | null | undefined) {
   if (code === 'reauthorize') return 'Google ha retirado el permiso. Vuelve a conectar tu cuenta.'
@@ -37,9 +46,20 @@ export function GoogleCalendarSettings() {
   const [actionError, setActionError] = useState<string | null>(null)
   const connection = status.data
   const connected = connection?.status === 'connected'
+  const canConnect = Boolean(tenantId && !connected && !status.isPending)
+  const reconnect = connection?.status === 'reauthorize'
+  const statusLabel = status.isError
+    ? 'Estado no disponible'
+    : status.isPending
+      ? 'Consultando…'
+      : connectionLabels[connection?.status ?? 'disconnected']
+  const syncError = errorMessage(connection?.lastError)
+  const feedback =
+    message ??
+    (callback === 'connected' ? 'Tu cuenta de Google se ha conectado correctamente.' : null)
 
   async function connect() {
-    if (!tenantId || busy) return
+    if (!canConnect || busy) return
     setBusy(true)
     setActionError(null)
     try {
@@ -87,150 +107,139 @@ export function GoogleCalendarSettings() {
   }
 
   return (
-    <section aria-labelledby="integrations-heading" className="space-y-5">
-      <div className="space-y-1">
-        <h2 id="integrations-heading" className="text-lg font-semibold">
-          Integraciones
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          Conecta tus herramientas con tu propia cuenta y decide cuándo retirar el acceso.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <span className="bg-primary/5 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
-              <CalendarCheck aria-hidden="true" className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <CardTitle>Google Calendar</CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Sincroniza las visitas que tienes asignadas con un calendario secundario de tu
-                cuenta.
-              </p>
-            </div>
-            {connection ? (
-              <output
-                className={
-                  connected
-                    ? 'bg-primary/10 text-primary rounded-full px-2.5 py-1 text-xs font-medium'
-                    : 'bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-medium'
-                }
+    <>
+      <IntegrationCard
+        name="Google Calendar"
+        logo={calendarLogo}
+        description="Sincroniza tus visitas asignadas con un calendario de tu cuenta."
+        status={
+          <Badge
+            variant={
+              status.isError ? 'neutral' : connected ? 'success' : reconnect ? 'warning' : 'neutral'
+            }
+          >
+            {statusLabel}
+          </Badge>
+        }
+        feedback={
+          feedback ? (
+            <output>{feedback}</output>
+          ) : callback === 'error' ? (
+            <p role="alert" className="text-destructive">
+              Google no pudo completar la conexión.
+            </p>
+          ) : null
+        }
+        actionLabel={connected ? 'Gestionar' : reconnect ? 'Volver a conectar' : 'Conectar'}
+        connectAction={!connected}
+        dialogTitle={connected ? 'Google Calendar' : 'Conectar Google Calendar'}
+        dialogActions={
+          connected ? (
+            <>
+              <Button
+                variant="outline"
+                isDisabled={busy}
+                onPress={() => {
+                  setActionError(null)
+                  setConfirmDisconnect(true)
+                }}
               >
-                {connection.status === 'connected'
-                  ? 'Conectado'
-                  : connection.status === 'provisioning'
-                    ? 'Preparando'
-                    : connection.status === 'reauthorize'
-                      ? 'Requiere acceso'
-                      : 'Desconectado'}
+                Desconectar
+              </Button>
+              <Button isPending={busy} onPress={() => void syncNow()}>
+                Sincronizar ahora
+              </Button>
+            </>
+          ) : (
+            <Button isDisabled={!canConnect} isPending={busy} onPress={() => void connect()}>
+              Continuar con Google
+            </Button>
+          )
+        }
+      >
+        <dl className="space-y-3">
+          <div>
+            <dt className="font-medium">Qué se sincroniza</dt>
+            <dd className="text-muted-foreground">
+              Solo el horario y un título genérico. No se envían nombres de clientes, direcciones,
+              notas ni partes de trabajo.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">Tu calendario y las cuotas</dt>
+            <dd className="text-muted-foreground">
+              El calendario secundario queda en tu cuenta. La integración usa las cuotas de Ábaco,
+              no las de un proyecto tuyo. El uso estándar no tiene coste adicional dentro de los
+              límites de Google.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">Qué pasa al desconectar</dt>
+            <dd className="text-muted-foreground">{disconnectDescription}</dd>
+          </div>
+        </dl>
+        {status.isError ? (
+          <div className="space-y-2">
+            <p role="alert" className="text-destructive">
+              No se pudo consultar el estado de Google Calendar.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              isDisabled={busy}
+              isPending={status.isFetching}
+              onPress={() => void status.refetch()}
+            >
+              Reintentar consulta
+            </Button>
+          </div>
+        ) : null}
+        {connection?.pendingJobs || connection?.lastSyncedAt || syncError ? (
+          <div className="bg-muted text-muted-foreground space-y-1 rounded-lg p-3">
+            {connection?.pendingJobs ? (
+              <output>
+                Sincronizando {connection.pendingJobs}{' '}
+                {connection.pendingJobs === 1 ? 'visita' : 'visitas'}…
               </output>
             ) : null}
+            {connection?.lastSyncedAt ? (
+              <p>
+                Última sincronización:{' '}
+                <time dateTime={connection.lastSyncedAt}>
+                  {dateFormatter.format(new Date(connection.lastSyncedAt))}
+                </time>
+              </p>
+            ) : null}
+            {syncError ? <p>{syncError}</p> : null}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-muted-foreground space-y-2 text-sm leading-relaxed">
-            <p>
-              Ábaco solo envía el título genérico y el horario; no sincroniza nombres de clientes,
-              direcciones, notas ni partes de trabajo.
-            </p>
-            <p>
-              La cuenta Google es tuya y conserva el calendario. Las llamadas usan las cuotas del
-              proyecto de Ábaco: iniciar sesión con tu cuenta no traslada cuotas ni facturación a tu
-              proyecto Google personal. El uso estándar de Calendar no tiene coste adicional dentro
-              de los límites publicados por Google; consulta sus condiciones vigentes.
-            </p>
-          </div>
-
-          {status.isPending ? (
-            <p className="text-muted-foreground text-sm">Consultando conexión…</p>
-          ) : null}
-          {status.isError ? (
-            <p role="alert" className="text-destructive text-sm">
-              No se pudo consultar la conexión. Recarga la página para volver a intentarlo.
-            </p>
-          ) : null}
-          {connection?.pendingJobs ? (
-            <p className="text-muted-foreground text-sm" aria-live="polite">
-              Sincronizando {connection.pendingJobs}{' '}
-              {connection.pendingJobs === 1 ? 'visita' : 'visitas'}…
-            </p>
-          ) : null}
-          {connection?.lastSyncedAt ? (
-            <p className="text-muted-foreground text-sm">
-              Última sincronización:{' '}
-              <time dateTime={connection.lastSyncedAt}>
-                {dateFormatter.format(new Date(connection.lastSyncedAt))}
-              </time>
-            </p>
-          ) : null}
-          {errorMessage(connection?.lastError) ? (
-            <output className="text-muted-foreground flex items-start gap-2 text-sm">
-              <WarningCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              {errorMessage(connection?.lastError)}
-            </output>
-          ) : null}
-          {callback === 'connected' ? (
-            <output className="text-sm">Tu cuenta de Google se ha conectado correctamente.</output>
-          ) : null}
-          {callback === 'error' ? (
-            <p role="alert" className="text-destructive text-sm">
-              Google no pudo completar la conexión. Puedes intentarlo de nuevo.
-            </p>
-          ) : null}
-          {message ? <output className="text-sm">{message}</output> : null}
-          {actionError ? (
-            <p role="alert" className="text-destructive text-sm">
-              {actionError}
-            </p>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
-            {!connected ? (
-              <Button
-                isDisabled={!tenantId || busy || status.isPending}
-                onPress={() => void connect()}
-              >
-                <GoogleLogo aria-hidden="true" />
-                {connection?.status === 'reauthorize'
-                  ? 'Volver a conectar'
-                  : 'Conectar Google Calendar'}
-              </Button>
-            ) : (
-              <>
-                <Button isDisabled={busy} onPress={() => void syncNow()}>
-                  Sincronizar ahora
-                </Button>
-                <Button
-                  variant="outline"
-                  isDisabled={busy}
-                  onPress={() => setConfirmDisconnect(true)}
-                >
-                  Desconectar
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        Al desconectar se elimina de Ábaco la credencial y se detiene la sincronización. Los eventos
-        existentes no se borran ni se revoca automáticamente el permiso general de Google; puedes
-        quitarlos desde Calendar y gestionar el acceso en la configuración de tu cuenta Google.
-      </p>
+        ) : null}
+        {!confirmDisconnect && actionError ? (
+          <p role="alert" className="text-destructive">
+            {actionError}
+          </p>
+        ) : null}
+        {message ? <output>{message}</output> : null}
+      </IntegrationCard>
 
       <ConfirmDialog
         open={confirmDisconnect}
         onOpenChange={setConfirmDisconnect}
         title="¿Desconectar Google Calendar?"
-        description="Ábaco dejará de sincronizar tus visitas y eliminará la credencial guardada. Los eventos ya creados permanecerán en tu calendario."
+        description={
+          <>
+            {disconnectDescription}
+            {actionError ? (
+              <span role="alert" className="text-destructive mt-2 block">
+                {actionError}
+              </span>
+            ) : null}
+          </>
+        }
         confirmLabel={busy ? 'Desconectando…' : 'Desconectar'}
         destructive
         pending={busy}
         onConfirm={() => void disconnect()}
       />
-    </section>
+    </>
   )
 }

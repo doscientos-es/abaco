@@ -6,11 +6,14 @@ import {
   CardHeader,
   CardTitle,
   DialogContent,
+  DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogRoot,
+  DialogTitle,
   DialogTrigger,
 } from '@doscientos/ui'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 
 type IntegrationCardProps = {
   name: string
@@ -37,6 +40,8 @@ export function IntegrationCard({
   dialogActions,
   children,
 }: IntegrationCardProps) {
+  const descriptionId = useId()
+
   return (
     <DialogRoot>
       <Card variant="flat">
@@ -45,13 +50,11 @@ export function IntegrationCard({
             <span className="bg-muted/60 flex size-11 shrink-0 items-center justify-center rounded-lg">
               <img src={logo} alt="" className="size-7" />
             </span>
-            <div role="status" className="flex flex-wrap gap-1.5">
-              {status}
-            </div>
+            <output className="flex flex-wrap gap-1.5">{status}</output>
           </div>
           <div className="space-y-1">
-            <CardTitle role="heading" aria-level={3}>
-              {name}
+            <CardTitle>
+              <h3>{name}</h3>
             </CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
@@ -59,6 +62,7 @@ export function IntegrationCard({
         {feedback ? <CardContent className="space-y-1.5 text-sm">{feedback}</CardContent> : null}
         <CardFooter className="mt-auto justify-end">
           <DialogTrigger
+            aria-haspopup="dialog"
             aria-label={`${actionLabel}: ${name}`}
             size="sm"
             variant={connectAction ? 'default' : 'outline'}
@@ -67,7 +71,14 @@ export function IntegrationCard({
           </DialogTrigger>
         </CardFooter>
       </Card>
-      <DialogContent title={dialogTitle} description={description}>
+      <DialogContent
+        aria-describedby={descriptionId}
+        className="app-dialog max-h-[90dvh] w-full overflow-y-auto"
+      >
+        <DialogHeader className="pr-8">
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription id={descriptionId}>{description}</DialogDescription>
+        </DialogHeader>
         {children}
         {dialogActions ? <DialogFooter>{dialogActions}</DialogFooter> : null}
       </DialogContent>
