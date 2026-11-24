@@ -36,6 +36,13 @@ vi.mock('react', async (importOriginal) => ({
   useEffect: fixtures.effect,
 }))
 vi.mock('@doscientos/ui', () => ({ Button: fixtures.button }))
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, search }: { children: React.ReactNode; search: { seccion?: string } }) => (
+    <a href={search.seccion ? '/ajustes?tab=plan&seccion=referidos' : '/ajustes?tab=plan'}>
+      {children}
+    </a>
+  ),
+}))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: fixtures.invalidate }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
@@ -109,7 +116,7 @@ vi.mock('./pricing-catalog', () => ({
     ),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
-vi.mock('./referral-program', () => ({ ReferralProgram: () => null }))
+vi.mock('./referral-program', () => ({ ReferralProgram: () => <div>Detalles de referidos</div> }))
 vi.mock('./subscription-billing-profile-form', () => ({
   SubscriptionBillingProfileForm: () => null,
 }))
@@ -230,4 +237,20 @@ describe('billing confirmation', () => {
     expect(render()).toContain('Acceso de cortesía')
     expect(action('Elegir Ábaco')).toBeUndefined()
   })
+
+  it.each([false, true])(
+    'keeps referral details behind a direct link (courtesy: %s)',
+    (courtesy) => {
+      fixtures.courtesy = courtesy
+      const html = render()
+      expect(html).toContain('/ajustes?tab=plan&amp;seccion=referidos')
+      expect(html).not.toContain('Detalles de referidos')
+      const referral = renderToStaticMarkup(
+        <BillingSection tenantId="company" companyName="Company" referralView />,
+      )
+      expect(referral).toContain('Detalles de referidos')
+      expect(referral).toContain('Volver a la suscripción')
+      expect(referral).not.toContain('Elegir Ábaco')
+    },
+  )
 })

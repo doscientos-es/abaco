@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -5,12 +6,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Payment, Subscription } from '../application/billing-actions'
 import { PaymentHistory } from './payment-history'
 
-const { query, button, download } = vi.hoisted(() => ({
+const { query, button, download, filters } = vi.hoisted(() => ({
   query: vi.fn(),
   button: vi.fn(),
   download: vi.fn(),
+  filters: {
+    values: ['all', 'all'],
+    index: 0,
+    controls: new Map<string, (value: string) => void>(),
+  },
 }))
 
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof React>()),
+  useState: () => {
+    const index = filters.index++
+    return [
+      filters.values[index],
+      (value: string) => {
+        filters.values[index] = value
+      },
+    ]
+  },
+}))
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: { queryKey: string[] }) => {
     if (options.queryKey[0] === 'billing-catalog') return { data: [] }
@@ -28,6 +46,12 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 vi.mock('@doscientos/ui', () => ({ Button: button }))
 vi.mock('@/shared/domain/csv', () => ({ downloadTextFile: download }))
+vi.mock('@/shared/ui/form', () => ({
+  SelectField: ({ label, onChange }: { label: string; onChange: (value: string) => void }) => {
+    filters.controls.set(label, onChange)
+    return <span>{label}</span>
+  },
+}))
 vi.mock('../application/billing-actions', () => ({
   paymentsQuery: (tenantId: string) => ({ queryKey: ['billing-payments', tenantId] }),
   billingCatalogQuery: { queryKey: ['billing-catalog'] },
@@ -48,18 +72,22 @@ const subscription: Subscription = {
   trialDaysLeft: 18,
 }
 
-const render = (currentSubscription: Subscription = subscription) =>
-  renderToStaticMarkup(
+const render = (currentSubscription: Subscription = subscription) => {
+  filters.index = 0
+  return renderToStaticMarkup(
     <PaymentHistory
       tenantId="trial-company"
       companyName="Trial company"
       subscription={currentSubscription}
     />,
   )
+}
 
 describe('PaymentHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    filters.values = ['all', 'all']
+    filters.controls.clear()
     button.mockImplementation(({ children }: { children: ReactNode }) => (
       <button>{children}</button>
     ))
@@ -267,5 +295,49 @@ describe('PaymentHistory', () => {
     const html = render()
     expect(html).toContain('Sin conexión.')
     expect(html).not.toContain('Cargando…')
+  })
+
+  it('filters attempts by status and year, distinguishes no matches and resets filters', () => {
+    const payment: Payment = {
+      id: 'paid',
+      order: 'PAID2026',
+      plan: 'solo',
+      period: 'month',
+      kind: 'first',
+      vatPercent: 21,
+      netCents: 2000,
+      amountCents: 2420,
+      chargedCents: 2420,
+      referralCreditCents: 0,
+      status: 'succeeded',
+      createdAt: new Date('2026-11-01T12:00:00Z'),
+      settledAt: null,
+      invoiceNumber: null,
+      invoicePortalUrl: null,
+    }
+    query.mockReturnValue({
+      data: [
+        payment,
+        {
+          ...payment,
+          id: 'failed',
+          order: 'FAILED2025',
+          status: 'failed',
+          createdAt: new Date('2025-06-01T12:00:00Z'),
+        },
+      ],
+      isPending: false,
+      isError: false,
+    })
+    expect(render()).toContain('PAID2026')
+    filters.controls.get('Estado del pago')?.('failed')
+    expect(render()).toContain('FAILED2025')
+    expect(render()).not.toContain('PAID2026')
+    filters.controls.get('Año')?.('2026')
+    expect(render()).toContain('No hay pagos que coincidan con estos filtros.')
+    button.mock.calls.findLast(([props]) => props.children === 'Limpiar filtros')?.[0].onPress()
+    const reset = render()
+    expect(reset).toContain('PAID2026')
+    expect(reset).toContain('FAILED2025')
   })
 })

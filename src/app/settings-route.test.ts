@@ -26,6 +26,15 @@ describe('settings route search', () => {
     expect(validate({ tab: 'plan' })).toEqual({ tab: 'plan' })
   })
 
+  it('preserves the referral link only inside the plan tab', () => {
+    expect(validate({ tab: 'plan', seccion: 'referidos' })).toEqual({
+      tab: 'plan',
+      seccion: 'referidos',
+    })
+    expect(validate({ tab: 'empresa', seccion: 'referidos' })).toEqual({ tab: 'empresa' })
+    expect(validate({ tab: 'plan', seccion: 'invalid' })).toEqual({ tab: 'plan' })
+  })
+
   it('supports direct links to configurable lists', () => {
     expect(validate({ tab: 'listas' })).toEqual({ tab: 'listas' })
   })
