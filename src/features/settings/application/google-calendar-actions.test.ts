@@ -6,6 +6,7 @@ import {
   completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
   getGoogleCalendarStatus,
+  GoogleCalendarAccessInactiveError,
   GoogleCalendarPermissionError,
   queueGoogleCalendarSync,
 } from './google-calendar-actions'
@@ -59,6 +60,14 @@ describe('Google Calendar settings actions', () => {
     })
     await expect(getGoogleCalendarStatus('tenant-id')).rejects.toBeInstanceOf(
       GoogleCalendarPermissionError,
+    )
+
+    invoke.mockResolvedValueOnce({
+      data: null,
+      error: new FunctionsHttpError(Response.json({ error: 'access_inactive' }, { status: 403 })),
+    })
+    await expect(beginGoogleCalendarConnection('tenant-id')).rejects.toBeInstanceOf(
+      GoogleCalendarAccessInactiveError,
     )
 
     invoke.mockResolvedValueOnce({

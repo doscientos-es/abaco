@@ -21,6 +21,12 @@ export class GoogleCalendarPermissionError extends Error {
   }
 }
 
+export class GoogleCalendarAccessInactiveError extends Error {
+  constructor() {
+    super('La empresa no tiene acceso vigente. La sincronización está en pausa.')
+  }
+}
+
 async function invokeCalendar<T extends FunctionPayload>(
   action: string,
   tenantId: string,
@@ -36,6 +42,8 @@ async function invokeCalendar<T extends FunctionPayload>(
       const body: unknown = await response.json().catch(() => null)
       if (body && typeof body === 'object' && 'error' in body && body.error === 'not_allowed')
         throw new GoogleCalendarPermissionError()
+      if (body && typeof body === 'object' && 'error' in body && body.error === 'access_inactive')
+        throw new GoogleCalendarAccessInactiveError()
     }
   }
   if (error || !data || typeof data !== 'object')

@@ -15,7 +15,9 @@ describe('Google Calendar membership and subscription access', () => {
   beforeAll(async () => {
     await db.exec(`
       create role anon; create role authenticated; create role service_role;
-      create schema app_private; create schema auth;
+      create schema app_private; create schema auth; create schema cron;
+      create table cron.job(jobname text);
+      create function cron.schedule(text, text, text) returns bigint language sql as $$ select 1::bigint $$;
       create function auth.uid() returns uuid language sql as $$
         select nullif(current_setting('test.user_id', true), '')::uuid $$;
       create function auth.role() returns text language sql as $$
@@ -79,14 +81,14 @@ describe('Google Calendar membership and subscription access', () => {
       const { rows } = await db.query<{ allowed: boolean }>(
         `select public.authorize_google_calendar_actor('${tenant}', '${id}') as allowed`,
       )
-      expect(rows[0].allowed).toBe(true)
+      expect(rows[0]?.allowed).toBe(true)
     }
     expect(
       (
         await db.query<{ allowed: boolean }>(
           `select public.authorize_google_calendar_actor('${other}', '${admin}') as allowed`,
         )
-      ).rows[0].allowed,
+      ).rows[0]?.allowed,
     ).toBe(false)
     await db.exec(`update public.tenants set is_complimentary = false where id = '${tenant}'`)
     expect(
@@ -94,7 +96,7 @@ describe('Google Calendar membership and subscription access', () => {
         await db.query<{ allowed: boolean }>(
           `select public.authorize_google_calendar_actor('${tenant}', '${admin}') as allowed`,
         )
-      ).rows[0].allowed,
+      ).rows[0]?.allowed,
     ).toBe(false)
     await db.exec(
       `update public.tenants set subscription_status = 'trialing', trial_ends_at = now() + interval '1 day' where id = '${tenant}'`,
@@ -104,7 +106,7 @@ describe('Google Calendar membership and subscription access', () => {
         await db.query<{ allowed: boolean }>(
           `select public.authorize_google_calendar_actor('${tenant}', '${admin}') as allowed`,
         )
-      ).rows[0].allowed,
+      ).rows[0]?.allowed,
     ).toBe(true)
   })
 
@@ -136,7 +138,7 @@ describe('Google Calendar membership and subscription access', () => {
     const result = await db.query<{ disconnected: boolean }>(
       `select public.disconnect_my_google_calendar('${tenant}') as disconnected`,
     )
-    expect(result.rows[0].disconnected).toBe(true)
+    expect(result.rows[0]?.disconnected).toBe(true)
     expect(
       (
         await db.query(

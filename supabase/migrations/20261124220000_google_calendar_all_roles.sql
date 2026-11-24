@@ -136,4 +136,15 @@ begin
     from leased l join connection_lease c using (tenant_id, user_id);
 end;
 $$;
+
+-- A periodic wake-up is needed both for retries and for jobs paused until
+-- company access is restored. Immediate dispatch alone cannot cover either.
+do $$
+begin
+  if not exists (select 1 from cron.job where jobname = 'google-calendar-sync') then
+    perform cron.schedule('google-calendar-sync', '* * * * *',
+      'select public.run_google_calendar_sync_worker()');
+  end if;
+end;
+$$;
 notify pgrst, 'reload schema';

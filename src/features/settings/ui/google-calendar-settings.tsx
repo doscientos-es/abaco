@@ -9,6 +9,7 @@ import {
   beginGoogleCalendarConnection,
   completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
+  GoogleCalendarAccessInactiveError,
   GoogleCalendarPermissionError,
   googleCalendarStatusQuery,
   queueGoogleCalendarSync,
@@ -75,8 +76,12 @@ export function GoogleCalendarSettings() {
           queryKey: googleCalendarStatusQuery(tenantId).queryKey,
         })
       })
-      .catch(() =>
-        setActionError('No se pudo completar la conexión con Google. Vuelve a intentarlo.'),
+      .catch((error: unknown) =>
+        setActionError(
+          error instanceof GoogleCalendarAccessInactiveError
+            ? error.message
+            : 'No se pudo completar la conexión con Google. Vuelve a intentarlo.',
+        ),
       )
       .finally(() => setBusy(false))
   }, [tenantId, queryClient])
@@ -88,8 +93,12 @@ export function GoogleCalendarSettings() {
     try {
       const url = await beginGoogleCalendarConnection(tenantId)
       window.location.assign(url)
-    } catch {
-      setActionError('No se pudo iniciar la conexión. Comprueba tu sesión e inténtalo de nuevo.')
+    } catch (error) {
+      setActionError(
+        error instanceof GoogleCalendarAccessInactiveError
+          ? error.message
+          : 'No se pudo iniciar la conexión. Comprueba tu sesión e inténtalo de nuevo.',
+      )
       setBusy(false)
     }
   }
