@@ -8,6 +8,7 @@ import {
   applyReceiptSuggestion,
   estimateSuggestionSchema,
   receiptSuggestionSchema,
+  resetReceiptAutofill,
 } from './suggestions'
 
 let sequence = 0
@@ -61,6 +62,51 @@ describe('AI suggestions', () => {
     expect(receiptSuggestionSchema.safeParse({ ...valid, vendorId: 'invented' }).success).toBe(
       false,
     )
+  })
+
+  it('preserves manually edited fields, including cleared fields, and requires a missing VAT rate', () => {
+    const form = { date: '2026-01-01', concept: '', category: 'Manual', amount: '5', vatRate: '21' }
+    const suggestion = {
+      date: '2026-02-01',
+      concept: 'Factura',
+      category: 'IA',
+      grossCents: 1210,
+      vatRate: null,
+    }
+    const edited = new Set<keyof typeof form>(['concept', 'category', 'amount'])
+    expect(applyReceiptSuggestion(form, suggestion, edited)).toEqual({
+      date: '2026-02-01',
+      concept: '',
+      category: 'Manual',
+      amount: '5',
+      vatRate: '',
+    })
+    edited.add('vatRate')
+    expect(applyReceiptSuggestion(form, suggestion, edited).vatRate).toBe('21')
+  })
+
+  it('clears old auto-filled values when replacing a receipt without losing manual edits', () => {
+    const form = {
+      kind: 'expense',
+      date: '2026-02-01',
+      concept: 'Manual',
+      category: 'IA',
+      amount: '50',
+      vatRate: '10',
+    }
+    const defaults = {
+      date: '2026-01-01',
+      concept: '',
+      category: 'Materiales',
+      amount: '',
+      vatRate: '21',
+    }
+    expect(resetReceiptAutofill(form, defaults, new Set(['concept', 'amount']))).toEqual({
+      ...defaults,
+      kind: 'expense',
+      concept: 'Manual',
+      amount: '50',
+    })
   })
 
   it('appends complete lines to a sectioned draft without inventing missing prices', () => {
