@@ -34,6 +34,11 @@ describe('Gemini adapter', () => {
     expect(generateUrl).toContain(':generateContent')
     expect(generateUrl).not.toContain('test-only')
     expect(JSON.parse(countInit.body).generateContentRequest).toEqual(JSON.parse(generateInit.body))
+    expect(JSON.parse(generateInit.body).generationConfig).toMatchObject({
+      maxOutputTokens: 1000,
+      candidateCount: 1,
+      thinkingConfig: { thinkingLevel: 'minimal' },
+    })
     expect(generateInit.headers['x-goog-api-key']).toBe('test-only')
   })
 

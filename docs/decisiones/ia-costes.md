@@ -48,7 +48,9 @@ pagos ni activa accesos.
 ## Estado de la integración
 
 El adaptador de servidor usa el modelo estable `gemini-3.1-flash-lite`, cuenta el contexto
-antes de generar y rechaza respuestas truncadas o que no cumplan los esquemas. El recuento
+antes de generar, limita el razonamiento a `minimal`, solicita una sola respuesta y rechaza
+respuestas truncadas o que no cumplan los esquemas. `minimal` reduce el razonamiento, pero no
+garantiza que se desactive ni constituye por sí solo un límite exacto de coste. El recuento
 del proveedor no incluye el esquema de respuesta, por lo que los 3.000 tokens contados
 del adaptador no son un límite garantizado de facturación. El modelo está anunciado para
 retirada el 7 de mayo de 2027; hay que revisar el sustituto antes de esa fecha.

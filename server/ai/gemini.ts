@@ -135,6 +135,8 @@ export async function generateSuggestion(
       responseMimeType: 'application/json',
       responseJsonSchema: request.task === 'receipt' ? receiptSchema : estimateSchema,
       maxOutputTokens,
+      candidateCount: 1,
+      thinkingConfig: { thinkingLevel: 'minimal' },
     },
   }
   const headers = { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }
