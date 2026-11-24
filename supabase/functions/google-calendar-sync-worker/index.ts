@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { CalendarRequestError, GoogleCalendarClient } from '../_shared/google-calendar/calendar.ts'

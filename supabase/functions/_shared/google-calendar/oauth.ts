@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 
 export const calendarScope = 'https://www.googleapis.com/auth/calendar.app.created'

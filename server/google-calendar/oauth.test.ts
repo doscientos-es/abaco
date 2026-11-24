@@ -62,6 +62,18 @@ async function begin(store: OAuthStore) {
 }
 
 describe('server OAuth preparation', () => {
+  it('encrypts and decrypts without a global Buffer', () => {
+    vi.stubGlobal('Buffer', undefined)
+    let decrypted: string
+    try {
+      const encrypted = encryptRefreshToken('refresh-test', config.encryptionKey, actor)
+      decrypted = decryptRefreshToken(encrypted, config.encryptionKey, actor)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    expect(decrypted).toBe('refresh-test')
+  })
+
   it('uses minimum scope, offline access, state and PKCE; saves only an encrypted refresh token', async () => {
     const { store, saved } = memoryStore()
     const url = await begin(store)
