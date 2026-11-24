@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
-import { formLimits } from '@/shared/domain/form-limits'
-import { centsToInput } from '@/shared/domain/money'
 import type { Estimate, EstimateLine } from '@/shared/domain/types'
+
+import { formLimits } from '../../../shared/domain/form-limits.js'
+import { centsToInput } from '../../../shared/domain/money.js'
 
 const optionalText = (max: number) => z.string().trim().min(1).max(max).nullable()
 const date = z

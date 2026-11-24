@@ -4,7 +4,7 @@ import type { AiDocument, AiRequest } from '../../src/features/ai/domain/request
 import {
   estimateSuggestionSchema,
   receiptSuggestionSchema,
-} from '../../src/features/ai/domain/suggestions'
+} from '../../src/features/ai/domain/suggestions.js'
 
 const model = 'gemini-3.1-flash-lite'
 const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}`

@@ -2,9 +2,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { createClient } from '@supabase/supabase-js'
 
-import { generateSuggestion } from '../server/ai/gemini'
-import { createAiHandler } from '../server/ai/http'
-import { reply } from '../server/visit-report-pdf/http'
+import { generateSuggestion } from '../server/ai/gemini.js'
+import { createAiHandler } from '../server/ai/http.js'
+import { reply } from '../server/visit-report-pdf/http.js'
 
 export const config = { api: { bodyParser: false } }
 

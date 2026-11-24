@@ -2,8 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { z } from 'zod'
 
-import { readJson, reply } from '../visit-report-pdf/http'
-import { parseAiRequest, type AiRequest } from './gemini'
+import { readJson, reply } from '../visit-report-pdf/http.js'
+import { parseAiRequest, type AiRequest } from './gemini.js'
 
 type Reservation = 'allowed' | 'forbidden' | 'limit'
 type Dependencies = {
