@@ -119,10 +119,15 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       {tab === 'cuenta' ? <AccountSettings /> : null}
       {tab === 'interfaz' ? <InterfaceSettings /> : null}
       {tab === 'integraciones' ? (
-        <div className="space-y-5">
-          <StripeConnectSettings tenantId={tenant.id} />
-          <GoogleCalendarSettings />
-        </div>
+        <section aria-labelledby="integrations-heading" className="space-y-4">
+          <h2 id="integrations-heading" className="text-lg font-semibold">
+            Integraciones
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StripeConnectSettings tenantId={tenant.id} />
+            <GoogleCalendarSettings />
+          </div>
+        </section>
       ) : null}
       {tab === 'plan' && session?.tenantId ? (
         <BillingSection tenantId={session.tenantId} companyName={tenant.name} />

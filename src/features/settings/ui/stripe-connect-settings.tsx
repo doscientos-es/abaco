@@ -1,18 +1,29 @@
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@doscientos/ui'
+import { Badge, Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { beginStripeConnection, stripeConnectionQuery } from '../application/stripe-connect-actions'
+import { IntegrationCard } from './integration-card'
+import stripeLogo from './stripe-logo.svg'
 
 export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
   const callback = useSearch({ from: '/ajustes' }).stripe
   const status = useQuery(stripeConnectionQuery(tenantId))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const connection = status.data
+  const canConnect = connection?.connected === false
+  const statusLabel = status.isError
+    ? 'Estado no disponible'
+    : status.isPending
+      ? 'Consultando…'
+      : connection?.connected
+        ? 'Cuenta vinculada'
+        : 'Sin conectar'
 
   async function connect() {
-    if (busy) return
+    if (!canConnect || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -24,35 +35,60 @@ export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Stripe</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <p>Vincula la cuenta Stripe de esta empresa para preparar los cobros a sus clientes.</p>
-        <p className="text-muted-foreground">
-          Los cobros con Stripe todavía no están disponibles, incluso si conectas la cuenta.
-        </p>
-        {status.isPending ? <p>Consultando conexión…</p> : null}
-        {status.isError ? (
-          <p role="alert">No se pudo consultar Stripe. Inténtalo de nuevo más tarde.</p>
-        ) : null}
-        {status.data ? (
-          <p>
-            {status.data.connected ? 'Cuenta vinculada' : 'Sin cuenta vinculada'}
-            {!status.data.liveMode ? ' · Modo de pruebas' : ''}
+    <IntegrationCard
+      name="Stripe"
+      logo={stripeLogo}
+      description="Vincula la cuenta de tu empresa para futuros cobros."
+      status={
+        <>
+          <Badge variant={!status.isError && connection?.connected ? 'success' : 'neutral'}>
+            {statusLabel}
+          </Badge>
+          {connection?.liveMode === false ? <Badge variant="warning">Modo de pruebas</Badge> : null}
+        </>
+      }
+      feedback={
+        callback === 'error' ? (
+          <p role="alert" className="text-destructive">
+            No se pudo completar la conexión con Stripe.
           </p>
-        ) : null}
-        {callback === 'error' ? (
-          <p role="alert">No se pudo completar la conexión con Stripe.</p>
-        ) : null}
-        {error ? <p role="alert">{error}</p> : null}
-        {status.data && !status.data.connected ? (
-          <Button isDisabled={busy} onPress={() => void connect()}>
-            {busy ? 'Conectando…' : 'Conectar Stripe'}
+        ) : null
+      }
+      actionLabel={canConnect ? 'Conectar' : 'Ver detalles'}
+      connectAction={canConnect}
+      dialogTitle={canConnect ? 'Conectar Stripe' : 'Stripe'}
+      dialogActions={
+        canConnect ? (
+          <Button isPending={busy} onPress={() => void connect()}>
+            Continuar con Stripe
           </Button>
-        ) : null}
-      </CardContent>
-    </Card>
+        ) : status.isError ? (
+          <Button
+            variant="outline"
+            isPending={status.isFetching}
+            onPress={() => void status.refetch()}
+          >
+            Reintentar consulta
+          </Button>
+        ) : null
+      }
+    >
+      <div className="bg-muted rounded-lg p-3">
+        <h3 className="font-medium">Cobros aún no disponibles</h3>
+        <p className="text-muted-foreground mt-1">
+          Conectar la cuenta no activa los cobros con Stripe en Ábaco.
+        </p>
+      </div>
+      {status.isError ? (
+        <p role="alert" className="text-destructive">
+          No se pudo consultar la conexión con Stripe.
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </IntegrationCard>
   )
 }
