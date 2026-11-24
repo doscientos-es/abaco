@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { queryOptions } from '@tanstack/react-query'
 
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
@@ -13,6 +14,12 @@ type FunctionPayload = Record<string, unknown>
 const calendarStateKey = 'abaco-google-calendar-state'
 const statePattern = /^[A-Za-z0-9_-]{43}$/
 
+export class GoogleCalendarPermissionError extends Error {
+  constructor() {
+    super('Tu cuenta no tiene permiso para usar Google Calendar en esta empresa.')
+  }
+}
+
 async function invokeCalendar<T extends FunctionPayload>(
   action: string,
   tenantId: string,
@@ -22,6 +29,14 @@ async function invokeCalendar<T extends FunctionPayload>(
     'google-calendar-oauth',
     { body: { ...extra, action, tenantId } },
   )
+  if (error instanceof FunctionsHttpError && error.context instanceof Response) {
+    const response = error.context
+    if (response.status === 403) {
+      const body: unknown = await response.json().catch(() => null)
+      if (body && typeof body === 'object' && 'error' in body && body.error === 'not_allowed')
+        throw new GoogleCalendarPermissionError()
+    }
+  }
   if (error || !data || typeof data !== 'object')
     throw new Error('Google Calendar no está disponible.')
   return data as T

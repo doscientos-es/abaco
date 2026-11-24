@@ -24,6 +24,7 @@ vi.mock('@doscientos/ui', async (importOriginal) => {
   }
 })
 
+import { GoogleCalendarPermissionError } from '../application/google-calendar-actions'
 import { GoogleCalendarSettings } from './google-calendar-settings'
 import { StripeConnectSettings } from './stripe-connect-settings'
 
@@ -76,6 +77,14 @@ describe('Google Calendar settings', () => {
     query.mockReturnValue({ isError: true })
     const html = renderToStaticMarkup(<GoogleCalendarSettings />)
     expect(html).toContain('No se pudo consultar el estado de Google Calendar.')
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Continuar con Google<\/button>/)
+  })
+
+  it('explains when the server denies calendar access', () => {
+    dialog.open = true
+    query.mockReturnValue({ isError: true, error: new GoogleCalendarPermissionError() })
+    const html = renderToStaticMarkup(<GoogleCalendarSettings />)
+    expect(html).toContain('Tu cuenta no tiene permiso para usar Google Calendar en esta empresa.')
     expect(html).toMatch(/<button[^>]*disabled[^>]*>Continuar con Google<\/button>/)
   })
 

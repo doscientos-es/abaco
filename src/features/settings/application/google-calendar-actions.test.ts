@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -5,6 +6,7 @@ import {
   completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
   getGoogleCalendarStatus,
+  GoogleCalendarPermissionError,
   queueGoogleCalendarSync,
 } from './google-calendar-actions'
 
@@ -47,6 +49,26 @@ describe('Google Calendar settings actions', () => {
     expect(invoke).toHaveBeenCalledWith('google-calendar-oauth', {
       body: { action: 'status', tenantId: 'tenant-id' },
     })
+  })
+
+  it('distinguishes an explicit permission denial from other service errors', async () => {
+    invoke.mockResolvedValueOnce({
+      data: null,
+      error: new FunctionsHttpError(Response.json({ error: 'not_allowed' }, { status: 403 })),
+    })
+    await expect(getGoogleCalendarStatus('tenant-id')).rejects.toBeInstanceOf(
+      GoogleCalendarPermissionError,
+    )
+
+    invoke.mockResolvedValueOnce({
+      data: null,
+      error: new FunctionsHttpError(
+        Response.json({ error: 'origin_not_allowed' }, { status: 403 }),
+      ),
+    })
+    await expect(getGoogleCalendarStatus('tenant-id')).rejects.toThrow(
+      'Google Calendar no está disponible.',
+    )
   })
 
   it('accepts only the Google OAuth origin before redirecting', async () => {

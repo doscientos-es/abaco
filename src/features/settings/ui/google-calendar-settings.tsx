@@ -9,6 +9,7 @@ import {
   beginGoogleCalendarConnection,
   completeGoogleCalendarConnection,
   disconnectGoogleCalendar,
+  GoogleCalendarPermissionError,
   googleCalendarStatusQuery,
   queueGoogleCalendarSync,
 } from '../application/google-calendar-actions'
@@ -201,7 +202,9 @@ export function GoogleCalendarSettings() {
         {status.isError ? (
           <div className="space-y-2">
             <p role="alert" className="text-destructive">
-              No se pudo consultar el estado de Google Calendar.
+              {status.error instanceof GoogleCalendarPermissionError
+                ? status.error.message
+                : 'No se pudo consultar el estado de Google Calendar.'}
             </p>
             <Button
               variant="outline"
