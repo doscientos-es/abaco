@@ -11,6 +11,7 @@ import {
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { AiTestSettings } from '@/features/ai'
 import { useCompanyActions, useSession } from '@/features/auth'
 import { InterfaceSettings } from '@/features/interface-preferences'
 
@@ -19,6 +20,7 @@ import { GoogleCalendarSettings } from './google-calendar-settings'
 export function UserSettingsPage() {
   const { tab } = useSearch({ from: '/ajustes' })
   const navigate = useNavigate()
+  const session = useSession()
   const selectedTab = tab === 'interfaz' || tab === 'integraciones' ? tab : 'cuenta'
   return (
     <div className="space-y-5">
@@ -37,7 +39,10 @@ export function UserSettingsPage() {
         </TabsList>
       </Tabs>
       {selectedTab === 'integraciones' ? (
-        <GoogleCalendarSettings />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <GoogleCalendarSettings />
+          {session?.tenantId ? <AiTestSettings tenantId={session.tenantId} /> : null}
+        </div>
       ) : selectedTab === 'interfaz' ? (
         <InterfaceSettings />
       ) : (

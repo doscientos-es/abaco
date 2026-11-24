@@ -2,6 +2,7 @@ import { Button, Tabs, TabsList, TabsTrigger } from '@doscientos/ui'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { AiTestSettings } from '@/features/ai'
 import { useSession } from '@/features/auth'
 import { BillingSection } from '@/features/billing'
 import { InterfaceSettings } from '@/features/interface-preferences'
@@ -126,6 +127,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <StripeConnectSettings tenantId={tenant.id} />
             <GoogleCalendarSettings />
+            <AiTestSettings tenantId={tenant.id} />
           </div>
         </section>
       ) : null}
