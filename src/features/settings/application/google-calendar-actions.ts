@@ -8,6 +8,7 @@ export type GoogleCalendarStatus = {
   lastSyncedAt: string | null
   lastError: 'google_unavailable' | 'calendar_conflict' | 'invalid_visit' | 'reauthorize' | null
   pendingJobs: number
+  accessActive: boolean
 }
 
 type FunctionPayload = Record<string, unknown>
@@ -54,7 +55,8 @@ function isCalendarStatus(value: unknown): value is GoogleCalendarStatus {
       )) &&
     typeof status.pendingJobs === 'number' &&
     Number.isSafeInteger(status.pendingJobs) &&
-    status.pendingJobs >= 0
+    status.pendingJobs >= 0 &&
+    typeof status.accessActive === 'boolean'
   )
 }
 

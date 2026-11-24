@@ -39,6 +39,7 @@ describe('Google Calendar settings actions', () => {
         lastSyncedAt: '2026-11-20T12:00:00.000Z',
         lastError: null,
         pendingJobs: 2,
+        accessActive: true,
       },
       error: null,
     })

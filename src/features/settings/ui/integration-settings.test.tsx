@@ -89,7 +89,9 @@ describe('Google Calendar settings', () => {
   })
 
   it('puts data sharing, quotas and authorization in the reconnect dialog', () => {
-    query.mockReturnValue({ data: { status: 'reauthorize', lastError: 'reauthorize' } })
+    query.mockReturnValue({
+      data: { status: 'reauthorize', lastError: 'reauthorize', accessActive: true },
+    })
     const render = () => renderToStaticMarkup(<GoogleCalendarSettings />)
     const card = render()
     expect(card).toContain('Requiere acceso')
@@ -107,7 +109,7 @@ describe('Google Calendar settings', () => {
   })
 
   it('keeps sync and disconnect actions in the connected account dialog', () => {
-    query.mockReturnValue({ data: { status: 'connected', pendingJobs: 2 } })
+    query.mockReturnValue({ data: { status: 'connected', pendingJobs: 2, accessActive: true } })
     const render = () => renderToStaticMarkup(<GoogleCalendarSettings />)
     expect(render()).toContain('Gestionar: Google Calendar')
     expect(render()).not.toContain('Sincronizar ahora')
@@ -118,5 +120,15 @@ describe('Google Calendar settings', () => {
     expect(details).toContain('>Desconectar</button>')
     expect(details).toMatch(/Sincronizando .*2.* visitas…/)
     expect(details).not.toContain('Continuar con Google')
+  })
+
+  it('pauses synchronization but permits disconnecting when company access expires', () => {
+    dialog.open = true
+    query.mockReturnValue({ data: { status: 'connected', pendingJobs: 2, accessActive: false } })
+    const html = renderToStaticMarkup(<GoogleCalendarSettings />)
+    expect(html).toContain('La sincronización está en pausa')
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Sincronizar ahora<\/button>/)
+    expect(html).toContain('>Desconectar</button>')
+    expect(html).not.toContain('Sincronizando')
   })
 })

@@ -185,7 +185,20 @@ async function handleAction(request: Request) {
     const userId = userData.user?.id
     if (userError || !userId) return json(401, { error: 'unauthorized' })
     const actor = { tenantId: input.tenantId, userId }
-    if (!(await authorizeCalendarActor(admin, actor))) return json(403, { error: 'not_allowed' })
+    const { data: member, error: memberError } = await admin.rpc('is_google_calendar_member', {
+      p_tenant_id: actor.tenantId,
+      p_user_id: actor.userId,
+    })
+    if (memberError) return json(503, { error: 'calendar_unavailable' })
+    if (member !== true) return json(403, { error: 'not_allowed' })
+    const { data: accessActive, error: accessError } = await admin.rpc(
+      'authorize_google_calendar_actor',
+      { p_tenant_id: actor.tenantId, p_user_id: actor.userId },
+    )
+    if (accessError || typeof accessActive !== 'boolean')
+      return json(503, { error: 'calendar_unavailable' })
+    if ((input.action === 'start' || input.action === 'complete') && !accessActive)
+      return json(403, { error: 'access_inactive' })
 
     if ((input.action === 'start' || input.action === 'complete') && !integrationEnabled)
       return json(503, { error: 'integration_not_ready' })
@@ -228,6 +241,7 @@ async function handleAction(request: Request) {
       lastSyncedAt: data?.last_synced_at ?? null,
       lastError: data?.last_error ?? null,
       pendingJobs: count ?? 0,
+      accessActive,
     })
   } catch {
     return json(503, { error: 'calendar_unavailable' })

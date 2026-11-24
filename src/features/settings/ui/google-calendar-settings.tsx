@@ -49,7 +49,9 @@ export function GoogleCalendarSettings() {
   const completing = useRef(false)
   const connection = status.data
   const connected = connection?.status === 'connected'
-  const canConnect = Boolean(tenantId && !connected && !status.isPending && !status.isError)
+  const canConnect = Boolean(
+    tenantId && !connected && !status.isPending && !status.isError && connection?.accessActive,
+  )
   const reconnect = connection?.status === 'reauthorize'
   const statusLabel = status.isError
     ? 'Estado no disponible'
@@ -167,7 +169,11 @@ export function GoogleCalendarSettings() {
               >
                 Desconectar
               </Button>
-              <Button isPending={busy} onPress={() => void syncNow()}>
+              <Button
+                isDisabled={!connection?.accessActive}
+                isPending={busy}
+                onPress={() => void syncNow()}
+              >
                 Sincronizar ahora
               </Button>
             </>
@@ -199,6 +205,11 @@ export function GoogleCalendarSettings() {
             <dd className="text-muted-foreground">{disconnectDescription}</dd>
           </div>
         </dl>
+        {connection?.accessActive === false ? (
+          <p role="alert">
+            La sincronización está en pausa porque la empresa no tiene acceso vigente.
+          </p>
+        ) : null}
         {status.isError ? (
           <div className="space-y-2">
             <p role="alert" className="text-destructive">
@@ -219,7 +230,7 @@ export function GoogleCalendarSettings() {
         ) : null}
         {connection?.pendingJobs || connection?.lastSyncedAt || syncError ? (
           <div className="bg-muted text-muted-foreground space-y-1 rounded-lg p-3">
-            {connection?.pendingJobs ? (
+            {connection?.pendingJobs && connection.accessActive ? (
               <output>
                 Sincronizando {connection.pendingJobs}{' '}
                 {connection.pendingJobs === 1 ? 'visita' : 'visitas'}…

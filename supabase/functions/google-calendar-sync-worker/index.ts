@@ -8,7 +8,10 @@ import {
   CalendarAuthorizationError,
   refreshCalendarAccess,
 } from '../_shared/google-calendar/oauth.ts'
-import { createCalendarOAuthStore } from '../_shared/google-calendar/store.ts'
+import {
+  authorizeCalendarActor,
+  createCalendarOAuthStore,
+} from '../_shared/google-calendar/store.ts'
 import { googleOAuthCredentials } from '../_shared/google-oauth-credentials.ts'
 
 type Job = {
@@ -92,7 +95,7 @@ async function isAssigned(admin: ReturnType<typeof adminClient>, job: Job, visit
     .eq('user_id', job.user_id)
     .maybeSingle()
   if (error) throw new Error('Could not verify visit assignment')
-  if (membership?.role !== 'user' && membership?.role !== 'technician') return false
+  if (!membership) return false
   if (visit.assigned_user_id) return visit.assigned_user_id === job.user_id
   if (!visit.work_team_id) return false
   const { data, error: teamError } = await admin
@@ -189,6 +192,7 @@ async function processJob(admin: ReturnType<typeof adminClient>, job: Job) {
   if (connection.sync_lease_token !== job.lease_token) throw new Error('Calendar lease expired')
 
   const actor = { tenantId: job.tenant_id, userId: job.user_id }
+  if (!(await authorizeCalendarActor(admin, actor))) throw new Error('Calendar access inactive')
   const store = createCalendarOAuthStore(admin, '')
   const { accessToken } = await refreshCalendarAccess(
     actor,
