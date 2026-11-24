@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { finishGoogleAuth, safeAuthRedirect, startGoogleAuth } from './google-auth'
 
@@ -7,14 +7,19 @@ const mocks = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   updateUser: vi.fn(),
   rpc: vi.fn(),
+  from: vi.fn(),
+  updateProfile: vi.fn(),
+  profileId: vi.fn(),
+  profileName: vi.fn(),
   clearReferral: vi.fn(),
 }))
 vi.mock('@/shared/lib/supabase/client', () => ({
-  createBrowserSupabaseClient: () => ({ auth: mocks, rpc: mocks.rpc }),
+  createBrowserSupabaseClient: () => ({ auth: mocks, rpc: mocks.rpc, from: mocks.from }),
 }))
 vi.mock('./referral-actions', () => ({ clearReferral: mocks.clearReferral }))
 
 describe('Google authentication', () => {
+  afterEach(() => vi.unstubAllGlobals())
   beforeEach(() => {
     vi.resetAllMocks()
     const values = new Map<string, string>()
@@ -31,6 +36,10 @@ describe('Google authentication', () => {
     })
     mocks.updateUser.mockResolvedValue({ error: null })
     mocks.rpc.mockResolvedValue({ data: [], error: null })
+    mocks.from.mockReturnValue({ update: mocks.updateProfile })
+    mocks.updateProfile.mockReturnValue({ eq: mocks.profileId })
+    mocks.profileId.mockReturnValue({ eq: mocks.profileName })
+    mocks.profileName.mockResolvedValue({ error: null })
   })
 
   it('starts Supabase PKCE login without requesting Calendar access', async () => {
@@ -67,6 +76,26 @@ describe('Google authentication', () => {
     await startGoogleAuth('/', { fullName: 'Ana López', companyName: 'Empresa' })
     await finishGoogleAuth('code')
     expect(mocks.updateUser).not.toHaveBeenCalled()
+  })
+
+  it('fills only an empty profile name when Google does not supply one', async () => {
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1', user_metadata: {} } } },
+      error: null,
+    })
+    await startGoogleAuth('/', { fullName: 'Ana López', companyName: 'Empresa' })
+    await finishGoogleAuth('code')
+    expect(mocks.from).toHaveBeenCalledWith('profiles')
+    expect(mocks.updateProfile).toHaveBeenCalledWith({ full_name: 'Ana López' })
+    expect(mocks.profileId).toHaveBeenCalledWith('id', 'user-1')
+    expect(mocks.profileName).toHaveBeenCalledWith('full_name', '')
+    expect(mocks.updateUser).toHaveBeenCalledWith({
+      data: {
+        full_name: 'Ana López',
+        company_name: 'Empresa',
+        welcome_pending: true,
+      },
+    })
   })
 
   it('never completes a return without browser state or after a failed membership check', async () => {

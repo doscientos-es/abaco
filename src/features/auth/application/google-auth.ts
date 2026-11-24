@@ -57,12 +57,22 @@ export async function finishGoogleAuth(code: string): Promise<string> {
       .safeParse(pending.signup)
     if (!signup.success) throw new Error('Invalid signup details')
     const memberships = await supabase.rpc('my_company_memberships')
-    if (memberships.error) throw new Error('Could not check company memberships')
-    if (!memberships.data?.length) {
+    if (memberships.error || !Array.isArray(memberships.data))
+      throw new Error('Could not check company memberships')
+    if (memberships.data.length === 0) {
       const referral = referralCodeFromSearch(
         `?r=${encodeURIComponent(pending.signup.referralCode ?? '')}`,
       )
       const metadata = data.session.user.user_metadata ?? {}
+      if (!metadata.full_name) {
+        // The signup trigger copies Google's name into profiles; fill only a missing name.
+        const profile = await supabase
+          .from('profiles')
+          .update({ full_name: signup.data.fullName })
+          .eq('id', data.session.user.id)
+          .eq('full_name', '')
+        if (profile.error) throw new Error('Could not complete the profile')
+      }
       const result = await supabase.auth.updateUser({
         data: {
           ...(!metadata.full_name ? { full_name: signup.data.fullName } : {}),

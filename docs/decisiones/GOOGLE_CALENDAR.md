@@ -51,6 +51,11 @@ Google Cloud antes de pedir consentimiento.
 
 Se necesita un proyecto de Google Cloud autorizado, Calendar API, cliente OAuth
 web, URL HTTPS de retorno exacta, pantalla de consentimiento y usuarios de prueba.
+Las funciones Edge comparten `GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`;
+el proveedor Google de Supabase Auth se configura por separado en Authentication.
+La conexión y el worker requieren además `GOOGLE_CALENDAR_ENABLED=true` y
+`GOOGLE_CALENDAR_WORKER_ENABLED=true`. No activar estas opciones hasta resolver los
+problemas de conservación de visitas y reconexión descritos arriba.
 Para uso público, revisar la verificación de marca y de permisos sensibles o
 restringidos que corresponda, la política de privacidad y las condiciones de uso
 de datos de Google; no se ha validado su cumplimiento. No guardar secretos en el

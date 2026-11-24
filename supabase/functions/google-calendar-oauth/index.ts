@@ -12,17 +12,18 @@ import {
   authorizeCalendarActor,
   createCalendarOAuthStore,
 } from '../_shared/google-calendar/store.ts'
+import { googleOAuthCredentials } from '../_shared/google-oauth-credentials.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const appUrl = Deno.env.get('APP_URL')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID')
-const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET')
 const encryptionKey = decodeEncryptionKey(Deno.env.get('GOOGLE_CALENDAR_ENCRYPTION_KEY') ?? '')
 const redirectUri = supabaseUrl ? `${supabaseUrl}/functions/v1/google-calendar-oauth` : ''
 const appOrigin = safeOrigin(appUrl)
-const integrationEnabled = Deno.env.get('GOOGLE_CALENDAR_ENABLED') === 'true'
+const integrationEnabled =
+  Deno.env.get('GOOGLE_CALENDAR_ENABLED') === 'true' &&
+  Deno.env.get('GOOGLE_CALENDAR_WORKER_ENABLED') === 'true'
 const corsHeaders = {
   'Access-Control-Allow-Origin': appOrigin ?? '',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
@@ -54,8 +55,8 @@ function json(status: number, body: Record<string, unknown>) {
 }
 
 function config(): OAuthConfig {
-  if (!clientId || !clientSecret || !redirectUri || encryptionKey.length !== 32)
-    throw new Error('OAuth not configured')
+  const { clientId, clientSecret } = googleOAuthCredentials((name) => Deno.env.get(name))
+  if (!redirectUri || encryptionKey.length !== 32) throw new Error('OAuth not configured')
   return { clientId, clientSecret, redirectUri, encryptionKey }
 }
 

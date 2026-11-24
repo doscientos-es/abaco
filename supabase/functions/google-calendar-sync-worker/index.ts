@@ -7,6 +7,7 @@ import {
   refreshCalendarAccess,
 } from '../_shared/google-calendar/oauth.ts'
 import { createCalendarOAuthStore } from '../_shared/google-calendar/store.ts'
+import { googleOAuthCredentials } from '../_shared/google-oauth-credentials.ts'
 
 type Job = {
   job_id: string
@@ -31,12 +32,10 @@ type Mapping = { calendar_id: string; event_id: string; ownership_marker: string
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const config = () => {
-  const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID')
-  const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET')
+  const { clientId, clientSecret } = googleOAuthCredentials((name) => Deno.env.get(name))
   const key = decodeKey(Deno.env.get('GOOGLE_CALENDAR_ENCRYPTION_KEY') ?? '')
   const redirectUri = supabaseUrl ? `${supabaseUrl}/functions/v1/google-calendar-oauth` : ''
-  if (!clientId || !clientSecret || !redirectUri || key.length !== 32)
-    throw new Error('Calendar worker not configured')
+  if (!redirectUri || key.length !== 32) throw new Error('Calendar worker not configured')
   return { clientId, clientSecret, redirectUri, encryptionKey: key }
 }
 
@@ -268,6 +267,12 @@ async function finishJob(admin: ReturnType<typeof adminClient>, job: Job, code: 
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response(null, { status: 405 })
+  // Do not process a queued job while the integration is disabled.
+  if (
+    Deno.env.get('GOOGLE_CALENDAR_ENABLED') !== 'true' ||
+    Deno.env.get('GOOGLE_CALENDAR_WORKER_ENABLED') !== 'true'
+  )
+    return new Response(null, { status: 503 })
   const secret = readHeaderSecret(request)
   if (!secret || secret.length > 256) return new Response(null, { status: 401 })
   let admin: ReturnType<typeof adminClient>

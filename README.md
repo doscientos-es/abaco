@@ -129,6 +129,15 @@ secretos exclusivamente en el entorno de servidor correspondiente.
 - **Invitaciones:** `APP_URL` determina el enlace. Para permitir otros orígenes,
   configura `INVITE_ALLOWED_ORIGINS` en Supabase Edge como lista separada por comas;
   permite localhost solo en entornos autorizados. CORS no sustituye la autenticación.
+- **Acceso con Google:** habilita Google en Supabase Auth y configura allí el ID y
+  secreto del cliente OAuth, sin exponer el secreto al navegador. En Google Cloud,
+  añade `https://vqyicgarlksirpzrngut.supabase.co/auth/v1/callback` a los URI de
+  redirección del cliente; conserva también el URI de Calendar si se utiliza. En
+  Supabase Auth → URL Configuration, permite `https://<dominio-de-la-app>/acceso-google`
+  y, para desarrollo autorizado, `http://localhost:5173/acceso-google` (ajusta el
+  puerto al de Vite). El registro conserva empresa y referido, pero no crea una
+  empresa adicional si la cuenta ya pertenece a una. Google Calendar requiere un
+  consentimiento y una conexión independientes; iniciar sesión no lo activa.
 - **PDF de partes:** las funciones Node.js de Vercel necesitan `SUPABASE_URL` y
   `SUPABASE_SERVICE_ROLE_KEY` en el servidor. Para la cola, configura también
   `CRON_SECRET` en Vercel con el mismo valor de `cron_secret` en Supabase Vault,

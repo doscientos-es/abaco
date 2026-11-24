@@ -30,6 +30,7 @@ vi.mock('../application/auth-actions', () => ({
   sessionQuery: { queryKey: ['auth', 'session'] },
   signUp: vi.fn(),
 }))
+vi.mock('../application/google-auth', () => ({ startGoogleAuth: vi.fn() }))
 vi.mock('@/shared/ui/field-icons', () => ({ fieldIcons: { mail: null } }))
 vi.mock('@/shared/ui/form', () => ({
   TextField: ({ label, placeholder }: { label: string; placeholder?: string }) => (

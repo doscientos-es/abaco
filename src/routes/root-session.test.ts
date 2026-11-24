@@ -36,6 +36,20 @@ describe('root session guard', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it('allows the Google callback before a session exists', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    loadSession.mockResolvedValue(null)
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    await expect(
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: '/acceso-google', href: '/acceso-google?code=example' },
+      } as Parameters<typeof beforeLoad>[0]),
+    ).resolves.toEqual({ session: null, hasTenantAccess: false })
+    queryClient.clear()
+  })
+
   it('uses an already verified in-memory session offline, but never an invalidated one', async () => {
     vi.stubGlobal('navigator', { onLine: false })
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
