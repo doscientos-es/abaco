@@ -1,7 +1,8 @@
-import { createContext, useMemo, useState } from 'react'
+import { createContext, useMemo, useState, type ReactNode } from 'react'
 
 import {
   chooseShortcut,
+  reorderShortcuts,
   resolveNavigationLayout,
   type Destination,
   type NavigationGroup,
@@ -13,11 +14,14 @@ import {
   writeNavigationPreferences,
 } from '../infrastructure/navigation-storage'
 
+export type MobileDestination = Destination & { icon: ReactNode; mobileLabel?: string }
+
 type NavigationLayout = {
-  mobile: readonly Destination[]
+  mobile: readonly MobileDestination[]
   desktop: readonly NavigationGroup[]
   choices: readonly Destination[]
   setShortcut: (index: number, to: string) => void
+  moveShortcut: (to: string, index: number) => void
   setDesktopGroups: (ids: string[]) => void
   setDesktopItems: (ids: string[]) => void
   resetMobile: () => void
@@ -31,7 +35,7 @@ function keepHiddenOrder(ids: string[], previous: readonly string[]) {
   return [...ids, ...previous.filter((id) => !changed.has(id))]
 }
 
-export function useNavigationLayout<T extends Destination>({
+export function useNavigationLayout<T extends MobileDestination>({
   tenantId,
   userId,
   groups,
@@ -68,6 +72,11 @@ export function useNavigationLayout<T extends Destination>({
           to,
         ),
       })
+    },
+    moveShortcut(to: string, index: number) {
+      const current = layout.mobile.map((item) => item.to)
+      const next = reorderShortcuts(current, to, index)
+      if (next !== current) update({ mobile: [...next] })
     },
     setDesktopGroups(ids: string[]) {
       update({ desktopGroups: keepHiddenOrder(ids, prefs.desktopGroups) })

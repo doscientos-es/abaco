@@ -1,0 +1,54 @@
+/* Unlayered styles prevent the UI library's later .hidden utility from hiding the bar. */
+.mobile-bottom-nav {
+  display: grid;
+  flex: none;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  background: var(--sidebar);
+}
+
+.mobile-bottom-nav:not([data-preview]) {
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 10;
+}
+
+.mobile-bottom-nav .mobile-bottom-nav__link {
+  display: flex;
+  min-width: 0;
+  min-height: 3.75rem;
+  height: auto;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.125rem;
+  border-radius: 0;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.mobile-bottom-nav .mobile-bottom-nav__link--active {
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: inset 0 2px var(--primary);
+}
+
+.mobile-bottom-nav__link > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-bottom-nav__link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+@media (min-width: 48rem) {
+  .mobile-bottom-nav:not([data-preview]) {
+    display: none;
+  }
+}

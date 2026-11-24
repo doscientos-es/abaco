@@ -72,6 +72,22 @@ export function chooseShortcut(current: readonly string[], index: number, choice
   return next
 }
 
+export function reorderShortcuts(current: readonly string[], to: string, index: number) {
+  const from = current.indexOf(to)
+  if (
+    from < 0 ||
+    index === from ||
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= current.length
+  )
+    return current
+
+  const next = current.filter((item) => item !== to)
+  next.splice(index, 0, to)
+  return next
+}
+
 export function moveNavigationItem<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {
   const destination = index + direction
   return items.map((item, position) => {

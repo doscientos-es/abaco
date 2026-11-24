@@ -1,6 +1,11 @@
 import { Button } from '@doscientos/ui'
-import { MagnifyingGlass } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
+
+import {
+  MobileBottomBar,
+  MobileBottomBarItem,
+  MobileBottomBarSearch,
+} from '@/shared/ui/mobile-bottom-bar'
 
 import type { NavItem } from './frame-navigation'
 
@@ -16,13 +21,7 @@ export function MobileNavigation({
   onOpenSearch: () => void
 }) {
   return (
-    <nav
-      aria-label="Navegación móvil"
-      className="mobile-bottom-nav"
-      style={{
-        gridTemplateColumns: `repeat(${items.length + 1}, minmax(0, 1fr))`,
-      }}
-    >
+    <MobileBottomBar shortcuts={items.length}>
       {items.map((item) => (
         <Link
           key={item.to}
@@ -32,8 +31,7 @@ export function MobileNavigation({
           activeProps={{ className: 'mobile-bottom-nav__link--active' }}
           className="mobile-bottom-nav__link"
         >
-          {item.icon}
-          <span>{item.mobileLabel ?? item.label}</span>
+          <MobileBottomBarItem {...item} />
         </Link>
       ))}
       <Button
@@ -44,9 +42,8 @@ export function MobileNavigation({
         onPress={onOpenSearch}
         className="mobile-bottom-nav__link"
       >
-        <MagnifyingGlass aria-hidden="true" className="size-[18px] shrink-0" />
-        <span>Buscar</span>
+        <MobileBottomBarSearch />
       </Button>
-    </nav>
+    </MobileBottomBar>
   )
 }
