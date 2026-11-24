@@ -39,18 +39,41 @@ export type ReceiptFields = {
   vatRate: string
 }
 
-/** Applied only on user confirmation; missing values leave the current form untouched. */
+/** Missing values and fields edited by the user leave the current form untouched. */
 export function applyReceiptSuggestion<T extends ReceiptFields>(
   form: T,
   suggestion: ReceiptSuggestion,
+  edited: ReadonlySet<keyof ReceiptFields> = new Set(),
 ): T {
   return {
     ...form,
-    date: suggestion.date ?? form.date,
-    concept: suggestion.concept ?? form.concept,
-    category: suggestion.category ?? form.category,
-    amount: suggestion.grossCents === null ? form.amount : centsToInput(suggestion.grossCents),
-    vatRate: suggestion.vatRate === null ? form.vatRate : String(suggestion.vatRate),
+    date: edited.has('date') ? form.date : (suggestion.date ?? form.date),
+    concept: edited.has('concept') ? form.concept : (suggestion.concept ?? form.concept),
+    category: edited.has('category') ? form.category : (suggestion.category ?? form.category),
+    amount:
+      edited.has('amount') || suggestion.grossCents === null
+        ? form.amount
+        : centsToInput(suggestion.grossCents),
+    vatRate:
+      edited.has('vatRate') || suggestion.vatRate === null
+        ? form.vatRate
+        : String(suggestion.vatRate),
+  }
+}
+
+/** Remove values from the previous receipt without changing manually edited fields. */
+export function resetReceiptAutofill<T extends ReceiptFields>(
+  form: T,
+  defaults: ReceiptFields,
+  edited: ReadonlySet<keyof ReceiptFields>,
+): T {
+  return {
+    ...form,
+    date: edited.has('date') ? form.date : defaults.date,
+    concept: edited.has('concept') ? form.concept : defaults.concept,
+    category: edited.has('category') ? form.category : defaults.category,
+    amount: edited.has('amount') ? form.amount : defaults.amount,
+    vatRate: edited.has('vatRate') ? form.vatRate : defaults.vatRate,
   }
 }
 
