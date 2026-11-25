@@ -23,6 +23,9 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.126",
     "@ai-sdk/openai": "^4.0.123",
+    "@ai-sdk/react": "^4.0.186",
+    "@assistant-ui/ai-sdk": "^0.0.20",
+    "@assistant-ui/react": "^0.15.38",
     "@dnd-kit/react": "^0.5.3",
     "@doscientos/ui": "^0.1.43",
     "@phosphor-icons/react": "^2.1.10",
