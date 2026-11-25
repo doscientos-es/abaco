@@ -15,6 +15,9 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
     symlinkSync(join(root, 'node_modules'), join(output, 'node_modules'), 'junction')
     for (const source of [
       'api/ai_suggestion.ts',
+      'api/ai_chat.ts',
+      'server/ai/chat-http.ts',
+      'server/ai/chat-provider.ts',
       'server/ai/http.ts',
       'server/ai/provider-config.ts',
       'server/ai/provider.ts',
@@ -22,6 +25,7 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
       'server/ai/token-budget.ts',
       'server/visit-report-pdf/http.ts',
       'src/features/ai/domain/suggestions.ts',
+      'src/features/ai/domain/chat-tools.ts',
       'src/shared/domain/form-limits.ts',
       'src/shared/domain/ledger-vat.ts',
       'src/shared/domain/money.ts',
@@ -39,7 +43,7 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
         [
           '--input-type=module',
           '-e',
-          "const endpoint = await import('./api/ai_suggestion.js'); if (typeof endpoint.default !== 'function') process.exit(1)",
+          "for (const path of ['./api/ai_suggestion.js', './api/ai_chat.js']) { const endpoint = await import(path); if (typeof endpoint.default !== 'function') process.exit(1) }",
         ],
         { cwd: output, env: {}, stdio: 'pipe' },
       ),

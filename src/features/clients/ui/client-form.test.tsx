@@ -156,12 +156,14 @@ const centre = {
 function render(
   variant: 'page' | 'dialog',
   client = null as React.ComponentProps<typeof ClientForm>['client'],
+  initialValues?: React.ComponentProps<typeof ClientForm>['initialValues'],
 ) {
   mocks.cursor = 0
   return renderToStaticMarkup(
     <ClientForm
       variant={variant}
       client={client ?? null}
+      {...(initialValues ? { initialValues } : {})}
       onClose={mocks.close}
       onSaved={mocks.saved}
     />,
@@ -198,6 +200,15 @@ beforeEach(() => {
 })
 
 describe('client form', () => {
+  it('reviews proposed client data without saving until the user submits', async () => {
+    render('dialog', null, { name: 'Marta', email: 'marta@example.test' })
+    expect(mocks.create).not.toHaveBeenCalled()
+    mocks.submit?.()
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Marta', email: 'marta@example.test' }),
+    )
+    await vi.waitFor(() => expect(mocks.saved).toHaveBeenCalledWith('new-client'))
+  })
   it('uses the company options and saves the chosen type', async () => {
     render('dialog')
     expect(mocks.options.get('Tipo de cliente')).toEqual([

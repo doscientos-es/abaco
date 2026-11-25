@@ -31,6 +31,7 @@ type Props = {
   open: boolean
   /** Client being edited. Leave out to create a new one. */
   client?: Client | null
+  initialValues?: Partial<ClientInput>
   onClose: () => void
   /** Called with the id of the client that was created or edited. */
   onSaved?: (clientId: string) => void
@@ -43,6 +44,7 @@ export function ClientFormDialog({ open, ...rest }: Props) {
 
 export function ClientForm({
   client,
+  initialValues,
   onClose,
   onSaved,
   variant,
@@ -62,7 +64,7 @@ export function ClientForm({
           billingAddress: client.billingAddress ?? '',
           notes: client.notes,
         }
-      : empty,
+      : { ...empty, ...initialValues },
   )
   const currentForm = useRef(form)
   const [initialForm] = useState(() => JSON.stringify(form))

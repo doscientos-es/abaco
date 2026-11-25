@@ -9,11 +9,11 @@ import {
   PageHeaderHeading,
   PageHeaderTitle,
 } from '@doscientos/ui'
-import { CheckCircle, Eye } from '@phosphor-icons/react'
+import { CheckCircle, Eye, Sparkle } from '@phosphor-icons/react'
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { EstimateAiAssistant, useAiAccess } from '@/features/ai'
+import { useAiAccess, useAiChat } from '@/features/ai'
 import { can, useSession } from '@/features/auth'
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Estimate, TenantData } from '@/shared/domain/types'
@@ -59,6 +59,8 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
   const creation = useEstimateDraft()
   const patchEstimate = usePatchEstimate()
   const session = useSession()
+  const chat = useAiChat()
+  const setChatEstimate = chat?.setEstimate
   const [preview, setPreview] = useState(false)
   const client = clients.find(({ id }) => id === estimate.clientId)
   const canEdit = can(session?.role, 'estimates:write')
@@ -67,6 +69,23 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
     !creation && canEdit && (estimate.status === 'draft' || estimate.status === 'sent')
   const actions = useEstimateDocumentActions({ estimate, client, tenantId: tenant.id, canApprove })
   const { copyPublicLink, sendByEmail, sendByWhatsapp, approve, acceptingManually } = actions
+
+  useEffect(() => {
+    if (
+      !setChatEstimate ||
+      !canEdit ||
+      estimate.status !== 'draft' ||
+      creation?.submitted ||
+      creation?.busy
+    )
+      return
+    setChatEstimate({
+      estimate,
+      apply: (patch) => patchEstimate(estimate.id, patch),
+      isNew: Boolean(creation),
+    })
+    return () => setChatEstimate(null)
+  }, [setChatEstimate, canEdit, estimate, creation?.submitted, creation?.busy, patchEstimate])
 
   const approvalButton = canApprove ? (
     <Button
@@ -124,11 +143,13 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
         </PageHeaderHeading>
         <PageHeaderActions>
           {creation && aiAccess.data && !creation.submitted ? (
-            <EstimateAiAssistant
-              tenantId={tenant.id}
-              estimate={estimate}
-              onPatch={(patch) => patchEstimate(estimate.id, patch)}
-            />
+            <Button
+              type="button"
+              variant="outline"
+              onPress={() => chat?.open('Ayúdame a preparar las partidas de este presupuesto. ')}
+            >
+              <Sparkle aria-hidden="true" className="size-4" /> Generar con IA
+            </Button>
           ) : null}
           {approvalButton}
           {!creation ? (

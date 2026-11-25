@@ -26,13 +26,16 @@ export async function countInput(
     config.provider === 'google'
       ? 'https://generativelanguage.googleapis.com'
       : 'https://api.openai.com'
-  const expectedPath =
+  const expectedPaths =
     config.provider === 'google'
-      ? `/v1beta/models/${config.model}:generateContent`
-      : '/v1/responses'
+      ? [
+          `/v1beta/models/${config.model}:generateContent`,
+          `/v1beta/models/${config.model}:streamGenerateContent`,
+        ]
+      : ['/v1/responses']
   if (
     parsedUrl.origin !== expectedOrigin ||
-    parsedUrl.pathname !== expectedPath ||
+    !expectedPaths.includes(parsedUrl.pathname) ||
     typeof init?.body !== 'string'
   )
     throw new Error('ai_provider_unavailable')

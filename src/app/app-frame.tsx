@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
 
+import { AiChatProvider, type ClientProposal } from '@/features/ai'
 import {
   can,
   CompanyDialog,
@@ -28,6 +29,7 @@ import {
   type Permission,
 } from '@/features/auth'
 import { PlanBanner } from '@/features/billing'
+import { ClientFormDialog } from '@/features/clients'
 import { GlobalSearch, type SearchItem, type SearchMode } from '@/features/global-search'
 import {
   NavigationLayoutContext,
@@ -145,6 +147,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
+  const [clientProposal, setClientProposal] = useState<ClientProposal | null>(null)
   const [searchMode, setSearchMode] = useState<SearchMode>(null)
   const [headingTarget, setHeadingTarget] = useState<HTMLDivElement | null>(null)
   const [tabsTarget, setTabsTarget] = useState<HTMLDivElement | null>(null)
@@ -256,170 +259,197 @@ export function AppFrame({ children }: { children: ReactNode }) {
   )
 
   return (
-    <WorkspaceChromeContext.Provider value={{ heading: headingTarget, tabs: tabsTarget }}>
-      <AppShell
-        className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
-        style={brandThemeStyle(tenant.brandColor)}
-      >
-        <a href="#main-content" className="skip-link">
-          Saltar al contenido
-        </a>
-        <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
-          <div className="shrink-0 px-3 pt-4 pb-3">
-            <Link
-              to="/"
-              aria-label="Ir al resumen"
-              className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
-            >
-              <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
-                {tenant.logoUrl ? (
-                  <img
-                    src={tenant.logoUrl}
-                    alt={tenant.name}
-                    className="max-h-8 max-w-12 object-contain"
-                  />
-                ) : (
-                  <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
-                )}
-              </span>
-              <span className="min-w-0 leading-tight">
-                <span className="block truncate text-sm font-semibold tracking-tight">
-                  {tenant.name}
+    <AiChatProvider
+      key={`${tenant.id}:${session?.userId ?? ''}`}
+      tenantId={tenant.id}
+      userId={session?.userId ?? ''}
+      onCreateClient={(proposal) => {
+        if (can(session?.role, 'clients:write')) setClientProposal(proposal)
+      }}
+    >
+      <WorkspaceChromeContext.Provider value={{ heading: headingTarget, tabs: tabsTarget }}>
+        <AppShell
+          className="admin-frame flex h-svh flex-col overflow-hidden md:flex-row"
+          style={brandThemeStyle(tenant.brandColor)}
+        >
+          <a href="#main-content" className="skip-link">
+            Saltar al contenido
+          </a>
+          <AppShellSidebar className="workspace-sidebar hidden h-full w-64 shrink-0 flex-col md:flex">
+            <div className="shrink-0 px-3 pt-4 pb-3">
+              <Link
+                to="/"
+                aria-label="Ir al resumen"
+                className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
+              >
+                <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
+                  {tenant.logoUrl ? (
+                    <img
+                      src={tenant.logoUrl}
+                      alt={tenant.name}
+                      className="max-h-8 max-w-12 object-contain"
+                    />
+                  ) : (
+                    <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+                  )}
                 </span>
-                <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
-              </span>
-            </Link>
-          </div>
-
-          <nav
-            aria-label="Principal"
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1"
-          >
-            {navigationLayout.desktop.map((group) => (
-              <div key={group.id} className="space-y-1">
-                <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
-                  {group.label}
-                </p>
-                {group.items.map((item) => (
-                  <SidebarLink key={item.to} {...item} />
-                ))}
-              </div>
-            ))}
-          </nav>
-
-          <PlanBanner placement="sidebar" />
-
-          <div className="border-border mt-auto shrink-0 border-t p-3">
-            <div className="flex items-center gap-1 px-2 pb-2">
-              <SaveStatusIndicator status={saveStatus} />
-              <div className="ml-auto flex items-center gap-1">
-                {can(session?.role, 'invoices:read') && session?.tenantId ? (
-                  <ContractInvoiceNotifications
-                    tenantId={session.tenantId}
-                    userId={session.userId}
-                  />
-                ) : null}
-                {staff && can(session?.role, 'vacations:manage') && session?.tenantId ? (
-                  <PendingAbsenceNotifications tenantId={session.tenantId} />
-                ) : null}
-                {canSeeSettings ? (
-                  <IconButton
-                    label="Ajustes"
-                    variant="ghost"
-                    onPress={() => void navigate({ to: '/ajustes' })}
-                    className={pathname === '/ajustes' ? 'text-primary' : 'text-muted-foreground'}
-                  >
-                    {navIcons.settings}
-                  </IconButton>
-                ) : null}
-              </div>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-sm font-semibold tracking-tight">
+                    {tenant.name}
+                  </span>
+                  <span className="text-muted-foreground block truncate text-xs">{brand.name}</span>
+                </span>
+              </Link>
             </div>
+
+            <nav
+              aria-label="Principal"
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-1"
+            >
+              {navigationLayout.desktop.map((group) => (
+                <div key={group.id} className="space-y-1">
+                  <p className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <SidebarLink key={item.to} {...item} />
+                  ))}
+                </div>
+              ))}
+            </nav>
+
+            <PlanBanner placement="sidebar" />
+
+            <div className="border-border mt-auto shrink-0 border-t p-3">
+              <div className="flex items-center gap-1 px-2 pb-2">
+                <SaveStatusIndicator status={saveStatus} />
+                <div className="ml-auto flex items-center gap-1">
+                  {can(session?.role, 'invoices:read') && session?.tenantId ? (
+                    <ContractInvoiceNotifications
+                      tenantId={session.tenantId}
+                      userId={session.userId}
+                    />
+                  ) : null}
+                  {staff && can(session?.role, 'vacations:manage') && session?.tenantId ? (
+                    <PendingAbsenceNotifications tenantId={session.tenantId} />
+                  ) : null}
+                  {canSeeSettings ? (
+                    <IconButton
+                      label="Ajustes"
+                      variant="ghost"
+                      onPress={() => void navigate({ to: '/ajustes' })}
+                      className={pathname === '/ajustes' ? 'text-primary' : 'text-muted-foreground'}
+                    >
+                      {navIcons.settings}
+                    </IconButton>
+                  ) : null}
+                </div>
+              </div>
+              <DropdownMenuTrigger>
+                <Button
+                  variant="ghost"
+                  aria-label="Menú de usuario"
+                  className="h-auto w-full justify-start gap-3 px-3 py-2"
+                >
+                  <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
+                  <span className="min-w-0 text-left leading-tight">
+                    <span className="block truncate text-sm font-medium">{userName}</span>
+                    <span className="text-muted-foreground block truncate text-xs font-normal">
+                      {session?.role ? roleLabels[session.role] : ''}
+                    </span>
+                  </span>
+                </Button>
+                {userMenu('top start')}
+              </DropdownMenuTrigger>
+            </div>
+          </AppShellSidebar>
+
+          <AppShellMobileHeader className="workspace-mobile-header hidden max-md:flex">
+            <MobileBrandLink
+              to="/"
+              label="Ir al resumen"
+              name={tenant.name}
+              logoUrl={tenant.logoUrl}
+            />
+            <MobileSaveStatus status={saveStatus} />
+            {can(session?.role, 'invoices:read') && session?.tenantId ? (
+              <ContractInvoiceNotifications tenantId={session.tenantId} userId={session.userId} />
+            ) : null}
             <DropdownMenuTrigger>
               <Button
                 variant="ghost"
                 aria-label="Menú de usuario"
-                className="h-auto w-full justify-start gap-3 px-3 py-2"
+                className="h-auto rounded-full p-1"
               >
                 <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
-                <span className="min-w-0 text-left leading-tight">
-                  <span className="block truncate text-sm font-medium">{userName}</span>
-                  <span className="text-muted-foreground block truncate text-xs font-normal">
-                    {session?.role ? roleLabels[session.role] : ''}
-                  </span>
-                </span>
               </Button>
-              {userMenu('top start')}
+              {userMenu('bottom end')}
             </DropdownMenuTrigger>
-          </div>
-        </AppShellSidebar>
-
-        <AppShellMobileHeader className="workspace-mobile-header hidden max-md:flex">
-          <MobileBrandLink
-            to="/"
-            label="Ir al resumen"
-            name={tenant.name}
-            logoUrl={tenant.logoUrl}
-          />
-          <MobileSaveStatus status={saveStatus} />
-          {can(session?.role, 'invoices:read') && session?.tenantId ? (
-            <ContractInvoiceNotifications tenantId={session.tenantId} userId={session.userId} />
-          ) : null}
-          <DropdownMenuTrigger>
-            <Button
-              variant="ghost"
-              aria-label="Menú de usuario"
-              className="h-auto rounded-full p-1"
-            >
-              <UserAvatar name={userName} avatarUrl={session?.avatarUrl} />
-            </Button>
-            {userMenu('bottom end')}
-          </DropdownMenuTrigger>
-        </AppShellMobileHeader>
-        <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          <div className="workspace-topbar">
-            <div className="workspace-topbar__row">
-              <div className="workspace-topbar__identity">
-                {isInternalPage ? (
-                  <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
-                    {tenant.name}
-                    <span aria-hidden="true" className="px-2">
-                      /
+          </AppShellMobileHeader>
+          <AppShellMain className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+            <div className="workspace-topbar">
+              <div className="workspace-topbar__row">
+                <div className="workspace-topbar__identity">
+                  {isInternalPage ? (
+                    <span className="text-muted-foreground hidden min-w-0 truncate text-xs md:block">
+                      {tenant.name}
+                      <span aria-hidden="true" className="px-2">
+                        /
+                      </span>
+                      <span className="text-foreground">{section}</span>
                     </span>
-                    <span className="text-foreground">{section}</span>
-                  </span>
-                ) : null}
-                <div ref={setHeadingTarget} className="workspace-topbar__heading" />
+                  ) : null}
+                  <div ref={setHeadingTarget} className="workspace-topbar__heading" />
+                </div>
+                <GlobalSearch
+                  mode={searchMode}
+                  onModeChange={setSearchMode}
+                  data={session?.role === 'admin' ? data : undefined}
+                  navigation={searchNavigation}
+                />
               </div>
-              <GlobalSearch
-                mode={searchMode}
-                onModeChange={setSearchMode}
-                data={session?.role === 'admin' ? data : undefined}
-                navigation={searchNavigation}
-              />
+              <div ref={setTabsTarget} className="workspace-topbar__tabs" />
             </div>
-            <div ref={setTabsTarget} className="workspace-topbar__tabs" />
-          </div>
-          <PlanBanner />
-          <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
-          <AppShellContent
-            id="main-content"
-            tabIndex={-1}
-            size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
-            className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
-          >
-            <NavigationLayoutContext.Provider value={navigationLayout}>
-              {children}
-            </NavigationLayoutContext.Provider>
-          </AppShellContent>
-        </AppShellMain>
+            <PlanBanner />
+            <SaveStatusNotice status={saveStatus} onRetry={retryStoreSaves} />
+            <AppShellContent
+              id="main-content"
+              tabIndex={-1}
+              size={pathname === '/vacaciones' || pathname === '/trabajadores' ? 'full' : 'wide'}
+              className={`mx-auto p-4 md:px-6 md:py-6 ${pathname === '/vacaciones' || pathname === '/trabajadores' ? 'max-w-none' : 'max-w-6xl'}`}
+            >
+              <NavigationLayoutContext.Provider value={navigationLayout}>
+                {children}
+              </NavigationLayoutContext.Provider>
+            </AppShellContent>
+          </AppShellMain>
 
-        <MobileNavigation
-          items={navigationLayout.mobile}
-          searchOpen={searchMode === 'mobile'}
-          onOpenSearch={() => setSearchMode('mobile')}
-        />
-        <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
-      </AppShell>
-    </WorkspaceChromeContext.Provider>
+          <MobileNavigation
+            items={navigationLayout.mobile}
+            searchOpen={searchMode === 'mobile'}
+            onOpenSearch={() => setSearchMode('mobile')}
+          />
+          <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
+          <ClientFormDialog
+            open={clientProposal !== null}
+            initialValues={
+              clientProposal
+                ? {
+                    name: clientProposal.name,
+                    taxId: clientProposal.taxId ?? '',
+                    email: clientProposal.email ?? '',
+                    phone: clientProposal.phone ?? '',
+                    address: clientProposal.address ?? '',
+                  }
+                : {}
+            }
+            onClose={() => setClientProposal(null)}
+            onSaved={(clientId) =>
+              void navigate({ to: '/clientes/$clientId', params: { clientId } })
+            }
+          />
+        </AppShell>
+      </WorkspaceChromeContext.Provider>
+    </AiChatProvider>
   )
 }
