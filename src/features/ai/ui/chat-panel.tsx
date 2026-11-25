@@ -12,7 +12,7 @@ import { can, useSession } from '@/features/auth'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { newId, useTenantData } from '@/shared/store/store'
 
-import { useAiAccess } from '../application/ai-access'
+import { useAiAccess, useAiCredits } from '../application/ai-access'
 import {
   clientProposalSchema,
   clientProposalProgressSchema,
@@ -46,6 +46,7 @@ export function AiChatPanel({
   target: DraftTarget | null
 }) {
   const access = useAiAccess(tenantId, userId)
+  const credits = useAiCredits(tenantId, access.data ? userId : undefined)
   const queryClient = useQueryClient()
   const data = useTenantData()
   const session = useSession()
@@ -543,8 +544,16 @@ export function AiChatPanel({
               </div>
             </ComposerPrimitive.Root>
             <p className="text-muted-foreground text-xs">
-              Cada consulta al modelo consume una solicitud de IA.
+              Cada llamada al modelo consume una solicitud, incluso si falla después de reservarse.
+              Continuar tras una búsqueda puede consumir otra.
             </p>
+            {credits.data ? (
+              <p className="text-muted-foreground text-xs">
+                Solicitudes mensuales restantes:{' '}
+                {Math.max(0, credits.data.monthly_limit - credits.data.monthly_used)} · Créditos
+                extra: {credits.data.extra_remaining}
+              </p>
+            ) : null}
           </div>
         </aside>
       )}

@@ -139,4 +139,10 @@ describe('chat HTTP boundary', () => {
     expect(reserve).toHaveBeenCalledTimes(2)
     expect(stream).toHaveBeenCalledTimes(2)
   })
+
+  it('keeps the reservation when the provider fails after it was made', async () => {
+    stream.mockRejectedValueOnce(new Error('provider unavailable'))
+    expect((await invoke()).status).toBe(503)
+    expect(reserve).toHaveBeenCalledOnce()
+  })
 })

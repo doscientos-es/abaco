@@ -72,7 +72,10 @@ vi.mock('@/shared/store/store', () => ({
     estimates: [],
   }),
 }))
-vi.mock('../application/ai-access', () => ({ useAiAccess: () => ({ data: true }) }))
+vi.mock('../application/ai-access', () => ({
+  useAiAccess: () => ({ data: true }),
+  useAiCredits: () => ({ data: { monthly_limit: 500, monthly_used: 24, extra_remaining: 3 } }),
+}))
 vi.mock('./estimate-suggestion-preview', () => ({
   EstimateSuggestionPreview: (props: { disabled: boolean }) => {
     mocks.preview(props)
@@ -129,7 +132,9 @@ it('returns matching real records to the model when it requests a search', () =>
 })
 
 it('refreshes the credit balance after successful and failed model calls', () => {
-  render()
+  const { html } = render()
+  expect(html).toContain('476')
+  expect(html).toContain('Créditos extra: 3')
   mocks.onFinish?.()
   mocks.onError?.()
   expect(mocks.invalidate).toHaveBeenCalledTimes(2)
