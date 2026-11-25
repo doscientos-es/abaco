@@ -45,6 +45,7 @@ const unitOptions = [
   'servicio',
   'visita',
   'par',
+  'lote',
   '%',
 ].map((value) => ({ value, label: value }))
 

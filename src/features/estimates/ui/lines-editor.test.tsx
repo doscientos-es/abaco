@@ -148,9 +148,10 @@ describe('LinesEditor', () => {
     )
 
     expect(mocks.unitOptions).toContainEqual({ value: 'h', label: 'h' })
+    expect(mocks.unitOptions).toContainEqual({ value: 'lote', label: 'lote' })
     expect(mocks.unitOptions[0]).toEqual({ value: 'caja', label: 'caja' })
-    mocks.setUnit?.('h')
-    expect(onChange).toHaveBeenCalledWith([{ ...customLine, unit: 'h' }])
+    mocks.setUnit?.('lote')
+    expect(onChange).toHaveBeenCalledWith([{ ...customLine, unit: 'lote' }])
   })
 
   it('uses a two-column mobile layout and a proportional single row in wide containers', () => {
