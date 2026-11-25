@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   preview: vi.fn(),
   invalidate: vi.fn(),
+  stop: vi.fn(),
   onFinish: null as null | (() => void),
   onError: null as null | (() => void),
   effects: [] as Array<() => void>,
@@ -36,7 +37,7 @@ vi.mock('@ai-sdk/react', () => ({
       status: mocks.status,
       addToolOutput: mocks.output,
       setMessages: vi.fn(),
-      stop: vi.fn(),
+      stop: mocks.stop,
     }
   },
 }))
@@ -155,6 +156,8 @@ it('opens and updates the client form from actual partial tool input without rep
   expect(onClientProgress).toHaveBeenCalledWith(
     expect.objectContaining({ id: 'call', values: { name: 'Mar' }, streaming: true }),
   )
+  onClientProgress.mock.calls[0]?.[0].stop()
+  expect(mocks.stop).toHaveBeenCalledOnce()
   part.input = { name: 'Marta' }
   mocks.effects.forEach((effect) => effect())
   expect(onClientProgress).toHaveBeenLastCalledWith(

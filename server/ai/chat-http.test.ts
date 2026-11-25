@@ -145,4 +145,96 @@ describe('chat HTTP boundary', () => {
     expect((await invoke()).status).toBe(503)
     expect(reserve).toHaveBeenCalledOnce()
   })
+
+  it('aborts an active model stream when the client disconnects', async () => {
+    let modelSignal: AbortSignal | undefined
+    const streamingHandler = createChatHandler({
+      origin: 'https://app.example',
+      authenticate,
+      reserve,
+      stream: async (_messages, _context, signal) => {
+        modelSignal = signal
+        return {
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({ type: 'start' })
+              signal.addEventListener('abort', () => controller.close(), { once: true })
+            },
+          }),
+        } as unknown as Awaited<ReturnType<typeof streamChat>>
+      },
+    })
+    const server = createServer((req, res) => void streamingHandler(req, res))
+    servers.push(server)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const abort = new AbortController()
+    const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}`, {
+      method: 'POST',
+      headers: {
+        origin: 'https://app.example',
+        authorization: 'Bearer test',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: abort.signal,
+    })
+    expect(response.status).toBe(200)
+    abort.abort()
+    await vi.waitFor(() => expect(modelSignal?.aborted).toBe(true))
+    expect(reserve).toHaveBeenCalledOnce()
+  })
+
+  it('does not start the model if the client disconnects during reservation', async () => {
+    let finishReservation: (() => void) | undefined
+    let reservationStarted: (() => void) | undefined
+    let requestClosed: (() => void) | undefined
+    let handlerFinished: (() => void) | undefined
+    const started = new Promise<void>((resolve) => {
+      reservationStarted = resolve
+    })
+    const closed = new Promise<void>((resolve) => {
+      requestClosed = resolve
+    })
+    const finished = new Promise<void>((resolve) => {
+      handlerFinished = resolve
+    })
+    const slowReserve = vi.fn(async (): Promise<'allowed'> => {
+      reservationStarted?.()
+      await new Promise<void>((resolve) => {
+        finishReservation = resolve
+      })
+      return 'allowed'
+    })
+    const slowHandler = createChatHandler({
+      origin: 'https://app.example',
+      authenticate,
+      reserve: slowReserve,
+      stream,
+    })
+    const server = createServer((req, res) => {
+      res.on('close', () => requestClosed?.())
+      void slowHandler(req, res).finally(() => handlerFinished?.())
+    })
+    servers.push(server)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const abort = new AbortController()
+    const request = fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}`, {
+      method: 'POST',
+      headers: {
+        origin: 'https://app.example',
+        authorization: 'Bearer test',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: abort.signal,
+    }).catch(() => undefined)
+    await started
+    abort.abort()
+    await closed
+    finishReservation?.()
+    await finished
+    await request
+    expect(slowReserve).toHaveBeenCalledOnce()
+    expect(stream).not.toHaveBeenCalled()
+  })
 })

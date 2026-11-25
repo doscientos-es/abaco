@@ -111,6 +111,8 @@ export function createChatHandler(dependencies: Dependencies) {
     if (reservation === 'forbidden') return reply(response, 403, { error: 'forbidden' })
     if (reservation === 'limit') return reply(response, 429, { error: 'limit_reached' })
     if (reservation !== 'allowed') return reply(response, 503, { error: 'unavailable' })
+    // The client may have disconnected while the reservation was in flight.
+    if (response.destroyed) return
     const abort = new AbortController()
     const onClose = () => {
       if (!response.writableFinished) abort.abort()
