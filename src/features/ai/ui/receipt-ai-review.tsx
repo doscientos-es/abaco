@@ -103,8 +103,8 @@ export function ReceiptAiReview({
             ? 'Análisis finalizado. Revisa todos los campos antes de guardar.'
             : 'No se han detectado datos fiables. Completa el apunte manualmente.'}
           {suggestion.date === null ? ' No se ha identificado la fecha.' : ''}
-          {suggestion.vatRate === null
-            ? ' No se ha identificado un único tipo de IVA. El libro solo admite un tipo: revisa el justificante antes de guardar.'
+          {suggestion.vatRate === null && !suggestion.vatLines
+            ? ' No se ha identificado un desglose fiable del IVA. Revísalo antes de guardar.'
             : ''}
         </output>
       ) : null}

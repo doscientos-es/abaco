@@ -30,6 +30,7 @@ import { quarterlyVat } from '@/shared/domain/csv'
 import { ledgerNetCents } from '@/shared/domain/estimate'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
+import { parseLedgerVatBreakdown } from '@/shared/domain/ledger-vat'
 import { formatEuros, parseEuros } from '@/shared/domain/money'
 import type { LedgerEntry, LedgerKind, TenantData } from '@/shared/domain/types'
 import {
@@ -63,10 +64,23 @@ import { ExpenseAllocationDialog } from './expense-allocation-dialog'
 import { LedgerAttachmentsDialog } from './ledger-attachments-dialog'
 import { LedgerSummary, useLedgerSummaryEditor } from './ledger-summary'
 import { ledgerTabs, type LedgerTab } from './ledger-tabs'
+import { LedgerVatFields } from './ledger-vat-fields'
 import { PaymentCalendar } from './payment-calendar'
 import { useLedgerExports } from './use-ledger-exports'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const receiptDefaults = (kind: LedgerKind, defaultVatRate: number): ReceiptFields => ({
+  kind,
+  date: today(),
+  concept: '',
+  category: kind === 'expense' ? 'Materiales' : 'Ingresos',
+  amount: '',
+  vatRate: String(defaultVatRate),
+  counterpartyName: '',
+  counterpartyTaxId: '',
+  documentNumber: '',
+  vatLines: [],
+})
 const ledgerTabLabels: Record<LedgerTab, string> = {
   resumen: 'Resumen',
   apuntes: 'Apuntes',
@@ -102,6 +116,34 @@ function MonthFilter({ month, onChange }: { month: string; onChange: (month: str
         </Button>
       ) : null}
     </div>
+  )
+}
+
+function FiscalDetails({ entry }: { entry: LedgerEntry }) {
+  if (
+    !entry.counterpartyName &&
+    !entry.counterpartyTaxId &&
+    !entry.documentNumber &&
+    !entry.vatBreakdown?.length
+  )
+    return null
+  return (
+    <details className="text-muted-foreground mt-1 text-xs">
+      <summary className="cursor-pointer">Datos fiscales</summary>
+      {entry.counterpartyName ? (
+        <p>
+          {entry.kind === 'expense' ? 'Proveedor' : 'Cliente'}: {entry.counterpartyName}
+        </p>
+      ) : null}
+      {entry.counterpartyTaxId ? <p>NIF: {entry.counterpartyTaxId}</p> : null}
+      {entry.documentNumber ? <p>Documento: {entry.documentNumber}</p> : null}
+      {entry.vatBreakdown?.map((line, index) => (
+        <p key={index}>
+          IVA {line.rate} % · Base {formatEuros(line.baseCents)} · Cuota{' '}
+          {formatEuros(line.vatCents)}
+        </p>
+      ))}
+    </details>
   )
 }
 
@@ -157,14 +199,9 @@ function LedgerContent({
     entry: LedgerEntry
     pending: PendingLedgerAttachment | null
   } | null>(null)
-  const [form, setForm] = useState({
-    kind: 'expense' as LedgerKind,
-    date: today(),
-    concept: '',
-    category: 'Materiales',
-    amount: '',
-    vatRate: String(tenant.defaultVatRate),
-  })
+  const [form, setForm] = useState<ReceiptFields>(() =>
+    receiptDefaults('expense', tenant.defaultVatRate),
+  )
 
   const orderedEntries = useMemo(
     () => [...ledger].sort((a, b) => b.date.localeCompare(a.date)),
@@ -176,7 +213,16 @@ function LedgerContent({
   const visible = monthEntries.filter(
     (entry) =>
       (kindFilter === 'all' || entry.kind === kindFilter) &&
-      fuzzySearch(query, entry.concept, entry.category, entry.date, entry.kind),
+      fuzzySearch(
+        query,
+        entry.concept,
+        entry.category,
+        entry.date,
+        entry.kind,
+        entry.counterpartyName ?? '',
+        entry.counterpartyTaxId ?? '',
+        entry.documentNumber ?? '',
+      ),
   )
   const pager = usePagination(
     visible,
@@ -201,21 +247,28 @@ function LedgerContent({
     quarters,
   })
   const vatExport = exportAction('vat')
+  const breakdown = form.vatLines.length
+    ? parseLedgerVatBreakdown(form.vatLines, parseEuros(form.amount))
+    : null
+  const validVat =
+    form.vatLines.length > 0
+      ? breakdown !== null
+      : !!form.vatRate.trim() &&
+        Number.isFinite(Number(form.vatRate.replace(',', '.'))) &&
+        Number(form.vatRate.replace(',', '.')) >= 0 &&
+        Number(form.vatRate.replace(',', '.')) <= 100
+
+  function openAdd(kind: LedgerKind) {
+    editedReceiptFields.current.clear()
+    setReceipt(null)
+    setForm(receiptDefaults(kind, tenant.defaultVatRate))
+    setDialogOpen(true)
+  }
 
   function resetAutofill() {
     const edited = new Set(editedReceiptFields.current)
     setForm((current) =>
-      resetReceiptAutofill(
-        current,
-        {
-          date: today(),
-          concept: '',
-          category: 'Materiales',
-          amount: '',
-          vatRate: String(tenant.defaultVatRate),
-        },
-        edited,
-      ),
+      resetReceiptAutofill(current, receiptDefaults(current.kind, tenant.defaultVatRate), edited),
     )
   }
 
@@ -230,10 +283,7 @@ function LedgerContent({
       form.category.trim().length > formLimits.ledgerCategory ||
       amountCents <= 0 ||
       amountCents > formLimits.monetaryAmount * 100 ||
-      !form.vatRate.trim() ||
-      !Number.isFinite(vatRate) ||
-      vatRate < 0 ||
-      vatRate > 100 ||
+      !validVat ||
       !/^\d{4}-\d{2}-\d{2}$/.test(form.date)
     )
       return
@@ -245,7 +295,13 @@ function LedgerContent({
       concept: form.concept.trim(),
       category: form.category.trim(),
       amountCents,
-      vatRate: Math.round(vatRate * 100) / 100,
+      vatRate: breakdown?.[0]?.rate ?? Math.round(vatRate * 100) / 100,
+      ...(breakdown ? { vatBreakdown: breakdown } : {}),
+      ...(form.counterpartyName.trim() ? { counterpartyName: form.counterpartyName.trim() } : {}),
+      ...(form.counterpartyTaxId.trim()
+        ? { counterpartyTaxId: form.counterpartyTaxId.trim() }
+        : {}),
+      ...(form.documentNumber.trim() ? { documentNumber: form.documentNumber.trim() } : {}),
       estimateId: null,
       milestoneId: null,
     }
@@ -266,14 +322,7 @@ function LedgerContent({
       }
     }
     editedReceiptFields.current.clear()
-    setForm({
-      kind: form.kind,
-      date: today(),
-      concept: '',
-      category: 'Materiales',
-      amount: '',
-      vatRate: String(tenant.defaultVatRate),
-    })
+    setForm(receiptDefaults(form.kind, tenant.defaultVatRate))
     setReceipt(null)
     setDialogOpen(false)
   }
@@ -315,10 +364,14 @@ function LedgerContent({
         title="Contabilidad"
         editor={tab === 'resumen' ? summary.editor : undefined}
         actions={
-          <Button onPress={() => setDialogOpen(true)}>
-            <Plus aria-hidden="true" className="size-4" />
-            Nuevo apunte
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onPress={() => openAdd('income')}>
+              <Plus aria-hidden="true" className="size-4" /> Añadir ingreso
+            </Button>
+            <Button onPress={() => openAdd('expense')}>
+              <Plus aria-hidden="true" className="size-4" /> Añadir gasto
+            </Button>
+          </div>
         }
       />
 
@@ -514,9 +567,11 @@ function LedgerContent({
             resetAutofill()
           }
         }}
-        title="Nuevo apunte"
-        description="Registra un ingreso o un gasto en el libro."
-        submitLabel={adding ? 'Guardando…' : 'Añadir apunte'}
+        title={form.kind === 'expense' ? 'Añadir gasto' : 'Añadir ingreso'}
+        description="Registra la operación y revisa los datos del justificante."
+        submitLabel={
+          adding ? 'Guardando…' : form.kind === 'expense' ? 'Añadir gasto' : 'Añadir ingreso'
+        }
         isSubmitting={adding}
         isDirty={!!receipt}
         submitDisabled={
@@ -526,22 +581,10 @@ function LedgerContent({
           form.category.trim().length > formLimits.ledgerCategory ||
           parseEuros(form.amount) <= 0 ||
           parseEuros(form.amount) > formLimits.monetaryAmount * 100 ||
-          !form.vatRate.trim() ||
-          !Number.isFinite(Number(form.vatRate.replace(',', '.'))) ||
-          Number(form.vatRate.replace(',', '.')) < 0 ||
-          Number(form.vatRate.replace(',', '.')) > 100
+          !validVat
         }
         onSubmit={() => void add()}
       >
-        <SelectField
-          label="Tipo"
-          value={form.kind}
-          options={[
-            { value: 'expense', label: 'Gasto' },
-            { value: 'income', label: 'Ingreso' },
-          ]}
-          onChange={(kind) => setForm((current) => ({ ...current, kind: kind as LedgerKind }))}
-        />
         <TextField
           label="Fecha"
           type="date"
@@ -587,20 +630,87 @@ function LedgerContent({
           }}
         />
         <TextField
-          label="IVA %"
-          type="number"
-          min={0}
-          max={100}
-          step="0.01"
-          placeholder="21"
-          icon={fieldIcons.percent}
-          helper="Entre 0 y 100. El importe ya incluye este IVA."
-          value={form.vatRate}
-          onChange={(vatRate) => {
-            editedReceiptFields.current.add('vatRate')
-            setForm((current) => ({ ...current, vatRate }))
+          label={form.kind === 'expense' ? 'Proveedor' : 'Cliente'}
+          placeholder="Nombre o razón social"
+          maxLength={200}
+          value={form.counterpartyName}
+          onChange={(counterpartyName) => {
+            editedReceiptFields.current.add('counterpartyName')
+            setForm((current) => ({ ...current, counterpartyName }))
           }}
         />
+        <TextField
+          label={form.kind === 'expense' ? 'NIF del proveedor' : 'NIF del cliente'}
+          placeholder="NIF"
+          maxLength={40}
+          value={form.counterpartyTaxId}
+          onChange={(counterpartyTaxId) => {
+            editedReceiptFields.current.add('counterpartyTaxId')
+            setForm((current) => ({ ...current, counterpartyTaxId }))
+          }}
+        />
+        <TextField
+          label="Número de factura o justificante"
+          placeholder="Número del documento"
+          maxLength={100}
+          value={form.documentNumber}
+          onChange={(documentNumber) => {
+            editedReceiptFields.current.add('documentNumber')
+            setForm((current) => ({ ...current, documentNumber }))
+          }}
+        />
+        {!form.vatLines.length ? (
+          <TextField
+            label="IVA %"
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            placeholder="21"
+            icon={fieldIcons.percent}
+            helper="Entre 0 y 100. El importe ya incluye este IVA."
+            value={form.vatRate}
+            onChange={(vatRate) => {
+              editedReceiptFields.current.add('vatRate')
+              setForm((current) => ({ ...current, vatRate }))
+            }}
+          />
+        ) : null}
+        <p className="text-muted-foreground text-xs sm:col-span-2">
+          Este formulario no desglosa retenciones ni otros cargos. Si el justificante los incluye,
+          el cálculo del IVA puede ser incorrecto.
+        </p>
+        {form.vatLines.length ? (
+          <>
+            <LedgerVatFields
+              lines={form.vatLines}
+              onChange={(vatLines) => {
+                editedReceiptFields.current.add('vatLines')
+                setForm((current) => ({ ...current, vatLines }))
+              }}
+            />
+            {!validVat ? (
+              <p role="alert" className="text-destructive text-sm sm:col-span-2">
+                Completa el desglose: la suma de bases y cuotas debe coincidir con el importe total.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onPress={() => {
+              editedReceiptFields.current.add('vatLines')
+              setForm((current) => ({
+                ...current,
+                vatLines: [{ rate: current.vatRate, base: '', vat: '' }],
+              }))
+            }}
+          >
+            Desglosar varios tipos de IVA
+          </Button>
+        )}
         {isAdmin && dialogOpen ? (
           <div className="sm:col-span-2">
             <ReceiptAiReview
@@ -635,7 +745,7 @@ function LedgerContent({
             }
           >
             {ledger.length === 0 ? (
-              <Button onPress={() => setDialogOpen(true)}>Añadir apunte</Button>
+              <Button onPress={() => openAdd('expense')}>Añadir gasto</Button>
             ) : (
               <Button
                 variant="outline"
@@ -663,6 +773,7 @@ function LedgerContent({
                       <p className="text-muted-foreground text-xs">
                         {entry.date} · {entry.category}
                       </p>
+                      <FiscalDetails entry={entry} />
                     </div>
                     <p className="shrink-0 text-right font-semibold tabular-nums">
                       {entry.kind === 'income' && entry.amountCents > 0 ? '+' : '−'}
@@ -724,6 +835,7 @@ function LedgerContent({
                           <TableCell>
                             {entry.concept}
                             <div className="text-muted-foreground text-xs">{entry.category}</div>
+                            <FiscalDetails entry={entry} />
                           </TableCell>
                         ),
                         kind: (

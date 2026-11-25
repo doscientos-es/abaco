@@ -72,7 +72,7 @@ export function applyReceiptSuggestion<T extends ReceiptFields>(
     amount,
     vatRate: edited.has('vatRate')
       ? form.vatRate
-      : suggestion.vatRate === null
+      : suggestion.vatRate === null || (lines !== null && !applicable)
         ? ''
         : String(suggestion.vatRate),
     counterpartyName: edited.has('counterpartyName')
@@ -86,15 +86,16 @@ export function applyReceiptSuggestion<T extends ReceiptFields>(
     documentNumber: edited.has('documentNumber')
       ? form.documentNumber
       : (suggestion.documentNumber ?? form.documentNumber),
-    vatLines: edited.has('vatLines')
-      ? form.vatLines
-      : applicable
-        ? lines.map((line) => ({
-            rate: String(line.rate),
-            base: centsToInput(line.baseCents),
-            vat: centsToInput(line.vatCents),
-          }))
-        : [],
+    vatLines:
+      edited.has('vatLines') || edited.has('vatRate')
+        ? form.vatLines
+        : applicable
+          ? lines.map((line) => ({
+              rate: String(line.rate),
+              base: centsToInput(line.baseCents),
+              vat: centsToInput(line.vatCents),
+            }))
+          : [],
   }
 }
 

@@ -87,7 +87,7 @@ describe('receipt autofill', () => {
     await vi.waitFor(() => expect(props.onApply).toHaveBeenCalledWith(suggestion))
     expect(props.onBusyChange).toHaveBeenLastCalledWith(false)
     expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['ai-credits', 'tenant'] })
-    expect(render({ file })).toContain('El libro solo admite un tipo')
+    expect(render({ file })).toContain('No se ha identificado un desglose fiable')
   })
 
   it('allows manual attachments without AI access', () => {

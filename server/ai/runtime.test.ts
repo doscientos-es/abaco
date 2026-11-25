@@ -23,6 +23,7 @@ it('loads the transpiled AI endpoint in Node without a bundler or application cr
       'server/visit-report-pdf/http.ts',
       'src/features/ai/domain/suggestions.ts',
       'src/shared/domain/form-limits.ts',
+      'src/shared/domain/ledger-vat.ts',
       'src/shared/domain/money.ts',
     ]) {
       const target = join(output, source.replace(/\.ts$/, '.js'))

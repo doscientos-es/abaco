@@ -165,6 +165,12 @@ export function ExpenseAllocationDialog({
         Si el mismo importe ya figura como material, horas u otro coste, vincúlalo aquí para no
         sumarlo dos veces. El importe sin IVA debe coincidir.
       </p>
+      {entry?.vatBreakdown?.length ? (
+        <p className="text-muted-foreground text-xs sm:col-span-2">
+          En gastos con desglose, las imputaciones parciales reparten la base proporcionalmente al
+          total del justificante.
+        </p>
+      ) : null}
       <div className="sm:col-span-2">
         {allocationQuery.isError ? <p role="alert">{allocationQuery.error.message}</p> : null}
         {targetQuery.isError ? <p role="alert">{targetQuery.error.message}</p> : null}

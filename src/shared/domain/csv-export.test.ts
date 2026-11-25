@@ -108,7 +108,7 @@ describe('structured accounting CSV', () => {
       },
     ])
     expect(ledger).toBe(
-      '\uFEFFFecha;Tipo;Concepto;Categoría;Base;IVA %;Total\r\n2026-01-02;Gasto;Compra;Materiales;-10.00;21.00;-12.10\r\n',
+      '\uFEFFFecha;Tipo;Concepto;Categoría;Base;IVA %;Total;Contraparte;NIF;Nº documento\r\n2026-01-02;Gasto;Compra;Materiales;-10.00;21.00;-12.10;;;\r\n',
     )
     const vat = buildQuarterlyVatCsv([
       {

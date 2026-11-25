@@ -13,6 +13,12 @@ const receipt = {
   date: '2026-11-23',
   concept: 'Material',
   category: null,
+  issuerName: null,
+  issuerTaxId: null,
+  recipientName: null,
+  recipientTaxId: null,
+  documentNumber: null,
+  vatLines: null,
   grossCents: 1234,
   vatRate: 21,
 }

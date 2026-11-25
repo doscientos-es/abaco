@@ -13,6 +13,20 @@ import {
 
 let sequence = 0
 const id = () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`
+const unknownFiscal = {
+  issuerName: null,
+  issuerTaxId: null,
+  recipientName: null,
+  recipientTaxId: null,
+  documentNumber: null,
+  vatLines: null,
+}
+const blankFields = {
+  counterpartyName: '',
+  counterpartyTaxId: '',
+  documentNumber: '',
+  vatLines: [],
+}
 const tenant: Tenant = {
   id: 'tenant',
   name: 'Empresa',
@@ -27,6 +41,7 @@ const tenant: Tenant = {
 describe('AI suggestions', () => {
   it('applies only recognized receipt values, including a zero VAT rate', () => {
     const suggestion = receiptSuggestionSchema.parse({
+      ...unknownFiscal,
       date: null,
       concept: '  Material eléctrico  ',
       category: null,
@@ -42,6 +57,7 @@ describe('AI suggestions', () => {
           amount: '',
           vatRate: '21',
           kind: 'expense',
+          ...blankFields,
         },
         suggestion,
       ),
@@ -52,11 +68,20 @@ describe('AI suggestions', () => {
       amount: '123,45',
       vatRate: '0',
       kind: 'expense',
+      ...blankFields,
     })
   })
 
   it('rejects invalid dates, invalid amounts and unexpected receipt fields', () => {
-    const valid = { date: null, concept: null, category: null, grossCents: null, vatRate: null }
+    const valid = {
+      ...unknownFiscal,
+      date: null,
+      concept: null,
+      category: null,
+      grossCents: null,
+      vatRate: null,
+    }
+    expect(receiptSuggestionSchema.safeParse(valid).success).toBe(true)
     expect(receiptSuggestionSchema.safeParse({ ...valid, date: '2026-02-30' }).success).toBe(false)
     expect(receiptSuggestionSchema.safeParse({ ...valid, grossCents: -1 }).success).toBe(false)
     expect(receiptSuggestionSchema.safeParse({ ...valid, vendorId: 'invented' }).success).toBe(
@@ -65,8 +90,17 @@ describe('AI suggestions', () => {
   })
 
   it('preserves manually edited fields, including cleared fields, and requires a missing VAT rate', () => {
-    const form = { date: '2026-01-01', concept: '', category: 'Manual', amount: '5', vatRate: '21' }
+    const form = {
+      ...blankFields,
+      kind: 'expense' as const,
+      date: '2026-01-01',
+      concept: '',
+      category: 'Manual',
+      amount: '5',
+      vatRate: '21',
+    }
     const suggestion = {
+      ...unknownFiscal,
       date: '2026-02-01',
       concept: 'Factura',
       category: 'IA',
@@ -75,6 +109,8 @@ describe('AI suggestions', () => {
     }
     const edited = new Set<keyof typeof form>(['concept', 'category', 'amount'])
     expect(applyReceiptSuggestion(form, suggestion, edited)).toEqual({
+      ...blankFields,
+      kind: 'expense',
       date: '2026-02-01',
       concept: '',
       category: 'Manual',
@@ -87,7 +123,8 @@ describe('AI suggestions', () => {
 
   it('clears old auto-filled values when replacing a receipt without losing manual edits', () => {
     const form = {
-      kind: 'expense',
+      ...blankFields,
+      kind: 'expense' as const,
       date: '2026-02-01',
       concept: 'Manual',
       category: 'IA',
@@ -95,6 +132,8 @@ describe('AI suggestions', () => {
       vatRate: '10',
     }
     const defaults = {
+      ...blankFields,
+      kind: 'expense' as const,
       date: '2026-01-01',
       concept: '',
       category: 'Materiales',
@@ -107,6 +146,64 @@ describe('AI suggestions', () => {
       concept: 'Manual',
       amount: '50',
     })
+  })
+
+  it('uses the issuer for expenses, recipient for income and applies a matching multi-rate breakdown', () => {
+    const form = {
+      ...blankFields,
+      kind: 'expense' as const,
+      date: '2026-01-01',
+      concept: '',
+      category: '',
+      amount: '',
+      vatRate: '21',
+    }
+    const suggestion = receiptSuggestionSchema.parse({
+      ...unknownFiscal,
+      date: null,
+      concept: 'Factura',
+      category: null,
+      grossCents: 23100,
+      vatRate: null,
+      issuerName: 'Proveedor',
+      issuerTaxId: 'B123',
+      recipientName: 'Cliente',
+      recipientTaxId: 'A456',
+      documentNumber: 'F-42',
+      vatLines: [
+        { rate: 21, baseCents: 10000, vatCents: 2100 },
+        { rate: 10, baseCents: 10000, vatCents: 1000 },
+      ],
+    })
+    const expense = applyReceiptSuggestion(form, suggestion)
+    expect(expense).toMatchObject({
+      counterpartyName: 'Proveedor',
+      counterpartyTaxId: 'B123',
+      documentNumber: 'F-42',
+      amount: '231,00',
+      vatLines: [
+        { rate: '21', base: '100,00', vat: '21,00' },
+        { rate: '10', base: '100,00', vat: '10,00' },
+      ],
+    })
+    expect(applyReceiptSuggestion({ ...form, kind: 'income' }, suggestion)).toMatchObject({
+      counterpartyName: 'Cliente',
+      counterpartyTaxId: 'A456',
+    })
+    const manual = applyReceiptSuggestion(
+      { ...form, amount: '5', counterpartyName: 'Manual', vatRate: '4' },
+      suggestion,
+      new Set(['amount', 'counterpartyName', 'vatRate']),
+    )
+    expect(manual).toMatchObject({
+      amount: '5',
+      counterpartyName: 'Manual',
+      vatRate: '4',
+      vatLines: [],
+    })
+    expect(
+      applyReceiptSuggestion(form, { ...suggestion, grossCents: 23099, vatRate: 21 }),
+    ).toMatchObject({ vatRate: '', vatLines: [] })
   })
 
   it('appends complete lines to a sectioned draft without inventing missing prices', () => {
