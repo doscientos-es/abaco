@@ -41,10 +41,35 @@ describe('chat context window', () => {
     expect(chatContextWindow(messages, new Set(['one']))).toEqual(messages)
   })
 
+  it('retains questions embedded in an estimate preview', () => {
+    const messages: UIMessage[] = [
+      user('old'),
+      {
+        id: 'a',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-proponer_partidas',
+            toolCallId: 'p',
+            state: 'output-available',
+            input: { message: '¿Añadimos más?', lines: [] },
+            output: {},
+          },
+        ],
+      },
+      user('answer'),
+    ]
+    expect(chatContextWindow(messages, new Set(['p']))).toEqual(messages)
+  })
+
   it('keeps at most four recent user turns and starts with a user message', () => {
     const messages = Array.from({ length: 6 }, (_, i) => [
       user(`u${i}`),
-      proposal(`a${i}`, `p${i}`),
+      {
+        id: `a${i}`,
+        role: 'assistant' as const,
+        parts: [{ type: 'text' as const, text: 'Hecho.' }],
+      },
     ]).flat()
     expect(chatContextWindow(messages, new Set()).map(({ id }) => id)).toEqual([
       'u2',
@@ -56,5 +81,25 @@ describe('chat context window', () => {
       'u5',
       'a5',
     ])
+  })
+
+  it('retains older pending proposals rather than cutting them at four turns', () => {
+    const messages = [
+      user('old'),
+      proposal('pending', 'p'),
+      ...Array.from({ length: 4 }, (_, i) => user(`u${i}`)),
+    ]
+    expect(chatContextWindow(messages, new Set())).toEqual(messages)
+  })
+
+  it('does not silently remove pending proposals beyond the hard message limit', () => {
+    const messages = [
+      user('old'),
+      proposal('pending', 'p'),
+      ...Array.from({ length: 20 }, (_, i) => user(`u${i}`)),
+    ]
+    expect(() => chatContextWindow(messages, new Set())).toThrow(
+      'Resuelve las propuestas pendientes',
+    )
   })
 })

@@ -13,7 +13,7 @@ import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { newId, useTenantData } from '@/shared/store/store'
 
 import { useAiAccess, useAiCredits } from '../application/ai-access'
-import { chatContextWindow } from '../application/chat-context-window'
+import { chatContextWindow, pendingContextLimitMessage } from '../application/chat-context-window'
 import {
   clientProposalSchema,
   clientProposalProgressSchema,
@@ -458,7 +458,7 @@ export function AiChatPanel({
                           disabled={!target || !draftReady || applied.has(part.toolCallId)}
                           onApply={() => {
                             if (!target || !draftReady || applied.has(part.toolCallId)) return
-                            const { patch } = appendEstimateSuggestion(
+                            const { patch, incomplete } = appendEstimateSuggestion(
                               target.estimate,
                               suggestion,
                               newId,
@@ -470,7 +470,7 @@ export function AiChatPanel({
                               return
                             }
                             target.apply(patch)
-                            completedProposals.current.add(part.toolCallId)
+                            if (!incomplete) completedProposals.current.add(part.toolCallId)
                             setApplied((previous) => new Set(previous).add(part.toolCallId))
                             setApplyError('')
                           }}
@@ -489,7 +489,9 @@ export function AiChatPanel({
             ))}
             {chat.error ? (
               <p role="alert" className="text-destructive text-sm">
-                No se pudo completar la solicitud. Comprueba tu acceso y créditos de IA.
+                {chat.error.message === pendingContextLimitMessage
+                  ? chat.error.message
+                  : 'No se pudo completar la solicitud. Comprueba tu acceso y créditos de IA.'}
               </p>
             ) : null}
             {applyError ? (

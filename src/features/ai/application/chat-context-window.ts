@@ -1,5 +1,10 @@
 import type { UIMessage } from 'ai'
 
+import { estimateDraftProposalSchema, estimateProposalSchema } from '../domain/chat-tools'
+
+export const pendingContextLimitMessage =
+  'Resuelve las propuestas pendientes o limpia el chat antes de continuar.'
+
 /** Keep pending actions and questions; only retire a turn after a confirmed action. */
 export function chatContextWindow(
   messages: UIMessage[],
@@ -23,6 +28,19 @@ export function chatContextWindow(
         part.type !== 'tool-proponer_presupuesto'
       )
         continue
+      const suggestion =
+        part.type === 'tool-proponer_partidas'
+          ? estimateProposalSchema.safeParse(part.input)
+          : part.type === 'tool-proponer_presupuesto'
+            ? estimateDraftProposalSchema.safeParse(part.input)
+            : null
+      if (suggestion?.success) {
+        const text =
+          'suggestion' in suggestion.data
+            ? suggestion.data.suggestion.message
+            : suggestion.data.message
+        if (/[?¿]/.test(text)) turnHasQuestion = true
+      }
       if (
         completed.has(part.toolCallId) &&
         (part.state === 'input-available' || part.state === 'output-available')
@@ -42,6 +60,16 @@ export function chatContextWindow(
       lastCompletedTurn = index
   }
   const afterCompleted = messages.slice(lastCompletedTurn + 1)
+  const hasPending = (message: UIMessage) =>
+    message.parts.some(
+      (part) =>
+        (part.type === 'tool-proponer_cliente' ||
+          part.type === 'tool-proponer_partidas' ||
+          part.type === 'tool-proponer_presupuesto') &&
+        (!completed.has(part.toolCallId) ||
+          (part.state !== 'input-available' && part.state !== 'output-available')),
+    )
+  if (afterCompleted.slice(0, -20).some(hasPending)) throw new Error(pendingContextLimitMessage)
   const recent = afterCompleted.slice(-20)
   let users = 0
   let start = recent.length
@@ -51,7 +79,10 @@ export function chatContextWindow(
       break
     }
   }
-  const bounded = users < 4 ? recent : recent.slice(start)
+  const bounded =
+    users < 4 || recent.slice(0, start).some(hasPending) ? recent : recent.slice(start)
   const firstUser = bounded.findIndex((message) => message.role === 'user')
+  if (firstUser > 0 && bounded.slice(0, firstUser).some(hasPending))
+    throw new Error(pendingContextLimitMessage)
   return firstUser < 0 ? bounded : bounded.slice(firstUser)
 }

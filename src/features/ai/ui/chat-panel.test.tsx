@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   stop: vi.fn(),
   onFinish: null as null | (() => void),
   onError: null as null | (() => void),
+  prepareRequest: null as
+    | null
+    | ((options: { messages: unknown[] }) => Promise<{ body: { messages: unknown[] } }>),
   effects: [] as Array<() => void>,
   status: 'ready' as 'ready' | 'streaming',
 }))
@@ -25,6 +28,7 @@ vi.mock('react', async (importOriginal) => ({
 }))
 vi.mock('@ai-sdk/react', () => ({
   useChat: (options: {
+    transport: { prepareSendMessagesRequest: typeof mocks.prepareRequest }
     onToolCall: (event: unknown) => void
     onFinish: () => void
     onError: () => void
@@ -32,6 +36,7 @@ vi.mock('@ai-sdk/react', () => ({
     mocks.onToolCall = options.onToolCall
     mocks.onFinish = options.onFinish
     mocks.onError = options.onError
+    mocks.prepareRequest = options.transport.prepareSendMessagesRequest
     return {
       messages: mocks.messages,
       status: mocks.status,
@@ -73,6 +78,11 @@ vi.mock('@/shared/store/store', () => ({
     estimates: [],
   }),
 }))
+vi.mock('@/shared/lib/supabase/client', () => ({
+  createBrowserSupabaseClient: () => ({
+    auth: { getSession: async () => ({ data: { session: { access_token: 'synthetic' } } }) },
+  }),
+}))
 vi.mock('../application/ai-access', () => ({
   useAiAccess: () => ({ data: true }),
   useAiCredits: () => ({ data: { monthly_limit: 500, monthly_used: 24, extra_remaining: 3 } }),
@@ -91,6 +101,7 @@ beforeEach(() => {
   mocks.messages = []
   mocks.effects = []
   mocks.status = 'ready'
+  mocks.prepareRequest = null
   mocks.buttons.clear()
   vi.clearAllMocks()
 })
@@ -99,6 +110,7 @@ function render(
   onCreateClient = vi.fn(),
   target: DraftTarget | null = null,
   onClientProgress = vi.fn(),
+  completedClientProposalId: string | null = null,
 ) {
   const html = renderToStaticMarkup(
     <AiChatPanel
@@ -110,7 +122,7 @@ function render(
       userId="user"
       onCreateClient={onCreateClient}
       onClientProgress={onClientProgress}
-      completedClientProposalId={null}
+      completedClientProposalId={completedClientProposalId}
       target={target}
     />,
   )
@@ -141,6 +153,31 @@ it('refreshes the credit balance after successful and failed model calls', () =>
   mocks.onError?.()
   expect(mocks.invalidate).toHaveBeenCalledTimes(2)
   expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['ai-credits', 'tenant', 'user'] })
+})
+
+it('sends a fresh context after the client proposal was saved', async () => {
+  const messages = [
+    { id: 'old', role: 'user', parts: [{ type: 'text', text: 'Crea un cliente' }] },
+    {
+      id: 'assistant',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'tool-proponer_cliente',
+          toolCallId: 'call',
+          state: 'output-available',
+          input: { name: 'Marta' },
+          output: {},
+        },
+      ],
+    },
+    { id: 'new', role: 'user', parts: [{ type: 'text', text: 'Otra tarea' }] },
+  ]
+  mocks.messages = messages
+  render(vi.fn(), null, vi.fn(), 'call')
+  mocks.effects.forEach((effect) => effect())
+  const request = await mocks.prepareRequest?.({ messages })
+  expect(request?.body.messages).toEqual([messages[2]])
 })
 
 it('opens and updates the client form from actual partial tool input without repeating updates', () => {
