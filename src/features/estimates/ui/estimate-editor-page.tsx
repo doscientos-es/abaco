@@ -57,6 +57,7 @@ export function EstimateEditorPage({ estimateId }: { estimateId: string }) {
 function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantData }) {
   const { clients, catalog, tenant, ledger } = data
   const creation = useEstimateDraft()
+  const isNewEstimate = Boolean(creation)
   const patchEstimate = usePatchEstimate()
   const session = useSession()
   const chat = useAiChat()
@@ -82,10 +83,18 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
     setChatEstimate({
       estimate,
       apply: (patch) => patchEstimate(estimate.id, patch),
-      isNew: Boolean(creation),
+      isNew: isNewEstimate,
     })
     return () => setChatEstimate(null)
-  }, [setChatEstimate, canEdit, estimate, creation?.submitted, creation?.busy, patchEstimate])
+  }, [
+    setChatEstimate,
+    canEdit,
+    estimate,
+    creation?.submitted,
+    creation?.busy,
+    isNewEstimate,
+    patchEstimate,
+  ])
 
   const approvalButton = canApprove ? (
     <Button
