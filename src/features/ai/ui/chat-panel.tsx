@@ -547,6 +547,10 @@ export function AiChatPanel({
               Cada llamada al modelo consume una solicitud, incluso si falla después de reservarse.
               Continuar tras una búsqueda puede consumir otra.
             </p>
+            <p className="text-muted-foreground text-xs">
+              Tras completar una acción, el asistente puede iniciar un contexto nuevo; los mensajes
+              siguen visibles.
+            </p>
             {credits.data ? (
               <p className="text-muted-foreground text-xs">
                 Solicitudes mensuales restantes:{' '}

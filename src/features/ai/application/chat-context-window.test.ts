@@ -102,4 +102,15 @@ describe('chat context window', () => {
       'Resuelve las propuestas pendientes',
     )
   })
+
+  it('does not discard a pending proposal when its user message falls outside the limit', () => {
+    const messages = [
+      user('old'),
+      proposal('pending', 'p'),
+      ...Array.from({ length: 19 }, (_, i) => user(`u${i}`)),
+    ]
+    expect(() => chatContextWindow(messages, new Set())).toThrow(
+      'Resuelve las propuestas pendientes',
+    )
+  })
 })
