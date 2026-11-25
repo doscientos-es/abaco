@@ -180,6 +180,55 @@ it('sends a fresh context after the client proposal was saved', async () => {
   expect(request?.body.messages).toEqual([messages[2]])
 })
 
+it.each([
+  { incomplete: false, resets: true },
+  { incomplete: true, resets: false },
+])(
+  'only resets an estimate proposal when all lines were applied: $incomplete',
+  async ({ incomplete, resets }) => {
+    const line = {
+      description: 'Pintar',
+      details: null,
+      kind: 'labor',
+      unit: 'h',
+      quantity: 1,
+      unitPriceCents: 1000,
+    }
+    const messages = [
+      { id: 'old', role: 'user', parts: [{ type: 'text', text: 'Prepara partidas' }] },
+      {
+        id: 'assistant',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-proponer_partidas',
+            toolCallId: 'estimate',
+            state: 'output-available',
+            input: {
+              message: 'Propuesta',
+              lines: incomplete ? [line, { ...line, unitPriceCents: null }] : [line],
+            },
+            output: {},
+          },
+        ],
+      },
+      { id: 'new', role: 'user', parts: [{ type: 'text', text: 'Otra tarea' }] },
+    ]
+    mocks.messages = messages
+    const target = {
+      estimate: { lines: [], documentFormat: 'table', title: '', number: '', clientId: '' },
+      isNew: true,
+      apply: vi.fn(),
+    } as unknown as DraftTarget
+    render(vi.fn(), target)
+    const preview = mocks.preview.mock.calls.at(-1)?.[0] as { onApply: () => void }
+    preview.onApply()
+    expect(target.apply).toHaveBeenCalledOnce()
+    const request = await mocks.prepareRequest?.({ messages })
+    expect(request?.body.messages).toEqual(resets ? [messages[2]] : messages)
+  },
+)
+
 it('opens and updates the client form from actual partial tool input without repeating updates', () => {
   mocks.status = 'streaming'
   const part = {
