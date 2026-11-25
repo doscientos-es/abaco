@@ -36,7 +36,7 @@ describe('ledger fiscal migration', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../../supabase/migrations/20261124230000_ledger_fiscal_breakdown.sql',
+          '../../../supabase/migrations/20261125075527_ledger_fiscal_breakdown.sql',
           import.meta.url,
         ),
         'utf8',
