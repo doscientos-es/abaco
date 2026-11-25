@@ -1,7 +1,7 @@
 import { Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useBlocker } from '@tanstack/react-router'
-import { useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Client } from '@/shared/domain/types'
@@ -11,6 +11,10 @@ import { SelectField, TextField, TextareaField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
 
 import { createClient, updateClient, type ClientInput } from '../application/client-actions'
+import {
+  mergeClientAssistantValues,
+  type ClientAssistantValues,
+} from '../application/client-assistant'
 import { findPotentialClientDuplicates } from '../application/client-duplicates'
 import { clientTypesQuery } from '../application/client-types'
 import { ClientLocationsEditor } from './client-locations-editor'
@@ -32,6 +36,9 @@ type Props = {
   /** Client being edited. Leave out to create a new one. */
   client?: Client | null
   initialValues?: Partial<ClientInput>
+  assistantValues?: ClientAssistantValues | undefined
+  assistantStreaming?: boolean
+  onStopAssistant?: (() => void) | undefined
   onClose: () => void
   /** Called with the id of the client that was created or edited. */
   onSaved?: (clientId: string) => void
@@ -45,6 +52,9 @@ export function ClientFormDialog({ open, ...rest }: Props) {
 export function ClientForm({
   client,
   initialValues,
+  assistantValues,
+  assistantStreaming = false,
+  onStopAssistant,
   onClose,
   onSaved,
   variant,
@@ -52,6 +62,7 @@ export function ClientForm({
   const { clients, tenant } = useTenantData()
   const types = useQuery(clientTypesQuery(tenant.id))
   const locations = useClientLocations(tenant.id, client?.id)
+  const { locations: locationDrafts, setLocations } = locations
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? {
@@ -67,6 +78,7 @@ export function ClientForm({
       : { ...empty, ...initialValues },
   )
   const currentForm = useRef(form)
+  const editedFields = useRef(new Set<keyof ClientInput>())
   const [initialForm] = useState(() => JSON.stringify(form))
   const saved = useRef(false)
   const savedClientId = useRef(client?.id)
@@ -74,16 +86,15 @@ export function ClientForm({
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const set = (key: keyof ClientInput) => (value: string) => {
+    editedFields.current.add(key)
     saved.current = false
     const next = { ...currentForm.current, [key]: value }
     currentForm.current = next
     setForm(next)
     const clientContact = [next.name, next.phone, next.email].filter(Boolean).join(' · ')
-    if (
-      locations.locations.some(({ original, usesClientDetails }) => !original && usesClientDetails)
-    ) {
-      locations.setLocations(
-        locations.locations.map((draft) =>
+    if (locationDrafts.some(({ original, usesClientDetails }) => !original && usesClientDetails)) {
+      setLocations(
+        locationDrafts.map((draft) =>
           !draft.original && draft.usesClientDetails
             ? {
                 ...draft,
@@ -98,6 +109,31 @@ export function ClientForm({
       )
     }
   }
+  useEffect(() => {
+    if (client || !assistantValues || saving.current) return
+    const next = mergeClientAssistantValues(
+      currentForm.current,
+      assistantValues,
+      editedFields.current,
+    )
+    if (next === currentForm.current) return
+    saved.current = false
+    currentForm.current = next
+    setForm(next)
+    const contact = [next.name, next.phone, next.email].filter(Boolean).join(' · ')
+    if (locationDrafts.some(({ original, usesClientDetails }) => !original && usesClientDetails)) {
+      setLocations(
+        locationDrafts.map((draft) =>
+          !draft.original && draft.usesClientDetails
+            ? {
+                ...draft,
+                input: { ...draft.input, address: next.address, operational_contact: contact },
+              }
+            : draft,
+        ),
+      )
+    }
+  }, [assistantValues, client, locationDrafts, setLocations])
   const duplicates = findPotentialClientDuplicates(form, clients, client?.id)
   const isDirty =
     JSON.stringify(form) !== initialForm ||
@@ -107,7 +143,7 @@ export function ClientForm({
   const validKind = types.isSuccess && types.data.some((item) => item.value === selectedKind)
 
   async function save() {
-    if (saved.current || saving.current || locations.invalid) return
+    if (saved.current || saving.current || locations.invalid || assistantStreaming) return
     const clean = Object.fromEntries(
       Object.entries(form).map(([key, value]) => [key, value.trim()]),
     ) as ClientInput
@@ -137,6 +173,16 @@ export function ClientForm({
 
   const fields = (
     <div className="space-y-4">
+      {assistantStreaming ? (
+        <div className="bg-muted flex items-center justify-between gap-3 rounded-lg p-3 text-sm">
+          <output>El asistente está rellenando los datos. Puedes editarlos.</output>
+          {onStopAssistant ? (
+            <Button type="button" variant="outline" onPress={onStopAssistant}>
+              Detener
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <section
         className="border-border bg-card rounded-xl border p-4 sm:p-6"
         aria-labelledby="client-identity-title"
@@ -304,6 +350,7 @@ export function ClientForm({
     </div>
   )
   const invalid =
+    assistantStreaming ||
     !form.name.trim() ||
     form.name.trim().length > formLimits.clientName ||
     !validKind ||

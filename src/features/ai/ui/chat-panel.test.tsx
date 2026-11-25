@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, expect, it, vi } from 'vitest'
 
@@ -9,13 +10,30 @@ const mocks = vi.hoisted(() => ({
   buttons: new Map<string, () => void>(),
   navigate: vi.fn(),
   preview: vi.fn(),
+  invalidate: vi.fn(),
+  onFinish: null as null | (() => void),
+  onError: null as null | (() => void),
+  effects: [] as Array<() => void>,
+  status: 'ready' as 'ready' | 'streaming',
+}))
+vi.mock('react', async (importOriginal) => ({
+  ...(await importOriginal<typeof React>()),
+  useEffect: (effect: () => void) => {
+    mocks.effects.push(effect)
+  },
 }))
 vi.mock('@ai-sdk/react', () => ({
-  useChat: (options: { onToolCall: (event: unknown) => void }) => {
+  useChat: (options: {
+    onToolCall: (event: unknown) => void
+    onFinish: () => void
+    onError: () => void
+  }) => {
     mocks.onToolCall = options.onToolCall
+    mocks.onFinish = options.onFinish
+    mocks.onError = options.onError
     return {
       messages: mocks.messages,
-      status: 'ready',
+      status: mocks.status,
       addToolOutput: mocks.output,
       setMessages: vi.fn(),
       stop: vi.fn(),
@@ -40,6 +58,9 @@ vi.mock('@doscientos/ui', () => ({
   },
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
+}))
 vi.mock('@/features/auth', () => ({
   useSession: () => ({ role: 'admin' }),
   can: (role: string) => role === 'admin',
@@ -64,11 +85,17 @@ import { AiChatPanel } from './chat-panel'
 
 beforeEach(() => {
   mocks.messages = []
+  mocks.effects = []
+  mocks.status = 'ready'
   mocks.buttons.clear()
   vi.clearAllMocks()
 })
 
-function render(onCreateClient = vi.fn(), target: DraftTarget | null = null) {
+function render(
+  onCreateClient = vi.fn(),
+  target: DraftTarget | null = null,
+  onClientProgress = vi.fn(),
+) {
   const html = renderToStaticMarkup(
     <AiChatPanel
       open
@@ -78,10 +105,11 @@ function render(onCreateClient = vi.fn(), target: DraftTarget | null = null) {
       tenantId="tenant"
       userId="user"
       onCreateClient={onCreateClient}
+      onClientProgress={onClientProgress}
       target={target}
     />,
   )
-  return { html, onCreateClient }
+  return { html, onCreateClient, onClientProgress }
 }
 
 it('returns matching real records to the model when it requests a search', () => {
@@ -98,6 +126,40 @@ it('returns matching real records to the model when it requests a search', () =>
     toolCallId: 'call1',
     output: { type: 'clientes', matches: [{ id: 'client-id', name: 'Marta' }] },
   })
+})
+
+it('refreshes the credit balance after successful and failed model calls', () => {
+  render()
+  mocks.onFinish?.()
+  mocks.onError?.()
+  expect(mocks.invalidate).toHaveBeenCalledTimes(2)
+  expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['ai-credits', 'tenant', 'user'] })
+})
+
+it('opens and updates the client form from actual partial tool input without repeating updates', () => {
+  mocks.status = 'streaming'
+  const part = {
+    type: 'tool-proponer_cliente',
+    toolCallId: 'call',
+    state: 'input-streaming',
+    input: { name: 'Mar' },
+  }
+  mocks.messages = [{ id: 'a', role: 'assistant', parts: [part] }]
+  const { onClientProgress } = render()
+  mocks.effects.forEach((effect) => effect())
+  expect(onClientProgress).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'call', values: { name: 'Mar' }, streaming: true }),
+  )
+  part.input = { name: 'Marta' }
+  mocks.effects.forEach((effect) => effect())
+  expect(onClientProgress).toHaveBeenLastCalledWith(
+    expect.objectContaining({ values: { name: 'Marta' }, streaming: true }),
+  )
+  mocks.effects.forEach((effect) => effect())
+  expect(onClientProgress).toHaveBeenCalledTimes(2)
+  part.state = 'output-available'
+  mocks.effects.forEach((effect) => effect())
+  expect(onClientProgress).toHaveBeenLastCalledWith(expect.objectContaining({ streaming: false }))
 })
 
 it('shows proposed client data and opens the real form only on confirmation', () => {

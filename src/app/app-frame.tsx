@@ -15,9 +15,9 @@ import {
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-import { AiChatProvider, type ClientProposal } from '@/features/ai'
+import { AiChatProvider, type ClientProgress } from '@/features/ai'
 import {
   can,
   CompanyDialog,
@@ -147,7 +147,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { switchTo } = useCompanyActions()
   const [creatingCompany, setCreatingCompany] = useState(false)
-  const [clientProposal, setClientProposal] = useState<ClientProposal | null>(null)
+  const proposalScope = `${tenant.id}:${session?.userId ?? ''}`
+  const [clientProposal, setClientProposal] = useState<
+    (ClientProgress & { live: boolean; scope: string }) | null
+  >(null)
+  const dismissedProposals = useRef(new Set<string>())
+  useEffect(() => {
+    dismissedProposals.current.clear()
+    setClientProposal((current) => (current?.scope === proposalScope ? current : null))
+  }, [proposalScope])
+  const activeProposal = clientProposal?.scope === proposalScope ? clientProposal : null
   const [searchMode, setSearchMode] = useState<SearchMode>(null)
   const [headingTarget, setHeadingTarget] = useState<HTMLDivElement | null>(null)
   const [tabsTarget, setTabsTarget] = useState<HTMLDivElement | null>(null)
@@ -264,7 +273,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       tenantId={tenant.id}
       userId={session?.userId ?? ''}
       onCreateClient={(proposal) => {
-        if (can(session?.role, 'clients:write')) setClientProposal(proposal)
+        if (can(session?.role, 'clients:write'))
+          setClientProposal({
+            id: 'manual',
+            values: proposal,
+            streaming: false,
+            stop: () => {},
+            live: false,
+            scope: proposalScope,
+          })
+      }}
+      onClientProgress={(progress) => {
+        if (!can(session?.role, 'clients:write') || dismissedProposals.current.has(progress.id))
+          return
+        setClientProposal((current) =>
+          current?.scope === proposalScope && current.id !== progress.id
+            ? current
+            : { ...progress, live: true, scope: proposalScope },
+        )
       }}
     >
       <WorkspaceChromeContext.Provider value={{ heading: headingTarget, tabs: tabsTarget }}>
@@ -431,19 +457,28 @@ export function AppFrame({ children }: { children: ReactNode }) {
           />
           <CompanyDialog open={creatingCompany} onClose={() => setCreatingCompany(false)} />
           <ClientFormDialog
-            open={clientProposal !== null}
+            open={activeProposal !== null}
             initialValues={
-              clientProposal
+              activeProposal && !activeProposal.live
                 ? {
-                    name: clientProposal.name,
-                    taxId: clientProposal.taxId ?? '',
-                    email: clientProposal.email ?? '',
-                    phone: clientProposal.phone ?? '',
-                    address: clientProposal.address ?? '',
+                    name: activeProposal.values.name ?? '',
+                    taxId: activeProposal.values.taxId ?? '',
+                    email: activeProposal.values.email ?? '',
+                    phone: activeProposal.values.phone ?? '',
+                    address: activeProposal.values.address ?? '',
                   }
                 : {}
             }
-            onClose={() => setClientProposal(null)}
+            assistantValues={activeProposal?.live ? activeProposal.values : undefined}
+            assistantStreaming={activeProposal?.streaming ?? false}
+            onStopAssistant={activeProposal?.stop}
+            onClose={() => {
+              if (activeProposal) {
+                dismissedProposals.current.add(activeProposal.id)
+                if (activeProposal.streaming) activeProposal.stop()
+              }
+              setClientProposal(null)
+            }}
             onSaved={(clientId) =>
               void navigate({ to: '/clientes/$clientId', params: { clientId } })
             }

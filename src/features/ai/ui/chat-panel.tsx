@@ -3,6 +3,7 @@ import { useAISDKRuntime } from '@assistant-ui/ai-sdk'
 import { AssistantRuntimeProvider, ComposerPrimitive } from '@assistant-ui/react'
 import { Button } from '@doscientos/ui'
 import { Sparkle, X } from '@phosphor-icons/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -14,12 +15,13 @@ import { newId, useTenantData } from '@/shared/store/store'
 import { useAiAccess } from '../application/ai-access'
 import {
   clientProposalSchema,
+  clientProposalProgressSchema,
   estimateDraftProposalSchema,
   searchRecordsSchema,
   type ClientProposal,
 } from '../domain/chat-tools'
 import { appendEstimateSuggestion, estimateSuggestionSchema } from '../domain/suggestions'
-import type { DraftTarget } from './chat-context'
+import type { ClientProgress, DraftTarget } from './chat-context'
 import { EstimateSuggestionPreview } from './estimate-suggestion-preview'
 
 export function AiChatPanel({
@@ -30,6 +32,7 @@ export function AiChatPanel({
   tenantId,
   userId,
   onCreateClient,
+  onClientProgress,
   target,
 }: {
   open: boolean
@@ -39,9 +42,11 @@ export function AiChatPanel({
   tenantId: string
   userId: string
   onCreateClient: (proposal: ClientProposal) => void
+  onClientProgress: (progress: ClientProgress) => void
   target: DraftTarget | null
 }) {
   const access = useAiAccess(tenantId, userId)
+  const queryClient = useQueryClient()
   const data = useTenantData()
   const session = useSession()
   const [applied, setApplied] = useState<Set<string>>(() => new Set())
@@ -49,6 +54,9 @@ export function AiChatPanel({
   const messagesRef = useRef<HTMLDivElement>(null)
   const latest = useRef(data)
   const targetRef = useRef(target)
+  const clientProgress = useRef(
+    new Map<string, { fingerprint: string; values: ClientProgress['values'] }>(),
+  )
   useEffect(() => {
     latest.current = data
     targetRef.current = target
@@ -105,6 +113,12 @@ export function AiChatPanel({
   )
   const chat = useChat({
     transport,
+    onFinish: () => {
+      void queryClient.invalidateQueries({ queryKey: ['ai-credits', tenantId, userId] })
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ['ai-credits', tenantId, userId] })
+    },
     sendAutomaticallyWhen: ({ messages }) => {
       const parts = messages.at(-1)?.parts ?? []
       const sinceUser = [...messages].reverse().findIndex((message) => message.role === 'user')
@@ -185,6 +199,7 @@ export function AiChatPanel({
   })
   const runtime = useAISDKRuntime(chat)
   const stop = chat.stop
+  const busy = chat.status === 'streaming' || chat.status === 'submitted'
   useEffect(
     () => () => {
       void stop()
@@ -200,9 +215,33 @@ export function AiChatPanel({
     runtime.thread.composer.setText(prompt)
     onPromptUsed()
   }, [prompt, runtime, onPromptUsed])
+  useEffect(() => {
+    if (!access.data || !can(session?.role, 'clients:write')) return
+    const message = chat.messages.at(-1)
+    if (message?.role !== 'assistant') return
+    for (const part of message.parts) {
+      if (part.type !== 'tool-proponer_cliente') continue
+      const previous = clientProgress.current.get(part.toolCallId)
+      if (!open && !previous) continue
+      const parsed = clientProposalProgressSchema.safeParse(part.input)
+      const values = parsed.success ? parsed.data : previous?.values
+      if (!values) continue
+      const streaming = busy && part.state === 'input-streaming'
+      const fingerprint = JSON.stringify({ values, streaming })
+      if (previous?.fingerprint === fingerprint) continue
+      clientProgress.current.set(part.toolCallId, { fingerprint, values })
+      onClientProgress({
+        id: part.toolCallId,
+        values,
+        streaming,
+        stop: () => {
+          void stop()
+        },
+      })
+    }
+  }, [chat.messages, busy, onClientProgress, session?.role, stop, access.data, open])
 
   if (!access.data) return null
-  const busy = chat.status === 'streaming' || chat.status === 'submitted'
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       {!open ? (
@@ -485,6 +524,7 @@ export function AiChatPanel({
                   onPress={() => {
                     chat.setMessages([])
                     setApplied(new Set())
+                    clientProgress.current.clear()
                     setApplyError('')
                   }}
                   isDisabled={busy}

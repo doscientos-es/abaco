@@ -1,5 +1,6 @@
 export { useAiAccess } from './application/ai-access'
 export type { ClientProposal } from './domain/chat-tools'
+export type { ClientProgress } from './ui/chat-context'
 export {
   applyReceiptSuggestion,
   resetReceiptAutofill,

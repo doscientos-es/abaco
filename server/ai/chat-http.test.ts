@@ -132,4 +132,11 @@ describe('chat HTTP boundary', () => {
     expect(await response.text()).toContain('Hola')
     expect(stream).toHaveBeenCalledOnce()
   })
+
+  it('reserves a separate credit for each model call, including the search continuation', async () => {
+    expect((await invoke()).status).toBe(200)
+    expect((await invoke()).status).toBe(200)
+    expect(reserve).toHaveBeenCalledTimes(2)
+    expect(stream).toHaveBeenCalledTimes(2)
+  })
 })

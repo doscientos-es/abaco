@@ -2,13 +2,19 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 
 import type { Estimate } from '@/shared/domain/types'
 
-import type { ClientProposal } from '../domain/chat-tools'
+import type { ClientProposal, ClientProposalProgress } from '../domain/chat-tools'
 import { AiChatPanel } from './chat-panel'
 
 export type DraftTarget = {
   estimate: Estimate
   apply: (patch: Partial<Estimate>) => void
   isNew: boolean
+}
+export type ClientProgress = {
+  id: string
+  values: ClientProposalProgress
+  streaming: boolean
+  stop: () => void
 }
 type ChatContextValue = {
   open: (prompt?: string) => void
@@ -27,11 +33,13 @@ export function AiChatProvider({
   tenantId,
   userId,
   onCreateClient,
+  onClientProgress,
 }: {
   children: ReactNode
   tenantId: string
   userId: string
   onCreateClient: (proposal: ClientProposal) => void
+  onClientProgress: (progress: ClientProgress) => void
 }) {
   const [open, setOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
@@ -68,6 +76,7 @@ export function AiChatProvider({
         tenantId={tenantId}
         userId={userId}
         onCreateClient={onCreateClient}
+        onClientProgress={onClientProgress}
         target={estimate}
       />
     </ChatContext.Provider>

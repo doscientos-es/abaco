@@ -16,6 +16,11 @@ export const clientProposalSchema = z.object({
   address: z.string().max(formLimits.address).nullable(),
 })
 
+// Tool arguments arrive incrementally and may contain an unfinished name.
+export const clientProposalProgressSchema = clientProposalSchema.partial().extend({
+  name: z.string().max(formLimits.clientName).optional(),
+})
+
 export const estimateProposalSchema = estimateSuggestionSchema
 
 export const estimateDraftProposalSchema = z
@@ -27,3 +32,4 @@ export const estimateDraftProposalSchema = z
   .strict()
 
 export type ClientProposal = z.infer<typeof clientProposalSchema>
+export type ClientProposalProgress = z.infer<typeof clientProposalProgressSchema>

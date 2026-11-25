@@ -8,6 +8,7 @@ import type { ServiceLocation } from '../domain/client-location'
 const mocks = vi.hoisted(() => ({
   states: [] as unknown[],
   cursor: 0,
+  effects: [] as Array<() => void>,
   fields: new Map<string, (value: string) => void>(),
   submit: null as null | (() => void),
   blocker: null as null | { shouldBlockFn: () => boolean; enableBeforeUnload: () => boolean },
@@ -36,6 +37,9 @@ vi.mock('react', async (importOriginal) => ({
     const index = mocks.cursor++
     if (!(index in mocks.states)) mocks.states[index] = { current: initial }
     return mocks.states[index]
+  },
+  useEffect: (effect: () => void) => {
+    mocks.effects.push(effect)
   },
   useState: (initial: unknown) => {
     const index = mocks.cursor++
@@ -157,13 +161,18 @@ function render(
   variant: 'page' | 'dialog',
   client = null as React.ComponentProps<typeof ClientForm>['client'],
   initialValues?: React.ComponentProps<typeof ClientForm>['initialValues'],
+  assistantValues?: React.ComponentProps<typeof ClientForm>['assistantValues'],
+  assistantStreaming = false,
 ) {
   mocks.cursor = 0
+  mocks.effects = []
   return renderToStaticMarkup(
     <ClientForm
       variant={variant}
       client={client ?? null}
       {...(initialValues ? { initialValues } : {})}
+      assistantValues={assistantValues}
+      assistantStreaming={assistantStreaming}
       onClose={mocks.close}
       onSaved={mocks.saved}
     />,
@@ -200,6 +209,22 @@ beforeEach(() => {
 })
 
 describe('client form', () => {
+  it('updates streamed fields without overwriting edits or allowing submission during streaming', async () => {
+    render('dialog', null, undefined, { name: 'Mar' }, true)
+    mocks.effects.forEach((effect) => effect())
+    render('dialog', null, undefined, { name: 'Mar' }, true)
+    mocks.submit?.()
+    expect(mocks.create).not.toHaveBeenCalled()
+    mocks.fields.get('Nombre')?.('Manuel')
+    render('dialog', null, undefined, { name: 'Marta', email: 'marta@example.test' }, false)
+    mocks.effects.forEach((effect) => effect())
+    render('dialog', null, undefined, { name: 'Marta', email: 'marta@example.test' }, false)
+    mocks.submit?.()
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Manuel', email: 'marta@example.test' }),
+    )
+    await vi.waitFor(() => expect(mocks.saved).toHaveBeenCalledWith('new-client'))
+  })
   it('reviews proposed client data without saving until the user submits', async () => {
     render('dialog', null, { name: 'Marta', email: 'marta@example.test' })
     expect(mocks.create).not.toHaveBeenCalled()
