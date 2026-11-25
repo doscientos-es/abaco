@@ -13,6 +13,7 @@ import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { newId, useTenantData } from '@/shared/store/store'
 
 import { useAiAccess, useAiCredits } from '../application/ai-access'
+import { chatContextWindow } from '../application/chat-context-window'
 import {
   clientProposalSchema,
   clientProposalProgressSchema,
@@ -33,6 +34,7 @@ export function AiChatPanel({
   userId,
   onCreateClient,
   onClientProgress,
+  completedClientProposalId,
   target,
 }: {
   open: boolean
@@ -41,8 +43,9 @@ export function AiChatPanel({
   onPromptUsed: () => void
   tenantId: string
   userId: string
-  onCreateClient: (proposal: ClientProposal) => void
+  onCreateClient: (proposal: ClientProposal, proposalId: string) => void
   onClientProgress: (progress: ClientProgress) => void
+  completedClientProposalId: string | null
   target: DraftTarget | null
 }) {
   const access = useAiAccess(tenantId, userId)
@@ -55,6 +58,7 @@ export function AiChatPanel({
   const messagesRef = useRef<HTMLDivElement>(null)
   const latest = useRef(data)
   const targetRef = useRef(target)
+  const completedProposals = useRef(new Set<string>())
   const clientProgress = useRef(
     new Map<string, { fingerprint: string; values: ClientProgress['values'] }>(),
   )
@@ -70,18 +74,7 @@ export function AiChatPanel({
         prepareSendMessagesRequest: async ({ messages }) => {
           const { data: session } = await createBrowserSupabaseClient().auth.getSession()
           if (!session.session) throw new Error('Tu sesión ha caducado. Vuelve a iniciar sesión.')
-          const recent = messages.slice(-20)
-          const fourthUserFromEnd = [...recent]
-            .reverse()
-            .reduce<{ count: number; index: number }>(
-              (found, message, index) =>
-                message.role === 'user' && found.count < 4
-                  ? { count: found.count + 1, index }
-                  : found,
-              { count: 0, index: recent.length - 1 },
-            )
-          const bounded = recent.slice(recent.length - 1 - fourthUserFromEnd.index)
-          const firstUser = bounded.findIndex((message) => message.role === 'user')
+          const bounded = chatContextWindow(messages, completedProposals.current)
           const estimate = targetRef.current?.estimate
           const context = estimate
             ? {
@@ -103,7 +96,7 @@ export function AiChatPanel({
           return {
             body: {
               tenantId,
-              messages: firstUser < 0 ? bounded : bounded.slice(firstUser),
+              messages: bounded,
               context,
             },
             headers: { Authorization: `Bearer ${session.session.access_token}` },
@@ -201,6 +194,9 @@ export function AiChatPanel({
   const runtime = useAISDKRuntime(chat)
   const stop = chat.stop
   const busy = chat.status === 'streaming' || chat.status === 'submitted'
+  useEffect(() => {
+    if (completedClientProposalId) completedProposals.current.add(completedClientProposalId)
+  }, [completedClientProposalId])
   useEffect(
     () => () => {
       void stop()
@@ -375,7 +371,7 @@ export function AiChatPanel({
                           isDisabled={!can(session?.role, 'clients:write')}
                           onPress={() => {
                             onOpenChange(false)
-                            onCreateClient(proposal.data)
+                            onCreateClient(proposal.data, part.toolCallId)
                           }}
                         >
                           Revisar formulario
@@ -474,6 +470,7 @@ export function AiChatPanel({
                               return
                             }
                             target.apply(patch)
+                            completedProposals.current.add(part.toolCallId)
                             setApplied((previous) => new Set(previous).add(part.toolCallId))
                             setApplyError('')
                           }}
@@ -526,6 +523,7 @@ export function AiChatPanel({
                     chat.setMessages([])
                     setApplied(new Set())
                     clientProgress.current.clear()
+                    completedProposals.current.clear()
                     setApplyError('')
                   }}
                   isDisabled={busy}

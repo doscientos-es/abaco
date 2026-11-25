@@ -34,12 +34,14 @@ export function AiChatProvider({
   userId,
   onCreateClient,
   onClientProgress,
+  completedClientProposalId,
 }: {
   children: ReactNode
   tenantId: string
   userId: string
-  onCreateClient: (proposal: ClientProposal) => void
+  onCreateClient: (proposal: ClientProposal, proposalId: string) => void
   onClientProgress: (progress: ClientProgress) => void
+  completedClientProposalId: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
@@ -77,6 +79,7 @@ export function AiChatProvider({
         userId={userId}
         onCreateClient={onCreateClient}
         onClientProgress={onClientProgress}
+        completedClientProposalId={completedClientProposalId}
         target={estimate}
       />
     </ChatContext.Provider>

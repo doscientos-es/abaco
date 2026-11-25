@@ -152,6 +152,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
     (ClientProgress & { live: boolean; scope: string }) | null
   >(null)
   const dismissedProposals = useRef(new Set<string>())
+  const [completedClientProposal, setCompletedClientProposal] = useState<{
+    id: string
+    scope: string
+  } | null>(null)
   useEffect(() => {
     dismissedProposals.current.clear()
     setClientProposal((current) => (current?.scope === proposalScope ? current : null))
@@ -272,10 +276,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
       key={`${tenant.id}:${session?.userId ?? ''}`}
       tenantId={tenant.id}
       userId={session?.userId ?? ''}
-      onCreateClient={(proposal) => {
+      completedClientProposalId={
+        completedClientProposal?.scope === proposalScope ? completedClientProposal.id : null
+      }
+      onCreateClient={(proposal, proposalId) => {
         if (can(session?.role, 'clients:write'))
           setClientProposal({
-            id: 'manual',
+            id: proposalId,
             values: proposal,
             streaming: false,
             stop: () => {},
@@ -479,9 +486,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
               }
               setClientProposal(null)
             }}
-            onSaved={(clientId) =>
+            onSaved={(clientId) => {
+              if (activeProposal)
+                setCompletedClientProposal({ id: activeProposal.id, scope: proposalScope })
               void navigate({ to: '/clientes/$clientId', params: { clientId } })
-            }
+            }}
           />
         </AppShell>
       </WorkspaceChromeContext.Provider>

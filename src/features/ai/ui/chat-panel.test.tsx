@@ -110,6 +110,7 @@ function render(
       userId="user"
       onCreateClient={onCreateClient}
       onClientProgress={onClientProgress}
+      completedClientProposalId={null}
       target={target}
     />,
   )
@@ -191,7 +192,7 @@ it('shows proposed client data and opens the real form only on confirmation', ()
   expect(html).toContain('Nuevo cliente: Marta')
   expect(onCreateClient).not.toHaveBeenCalled()
   mocks.buttons.get('Revisar formulario')?.()
-  expect(onCreateClient).toHaveBeenCalledWith(proposal)
+  expect(onCreateClient).toHaveBeenCalledWith(proposal, 'call')
 })
 
 it('only enables a new estimate proposal for an open new draft', () => {
