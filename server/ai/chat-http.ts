@@ -95,6 +95,8 @@ export function createChatHandler(dependencies: Dependencies) {
                     'tool-proponer_cliente',
                     'tool-proponer_edicion_cliente',
                     'tool-proponer_stock',
+                    'tool-proponer_materiales',
+                    'tool-proponer_precios_catalogo',
                     'tool-proponer_edicion_partida',
                     'tool-proponer_partidas',
                     'tool-proponer_presupuesto',

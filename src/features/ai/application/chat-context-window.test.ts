@@ -95,6 +95,8 @@ describe('chat context window', () => {
   it.each([
     'tool-proponer_edicion_cliente',
     'tool-proponer_stock',
+    'tool-proponer_materiales',
+    'tool-proponer_precios_catalogo',
     'tool-proponer_edicion_partida',
   ] as const)('retains and retires %s proposals', (type) => {
     const action: UIMessage = {

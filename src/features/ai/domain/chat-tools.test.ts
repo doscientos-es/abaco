@@ -4,6 +4,8 @@ import type { Estimate } from '@/shared/domain/types'
 
 import {
   applyEstimateLineEdit,
+  catalogCreateProposalSchema,
+  catalogPriceProposalSchema,
   estimateLineEditSchema,
   inventoryProposalSchema,
 } from './chat-tools'
@@ -34,6 +36,22 @@ const proposal = {
 }
 
 describe('AI edit proposals', () => {
+  it('validates material batches and percentage ranges without inventing missing prices', () => {
+    const item = { name: 'Cemento', sku: null, category: null, unit: null, unitPriceCents: null }
+    expect(catalogCreateProposalSchema.safeParse({ items: [item] }).success).toBe(true)
+    expect(catalogCreateProposalSchema.safeParse({ items: [] }).success).toBe(false)
+    expect(
+      catalogCreateProposalSchema.safeParse({ items: [{ ...item, unitPriceCents: -1 }] }).success,
+    ).toBe(false)
+    expect(
+      catalogPriceProposalSchema.safeParse({ basisPoints: -10001, kind: 'all', category: null })
+        .success,
+    ).toBe(false)
+    expect(
+      catalogPriceProposalSchema.safeParse({ basisPoints: 200, kind: 'material', category: null })
+        .success,
+    ).toBe(true)
+  })
   it('only changes requested fields on the matching draft line', () => {
     expect(applyEstimateLineEdit(estimate, proposal)?.lines).toEqual([
       { ...estimate.lines[0], quantity: 3 },

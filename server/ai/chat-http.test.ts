@@ -147,6 +147,11 @@ describe('chat HTTP boundary', () => {
     ],
     ['proponer_stock', { catalogItemId: tenantId, quantity: 2.5 }],
     [
+      'proponer_materiales',
+      { items: [{ name: 'Cemento', sku: null, category: null, unit: null, unitPriceCents: null }] },
+    ],
+    ['proponer_precios_catalogo', { basisPoints: 200, kind: 'all', category: null }],
+    [
       'proponer_edicion_partida',
       {
         estimateId: tenantId,

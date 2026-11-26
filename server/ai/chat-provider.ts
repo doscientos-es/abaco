@@ -3,6 +3,8 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { convertToModelMessages, streamText, type UIMessage } from 'ai'
 
 import {
+  catalogCreateProposalSchema,
+  catalogPriceProposalSchema,
   clientProposalSchema,
   clientEditProposalSchema,
   estimateDraftProposalSchema,
@@ -34,6 +36,14 @@ export const chatTools = {
       'Prepara una cantidad absoluta de stock para revisar en el formulario; nunca guarda datos.',
     inputSchema: inventoryProposalSchema,
   },
+  proponer_materiales: {
+    description: 'Prepara hasta 60 materiales nuevos para revisión, sin guardarlos.',
+    inputSchema: catalogCreateProposalSchema,
+  },
+  proponer_precios_catalogo: {
+    description: 'Prepara una variación porcentual de precios para revisión, sin aplicar cambios.',
+    inputSchema: catalogPriceProposalSchema,
+  },
   proponer_edicion_partida: {
     description:
       'Prepara cambios en una partida del presupuesto abierto. Usa null para conservar los campos no modificados.',
@@ -58,6 +68,8 @@ Para buscar presupuestos de un cliente, busca primero el cliente y filtra con su
 El inventario sin registro de stock está sin controlar, no equivale a cero. Para editar stock busca el material y usa proponer_stock con la cantidad final explícita; pregunta si falta o es ambigua.
 Para editar un cliente busca su id y usa proponer_edicion_cliente; usa null para los campos que no se cambian. No inventes datos.
 Para crear un cliente usa proponer_cliente con los datos conocidos y null para los que falten.
+Para crear materiales usa proponer_materiales con los datos del texto, sin inventar precios: usa null para lo desconocido. El usuario podrá completar los precios en la revisión. Como máximo 60 por propuesta; si hay más, divídelos e indica que debe revisar cada propuesta.
+Para variar precios del catálogo usa proponer_precios_catalogo; basisPoints es el porcentaje multiplicado por 100 (subir 2% = 200, bajar 2% = -200). kind=all incluye material, mano de obra y otros; usa material si pide solo materiales. category es null salvo que se solicite una categoría exacta. Si el alcance es ambiguo, pregunta. La aplicación consultará el catálogo completo al revisar; no enumeres una búsqueda parcial como si fuera completa.
 Para presupuestos usa proponer_partidas; pregunta por cantidades y precios ausentes, nunca los inventes.
 Para modificar una partida del presupuesto abierto usa proponer_edicion_partida con los ids del contexto y solo los cambios solicitados; null conserva el valor. No alteres importes o cantidades no indicados.
 Si se pide un presupuesto nuevo, busca el cliente y usa proponer_presupuesto con el id encontrado y el título conocido; usa null si no se conocen.
@@ -88,7 +100,7 @@ export async function streamChat(
       ignoreIncompleteToolCalls: true,
     }),
     tools: chatTools,
-    maxOutputTokens: 1500,
+    maxOutputTokens: 6000,
     maxRetries: 0,
     abortSignal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
     providerOptions: config.provider === 'openai' ? { openai: { store: false } } : {},

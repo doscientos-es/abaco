@@ -18,6 +18,8 @@ import { useAiAccess, useAiCredits } from '../application/ai-access'
 import { chatContextWindow, pendingContextLimitMessage } from '../application/chat-context-window'
 import { searchRecords } from '../application/search-records'
 import {
+  catalogCreateProposalSchema,
+  catalogPriceProposalSchema,
   clientProposalSchema,
   clientProposalProgressSchema,
   clientEditProposalSchema,
@@ -29,6 +31,7 @@ import {
   type ClientProposal,
 } from '../domain/chat-tools'
 import { appendEstimateSuggestion, estimateSuggestionSchema } from '../domain/suggestions'
+import { CatalogBatchProposal } from './catalog-batch-proposal'
 import type { ClientProgress, DraftTarget } from './chat-context'
 import { EstimateSuggestionPreview } from './estimate-suggestion-preview'
 import { RecordProposal } from './record-proposal'
@@ -139,6 +142,8 @@ export function AiChatPanel({
             part.type === 'tool-proponer_cliente' ||
             part.type === 'tool-proponer_edicion_cliente' ||
             part.type === 'tool-proponer_stock' ||
+            part.type === 'tool-proponer_materiales' ||
+            part.type === 'tool-proponer_precios_catalogo' ||
             part.type === 'tool-proponer_edicion_partida' ||
             part.type === 'tool-proponer_partidas' ||
             part.type === 'tool-proponer_presupuesto',
@@ -151,6 +156,8 @@ export function AiChatPanel({
         toolCall.toolName === 'proponer_cliente' ||
         toolCall.toolName === 'proponer_edicion_cliente' ||
         toolCall.toolName === 'proponer_stock' ||
+        toolCall.toolName === 'proponer_materiales' ||
+        toolCall.toolName === 'proponer_precios_catalogo' ||
         toolCall.toolName === 'proponer_edicion_partida' ||
         toolCall.toolName === 'proponer_partidas' ||
         toolCall.toolName === 'proponer_presupuesto'
@@ -353,6 +360,48 @@ export function AiChatPanel({
                         {result.truncated ? <p>Hay más resultados; concreta la búsqueda.</p> : null}
                       </div>
                     )
+                  }
+                  if (
+                    (part.type === 'tool-proponer_materiales' ||
+                      part.type === 'tool-proponer_precios_catalogo') &&
+                    part.state === 'input-streaming'
+                  ) {
+                    return (
+                      <output key={index} className="text-muted-foreground block text-sm">
+                        Preparando la propuesta del catálogo…
+                      </output>
+                    )
+                  }
+                  if (
+                    (part.type === 'tool-proponer_materiales' ||
+                      part.type === 'tool-proponer_precios_catalogo') &&
+                    (part.state === 'input-available' || part.state === 'output-available')
+                  ) {
+                    const creation =
+                      part.type === 'tool-proponer_materiales'
+                        ? catalogCreateProposalSchema.safeParse(part.input)
+                        : null
+                    const prices =
+                      part.type === 'tool-proponer_precios_catalogo'
+                        ? catalogPriceProposalSchema.safeParse(part.input)
+                        : null
+                    const proposal = creation?.success
+                      ? { type: 'create' as const, value: creation.data }
+                      : prices?.success
+                        ? { type: 'prices' as const, value: prices.data }
+                        : null
+                    return proposal ? (
+                      <CatalogBatchProposal
+                        key={index}
+                        proposal={proposal}
+                        tenantId={tenantId}
+                        enabled={!applied.has(part.toolCallId)}
+                        onAttempt={() => {
+                          completedProposals.current.add(part.toolCallId)
+                          setApplied((previous) => new Set(previous).add(part.toolCallId))
+                        }}
+                      />
+                    ) : null
                   }
                   if (
                     (part.type === 'tool-proponer_edicion_cliente' ||

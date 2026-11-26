@@ -26,6 +26,8 @@ export function chatContextWindow(
         part.type !== 'tool-proponer_cliente' &&
         part.type !== 'tool-proponer_edicion_cliente' &&
         part.type !== 'tool-proponer_stock' &&
+        part.type !== 'tool-proponer_materiales' &&
+        part.type !== 'tool-proponer_precios_catalogo' &&
         part.type !== 'tool-proponer_edicion_partida' &&
         part.type !== 'tool-proponer_partidas' &&
         part.type !== 'tool-proponer_presupuesto'
@@ -69,6 +71,8 @@ export function chatContextWindow(
         (part.type === 'tool-proponer_cliente' ||
           part.type === 'tool-proponer_edicion_cliente' ||
           part.type === 'tool-proponer_stock' ||
+          part.type === 'tool-proponer_materiales' ||
+          part.type === 'tool-proponer_precios_catalogo' ||
           part.type === 'tool-proponer_edicion_partida' ||
           part.type === 'tool-proponer_partidas' ||
           part.type === 'tool-proponer_presupuesto') &&

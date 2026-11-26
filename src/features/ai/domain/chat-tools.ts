@@ -35,6 +35,33 @@ export const inventoryProposalSchema = z.object({
   quantity: z.number().finite().min(0).max(999999999.999).multipleOf(0.001),
 })
 
+export const catalogCreateProposalSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(formLimits.catalogName),
+        sku: z.string().trim().max(formLimits.sku).nullable(),
+        category: z.string().trim().max(formLimits.category).nullable(),
+        unit: z.string().trim().min(1).max(formLimits.unit).nullable(),
+        unitPriceCents: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(formLimits.monetaryAmount * 100)
+          .nullable(),
+      }),
+    )
+    .min(1)
+    .max(60),
+})
+
+export const catalogPriceProposalSchema = z.object({
+  // 100 basis points = 1%; negative values reduce prices.
+  basisPoints: z.number().int().min(-10000).max(100000),
+  kind: z.enum(['all', 'material', 'labor', 'other']),
+  category: z.string().trim().min(1).max(formLimits.category).nullable(),
+})
+
 export const estimateLineEditSchema = z.object({
   estimateId: z.string().uuid(),
   lineId: z.string().uuid(),
