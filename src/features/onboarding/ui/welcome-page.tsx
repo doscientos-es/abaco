@@ -66,7 +66,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <img src="/abaco-logo.svg" alt="Ábaco" className="h-12 w-auto" />
+            <span className="text-xl font-bold tracking-tight">Menoslios</span>
             <div className="flex flex-wrap items-center gap-2">
               {otherCompanies.length ? (
                 <label className="text-sm">
@@ -96,7 +96,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
           <div>
             <p className="text-primary text-sm font-semibold">Tu empresa, lista para empezar</p>
             <h1 className="text-foreground mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-              Configura tu Ábaco
+              Configura Menoslios
             </h1>
           </div>
           <ol
@@ -147,7 +147,9 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
         {stage === 'billing_issue' ? (
           <section className="bg-card border-border space-y-3 rounded-2xl border p-6">
             <h2 className="text-xl font-semibold">Necesitamos revisar tu suscripción</h2>
-            <p>Contacta con Ábaco para recuperar tu alta. No repitas el pago mientras se revisa.</p>
+            <p>
+              Contacta con Menoslios para recuperar tu alta. No repitas el pago mientras se revisa.
+            </p>
             <Button variant="outline" onPress={() => void status.refetch()}>
               Comprobar estado
             </Button>
@@ -187,7 +189,7 @@ function BookingStep({
       {url ? (
         <>
           <p className="text-muted-foreground text-sm">
-            Reserva con <strong>{email}</strong>. Si Cal.com no rellena la referencia de Ábaco,
+            Reserva con <strong>{email}</strong>. Si Cal.com no rellena la referencia de Menoslios,
             copia este código:
           </p>
           <code className="bg-muted block w-fit rounded px-2 py-1 text-xs break-all sm:text-sm">
@@ -209,8 +211,8 @@ function BookingStep({
         </>
       ) : (
         <p role="alert">
-          No se puede abrir la agenda con esta cuenta. Contacta con Ábaco para completar la reserva
-          sin volver a pagar.
+          No se puede abrir la agenda con esta cuenta. Contacta con Menoslios para completar la
+          reserva sin volver a pagar.
         </p>
       )}
       <p className="text-muted-foreground text-sm">

@@ -238,7 +238,7 @@ const products = [
     await page.getByRole('button', { name: 'Crear una empresa' }).click()
     await page.getByRole('textbox', { name: 'Nombre de la empresa' }).fill('Empresa de pruebas')
     await page.getByRole('button', { name: 'Crear empresa', exact: true }).click()
-    await page.getByRole('heading', { name: 'Configura tu Ábaco' }).waitFor()
+    await page.getByRole('heading', { name: 'Configura Menoslios' }).waitFor()
     await page.getByRole('checkbox', { name: 'Añadir Trabajadores' }).check()
     await page.getByRole('checkbox', { name: 'Añadir Asistente de IA' }).check()
     await page.getByText('Ver qué incluye').first().click()

@@ -3,8 +3,8 @@ create schema auth; create schema app_private;
 grant usage on schema auth to authenticated;
 create function auth.uid() returns uuid language sql as
   $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
-create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb);
-insert into auth.users values ('00000000-0000-4000-8000-000000000001','owner@example.test','{}'), ('00000000-0000-4000-8000-000000000002','other@example.test','{}');
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb, email_confirmed_at timestamptz default now());
+insert into auth.users (id,email,raw_user_meta_data) values ('00000000-0000-4000-8000-000000000001','owner@example.test','{}'), ('00000000-0000-4000-8000-000000000002','other@example.test','{}');
 create table public.tenants (
   id uuid primary key default gen_random_uuid(), name text, trial_ends_at timestamptz default now() + interval '14 days',
   subscription_status text default 'trialing', current_period_end timestamptz, is_complimentary boolean default false,
@@ -15,7 +15,7 @@ create table public.memberships (tenant_id uuid, user_id uuid, role text, create
 create table app_private.referral_codes (tenant_id uuid, code text);
 create table app_private.referral_attributions (tenant_id uuid, referrer_id uuid);
 create table public.billing_payments (id uuid default gen_random_uuid(), tenant_id uuid, kind text,
-  status text, created_at timestamptz default now(), merchant_order text);
+  status text, created_at timestamptz default now(), merchant_order text, period text, seats integer);
 create table public.billing_module_catalog (code text primary key,status text,monthly_cents int,yearly_cents int);
 insert into public.billing_module_catalog values ('workers','pilot',900,9000),('supplier_logistics','planned',2900,29000);
 create table public.tenant_modules (tenant_id uuid,module_code text,enabled bool,next_enabled bool,monthly_cents int,
@@ -39,8 +39,8 @@ begin
     or not exists(select 1 from public.tenant_modules where tenant_id=tenant
       and module_code='workers' and next_enabled and monthly_cents=900) then raise exception 'invalid quote';
   end if;
-  insert into public.billing_payments(tenant_id,kind,status,merchant_order)
-    values(tenant,'first','pending',order_id);
+  insert into public.billing_payments(tenant_id,kind,status,merchant_order,period,seats)
+    values(tenant,'first','pending',order_id,period,seats);
   return total;
 end $$;
 

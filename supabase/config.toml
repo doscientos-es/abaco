@@ -68,3 +68,6 @@ verify_jwt = false
 # Cal.com authenticates bookings with a dedicated HMAC secret.
 [functions.onboarding-cal-webhook]
 verify_jwt = false
+
+[functions.menoslios-crm]
+verify_jwt = false

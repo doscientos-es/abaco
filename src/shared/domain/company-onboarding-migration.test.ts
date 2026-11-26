@@ -25,6 +25,20 @@ describe('guided company onboarding persistence', () => {
         'utf8',
       ),
     )
+    // PGlite doesn't ship pg_cron, pg_net, or Vault. Their server adapter is not invoked here.
+    await db.exec(`
+      create schema cron;
+      create function cron.schedule(text,text,text) returns int language sql as $$ select 1 $$;
+    `)
+    await db.exec(
+      await readFile(
+        new URL(
+          '../../../supabase/migrations/20261126201500_menoslios_crm_outbox.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
   }, 30000)
 
   afterAll(async () => db.close())
@@ -65,6 +79,38 @@ describe('guided company onboarding persistence', () => {
         [tenant, actor, total],
       )
 
+    const claim = async () =>
+      (
+        await db.query<{ id: string; lease_id: string; payload: unknown }>(
+          'select * from public.claim_menoslios_crm_event()',
+        )
+      ).rows[0]!
+    const finish = (job: { id: string; lease_id: string }, delivered: boolean) =>
+      db.query('select public.finish_menoslios_crm_event($1,$2,$3)', [
+        job.id,
+        job.lease_id,
+        delivered,
+      ])
+    await db.exec('set role authenticated')
+    await expect(claim()).rejects.toThrow('permission denied')
+    await db.exec('reset role')
+    const registration = await claim()
+    expect(registration.payload).toEqual({
+      tenantId: tenant,
+      kind: 'registration',
+      company: 'Empresa ficticia',
+      name: 'Empresa ficticia',
+      email: 'owner@example.test',
+      booking: null,
+    })
+    await finish(registration, false)
+    expect(await claim()).toBeUndefined()
+    await db.exec('update app_private.menoslios_crm_outbox set due_at=now()')
+    const retry = await claim()
+    expect(retry.id).toBe(registration.id)
+    expect(retry.lease_id).not.toBe(registration.lease_id)
+    await finish(retry, true)
+
     expect(await access(legacy)).toBe(true)
     expect(await access(tenant)).toBe(false)
     expect(await state()).toMatchObject({ stage: 'selection', booking_reference: null })
@@ -93,8 +139,17 @@ describe('guided company onboarding persistence', () => {
     await setActor(other)
     await expect(state()).rejects.toThrow('No autorizado')
     await setActor(owner)
+    await db.exec("update public.tenant_modules set enabled=true where module_code='workers'")
     expect(await book('owner@example.test')).toBe(true)
     expect(await book('owner@example.test')).toBe(false)
+    const meeting = await claim()
+    expect(meeting.payload).toMatchObject({
+      tenantId: tenant,
+      kind: 'booking',
+      booking: { seats: 1, interval: 'month', modules: ['workers'] },
+    })
+    await finish(meeting, true)
+    expect(await claim()).toBeUndefined()
     expect(await access(tenant)).toBe(true)
     expect(await state()).toMatchObject({ stage: 'complete', booking_reference: null })
     await db.exec('set role authenticated')

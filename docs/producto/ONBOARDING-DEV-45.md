@@ -66,3 +66,22 @@ directamente por Superadmin no reciben el nuevo requisito. No se cambia su plan 
   de herramientas separada. El guion abre Chromium, prueba el alta, declina y confirma
   pagos de ficción, verifica la firma de agenda, materializa el resultado en PGlite y
   confirma el acceso de cortesía por separado. No necesita credenciales ni Docker.
+
+## Menoslios: alta CRM y contexto para Gerard
+
+El alta confirmada de una empresa nueva genera un trabajo persistente de tipo
+`registration`. Una reserva firmada, del evento configurado y del correo del
+administrador de una empresa de pago genera un trabajo `booking`. La cola no
+guarda datos fiscales ni secretos, se reintenta sin duplicar la ficha y no
+bloquea el onboarding si el backoffice está temporalmente caído.
+
+Despliega `menoslios-crm` (sin JWT externo, autentica con el `CRON_SECRET` ya
+configurado) y configura `MENOSLIOS_CRM_ENDPOINT` con la URL HTTPS exacta del
+endpoint `/api/webhooks/menoslios` del backoffice y `MENOSLIOS_CRM_SECRET` con
+una clave nueva, de 32 caracteres como mínimo, también en el backoffice.
+No reutilices la clave de Cal.com ni la de facturación. Configura allí
+`MENOSLIOS_CALENDAR_SUBJECT=gerard@doscientos.es` y la delegación de Google
+Calendar existente. El cliente recibe la cita normal de Cal.com; el contexto
+se crea en el calendario principal de Gerard como evento privado, libre y sin
+invitados. Este flujo copia únicamente las reservas iniciales, no los cambios
+o cancelaciones posteriores. No hace backfill de cuentas existentes.
