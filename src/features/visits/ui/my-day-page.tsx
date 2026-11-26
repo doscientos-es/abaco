@@ -27,6 +27,7 @@ import {
   readVisitReportLocalDraft,
   visitReportDraftKey,
 } from '../application/visit-report-local-draft'
+import type { CalendarVisitLink } from '../domain/calendar-visit-link'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
@@ -48,15 +49,16 @@ const taskStatusLabels = {
   skipped: 'No aplica',
 } as const
 
-export function MyDayPage() {
+export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVisitLink | null }) {
   const session = useSession()
   const tenantId = session?.tenantId
   const queryClient = useQueryClient()
-  const [date, setDate] = useState(todayInMadrid)
+  const [date, setDate] = useState(() => calendarVisit?.fecha ?? todayInMadrid())
   const [busyId, setBusyId] = useState<string | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
+  const [linkedGroupDismissed, setLinkedGroupDismissed] = useState(false)
   const operations = useRef(new Map<string, string>())
   const queryKey = ['my-visits', tenantId, date]
   const visits = useQuery({
@@ -77,6 +79,13 @@ export function MyDayPage() {
     },
   })
   const tasksByVisit = new Map(tasks.data?.map((entry) => [entry.visitId, entry.tasks]) ?? [])
+  const linkCompanyMismatch = Boolean(
+    calendarVisit && tenantId && calendarVisit.empresa !== tenantId,
+  )
+  const linkedVisit =
+    !linkCompanyMismatch && calendarVisit?.fecha === date
+      ? visits.data?.find((visit) => visit.id === calendarVisit.visita)
+      : undefined
 
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
     if (!tenantId || busyId) return
@@ -175,6 +184,13 @@ export function MyDayPage() {
 
   return (
     <div className="worker-page space-y-6">
+      {linkCompanyMismatch ? (
+        <p role="alert">Esta visita pertenece a otra empresa. Cambia de empresa para verla.</p>
+      ) : calendarVisit && calendarVisit.fecha === date && visits.isSuccess && !linkedVisit ? (
+        <p role="alert">
+          No se encuentra esta visita en tu jornada. Puede haber cambiado de fecha o asignación.
+        </p>
+      ) : null}
       <div className="worker-hero flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="worker-title">Mi jornada</h1>
@@ -308,6 +324,7 @@ export function MyDayPage() {
           const cards = group.visits.map((visit) => (
             <Card key={visit.id} className="worker-visit-card">
               <CardHeader className="gap-2 pb-3">
+                {linkedVisit?.id === visit.id ? <p>Visita abierta desde tu calendario</p> : null}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle>{visit.title}</CardTitle>
                   <span className="bg-muted rounded-full px-2.5 py-1 text-xs font-medium">
@@ -426,8 +443,15 @@ export function MyDayPage() {
           return contractId ? (
             <details
               key={group.id}
-              open={selectedContractId === contractId || undefined}
+              open={
+                selectedContractId === contractId ||
+                (!linkedGroupDismissed && linkedVisit?.contract_id === contractId) ||
+                undefined
+              }
               onToggle={(event) => {
+                if (!event.currentTarget.open && linkedVisit?.contract_id === contractId) {
+                  setLinkedGroupDismissed(true)
+                }
                 if (!event.currentTarget.open && selectedContractId === contractId) {
                   setSelectedContractId(null)
                 }

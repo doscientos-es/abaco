@@ -104,6 +104,32 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('navegación por días', () => {
+  it('opens the linked assigned visit on its day, including a collapsed contract group', () => {
+    mocks.visits = [{ ...visit, contract_id: 'contract', contract_title: 'Oficina' }]
+    const html = renderToStaticMarkup(
+      <MyDayPage calendarVisit={{ empresa: 'tenant', visita: visit.id, fecha: '2026-11-12' }} />,
+    )
+    expect(mocks.visitsQuery?.queryKey).toEqual(['my-visits', 'tenant', '2026-11-12'])
+    expect(html).toContain('Visita abierta desde tu calendario')
+    expect(html).toMatch(/<details[^>]*open/)
+  })
+
+  it('does not identify a visit when the calendar link belongs to another company', () => {
+    const html = renderToStaticMarkup(
+      <MyDayPage calendarVisit={{ empresa: 'other', visita: visit.id, fecha: '2026-11-12' }} />,
+    )
+    expect(html).toContain('Esta visita pertenece a otra empresa')
+    expect(html).not.toContain('Visita abierta desde tu calendario')
+  })
+
+  it('explains when the linked visit is no longer assigned on that day', () => {
+    mocks.visits = []
+    const html = renderToStaticMarkup(
+      <MyDayPage calendarVisit={{ empresa: 'tenant', visita: visit.id, fecha: '2026-11-12' }} />,
+    )
+    expect(html).toContain('No se encuentra esta visita en tu jornada')
+  })
+
   it('avanza y retrocede entre meses y años, consultando el día seleccionado', () => {
     mocks.date = '2026-12-31'
     const html = renderToStaticMarkup(<MyDayPage />)
