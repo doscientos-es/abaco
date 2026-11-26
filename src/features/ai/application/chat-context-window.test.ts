@@ -92,6 +92,21 @@ describe('chat context window', () => {
     expect(chatContextWindow(messages, new Set())).toEqual(messages)
   })
 
+  it.each([
+    'tool-proponer_edicion_cliente',
+    'tool-proponer_stock',
+    'tool-proponer_edicion_partida',
+  ] as const)('retains and retires %s proposals', (type) => {
+    const action: UIMessage = {
+      id: 'action',
+      role: 'assistant',
+      parts: [{ type, toolCallId: 'p', state: 'output-available', input: {}, output: {} }],
+    }
+    const messages = [user('old'), action, user('new')]
+    expect(chatContextWindow(messages, new Set())).toEqual(messages)
+    expect(chatContextWindow(messages, new Set(['p'])).map(({ id }) => id)).toEqual(['new'])
+  })
+
   it('does not silently remove pending proposals beyond the hard message limit', () => {
     const messages = [
       user('old'),

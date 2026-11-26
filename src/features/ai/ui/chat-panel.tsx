@@ -9,21 +9,29 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } fro
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { useModuleEnabled } from '@/features/product-modules'
+import { formatEuros } from '@/shared/domain/money'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { newId, useTenantData } from '@/shared/store/store'
 
 import { useAiAccess, useAiCredits } from '../application/ai-access'
 import { chatContextWindow, pendingContextLimitMessage } from '../application/chat-context-window'
+import { searchRecords } from '../application/search-records'
 import {
   clientProposalSchema,
   clientProposalProgressSchema,
+  clientEditProposalSchema,
+  applyEstimateLineEdit,
   estimateDraftProposalSchema,
+  estimateLineEditSchema,
+  inventoryProposalSchema,
   searchRecordsSchema,
   type ClientProposal,
 } from '../domain/chat-tools'
 import { appendEstimateSuggestion, estimateSuggestionSchema } from '../domain/suggestions'
 import type { ClientProgress, DraftTarget } from './chat-context'
 import { EstimateSuggestionPreview } from './estimate-suggestion-preview'
+import { RecordProposal } from './record-proposal'
 
 export function AiChatPanel({
   open,
@@ -53,6 +61,7 @@ export function AiChatPanel({
   const queryClient = useQueryClient()
   const data = useTenantData()
   const session = useSession()
+  const procurement = useModuleEnabled(tenantId, 'procurement')
   const [applied, setApplied] = useState<Set<string>>(() => new Set())
   const [applyError, setApplyError] = useState('')
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -78,6 +87,7 @@ export function AiChatPanel({
           const estimate = targetRef.current?.estimate
           const context = estimate
             ? {
+                id: estimate.id,
                 title: estimate.title.slice(0, 200),
                 number: estimate.number.slice(0, 100),
                 clientName:
@@ -85,6 +95,7 @@ export function AiChatPanel({
                     .find((client) => client.id === estimate.clientId)
                     ?.name.slice(0, 200) ?? null,
                 lines: estimate.lines.slice(0, 10).map((line) => ({
+                  id: line.id,
                   description: line.description.slice(0, 200),
                   quantity: line.quantity,
                   unit: line.unit,
@@ -121,11 +132,14 @@ export function AiChatPanel({
         .flatMap((message) => message.parts)
         .filter((part) => part.type === 'tool-buscar').length
       return (
-        searchCount <= 2 &&
+        searchCount <= 4 &&
         parts.some((part) => part.type === 'tool-buscar') &&
         !parts.some(
           (part) =>
             part.type === 'tool-proponer_cliente' ||
+            part.type === 'tool-proponer_edicion_cliente' ||
+            part.type === 'tool-proponer_stock' ||
+            part.type === 'tool-proponer_edicion_partida' ||
             part.type === 'tool-proponer_partidas' ||
             part.type === 'tool-proponer_presupuesto',
         ) &&
@@ -135,6 +149,9 @@ export function AiChatPanel({
     onToolCall: ({ toolCall }) => {
       if (
         toolCall.toolName === 'proponer_cliente' ||
+        toolCall.toolName === 'proponer_edicion_cliente' ||
+        toolCall.toolName === 'proponer_stock' ||
+        toolCall.toolName === 'proponer_edicion_partida' ||
         toolCall.toolName === 'proponer_partidas' ||
         toolCall.toolName === 'proponer_presupuesto'
       ) {
@@ -155,40 +172,39 @@ export function AiChatPanel({
         })
         return
       }
-      const { type, query } = parsed.data
-      if (!can(session?.role, type === 'clientes' ? 'clients:read' : 'estimates:read')) {
+      const { type } = parsed.data
+      const permission =
+        type === 'clientes'
+          ? 'clients:read'
+          : type === 'presupuestos'
+            ? 'estimates:read'
+            : 'catalog:read'
+      if (!can(session?.role, permission) || (type === 'inventario' && !procurement)) {
         void chat.addToolOutput({
           tool: 'buscar',
           toolCallId: toolCall.toolCallId,
-          output: { type, matches: [], error: 'Sin permiso' },
+          output: {
+            type,
+            matches: [],
+            error:
+              type === 'inventario' && !procurement
+                ? 'Módulo de inventario no disponible'
+                : 'Sin permiso',
+          },
         })
         return
       }
-      const term = query.toLocaleLowerCase('es')
-      const matches =
-        type === 'clientes'
-          ? latest.current.clients
-              .filter(
-                (client) =>
-                  !client.archivedAt && client.name.toLocaleLowerCase('es').includes(term),
-              )
-              .slice(0, 10)
-              .map(({ id, name }) => ({ id, name }))
-          : latest.current.estimates
-              .filter((estimate) =>
-                `${estimate.number} ${estimate.title}`.toLocaleLowerCase('es').includes(term),
-              )
-              .slice(0, 10)
-              .map(({ id, title, number, status }) => ({
-                id,
-                name: `${number} · ${title}`,
-                status,
-              }))
-      void chat.addToolOutput({
-        tool: 'buscar',
-        toolCallId: toolCall.toolCallId,
-        output: { type, matches },
-      })
+      void searchRecords(createBrowserSupabaseClient(), tenantId, parsed.data)
+        .then((output) =>
+          chat.addToolOutput({ tool: 'buscar', toolCallId: toolCall.toolCallId, output }),
+        )
+        .catch(() =>
+          chat.addToolOutput({
+            tool: 'buscar',
+            toolCallId: toolCall.toolCallId,
+            output: { type, matches: [], error: 'No se pudieron consultar los datos actuales.' },
+          }),
+        )
     },
   })
   const runtime = useAISDKRuntime(chat)
@@ -277,7 +293,7 @@ export function AiChatPanel({
           >
             {!chat.messages.length ? (
               <p className="text-muted-foreground text-sm">
-                Pregúntame por tus clientes o presupuestos, o dime qué quieres preparar.
+                Pregúntame por tus clientes, presupuestos o inventario, o dime qué quieres preparar.
               </p>
             ) : null}
             {chat.messages.map((message) => (
@@ -300,9 +316,10 @@ export function AiChatPanel({
                         </p>
                       )
                     const result = part.output as {
-                      type: 'clientes' | 'presupuestos'
+                      type: 'clientes' | 'presupuestos' | 'inventario'
                       matches: { id: string; name: string }[]
                       error?: string
+                      truncated?: boolean
                     }
                     return (
                       <div key={index} className="space-y-1 rounded-xl border p-3 text-sm">
@@ -316,10 +333,12 @@ export function AiChatPanel({
                               void navigate(
                                 result.type === 'clientes'
                                   ? { to: '/clientes/$clientId', params: { clientId: item.id } }
-                                  : {
-                                      to: '/presupuestos/$estimateId',
-                                      params: { estimateId: item.id },
-                                    },
+                                  : result.type === 'presupuestos'
+                                    ? {
+                                        to: '/presupuestos/$estimateId',
+                                        params: { estimateId: item.id },
+                                      }
+                                    : { to: '/catalogo', search: { q: item.name } },
                               )
                             }
                           >
@@ -331,7 +350,102 @@ export function AiChatPanel({
                         ) : !result.matches.length ? (
                           <p>No hay resultados.</p>
                         ) : null}
+                        {result.truncated ? <p>Hay más resultados; concreta la búsqueda.</p> : null}
                       </div>
+                    )
+                  }
+                  if (
+                    (part.type === 'tool-proponer_edicion_cliente' ||
+                      part.type === 'tool-proponer_stock') &&
+                    (part.state === 'input-available' || part.state === 'output-available')
+                  ) {
+                    const clientEdit =
+                      part.type === 'tool-proponer_edicion_cliente'
+                        ? clientEditProposalSchema.safeParse(part.input)
+                        : null
+                    const stockEdit =
+                      part.type === 'tool-proponer_stock'
+                        ? inventoryProposalSchema.safeParse(part.input)
+                        : null
+                    const proposal = clientEdit?.success
+                      ? { type: 'cliente' as const, value: clientEdit.data }
+                      : stockEdit?.success
+                        ? { type: 'stock' as const, value: stockEdit.data }
+                        : null
+                    return proposal ? (
+                      <RecordProposal
+                        key={index}
+                        proposal={proposal}
+                        tenantId={tenantId}
+                        enabled={
+                          !applied.has(part.toolCallId) &&
+                          (proposal.type !== 'stock' || procurement)
+                        }
+                        onSaved={() => {
+                          completedProposals.current.add(part.toolCallId)
+                          setApplied((previous) => new Set(previous).add(part.toolCallId))
+                        }}
+                      />
+                    ) : null
+                  }
+                  if (
+                    part.type === 'tool-proponer_edicion_partida' &&
+                    (part.state === 'input-available' || part.state === 'output-available')
+                  ) {
+                    const parsed = estimateLineEditSchema.safeParse(part.input)
+                    if (!parsed.success) return null
+                    const proposal = parsed.data
+                    const line =
+                      target?.estimate.id === proposal.estimateId
+                        ? target.estimate.lines.find((item) => item.id === proposal.lineId)
+                        : undefined
+                    const patch = target ? applyEstimateLineEdit(target.estimate, proposal) : null
+                    return (
+                      <section key={index} className="space-y-2 rounded-xl border p-3 text-sm">
+                        <strong>Editar partida</strong>
+                        {line ? (
+                          <>
+                            <p>
+                              Actual: {line.description} · {line.quantity} {line.unit} ·{' '}
+                              {formatEuros(line.unitPriceCents)} / unidad
+                            </p>
+                            <p>
+                              Propuesta: {proposal.description ?? line.description} ·{' '}
+                              {proposal.quantity ?? line.quantity} {proposal.unit ?? line.unit} ·{' '}
+                              {formatEuros(proposal.unitPriceCents ?? line.unitPriceCents)} / unidad
+                            </p>
+                          </>
+                        ) : (
+                          <p>Abre el presupuesto en borrador para revisar esta partida.</p>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          isDisabled={
+                            !patch ||
+                            !target ||
+                            !can(session?.role, 'estimates:write') ||
+                            applied.has(part.toolCallId)
+                          }
+                          onPress={() => {
+                            if (
+                              !patch ||
+                              !target ||
+                              !can(session?.role, 'estimates:write') ||
+                              applied.has(part.toolCallId)
+                            )
+                              return
+                            target.apply(patch)
+                            completedProposals.current.add(part.toolCallId)
+                            setApplied((previous) => new Set(previous).add(part.toolCallId))
+                          }}
+                        >
+                          Aplicar al borrador
+                        </Button>
+                        {applied.has(part.toolCallId) ? (
+                          <p>Partida actualizada en el borrador. Revisa el presupuesto.</p>
+                        ) : null}
+                      </section>
                     )
                   }
                   if (
@@ -455,9 +569,20 @@ export function AiChatPanel({
                         ) : null}
                         <EstimateSuggestionPreview
                           suggestion={suggestion}
-                          disabled={!target || !draftReady || applied.has(part.toolCallId)}
+                          disabled={
+                            !target ||
+                            !draftReady ||
+                            !can(session?.role, 'estimates:write') ||
+                            applied.has(part.toolCallId)
+                          }
                           onApply={() => {
-                            if (!target || !draftReady || applied.has(part.toolCallId)) return
+                            if (
+                              !target ||
+                              !draftReady ||
+                              !can(session?.role, 'estimates:write') ||
+                              applied.has(part.toolCallId)
+                            )
+                              return
                             const { patch, incomplete } = appendEstimateSuggestion(
                               target.estimate,
                               suggestion,

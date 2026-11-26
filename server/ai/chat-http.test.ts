@@ -133,6 +133,53 @@ describe('chat HTTP boundary', () => {
     expect(stream).toHaveBeenCalledOnce()
   })
 
+  it.each([
+    [
+      'proponer_edicion_cliente',
+      {
+        clientId: tenantId,
+        name: null,
+        taxId: null,
+        email: 'nuevo@example.test',
+        phone: null,
+        address: null,
+      },
+    ],
+    ['proponer_stock', { catalogItemId: tenantId, quantity: 2.5 }],
+    [
+      'proponer_edicion_partida',
+      {
+        estimateId: tenantId,
+        lineId: tenantId,
+        description: null,
+        quantity: 3,
+        unit: null,
+        unitPriceCents: null,
+      },
+    ],
+  ])('accepts a pending %s proposal in the conversation', async (tool, input) => {
+    const response = await invoke({
+      ...body,
+      messages: [
+        ...body.messages,
+        {
+          id: 'a1',
+          role: 'assistant',
+          parts: [
+            {
+              type: `tool-${tool}`,
+              toolCallId: 'call1',
+              state: 'output-available',
+              input,
+              output: { estado: 'Pendiente' },
+            },
+          ],
+        },
+      ],
+    })
+    expect(response.status).toBe(200)
+  })
+
   it('reserves a separate credit for each model call, including the search continuation', async () => {
     expect((await invoke()).status).toBe(200)
     expect((await invoke()).status).toBe(200)

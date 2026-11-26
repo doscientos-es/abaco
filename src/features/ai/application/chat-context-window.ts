@@ -24,6 +24,9 @@ export function chatContextWindow(
       if (part.type === 'text' && /[?¿]/.test(part.text)) turnHasQuestion = true
       if (
         part.type !== 'tool-proponer_cliente' &&
+        part.type !== 'tool-proponer_edicion_cliente' &&
+        part.type !== 'tool-proponer_stock' &&
+        part.type !== 'tool-proponer_edicion_partida' &&
         part.type !== 'tool-proponer_partidas' &&
         part.type !== 'tool-proponer_presupuesto'
       )
@@ -64,6 +67,9 @@ export function chatContextWindow(
     message.parts.some(
       (part) =>
         (part.type === 'tool-proponer_cliente' ||
+          part.type === 'tool-proponer_edicion_cliente' ||
+          part.type === 'tool-proponer_stock' ||
+          part.type === 'tool-proponer_edicion_partida' ||
           part.type === 'tool-proponer_partidas' ||
           part.type === 'tool-proponer_presupuesto') &&
         (!completed.has(part.toolCallId) ||

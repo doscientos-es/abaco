@@ -74,12 +74,28 @@ export function ClientForm({
           address: client.address,
           billingAddress: client.billingAddress ?? '',
           notes: client.notes,
+          ...initialValues,
         }
       : { ...empty, ...initialValues },
   )
   const currentForm = useRef(form)
   const editedFields = useRef(new Set<keyof ClientInput>())
-  const [initialForm] = useState(() => JSON.stringify(form))
+  const [initialForm] = useState(() =>
+    JSON.stringify(
+      client
+        ? {
+            name: client.name,
+            kind: client.kind ?? '',
+            taxId: client.taxId,
+            email: client.email,
+            phone: client.phone,
+            address: client.address,
+            billingAddress: client.billingAddress ?? '',
+            notes: client.notes,
+          }
+        : form,
+    ),
+  )
   const saved = useRef(false)
   const savedClientId = useRef(client?.id)
   const saving = useRef(false)

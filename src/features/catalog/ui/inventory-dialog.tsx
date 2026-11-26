@@ -12,17 +12,21 @@ export function InventoryDialog({
   item,
   stock,
   onClose,
+  initialQuantity,
+  onSaved,
 }: {
   item: CatalogItem
   stock: InventoryItem | undefined
   onClose: () => void
+  initialQuantity?: number
+  onSaved?: () => void
 }) {
   const queryClient = useQueryClient()
   const suppliers = useQuery({
     queryKey: ['suppliers', item.tenantId],
     queryFn: () => listSuppliers(item.tenantId),
   })
-  const [quantity, setQuantity] = useState(String(stock?.quantity ?? 0))
+  const [quantity, setQuantity] = useState(String(initialQuantity ?? stock?.quantity ?? 0))
   const [supplierId, setSupplierId] = useState(stock?.supplier_id ?? '')
   const [expectedVersion] = useState(stock?.version ?? null)
   const [saving, setSaving] = useState(false)
@@ -41,6 +45,7 @@ export function InventoryDialog({
         expectedVersion,
       })
       await queryClient.invalidateQueries({ queryKey: ['inventory', item.tenantId] })
+      onSaved?.()
       onClose()
       toast.success('Stock actualizado')
     } catch (error) {
@@ -60,7 +65,11 @@ export function InventoryDialog({
         if (!open) onClose()
       }}
       title={`Stock · ${item.name}`}
-      description="Al aceptar un presupuesto se descontará la cantidad disponible."
+      description={
+        initialQuantity === undefined
+          ? 'Al aceptar un presupuesto se descontará la cantidad disponible.'
+          : `Stock actual: ${stock ? `${stock.quantity} ${item.unit}` : 'sin controlar'}. Revisa la cantidad propuesta antes de guardar.`
+      }
       submitLabel="Guardar stock"
       submitDisabled={!valid || !suppliers.isSuccess}
       isSubmitting={saving}

@@ -24,6 +24,7 @@ type Dependencies = {
 
 const contextSchema = z
   .object({
+    id: z.string().uuid().optional(),
     title: z.string().max(200),
     number: z.string().max(100),
     clientName: z.string().max(200).nullable(),
@@ -31,6 +32,7 @@ const contextSchema = z
       .array(
         z
           .object({
+            id: z.string().uuid().optional(),
             description: z.string().max(200),
             quantity: z.number().finite(),
             unit: z.string().max(100),
@@ -91,6 +93,9 @@ export function createChatHandler(dependencies: Dependencies) {
                     'step-start',
                     'tool-buscar',
                     'tool-proponer_cliente',
+                    'tool-proponer_edicion_cliente',
+                    'tool-proponer_stock',
+                    'tool-proponer_edicion_partida',
                     'tool-proponer_partidas',
                     'tool-proponer_presupuesto',
                   ].includes(part.type),

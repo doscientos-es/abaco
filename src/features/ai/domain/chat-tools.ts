@@ -1,11 +1,15 @@
 import { z } from 'zod'
 
 import { formLimits } from '../../../shared/domain/form-limits.js'
+import type { Estimate } from '../../../shared/domain/types.js'
 import { estimateSuggestionSchema } from './suggestions.js'
 
 export const searchRecordsSchema = z.object({
-  type: z.enum(['clientes', 'presupuestos']),
+  type: z.enum(['clientes', 'presupuestos', 'inventario']),
   query: z.string().trim().max(formLimits.searchQuery),
+  recordId: z.string().uuid().nullable().optional(),
+  clientId: z.string().uuid().nullable().optional(),
+  status: z.enum(['draft', 'sent', 'accepted', 'rejected']).nullable().optional(),
 })
 
 export const clientProposalSchema = z.object({
@@ -20,6 +24,48 @@ export const clientProposalSchema = z.object({
 export const clientProposalProgressSchema = clientProposalSchema.partial().extend({
   name: z.string().max(formLimits.clientName).optional(),
 })
+
+export const clientEditProposalSchema = clientProposalSchema.extend({
+  clientId: z.string().uuid(),
+  name: z.string().trim().min(1).max(formLimits.clientName).nullable(),
+})
+
+export const inventoryProposalSchema = z.object({
+  catalogItemId: z.string().uuid(),
+  quantity: z.number().finite().min(0).max(999999999.999).multipleOf(0.001),
+})
+
+export const estimateLineEditSchema = z.object({
+  estimateId: z.string().uuid(),
+  lineId: z.string().uuid(),
+  description: z.string().trim().min(1).max(formLimits.estimateLineDescription).nullable(),
+  quantity: z.number().finite().positive().max(formLimits.quantity).nullable(),
+  unit: z.string().trim().min(1).max(formLimits.unit).nullable(),
+  unitPriceCents: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(formLimits.monetaryAmount * 100)
+    .nullable(),
+})
+
+export function applyEstimateLineEdit(
+  estimate: Estimate,
+  proposal: z.infer<typeof estimateLineEditSchema>,
+): Partial<Estimate> | null {
+  if (estimate.id !== proposal.estimateId || estimate.status !== 'draft') return null
+  const line = estimate.lines.find((item) => item.id === proposal.lineId)
+  if (!line) return null
+  const updated = {
+    ...line,
+    description: proposal.description ?? line.description,
+    quantity: proposal.quantity ?? line.quantity,
+    unit: proposal.unit ?? line.unit,
+    unitPriceCents: proposal.unitPriceCents ?? line.unitPriceCents,
+  }
+  if (JSON.stringify(updated) === JSON.stringify(line)) return null
+  return { lines: estimate.lines.map((item) => (item.id === line.id ? updated : item)) }
+}
 
 export const estimateProposalSchema = estimateSuggestionSchema
 
