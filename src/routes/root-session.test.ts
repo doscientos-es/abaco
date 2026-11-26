@@ -5,17 +5,25 @@ import { sessionQuery } from '@/features/auth/application/auth-actions'
 
 import { Route } from './__root'
 
-const { loadSession, hydrateStore, tenantAccess } = vi.hoisted(() => ({
+const { loadSession, hydrateStore, tenantAccess, onboardingStatus } = vi.hoisted(() => ({
   loadSession: vi.fn(),
   hydrateStore: vi.fn(),
   tenantAccess: vi.fn(),
+  onboardingStatus: vi.fn(),
 }))
 
 vi.mock('@/features/auth/infrastructure/load-session', () => ({ loadSession }))
 vi.mock('@/features/auth', async () => ({
   sessionQuery: (await import('@/features/auth/application/auth-actions')).sessionQuery,
   NoCompanyPage: () => null,
-  welcomeRedirect: () => null,
+}))
+vi.mock('@/features/onboarding', async () => ({
+  onboardingDestination: (await import('@/features/onboarding/application/company-onboarding'))
+    .onboardingDestination,
+  companyOnboardingQuery: (id: string) => ({
+    queryKey: ['company-onboarding', id],
+    queryFn: onboardingStatus,
+  }),
 }))
 vi.mock('@/app/app-frame', () => ({ AppFrame: () => null }))
 vi.mock('@/app/technician-frame', () => ({ UserFrame: () => null }))
@@ -33,6 +41,7 @@ describe('root session guard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     tenantAccess.mockResolvedValue(true)
+    onboardingStatus.mockResolvedValue(null)
   })
   afterEach(() => vi.unstubAllGlobals())
 
@@ -72,6 +81,7 @@ describe('root session guard', () => {
     }
     queryClient.setQueryData(sessionQuery.queryKey, session)
     queryClient.setQueryData(['tenant-access', 'company-1'], true)
+    queryClient.setQueryData(['company-onboarding', 'company-1'], null)
     hydrateStore.mockResolvedValue(undefined)
     await expect(visit()).resolves.toEqual({ session, hasTenantAccess: true })
     expect(loadSession).not.toHaveBeenCalled()
@@ -274,6 +284,23 @@ describe('root session guard', () => {
     expect(loaded).toBe(false)
     finishHydration()
     await expect(visit).resolves.toBeUndefined()
+    queryClient.clear()
+  })
+  it('keeps every role on onboarding until the paid booking is verified', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const visit = (pathname: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname, href: pathname },
+      } as Parameters<typeof beforeLoad>[0])
+    loadSession.mockResolvedValue({ tenantId: 'company-1', role: 'user' })
+    onboardingStatus.mockResolvedValue({ stage: 'booking' })
+    await expect(visit('/mi-jornada')).rejects.toMatchObject({ options: { to: '/bienvenida' } })
+    await expect(visit('/bienvenida')).resolves.toMatchObject({ hasTenantAccess: false })
+    expect(tenantAccess).not.toHaveBeenCalled()
+    expect(hydrateStore).not.toHaveBeenCalled()
     queryClient.clear()
   })
 })

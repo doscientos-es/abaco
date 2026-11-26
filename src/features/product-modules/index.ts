@@ -14,6 +14,7 @@ export {
   moduleNetForPlan,
   modules,
   type ModuleCode,
+  type ModuleRate,
   type ModuleSubscription,
 } from './domain/modules'
 export { ModuleSubscriptions } from './ui/module-subscriptions'

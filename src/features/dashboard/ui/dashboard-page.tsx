@@ -96,12 +96,37 @@ function DashboardContent({
         actions={
           <Link
             to="/presupuestos"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex max-md:min-h-11 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-colors max-md:min-h-11"
           >
             Ver presupuestos
           </Link>
         }
       />
+
+      {!clients.length || !estimates.length ? (
+        <section className="border-primary/20 bg-primary/5 space-y-2 rounded-xl border p-4">
+          <h2 className="font-semibold">Tus primeros pasos</h2>
+          <p className="text-muted-foreground text-sm">
+            Avanza a tu ritmo. En la puesta en marcha podemos ayudarte a importar tu Excel.
+          </p>
+          <ol className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {!clients.length ? (
+              <li>
+                <Link className="text-primary font-semibold underline" to="/clientes">
+                  1. Añade o importa tus clientes
+                </Link>
+              </li>
+            ) : null}
+            {!estimates.length ? (
+              <li>
+                <Link className="text-primary font-semibold underline" to="/presupuestos">
+                  2. Prepara tu primer presupuesto
+                </Link>
+              </li>
+            ) : null}
+          </ol>
+        </section>
+      ) : null}
 
       {data.overdueCount > 0 ? (
         <Link
@@ -109,7 +134,7 @@ function DashboardContent({
           aria-label={`${data.overdueCount} ${
             data.overdueCount === 1 ? 'factura vencida' : 'facturas vencidas'
           }, ${formatEuros(data.overdueTotal)} pendientes. Revisar facturas`}
-          className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 outline-none transition-colors focus-visible:ring-2"
+          className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 transition-colors outline-none focus-visible:ring-2"
         >
           <WarningCircle aria-hidden="true" className="text-destructive size-5 shrink-0" />
           <span className="min-w-0 flex-1">
@@ -216,7 +241,7 @@ function DashboardWidget({
     case 'key-metrics': {
       const months = monthlySeries(data.ledger)
       return (
-        <div className="dashboard-key-metrics grid grid-cols-2 gap-2.5 @lg:grid-cols-2 @4xl:grid-cols-4 md:gap-3">
+        <div className="dashboard-key-metrics grid grid-cols-2 gap-2.5 md:gap-3 @lg:grid-cols-2 @4xl:grid-cols-4">
           <DashboardMetric
             to="/presupuestos"
             editing={editing}
@@ -299,7 +324,7 @@ function DashboardWidget({
             </div>
             <Link
               to="/facturas"
-              className="text-muted-foreground hover:text-foreground inline-flex max-md:min-h-11 items-center text-sm font-medium"
+              className="text-muted-foreground hover:text-foreground inline-flex items-center text-sm font-medium max-md:min-h-11"
             >
               Ver facturas →
             </Link>
@@ -359,7 +384,7 @@ function DashboardWidget({
             <CardTitle>Presupuestos recientes</CardTitle>
             <Link
               to="/presupuestos"
-              className="text-muted-foreground hover:text-foreground inline-flex max-md:min-h-11 items-center text-sm font-medium"
+              className="text-muted-foreground hover:text-foreground inline-flex items-center text-sm font-medium max-md:min-h-11"
             >
               Ver todos →
             </Link>
@@ -419,7 +444,7 @@ function DashboardWidget({
             </div>
             <Link
               to="/clientes"
-              className="text-primary inline-flex max-md:min-h-11 items-center text-sm font-medium hover:underline"
+              className="text-primary inline-flex items-center text-sm font-medium hover:underline max-md:min-h-11"
             >
               Ver clientes →
             </Link>
@@ -444,7 +469,7 @@ function DashboardWidget({
             <Link
               to="/contabilidad"
               search={{ tab: 'apuntes' }}
-              className="text-primary inline-flex max-md:min-h-11 items-center text-sm font-medium hover:underline"
+              className="text-primary inline-flex items-center text-sm font-medium hover:underline max-md:min-h-11"
             >
               Ver apuntes →
             </Link>

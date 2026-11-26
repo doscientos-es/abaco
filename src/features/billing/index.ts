@@ -4,12 +4,16 @@ export {
   paymentsQuery,
   subscriptionQuery,
   tenantAccessQuery,
+  startOnboardingCheckout,
+  submitToRedsys,
 } from './application/billing-actions'
 export type { Subscription } from './application/billing-actions'
 export {
   billingVatLabel,
   catalogRateForCapacity,
   catalogQuote,
+  formatEuros,
+  withModulePrice,
   MAX_SCALE_PLAN_MEMBERS,
   paidPlans,
   planCatalog,
@@ -24,3 +28,5 @@ export { BillingSection } from './ui/billing-section'
 export { PlanBanner } from './ui/plan-banner'
 export { PricingCatalog } from './ui/pricing-catalog'
 export { SubscriptionAccessPage } from './ui/subscription-access-page'
+export { billingProfileQuery } from './application/subscription-billing-profile'
+export { SubscriptionBillingProfileForm } from './ui/subscription-billing-profile-form'

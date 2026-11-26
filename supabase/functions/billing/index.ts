@@ -53,7 +53,43 @@ Deno.serve(async (request) => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const order = newMerchantOrder()
   const action = typeof input?.action === 'string' ? input.action : null
-  const isCharge = action === 'checkout' || action === 'retry'
+  const isOnboarding = action === 'onboarding-checkout'
+  const isCharge = isOnboarding || action === 'checkout' || action === 'retry'
+  const modules = input?.modules
+  if (isOnboarding) {
+    const bookingUrl = Deno.env.get('ABACO_CAL_BOOKING_URL')
+    const eventType = Deno.env.get('ABACO_CAL_EVENT_TYPE_ID')
+    const secret = Deno.env.get('ABACO_CAL_WEBHOOK_SECRET')
+    if (
+      !bookingUrl ||
+      bookingUrl !== input?.bookingUrl ||
+      !eventType ||
+      !/^\d+$/.test(eventType) ||
+      !secret
+    )
+      return reply(409, {
+        error: 'La agenda de puesta en marcha no está disponible. No se ha iniciado ningún cobro.',
+      })
+    if (
+      !Array.isArray(modules) ||
+      modules.length > 3 ||
+      modules.some(
+        (code: unknown) =>
+          typeof code !== 'string' || !['workers', 'procurement', 'ai'].includes(code),
+      )
+    )
+      return reply(400, { error: 'Módulos no válidos' })
+  }
+  if (!isOnboarding && isCharge) {
+    const { data: onboarding, error: onboardingError } = await asCaller.rpc(
+      'company_onboarding_status',
+      { p_tenant: tenantId },
+    )
+    if (onboardingError) return reply(403, { error: 'No se pudo comprobar el alta' })
+    if (onboarding && onboarding.stage !== 'complete') {
+      return reply(409, { error: 'Continúa en el alta guiada para activar tu empresa.' })
+    }
+  }
   let profile = null
   if (isCharge) {
     if (config.environment !== 'prod' || config.currency !== '978') {
@@ -77,7 +113,18 @@ Deno.serve(async (request) => {
     p_order: order,
   }
   const { data: amount, error } = profile
-    ? await admin.rpc('reserve_subscription_invoice_payment', { ...args, p_recipient: profile })
+    ? isOnboarding
+      ? await admin.rpc('reserve_onboarding_payment', {
+          p_tenant: tenantId,
+          p_recipient: profile,
+          p_order: order,
+          p_actor: caller.user.id,
+          p_period: args.p_period,
+          p_seats: args.p_seats,
+          p_expected_total: args.p_expected_total,
+          p_modules: [...new Set(modules as string[])],
+        })
+      : await admin.rpc('reserve_subscription_invoice_payment', { ...args, p_recipient: profile })
     : await admin.rpc('billing_manage', args)
   if (error) {
     if (error.code === '42501')
@@ -96,8 +143,10 @@ Deno.serve(async (request) => {
     order,
     amountCents: amount,
     notifyUrl: `${url}/functions/v1/redsys-webhook`,
-    okUrl: `${appUrl}/ajustes?pago=ok`,
-    koUrl: `${appUrl}/ajustes?pago=cancelado`,
+    okUrl: isOnboarding ? `${appUrl}/bienvenida?pago=ok` : `${appUrl}/ajustes?pago=ok`,
+    koUrl: isOnboarding
+      ? `${appUrl}/bienvenida?pago=cancelado`
+      : `${appUrl}/ajustes?pago=cancelado`,
   })
   return reply(200, { form })
 })

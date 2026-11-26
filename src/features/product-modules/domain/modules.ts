@@ -8,6 +8,12 @@ export const coreFeatures = [
 ] as const
 
 export const modules = {
+  ai: {
+    name: 'Asistente de IA',
+    description:
+      'Ayuda a preparar presupuestos para una persona administradora; 500 peticiones al mes.',
+    includedIn: [],
+  },
   workers: {
     name: 'Trabajadores',
     description: 'Funciones, horarios, datos personales, documentos y ausencias del equipo.',

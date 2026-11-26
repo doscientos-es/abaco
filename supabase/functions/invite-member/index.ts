@@ -64,15 +64,24 @@ Deno.serve(async (request) => {
     .maybeSingle()
   if (!mine || mine.role !== 'admin') return reply(403, { error: 'No tienes permiso para invitar' })
 
+  const { data: canWrite, error: accessError } = await admin.rpc('tenant_can_write', {
+    p_tenant: tenantId,
+  })
+  if (accessError || canWrite !== true)
+    return reply(409, { error: 'Activa la empresa antes de invitar' })
+
   // 3b. Plan: antes de enviar ningún correo, comprobar que caben más personas.
   const [{ data: tenant }, { count: members }] = await Promise.all([
-    admin.from('tenants').select('plan').eq('id', tenantId).maybeSingle(),
+    admin.from('tenants').select('plan,billing_seats').eq('id', tenantId).maybeSingle(),
     admin
       .from('memberships')
       .select('user_id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId),
   ])
-  const { data: limit } = await admin.rpc('plan_member_limit', { p_plan: tenant?.plan ?? 'trial' })
+  const { data: planLimit } = await admin.rpc('plan_member_limit', {
+    p_plan: tenant?.plan ?? 'trial',
+  })
+  const limit = tenant?.billing_seats ?? planLimit
   if (typeof limit === 'number' && (members ?? 0) >= limit) {
     return reply(409, { error: 'plan_limit' })
   }

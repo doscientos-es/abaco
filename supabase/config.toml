@@ -64,3 +64,7 @@ verify_jwt = false
 [functions.google-calendar-sync-worker]
 verify_jwt = false
 
+
+# Cal.com authenticates bookings with a dedicated HMAC secret.
+[functions.onboarding-cal-webhook]
+verify_jwt = false
