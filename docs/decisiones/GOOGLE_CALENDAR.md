@@ -1,4 +1,4 @@
-# Calendarios: Google y Outlook
+# Google Calendar
 
 ## Estado comprobado: 26/11/2026
 
@@ -10,8 +10,8 @@ en esta revisión un evento real en Google: la conexión no tenía una última
 sincronización registrada. La disponibilidad efectiva también depende de la
 configuración de las funciones y de Google.
 
-Outlook no está implementado. La integración y el contenido ampliado descritos
-abajo son el alcance deseado, no funcionalidad disponible actualmente.
+El contenido ampliado descrito abajo es el alcance deseado, no funcionalidad
+disponible actualmente.
 
 ## Comportamiento actual de Google
 
@@ -30,9 +30,9 @@ abajo son el alcance deseado, no funcionalidad disponible actualmente.
   asignada, incluidas las visitas finalizadas. Al reconectar reutiliza el ID del
   calendario anterior sin comprobar que pertenezca a la cuenta recién autorizada.
 
-## Alcance deseado para Google y Outlook
+## Alcance deseado
 
-Cada persona podrá conectar su calendario Google y/o Microsoft y ver sus visitas
+Cada persona podrá conectar su calendario Google y ver sus visitas
 asignadas. Los eventos deberían actualizarse al cambiar la visita o la asignación,
 sin modificar Ábaco cuando se edite el evento externo. Se desea incluir:
 
@@ -40,7 +40,7 @@ sin modificar Ábaco cuando se edite el evento externo. Se desea incluir:
 - El sitio o dirección, las notas y las personas que van a la visita.
 - Un enlace a los detalles en Ábaco, sujeto a la sesión y permisos del usuario.
 
-Este contenido aún no se envía a Google ni existe una conexión con Outlook. Hay
+Este contenido aún no se envía a Google. Hay
 que definir cómo mostrar las personas cuando hay asignación individual o de equipo,
 qué notas son apropiadas para compartir y cómo acceder al detalle desde cada rol.
 La sincronización debe reflejar también cambios en cliente, lugar, notas y equipo,
@@ -79,11 +79,7 @@ ampliar su uso.
 
 ## Trabajo pendiente
 
-- Diseñar e implementar la conexión Microsoft, su consentimiento y permisos de
-  calendario, el almacenamiento seguro de credenciales, la cola y la interfaz.
-  Registrar la aplicación en Microsoft y probar con cuentas autorizadas antes de
-  presentar Outlook como disponible.
-- Ampliar la proyección de ambos proveedores y los disparadores de cambios,
+- Ampliar la proyección y los disparadores de cambios,
   manteniendo aislamiento por empresa, usuario y visita, y evitando duplicados.
 - Resolver la conservación de visitas finalizadas, las cancelaciones y la
   reconexión con una cuenta distinta. Definir el horizonte de sincronización y

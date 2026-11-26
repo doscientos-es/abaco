@@ -60,6 +60,15 @@ describe('Google Calendar membership and subscription access', () => {
         'utf8',
       ),
     )
+    await db.exec(
+      await readFile(
+        new URL(
+          '../../supabase/migrations/20261126202632_google_calendar_explicit_details_consent.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
   }, 30000)
 
   beforeEach(async () => {
@@ -168,5 +177,55 @@ describe('Google Calendar membership and subscription access', () => {
         )
       ).rows,
     ).toEqual([{ status: 'disconnected', refresh_token_ciphertext: null }])
+  })
+
+  it('requires explicit consent and queues only the consenting persons visits once', async () => {
+    await db.exec(`
+      insert into public.service_visits values ('${visit}', '${tenant}', '${admin}', null, 'scheduled'),
+        ('30000000-0000-4000-8000-000000000002', '${tenant}', '${user}', null, 'scheduled');
+    `)
+    const consent = () =>
+      db.query<{ accepted: boolean }>(
+        `select public.my_google_calendar_details_consent('${tenant}') as accepted`,
+      )
+    expect((await consent()).rows[0]?.accepted).toBe(false)
+    await db.exec(`select public.accept_google_calendar_details('${tenant}');`)
+    expect((await consent()).rows[0]?.accepted).toBe(true)
+    expect(
+      (await db.query('select visit_id, generation from public.google_calendar_sync_jobs')).rows,
+    ).toEqual([{ visit_id: visit, generation: 0 }])
+    await db.exec(`select public.accept_google_calendar_details('${tenant}');`)
+    expect(
+      (await db.query('select visit_id, generation from public.google_calendar_sync_jobs')).rows,
+    ).toEqual([{ visit_id: visit, generation: 0 }])
+  })
+
+  it('rejects another company, missing connections and inactive company access', async () => {
+    await expect(
+      db.exec(`select public.accept_google_calendar_details('${other}')`),
+    ).rejects.toThrow('permiso')
+    await db.exec(`select set_config('test.user_id', '${user}', false)`)
+    await expect(
+      db.exec(`select public.accept_google_calendar_details('${tenant}')`),
+    ).rejects.toThrow('Conecta')
+    await db.exec(`select set_config('test.user_id', '${admin}', false);
+      update public.tenants set is_complimentary = false where id = '${tenant}'`)
+    await expect(
+      db.exec(`select public.accept_google_calendar_details('${tenant}')`),
+    ).rejects.toThrow('permiso')
+  })
+
+  it('clears consent when disconnecting or authorizing a different account', async () => {
+    await db.exec(`select public.accept_google_calendar_details('${tenant}');
+      update public.google_calendar_connections set status = 'provisioning'`)
+    expect(
+      (await db.query('select details_consent_at from public.google_calendar_connections')).rows,
+    ).toEqual([{ details_consent_at: null }])
+    await db.exec(`update public.google_calendar_connections set status = 'connected';
+      select public.accept_google_calendar_details('${tenant}');
+      select public.disconnect_my_google_calendar('${tenant}');`)
+    expect(
+      (await db.query('select details_consent_at from public.google_calendar_connections')).rows,
+    ).toEqual([{ details_consent_at: null }])
   })
 })
