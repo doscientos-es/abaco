@@ -1,117 +1,99 @@
-# Google Calendar: preparación, no disponible
+# Calendarios: Google y Outlook
 
-## Actualización: 24/11/2026
+## Estado comprobado: 26/11/2026
 
-La conexión prevista es individual: cada persona autoriza su propia cuenta de
-Google para cada empresa, y la sincronización es solo de Ábaco a Calendar. El
-proyecto OAuth identifica la aplicación; no es la cuenta propietaria del calendario.
-Solo se copia el horario con un título genérico, no los datos completos del trabajo.
+Google Calendar ya tiene interfaz en **Ajustes → Integraciones**, conexión OAuth,
+almacenamiento, cola y funciones Edge para sincronizar. En el proyecto Supabase
+de Ábaco están desplegadas las funciones de conexión y sincronización, el cron
+está activo y hay una conexión registrada como conectada. No se ha comprobado
+en esta revisión un evento real en Google: la conexión no tenía una última
+sincronización registrada. La disponibilidad efectiva también depende de la
+configuración de las funciones y de Google.
 
-La cola y el disparo inmediato están preparados en la base de datos. El worker y
-OAuth están desplegados, pero la integración permanece desactivada, falta verificar
-la configuración de Google y el cron de recuperación está pausado. Antes de activarla
-hay que resolver la conservación de visitas finalizadas como historial y el cambio
-de cuenta Google al reconectar: el worker actual elimina eventos de visitas finalizadas
-y la reconexión reutiliza el ID del calendario anterior sin verificar que pertenezca
-a la nueva cuenta autorizada.
+Outlook no está implementado. La integración y el contenido ampliado descritos
+abajo son el alcance deseado, no funcionalidad disponible actualmente.
 
-Estado a 20/11/2026: **no hay conexión OAuth, sincronización ni controles de
-Calendar disponibles en Ábaco**. `server/google-calendar` contiene código local
-para OAuth, cifrado, proyección y llamadas a Google Calendar, probado con respuestas
-simuladas. No está conectado a rutas, almacenamiento, cola ni interfaz; no verifica
-asignaciones por sí mismo y no realiza sincronización. Sus pruebas no validan
-Google ni un flujo real. No presentarlo como una integración funcional.
+## Comportamiento actual de Google
 
-## Alcance y privacidad
+- Cada persona conecta su propia cuenta por empresa; la conexión es independiente
+  del inicio de sesión con Google. Se utiliza un calendario secundario de la cuenta.
+- La sincronización va de Ábaco a Google, no en sentido contrario. La cola tiene
+  disparo inmediato y un cron periódico para reintentos.
+- Se proyectan las visitas programadas o en curso asignadas directamente a la
+  persona o, si no hay asignación individual, a su equipo. Actualmente el evento
+  contiene únicamente el horario, la zona y el título genérico «Visita Ábaco»;
+  no contiene cliente, dirección, notas ni personas asignadas.
+- Al desconectar se elimina la credencial guardada y se detiene la sincronización;
+  los eventos ya creados permanecen en Google. El usuario puede borrarlos y retirar
+  el permiso desde su cuenta.
+- El worker actual elimina el evento cuando la visita deja de estar activa o
+  asignada, incluidas las visitas finalizadas. Al reconectar reutiliza el ID del
+  calendario anterior sin comprobar que pertenezca a la cuenta recién autorizada.
 
-La sincronización propuesta es unidireccional, con consentimiento por persona y
-empresa, sin invitados ni datos de clientes, direcciones, notas o partes. La
-proyección local solo contiene un título genérico, horario y zona. `private` no
-impide que el propietario o personas autorizadas para ver detalles del calendario
-puedan ver el evento: hay que informar al usuario de la visibilidad y de que el
-horario mismo puede ser sensible. Nada asegura la retirada inmediata de una copia
-cuando Google no está disponible o el acceso ha sido revocado.
+## Alcance deseado para Google y Outlook
 
-Las visitas admiten asignación individual o de equipo. Según
-`20261112115459_team_visit_permissions.sql`, la asignación individual prevalece;
-si no existe, el acceso de técnicos y usuarios depende de la pertenencia actual
-al equipo y del rol en la empresa. El futuro trabajador debe verificar en servidor
-la asignación efectiva y pertenencia actuales, también ante cambios de equipo,
-rol o empresa; los permisos de oficina para ver visitas no equivalen a asignación.
-Usar únicamente el acceso de servicio sin este filtro expondría datos. Comprobar
-la versión y aplicación reales de esas reglas antes de activarlo.
+Cada persona podrá conectar su calendario Google y/o Microsoft y ver sus visitas
+asignadas. Los eventos deberían actualizarse al cambiar la visita o la asignación,
+sin modificar Ábaco cuando se edite el evento externo. Se desea incluir:
 
-## OAuth y configuración pendiente
+- Un título identificable, adaptado al trabajo y al cliente.
+- El sitio o dirección, las notas y las personas que van a la visita.
+- Un enlace a los detalles en Ábaco, sujeto a la sesión y permisos del usuario.
 
-Se elige un calendario secundario creado por Ábaco con
-`https://www.googleapis.com/auth/calendar.app.created`, que permite crear esos
-calendarios y gestionar sus eventos. No solicitar acceso al calendario principal
-ni permisos más amplios. Comprobar en un entorno de prueba los permisos exactos
-de todas las operaciones elegidas y la clasificación actual del permiso en
-Google Cloud antes de pedir consentimiento.
+Este contenido aún no se envía a Google ni existe una conexión con Outlook. Hay
+que definir cómo mostrar las personas cuando hay asignación individual o de equipo,
+qué notas son apropiadas para compartir y cómo acceder al detalle desde cada rol.
+La sincronización debe reflejar también cambios en cliente, lugar, notas y equipo,
+no solo cambios de horario o asignación en la visita.
 
-Se necesita un proyecto de Google Cloud autorizado, Calendar API, cliente OAuth
-web, URL HTTPS de retorno exacta, pantalla de consentimiento y usuarios de prueba.
-Las funciones Edge comparten `GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`;
-el proveedor Google de Supabase Auth se configura por separado en Authentication.
-La conexión y el worker requieren además `GOOGLE_CALENDAR_ENABLED=true` y
-`GOOGLE_CALENDAR_WORKER_ENABLED=true`. No activar estas opciones hasta resolver los
-problemas de conservación de visitas y reconexión descritos arriba.
-Para uso público, revisar la verificación de marca y de permisos sensibles o
-restringidos que corresponda, la política de privacidad y las condiciones de uso
-de datos de Google; no se ha validado su cumplimiento. No guardar secretos en el
-repositorio ni en variables `VITE_*`.
+## Privacidad y seguridad
 
-El código local usa `state` aleatorio, PKCE, caducidad y consumo único mediante
-un almacén aún no implementado. Comprueba el permiso concedido y cifra el refresh
-token con AES-GCM ligado a empresa y usuario. La conexión solo se guarda mediante
-una operación que deberá comprobar transaccionalmente la pertenencia actual; la
-rotación exige comparación atómica. La ruta futura debe obtener el usuario de una
-sesión verificada en servidor, no de la petición, validar origen y retorno y mantener
-la vinculación segura con el navegador durante el callback OAuth. El cliente actual
-mantiene la sesión Supabase en el navegador, por lo que ese puente aún no existe.
-Aislar conexiones con RLS, restringir aún más credenciales, gestionar la clave y
-su rotación y no registrar tokens, códigos OAuth ni detalles sensibles.
+El contenido de un evento puede ser visible para el propietario del calendario y
+para quienes tengan acceso a sus detalles, aunque el evento se marque privado.
+Clientes, direcciones y notas pueden ser sensibles. Antes de enviar esos datos,
+informar claramente del nuevo contenido y obtener la aceptación adecuada, también
+para las conexiones de Google existentes, que se ofrecieron con contenido genérico.
 
-El código local puede solicitar la revocación a Google, pero todavía no implementa
-la desconexión ni limpieza. Revocar un permiso de una cuenta Google puede afectar
-a otros vínculos de la misma cuenta con el mismo cliente OAuth; no ejecutarlo
-automáticamente sin resolver esa interacción entre empresas.
+La sincronización debe comprobar en servidor la empresa, la pertenencia y la
+asignación efectiva antes de enviar información. El acceso de oficina para ver
+visitas no equivale a estar asignado. Ante una reasignación o pérdida de acceso,
+hay que intentar retirar el evento y comunicar que pueden quedar copias si el
+proveedor no está disponible o el permiso ha sido revocado. El enlace no debe
+conceder acceso por sí mismo ni incluir datos sensibles o credenciales.
 
-## Integridad pendiente antes de conectar
+## OAuth y configuración de Google
 
-- Persistir el vínculo entre conexión, calendario, visita y evento, con una cola
-  transaccional y reconciliación periódica para altas, ediciones, cancelaciones,
-  reasignaciones y cambios de miembros del equipo. Una operación debe permanecer
-  pendiente o en error hasta confirmarse realmente en Google; las respuestas
-  inciertas requieren reconciliación, no una falsa confirmación.
-- Crear un calendario secundario no es idempotente. Si se pierde la respuesta,
-  no repetir automáticamente: con `calendar.app.created` no se dispone del permiso
-  para `calendarList.list`. Diseñar recuperación explícita y segura sin solicitar
-  permisos adicionales por defecto; el cliente local no resuelve ese caso.
-- El ID local es estable por empresa, usuario y visita; cumple el alfabeto de
-  Google, pero por sí solo no prueba propiedad ni garantiza ausencia de colisiones.
-  Validar el evento remoto y su propiedad antes de actualizar o borrar; contemplar
-  conflictos, cancelaciones remotas y eventos eliminados que impidan reutilizar IDs.
-- Serializar por conexión y visita, comprobar versión/asignación antes y después
-  de cada llamada, usar ETag/`If-Match` cuando corresponda y reconciliar respuestas
-  tardías o condiciones de carrera. Una llamada en curso no puede revertirse
-  atómicamente con una transacción de Ábaco: manejar y comunicar esa ventana.
-- Mantener instantes UTC y zona IANA explícita; verificar cambios de horario de
-  verano, visitas que cruzan medianoche y cambios de zona. La proyección local no
-  valida la fuente de datos ni resuelve horarios locales ambiguos.
-- Tras revocación o desconexión, dejar de escribir, mostrar el estado y gestionar
-  la limpieza pendiente. Si el token ya no permite acceder, no prometer el borrado
-  remoto: informar de los eventos residuales y permitir reconexión o retirada manual.
-- Probar con cuentas y empresas aisladas: OAuth y `state`, RLS, permisos, duplicados,
-  404/409/410/412/429, respuestas perdidas, reintentos, revocación, cambios
-  concurrentes y equipos, además de una prueba real autorizada de extremo a extremo.
+El código solicita `https://www.googleapis.com/auth/calendar.app.created` para
+crear un calendario secundario y gestionar sus eventos. Las funciones requieren
+credenciales OAuth, la clave de cifrado, la URL de retorno y las opciones
+`GOOGLE_CALENDAR_ENABLED` y `GOOGLE_CALENDAR_WORKER_ENABLED`. El proveedor Google
+de Supabase Auth se configura por separado. No guardar secretos en el repositorio
+ni en variables `VITE_*`.
 
-Decisiones de producto pendientes: qué estados terminales se conservan; política
-de eliminación al desconectar; horizonte de
-sincronización; y cómo avisar de retrasos o eventos residuales. Hace falta también
-un entorno de pruebas y autorización explícita para aplicar infraestructura y
-probar Google. No se ha escrito en servicios externos ni desplegado nada.
+La implementación usa `state` de un solo uso, PKCE, comprobación del permiso,
+cifrado de la credencial ligado a empresa y usuario, y sesión verificada en el
+servidor. La desconexión no revoca automáticamente el permiso en Google: hacerlo
+podría afectar a otros vínculos de la misma cuenta con el mismo cliente OAuth.
+Revisar las políticas de los proveedores y la configuración efectiva antes de
+ampliar su uso.
+
+## Trabajo pendiente
+
+- Diseñar e implementar la conexión Microsoft, su consentimiento y permisos de
+  calendario, el almacenamiento seguro de credenciales, la cola y la interfaz.
+  Registrar la aplicación en Microsoft y probar con cuentas autorizadas antes de
+  presentar Outlook como disponible.
+- Ampliar la proyección de ambos proveedores y los disparadores de cambios,
+  manteniendo aislamiento por empresa, usuario y visita, y evitando duplicados.
+- Resolver la conservación de visitas finalizadas, las cancelaciones y la
+  reconexión con una cuenta distinta. Definir el horizonte de sincronización y
+  cómo comunicar retrasos y eventos residuales.
+- Gestionar la creación incierta de calendarios secundarios y los conflictos o
+  respuestas perdidas de eventos. Comprobar asignación y versión ante cambios
+  concurrentes, y reconciliar las operaciones que no puedan confirmarse.
+- Revisar permisos y políticas de los proveedores y probar OAuth, privacidad,
+  asignaciones de equipo, cambios, desconexión y zonas horarias. Realizar pruebas
+  reales de extremo a extremo con cuentas autorizadas, además de las simuladas.
 
 ## Referencias de Google
 

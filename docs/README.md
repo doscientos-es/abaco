@@ -16,7 +16,7 @@ Comprueba los entornos y las migraciones antes de reutilizar cualquier instrucci
 - [Administración y trabajo personal](decisiones/ADMINISTRACION_Y_TRABAJO_PERSONAL.md): decisión de navegación y recorrido pendiente para administradores que realizan trabajos.
 - [Equipos de trabajo](decisiones/WORK_TEAMS.md): alcance, permisos y activación.
 - [Ausencias y cobertura](decisiones/COBERTURA_DE_VACACIONES.md): comportamiento implementado, límites y decisiones pendientes.
-- [Google Calendar](decisiones/GOOGLE_CALENDAR.md): preparación local, riesgos y trabajo pendiente; integración no disponible.
+- [Calendarios Google y Outlook](decisiones/GOOGLE_CALENDAR.md): estado de Google, alcance deseado y trabajo pendiente para ambos proveedores.
 
 ## Demos
 
