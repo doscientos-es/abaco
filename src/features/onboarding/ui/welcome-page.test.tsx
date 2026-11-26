@@ -1,187 +1,95 @@
-import type * as React from 'react'
+import type * as ReactQuery from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-import type { ActionResult } from '@/features/auth'
+import { describe, expect, it, vi } from 'vitest'
 
 import { WelcomePage } from './welcome-page'
 
-const { state, button, query, complete, fetchQuery, navigate, setBusy, setError } = vi.hoisted(
-  () => ({
-    state: vi.fn(),
-    button: vi.fn(),
-    query: vi.fn(),
-    complete: vi.fn(),
-    fetchQuery: vi.fn(),
-    navigate: vi.fn(),
-    setBusy: vi.fn(),
-    setError: vi.fn(),
-  }),
-)
-vi.mock('react', async (importOriginal) => ({
-  ...(await importOriginal<typeof React>()),
-  useState: state,
+const { query, navigate, refetch } = vi.hoisted(() => ({
+  query: vi.fn(),
+  navigate: vi.fn(),
+  refetch: vi.fn(),
 }))
-vi.mock('@doscientos/ui', () => ({ Button: button }))
-vi.mock('@tanstack/react-query', () => ({
+
+vi.mock('@doscientos/ui', () => ({
+  Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
+}))
+vi.mock('@tanstack/react-query', async (original) => ({
+  ...(await original<typeof ReactQuery>()),
   useQuery: query,
-  useQueryClient: () => ({ fetchQuery }),
+  useQueryClient: () => ({}),
 }))
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
-vi.mock('@/features/billing', () => ({
-  subscriptionQuery: (id: string) => ({ queryKey: ['subscription', id] }),
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
+  useRouter: () => ({}),
 }))
 vi.mock('@/features/auth', () => ({
-  sessionQuery: { queryKey: ['auth', 'session'] },
-  useSession: () => ({ tenantId: 'company-1', role: 'admin', needsWelcome: true }),
-  completeWelcome: complete,
-  AuthLayout: ({
-    title,
-    description,
-    children,
-  }: {
-    title: string
-    description: string
-    children: React.ReactNode
-  }) => (
-    <main>
-      <h1>{title}</h1>
-      <p>{description}</p>
-      {children}
-    </main>
-  ),
-  FormError: ({ message }: { message: string | null }) =>
-    message ? <p role="alert">{message}</p> : null,
+  useSession: () => ({ tenantId: 'company-1', email: 'owner@example.test' }),
+  useCompanyActions: () => ({}),
+  useSignOut: () => vi.fn(),
+  FormError: () => null,
+}))
+vi.mock('@/features/billing', async () => ({
+  ...(await import('@/features/billing/domain/plans')),
+  billingCatalogQuery: { queryKey: ['catalog'] },
+  billingProfileQuery: () => ({ queryKey: ['profile'] }),
+  startOnboardingCheckout: vi.fn(),
+  submitToRedsys: vi.fn(),
+  SubscriptionBillingProfileForm: () => null,
+  tenantAccessQuery: () => ({ queryKey: ['access'] }),
+}))
+vi.mock('@/features/product-modules', async () => ({
+  ...(await import('@/features/product-modules/domain/modules')),
+  moduleCatalogQuery: { queryKey: ['modules'] },
 }))
 
-describe('WelcomePage', () => {
-  let busy: boolean
-  let error: string | null
-  let stateCalls: number
-  const render = () => {
-    stateCalls = 0
-    return renderToStaticMarkup(<WelcomePage />)
-  }
-  const choose = (label: string) => {
-    const props = button.mock.calls.find(([props]) => props.children === label)?.[0]
-    expect(props).toBeDefined()
-    props.onPress()
-  }
-
-  beforeEach(() => {
-    vi.resetAllMocks()
-    busy = false
-    error = null
-    setBusy.mockImplementation((value: typeof busy) => {
-      busy = value
+describe('guided onboarding screen', () => {
+  it('shows the available options before the payment or the workspace', () => {
+    query.mockImplementation(({ queryKey: [key] }) => {
+      if (key === 'company-onboarding') return { data: { stage: 'selection' }, refetch }
+      if (key === 'catalog')
+        return {
+          data: [
+            {
+              plan: 'standard',
+              seats: 1,
+              monthly_cents: 3480,
+              yearly_cents: 34800,
+              vat_percent: 21,
+            },
+          ],
+        }
+      if (key === 'modules')
+        return {
+          data: ['workers', 'procurement', 'mcp', 'ai'].map((code) => ({
+            code,
+            monthly_cents: 900,
+            yearly_cents: 9000,
+          })),
+        }
+      return {}
     })
-    setError.mockImplementation((value: string | null) => {
-      error = value
-    })
-    state.mockImplementation(() => (stateCalls++ === 0 ? [busy, setBusy] : [error, setError]))
-    button.mockImplementation(
-      ({ children, isDisabled }: { children: React.ReactNode; isDisabled?: boolean }) => (
-        <button disabled={isDisabled}>{children}</button>
-      ),
-    )
-    query.mockReturnValue({
-      data: {
-        status: 'trialing',
-        canWrite: false,
-      },
-    })
-    complete.mockResolvedValue({ ok: true })
-    fetchQuery.mockResolvedValue({ needsWelcome: false })
-    navigate.mockResolvedValue(undefined)
-  })
-
-  it('requires a subscription instead of offering a free trial', () => {
-    const html = render()
-
-    expect(html).toContain('Elegir un plan')
-    expect(html).toContain('paga con tarjeta para utilizar Ábaco')
+    const html = renderToStaticMarkup(<WelcomePage />)
+    expect(html).toContain('Elegir licencias')
+    expect(html).toContain('Añadir Asistente de IA')
+    expect(html).toContain('Ver qué incluye')
+    expect(html).not.toContain('Pagar y suscribirme')
     expect(html).not.toContain('prueba gratuita')
-    expect(complete).not.toHaveBeenCalled()
   })
 
-  it('guides activation through a real quotation and explains feature parity', () => {
-    const html = render()
-
-    expect(html).toContain('Tu primer presupuesto, paso a paso')
-    expect(html).toContain('Añade un cliente.')
-    expect(html).toContain('Prepara las partidas de materiales y mano de obra.')
-    expect(html).toContain('Envía el enlace por WhatsApp o correo y consulta la respuesta.')
-    expect(complete).not.toHaveBeenCalled()
+  it('waits for the provider and never offers another charge while payment is pending', () => {
+    query.mockReturnValue({ data: { stage: 'pending' }, refetch })
+    const html = renderToStaticMarkup(<WelcomePage />)
+    expect(html).toContain('Estamos comprobando el pago')
+    expect(html).not.toContain('Pagar y suscribirme')
+    expect(html).not.toContain('Ver horas disponibles')
   })
 
-  it('saves the welcome choice and opens the company for courtesy tenants', async () => {
-    query.mockReturnValue({ data: { isComplimentary: true, status: 'trialing' } })
-    render()
-    choose('Ir a mi empresa')
-
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
-    expect(complete).toHaveBeenCalledOnce()
-    expect(fetchQuery).toHaveBeenCalledWith({ queryKey: ['auth', 'session'], staleTime: 0 })
-    expect(complete.mock.invocationCallOrder[0]).toBeLessThan(
-      fetchQuery.mock.invocationCallOrder[0] ?? 0,
-    )
-    expect(fetchQuery.mock.invocationCallOrder[0]).toBeLessThan(
-      navigate.mock.invocationCallOrder[0] ?? 0,
-    )
-    expect(busy).toBe(false)
-  })
-
-  it('opens plan selection rather than charging when pay-now is chosen', async () => {
-    render()
-    choose('Elegir un plan')
-
-    await vi.waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith({
-        to: '/ajustes',
-        search: { tab: 'plan' },
-        replace: true,
-      }),
-    )
-    expect(complete).toHaveBeenCalledOnce()
-    expect(busy).toBe(false)
-  })
-
-  it('disables the button while saving and re-enables it on failure', async () => {
-    let finish: (result: ActionResult) => void = () => {}
-    complete.mockReturnValue(
-      new Promise<ActionResult>((resolve) => {
-        finish = resolve
-      }),
-    )
-    render()
-    choose('Elegir un plan')
-    button.mockClear()
-    render()
-    expect(button.mock.calls.every(([props]) => props.isDisabled)).toBe(true)
-
-    finish({ ok: false, message: 'No se pudo guardar tu elección.' })
-    await vi.waitFor(() => expect(busy).toBe(false))
-    expect(error).toBe('No se pudo guardar tu elección.')
-    expect(fetchQuery).not.toHaveBeenCalled()
+  it('requires a booking after payment, and stops safely when no scheduler is configured', () => {
+    query.mockReturnValue({ data: { stage: 'booking' }, refetch })
+    const html = renderToStaticMarkup(<WelcomePage />)
+    expect(html).toContain('Reserva tu sesión de puesta en marcha')
+    expect(html).toContain('No se puede abrir la agenda con esta cuenta')
+    expect(html).not.toContain('Pagar y suscribirme')
     expect(navigate).not.toHaveBeenCalled()
-    button.mockClear()
-    expect(render()).toContain('No se pudo guardar tu elección.')
-    expect(button.mock.calls.every(([props]) => !props.isDisabled)).toBe(true)
-  })
-
-  it('handles a failed session refresh without a permanently disabled button', async () => {
-    fetchQuery.mockRejectedValue(new Error('Unavailable'))
-    render()
-    choose('Elegir un plan')
-
-    await vi.waitFor(() => expect(busy).toBe(false))
-    expect(error).toBe('No se pudo continuar. Inténtalo de nuevo.')
-    expect(navigate).not.toHaveBeenCalled()
-  })
-
-  it('fails closed when the subscription cannot be loaded', () => {
-    query.mockReturnValue({ data: undefined, isError: true })
-    expect(render()).toContain('No se pudo comprobar tu suscripción')
-    expect(button.mock.calls[0]?.[0].isDisabled).toBe(true)
   })
 })

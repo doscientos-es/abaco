@@ -12,6 +12,7 @@ import {
   useSession,
   type Role,
 } from '@/features/auth'
+import { billingPreviewQuery } from '@/features/billing'
 import {
   StaffMemberFunctionsDialog,
   staffFunctionsQuery,
@@ -67,6 +68,10 @@ export function TeamSection({
   const functions = useQuery({ ...staffFunctionsQuery(tenantId), enabled: !inviting })
   const schedules = useQuery({ ...staffSchedulesQuery(tenantId), enabled: !inviting })
   const options = assignableRoles(session?.role)
+  const plan = useQuery({
+    ...billingPreviewQuery(tenantId),
+    enabled: !inviting && session?.role === 'admin',
+  })
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<Role>('user')
@@ -150,6 +155,25 @@ export function TeamSection({
 
   return (
     <div className="space-y-6">
+      {!inviting &&
+      !memberIds &&
+      !personId &&
+      session?.role === 'admin' &&
+      team.isSuccess &&
+      (team.data?.length ?? 0) <= 1 &&
+      (plan.data?.current?.seats ?? 0) > 1 ? (
+        <section className="border-primary/20 bg-primary/5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+          <div>
+            <h2 className="font-semibold">Importa tus primeros trabajadores</h2>
+            <p className="text-muted-foreground text-sm">
+              Usa tu Excel o CSV. Solo las personas a las que des acceso ocuparán plaza.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onPress={() => setImportOpen(true)}>
+            Importar desde Excel o CSV
+          </Button>
+        </section>
+      ) : null}
       <section
         aria-labelledby="people-heading"
         className={inviting ? 'border-border bg-card rounded-lg border' : 'space-y-4'}

@@ -35,19 +35,20 @@ Una cuota base incluye el núcleo y una persona. Cada plaza adicional cuesta 8 �
 
 Por ejemplo, tres personas cuestan 50,80 €/mes o 540 €/año (45 €/mes equivalentes), antes de módulos e IVA. El ahorro anual de dos mensualidades se aplica a la cuota base, no a las plazas adicionales. El catálogo vigente está en `billing_catalog`.
 
-- Prueba: 14 días, hasta 15 personas, sin tarjeta ni cobro automático al terminar.
+- El alta guiada nueva no tiene días de prueba. Tras elegir módulos y licencias, requiere confirmar la primera cuota y reservar la puesta en marcha. No se modifican las condiciones de empresas previas.
 - El pago anual se cobra de una vez; su equivalente mensual no es una cuota mensual.
 - Más de 200 personas o necesidades especiales: conversación y alcance evaluado, no una integración prometida.
 - Los planes anteriores se mantienen para clientes existentes; no se cambian sus condiciones automáticamente. El paso a la nueva tarifa es voluntario y sus módulos incluidos deben contratarse aparte si se quieren conservar.
 
 ### Módulos opcionales
 
-| Módulo                   | Mensual sin IVA | Anual sin IVA | Disponibilidad                   |
-| ------------------------ | --------------: | ------------: | -------------------------------- |
-| Trabajadores             |            +9 € |         +90 € | Opcional                         |
-| Proveedores              |           +15 € |        +150 € | Opcional                         |
-| MCP                      |            +9 € |         +90 € | Opcional                         |
-| Logística de proveedores |           +29 € |        +290 € | No se ofrece ni se puede activar |
+| Módulo                   | Mensual sin IVA | Anual sin IVA | Disponibilidad                                              |
+| ------------------------ | --------------: | ------------: | ----------------------------------------------------------- |
+| Trabajadores             |            +9 € |         +90 € | Opcional                                                    |
+| Proveedores              |           +15 € |        +150 € | Opcional                                                    |
+| Asistente de IA          |         +3,75 € |         +45 € | Una persona administradora; 500 peticiones incluidas al mes |
+| MCP                      |            +9 € |         +90 € | Opcional                                                    |
+| Logística de proveedores |           +29 € |        +290 € | No se ofrece ni se puede activar                            |
 
 Los suplementos son fijos por empresa, no por plaza. Superadmin puede regalar módulos a una empresa; el acceso regalado no añade cargos. Los administradores pueden programar las altas y bajas de módulos de pago desde **Módulos opcionales**. El precio y el acceso cambian al confirmar el primer pago o la siguiente renovación, sin prorrateos ni borrado de datos. En empresas de cortesía, Superadmin cambia el acceso al momento y sin cobro. El módulo de Logística requiere validar quién pide el camión, cómo se confirma la entrega y qué canal usa cada proveedor.
 
@@ -102,17 +103,17 @@ Estos hitos son aprendizaje inicial, no prueba estadística de viabilidad. No ca
 
 ### Registro semanal en el CRM
 
-Registrar por empresa y cohorte: oficio y zona, canal, fecha de contacto, cualificación, demo, inicio de prueba, primer presupuesto real enviado, primera respuesta, primer pago, plan y periodo, baja y motivo. Registrar también gasto de canal y minutos comerciales, de onboarding y soporte. No guardar enlaces públicos de clientes ni credenciales.
+Registrar por empresa y cohorte: oficio y zona, canal, fecha de contacto, cualificación, demo, alta abonada, cita reservada, primer presupuesto real enviado, primera respuesta, primer pago, plan y periodo, baja y motivo. Registrar también gasto de canal y minutos comerciales, de onboarding y soporte. No guardar enlaces públicos de clientes ni credenciales.
 
-| Indicador                  | Definición para decidir                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------- |
-| Conversión comercial       | Nuevas empresas de pago / oportunidades cualificadas de la misma cohorte                |
-| Activación                 | Empresas de la cohorte que envían un presupuesto real / empresas que empiezan la prueba |
-| Ticket observado           | MRR sin IVA / empresas de pago activas, desglosado por plan y periodo                   |
-| Coste de adquisición (CAC) | Gasto de captación y coste del tiempo comercial / nuevas empresas de pago               |
-| Recuperación del CAC       | CAC / contribución mensual media; aproximación que no garantiza retención               |
-| Retención a 60/90 días     | Empresas de pago de la cohorte que siguen suscritas; revisar uso por separado           |
-| Soporte                    | Minutos por empresa, separando puesta en marcha y atención recurrente                   |
+| Indicador                  | Definición para decidir                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Conversión comercial       | Nuevas empresas de pago / oportunidades cualificadas de la misma cohorte               |
+| Activación                 | Empresas de la cohorte que envían un presupuesto real / empresas que completan el alta |
+| Ticket observado           | MRR sin IVA / empresas de pago activas, desglosado por plan y periodo                  |
+| Coste de adquisición (CAC) | Gasto de captación y coste del tiempo comercial / nuevas empresas de pago              |
+| Recuperación del CAC       | CAC / contribución mensual media; aproximación que no garantiza retención              |
+| Retención a 60/90 días     | Empresas de pago de la cohorte que siguen suscritas; revisar uso por separado          |
+| Soporte                    | Minutos por empresa, separando puesta en marcha y atención recurrente                  |
 
 La permanencia contractual de una suscripción anual no demuestra uso ni renovación. Separar bajas mensuales, cancelación de renovación anual y renovaciones efectivas. Revisar también impagos.
 

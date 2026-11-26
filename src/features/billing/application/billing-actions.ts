@@ -376,3 +376,20 @@ export const acceptBillingTerms = (
 export const cancelPlan = (tenantId: string) => call({ action: 'cancel', tenantId })
 export const resumePlan = (tenantId: string) => call({ action: 'resume', tenantId })
 export const undoPlanChange = (tenantId: string) => call({ action: 'undo', tenantId })
+
+/** Guided checkout is separate from adjustments to existing subscriptions. */
+export const startOnboardingCheckout = (
+  tenantId: string,
+  terms: BillingTerms,
+  modules: readonly string[],
+  bookingUrl: string,
+) =>
+  call({
+    action: 'onboarding-checkout',
+    tenantId,
+    interval: terms.period,
+    seats: terms.seats,
+    total: terms.amount_cents,
+    modules,
+    bookingUrl,
+  })

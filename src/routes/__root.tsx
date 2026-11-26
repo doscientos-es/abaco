@@ -10,8 +10,9 @@ import { useEffect } from 'react'
 
 import { AppFrame } from '@/app/app-frame'
 import { UserFrame } from '@/app/technician-frame'
-import { NoCompanyPage, rememberReferral, sessionQuery, welcomeRedirect } from '@/features/auth'
+import { NoCompanyPage, rememberReferral, sessionQuery } from '@/features/auth'
 import { SubscriptionAccessPage, tenantAccessQuery } from '@/features/billing'
+import { companyOnboardingQuery, onboardingDestination } from '@/features/onboarding'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
 
@@ -49,6 +50,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     }
     if (session && guestOnlyPaths.includes(path)) throw redirect({ to: '/', replace: true })
     if (
+      session?.tenantId &&
+      !isPublicPath(path) &&
+      !isPlatformPage &&
+      path !== '/nueva-contrasena'
+    ) {
+      const query = companyOnboardingQuery(session.tenantId)
+      const cachedOnboarding = context.queryClient.getQueryState(query.queryKey)
+      if (
+        offline &&
+        (!cachedOnboarding || cachedOnboarding.isInvalidated || cachedOnboarding.data === undefined)
+      ) {
+        throw new Error('Se necesita conexión para comprobar el alta de la empresa.')
+      }
+      const onboarding = offline
+        ? cachedOnboarding?.data
+        : await context.queryClient.fetchQuery(query)
+      const destination = onboardingDestination(onboarding?.stage, path)
+      if (destination) throw redirect({ to: destination, replace: true })
+    }
+    if (
       session?.role === 'user' &&
       !isPublicPath(path) &&
       !isPlatformPage &&
@@ -56,13 +77,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       path !== '/mi-jornada' &&
       path !== '/horarios' &&
       path !== '/mis-vacaciones' &&
-      path !== '/nueva-contrasena'
+      path !== '/nueva-contrasena' &&
+      path !== '/bienvenida'
     ) {
       throw redirect({ to: '/mi-jornada', replace: true })
-    }
-    if (session && !isPublicPath(path) && !isPlatformPage) {
-      const destination = welcomeRedirect(session.needsWelcome, path)
-      if (destination) throw redirect({ to: destination, replace: true })
     }
     let hasTenantAccess = false
     if (
@@ -70,7 +88,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       session.tenantId &&
       !isPublicPath(path) &&
       !isPlatformPage &&
-      path !== '/nueva-contrasena'
+      path !== '/nueva-contrasena' &&
+      path !== '/bienvenida'
     ) {
       const access = tenantAccessQuery(session.tenantId)
       const cachedAccess = context.queryClient.getQueryState(access.queryKey)
