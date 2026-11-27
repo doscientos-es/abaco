@@ -1,3 +1,17 @@
+/* Workspaces scroll inside their frames; login needs the document to scroll. */
+html:has(#root > .login-layout) {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body:has(#root > .login-layout) {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
 .login-layout {
   min-height: 100svh;
   display: grid;
@@ -112,7 +126,7 @@
   }
   .login-main {
     min-height: 100svh;
-    padding: 1.5rem 1.5rem 2rem;
+    padding: 1.5rem 1.5rem calc(2rem + env(safe-area-inset-bottom, 0px));
   }
   .login-mobile-brand {
     display: flex;
