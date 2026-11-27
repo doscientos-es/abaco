@@ -8,7 +8,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { billingOrigin, menosliosOrigin } from '../_shared/billing-origin.ts'
-import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
+import {
+  firstPaymentForm,
+  hasUsableRedsysReferenceKey,
+  newMerchantOrder,
+  readRedsysConfig,
+} from '../_shared/redsys.ts'
 import { renamedEnv } from '../_shared/renamed-env.ts'
 import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
@@ -35,10 +40,8 @@ Deno.serve(async (request) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const appUrl = origin ?? menosliosOrigin
-  const config = readRedsysConfig()
   const authorization = request.headers.get('Authorization')
-  if (!url || !anonKey || !serviceKey || !config)
-    return reply(500, { error: 'Función sin configurar' })
+  if (!url || !anonKey || !serviceKey) return reply(500, { error: 'Función sin configurar' })
   if (!authorization) return reply(401, { error: 'Inicia sesión' })
 
   const asCaller = createClient(url, anonKey, {
@@ -61,6 +64,10 @@ Deno.serve(async (request) => {
     if (Deno.env.get('MENOSLIOS_ONBOARDING_PAYMENTS_LIVE') !== 'true')
       return reply(409, {
         error: 'La contratación todavía no está abierta. No se ha iniciado ningún cobro.',
+      })
+    if (!hasUsableRedsysReferenceKey())
+      return reply(503, {
+        error: 'El método de pago aún no está preparado. No se ha iniciado ningún cobro.',
       })
     const bookingUrl = renamedEnv('CAL_BOOKING_URL')
     const eventType = renamedEnv('CAL_EVENT_TYPE_ID')
@@ -95,6 +102,8 @@ Deno.serve(async (request) => {
       return reply(409, { error: 'Continúa en el alta guiada para activar tu empresa.' })
     }
   }
+  const config = readRedsysConfig()
+  if (!config) return reply(503, { error: 'El TPV no está configurado.' })
   let profile = null
   if (isCharge) {
     if (config.environment !== 'prod' || config.currency !== '978') {

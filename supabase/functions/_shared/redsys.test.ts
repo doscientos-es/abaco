@@ -6,6 +6,8 @@ import { billingOrigin } from './billing-origin'
 import {
   chargeReference,
   firstPaymentForm,
+  hasUsableRedsysReferenceKey,
+  readRedsysConfig,
   openReference,
   readNotification,
   redsysTerminalMatches,
@@ -53,6 +55,22 @@ describe('Redsys subscription provider', () => {
     expect(billingOrigin(legacy, legacy + '/')).toBe(legacy)
     expect(billingOrigin(current + '.example.test', legacy)).toBeNull()
     expect(billingOrigin('http://abaco.doscientos.es', 'http://abaco.doscientos.es')).toBeNull()
+  })
+
+  it('requires a correctly formatted merchant and a separate reference encryption key', () => {
+    const env = new Map([
+      ['REDSYS_ENVIRONMENT', 'test'],
+      ['REDSYS_MERCHANT_CODE', '999999999'],
+      ['REDSYS_TERMINAL', '001'],
+      ['REDSYS_SECRET_KEY', 'fixture-for-test'],
+    ])
+    vi.stubGlobal('Deno', { env: { get: (name: string) => env.get(name) } })
+    expect(readRedsysConfig()).toEqual(config)
+    expect(hasUsableRedsysReferenceKey()).toBe(false)
+    env.set('REDSYS_REFERENCE_KEY', 'a'.repeat(44))
+    expect(hasUsableRedsysReferenceKey()).toBe(true)
+    env.set('REDSYS_MERCHANT_CODE', 'invalid')
+    expect(readRedsysConfig()).toBeNull()
   })
 
   it('prepares an initial sandbox payment requesting a recurring Redsys token', () => {

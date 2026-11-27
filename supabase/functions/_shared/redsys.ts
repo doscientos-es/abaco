@@ -32,8 +32,10 @@ export function readRedsysConfig(): RedsysConfig | null {
   if (
     (environment !== 'test' && environment !== 'prod') ||
     !merchantCode ||
+    !/^\d{9}$/.test(merchantCode) ||
     !secretKey ||
-    !terminal
+    !terminal ||
+    !/^\d{1,3}$/.test(terminal)
   )
     return null
   return {
@@ -197,6 +199,9 @@ export function readNotification(
     return null
   }
 }
+
+export const hasUsableRedsysReferenceKey = () =>
+  (Deno.env.get('REDSYS_REFERENCE_KEY')?.trim().length ?? 0) >= 32
 
 const referenceKey = () => {
   const secret = Deno.env.get('REDSYS_REFERENCE_KEY')?.trim()

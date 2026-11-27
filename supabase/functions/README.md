@@ -17,6 +17,6 @@ Configura esos valores solo en los secretos de Edge Functions
 (`REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL`, `REDSYS_SECRET_KEY`,
 `REDSYS_ENVIRONMENT`; `REDSYS_CURRENCY` vale 978 por defecto). Configura
 también `REDSYS_REFERENCE_KEY`, separada de la clave de firma, para cifrar las
-referencias. No rotarla sin un plan de migración para tarjetas ya vinculadas.
+referencias (genera al menos 32 bytes aleatorios y usa su Base64). No rotarla sin un plan de migración para tarjetas ya vinculadas.
 En test, no utilizar el webhook de producción: bloquea avisos de sandbox y
 no genera facturas de prueba.
