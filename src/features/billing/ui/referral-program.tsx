@@ -2,6 +2,7 @@ import { Button } from '@doscientos/ui'
 import { useState } from 'react'
 
 import { referralLink } from '@/features/auth/domain/referral-link'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 
 import type { ReferralOverview } from '../application/billing-actions'
 
@@ -17,17 +18,24 @@ export function ReferralProgram({
   onRetry: () => void
 }) {
   const [message, setMessage] = useState('')
+  const [copying, setCopying] = useState(false)
+  const copyLock = useActionLock()
   const link =
     summary && typeof window !== 'undefined'
       ? referralLink(window.location.origin, summary.code)
       : ''
 
   async function copyLink() {
+    if (!link || !copyLock.acquire()) return
+    setCopying(true)
     try {
       await navigator.clipboard.writeText(link)
       setMessage('Enlace copiado. Compártelo con quien quieras invitar.')
     } catch {
       setMessage('No se pudo copiar automáticamente. Selecciona y copia el enlace.')
+    } finally {
+      copyLock.release()
+      setCopying(false)
     }
   }
 
@@ -81,8 +89,8 @@ export function ReferralProgram({
               value={link}
               className="border-input bg-background min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
             />
-            <Button variant="outline" onPress={() => void copyLink()}>
-              Copiar enlace
+            <Button variant="outline" isDisabled={copying} onPress={() => void copyLink()}>
+              {copying ? 'Copiando…' : 'Copiar enlace'}
             </Button>
           </div>
           {message ? (

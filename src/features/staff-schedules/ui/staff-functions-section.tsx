@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { teamQuery } from '@/features/settings/application/team-actions'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { TextField } from '@/shared/ui/form'
 
 import {
@@ -31,6 +32,7 @@ export function StaffFunctionsSection({
   const [removing, setRemoving] = useState<StaffFunction | null>(null)
   const [assigning, setAssigning] = useState<StaffFunction | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [message, setMessage] = useState('')
   const counts = new Map<string, number>()
   if (team.isSuccess && schedules.isSuccess && !team.isError && !schedules.isError) {
@@ -42,6 +44,7 @@ export function StaffFunctionsSection({
   }
 
   async function run(action: () => Promise<void>) {
+    if (!actionLock.acquire()) return false
     setBusy(true)
     setMessage('')
     try {
@@ -52,6 +55,7 @@ export function StaffFunctionsSection({
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el cambio.')
       return false
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }

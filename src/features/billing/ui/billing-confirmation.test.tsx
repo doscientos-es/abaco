@@ -202,6 +202,24 @@ describe('billing confirmation', () => {
     })
   })
 
+  it('does not start checkout twice on rapid confirmation', async () => {
+    let finish!: (value: { ok: true }) => void
+    fixtures.accept.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    render()
+    action('Elegir Ábaco').onPress()
+    render()
+    const confirm = action('Continuar al pago')
+    confirm.onPress()
+    confirm.onPress()
+    expect(fixtures.accept).toHaveBeenCalledTimes(1)
+    finish({ ok: true })
+    await vi.waitFor(() => expect(fixtures.invalidate).toHaveBeenCalled())
+  })
+
   it('lets a monthly customer schedule annual billing without starting checkout', async () => {
     fixtures.status = 'active'
     fixtures.accept.mockResolvedValue({ ok: true })

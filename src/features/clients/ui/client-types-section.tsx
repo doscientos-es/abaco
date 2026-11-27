@@ -2,6 +2,7 @@ import { Button, ConfirmDialog } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { useTenantData } from '@/shared/store/store'
 import { TextField } from '@/shared/ui/form'
 
@@ -22,9 +23,11 @@ export function ClientTypesSection({ tenantId }: { tenantId: string }) {
   const [editing, setEditing] = useState<ClientType | null>(null)
   const [removing, setRemoving] = useState<ClientType | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [message, setMessage] = useState<string | null>(null)
 
   async function run(action: () => Promise<void>): Promise<boolean> {
+    if (!actionLock.acquire()) return false
     setBusy(true)
     setMessage(null)
     try {
@@ -42,6 +45,7 @@ export function ClientTypesSection({ tenantId }: { tenantId: string }) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el cambio.')
       return false
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }
@@ -191,8 +195,8 @@ export function ClientTypesSection({ tenantId }: { tenantId: string }) {
         pending={busy}
         onConfirm={() => {
           if (removing)
-            void run(() => deleteClientType(tenantId, removing.id)).then(() => {
-              setRemoving(null)
+            void run(() => deleteClientType(tenantId, removing.id)).then((ok) => {
+              if (ok) setRemoving(null)
             })
         }}
       />

@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import type { LedgerEntry } from '@/shared/domain/types'
 import { receiptUpload } from '@/shared/domain/upload-file'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { newId, synchronizeStoreSaves } from '@/shared/store/store'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
@@ -32,12 +33,13 @@ export function LedgerAttachmentsDialog({
   const [pending, setPending] = useState(initialFile)
   const [toRemove, setToRemove] = useState<LedgerAttachment | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [error, setError] = useState(
     initialFile ? 'No se pudo completar la subida. Puedes reintentar sin añadir otro apunte.' : '',
   )
 
   async function run(action: () => Promise<void>) {
-    if (busy) return
+    if (!actionLock.acquire()) return
     setBusy(true)
     setError('')
     try {
@@ -45,6 +47,7 @@ export function LedgerAttachmentsDialog({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo completar la acción.')
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }
@@ -136,6 +139,7 @@ export function LedgerAttachmentsDialog({
         description={toRemove ? `«${toRemove.name}» se eliminará definitivamente.` : null}
         confirmLabel="Eliminar"
         destructive
+        pending={busy}
         onConfirm={() => {
           if (!toRemove) return
           const file = toRemove

@@ -11,6 +11,7 @@ import {
   type CalendarEvent,
   type EventCalendarView,
 } from '@/shared/lib/event-calendar'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { newId, refreshStore, useSaveStatus } from '@/shared/store/store'
 import { CalendarDetailsDialog } from '@/shared/ui/calendar-details-dialog'
 import { CalendarToolbar } from '@/shared/ui/calendar-toolbar'
@@ -55,6 +56,7 @@ export function PaymentCalendar({
   const [paidOn, setPaidOn] = useState(localToday)
   const [cancelling, setCancelling] = useState<ScheduledPayment | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [view, setView] = useState<EventCalendarView>('month')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const month = dateValue(date).slice(0, 7)
@@ -129,7 +131,7 @@ export function PaymentCalendar({
   }
 
   async function run(action: () => Promise<void>, success: string, close: () => void) {
-    if (busy) return
+    if (!actionLock.acquire()) return
     setBusy(true)
     try {
       await action()
@@ -141,6 +143,7 @@ export function PaymentCalendar({
         description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
       })
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }
@@ -414,6 +417,7 @@ export function PaymentCalendar({
         }
         confirmLabel="Anular previsión"
         destructive
+        pending={busy}
         onConfirm={() => {
           if (cancelling)
             void run(

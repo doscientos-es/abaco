@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 
 import {
   moduleCatalogQuery,
@@ -77,6 +78,8 @@ export function ModuleSubscriptions({
   const client = useQueryClient()
   const [selection, setSelection] = useState<Selection | null>(null)
   const [giftSelection, setGiftSelection] = useState<GiftSelection | null>(null)
+  const changeLock = useActionLock()
+  const giftLock = useActionLock()
   const change = useMutation({
     mutationFn: ({ rate, enabled }: Selection) => scheduleModule(tenantId, rate, enabled),
     onSuccess: async () => {
@@ -88,6 +91,9 @@ export function ModuleSubscriptions({
       ])
     },
     onError: () => client.invalidateQueries({ queryKey: moduleCatalogQuery.queryKey }),
+    onSettled: () => {
+      changeLock.release()
+    },
   })
   const gift = useMutation({
     mutationFn: (change: GiftSelection) =>
@@ -99,6 +105,9 @@ export function ModuleSubscriptions({
         client.invalidateQueries({ queryKey: tenantModulesQuery(tenantId).queryKey }),
         onChanged(),
       ])
+    },
+    onSettled: () => {
+      giftLock.release()
     },
   })
   const timing = active ? 'en la próxima renovación' : 'al pagar la primera cuota'
@@ -314,7 +323,10 @@ export function ModuleSubscriptions({
           <div className="flex gap-2">
             <Button
               isDisabled={blocked || change.isPending}
-              onPress={() => change.mutate(confirmation)}
+              onPress={() => {
+                if (!changeLock.acquire()) return
+                change.mutate(confirmation)
+              }}
             >
               {change.isPending ? 'Guardando…' : detail ? 'Guardar cambio' : 'Confirmar módulo'}
             </Button>
@@ -349,7 +361,10 @@ export function ModuleSubscriptions({
           <div className="flex gap-2">
             <Button
               isDisabled={blocked || gift.isPending}
-              onPress={() => gift.mutate(giftSelection)}
+              onPress={() => {
+                if (!giftLock.acquire()) return
+                gift.mutate(giftSelection)
+              }}
             >
               {gift.isPending ? 'Guardando…' : 'Confirmar regalo'}
             </Button>

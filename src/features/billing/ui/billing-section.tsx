@@ -10,6 +10,7 @@ import {
   staffModuleQuery,
   tenantModulesQuery,
 } from '@/features/product-modules'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 
 import {
   acceptBillingTerms,
@@ -77,6 +78,7 @@ export function BillingSection({
     action: 'checkout' | 'change' | 'retry'
   } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const actionLock = useActionLock()
   const [error, setError] = useState('')
   const [paidByBalance, setPaidByBalance] = useState(false)
 
@@ -115,6 +117,7 @@ export function BillingSection({
     const onPageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return
       // Browser Back can restore this page with the pre-redirect disabled state.
+      actionLock.release()
       setBusy(null)
       void queryClient.invalidateQueries({ queryKey: ['subscription', tenantId] })
       void queryClient.invalidateQueries({ queryKey: ['billing-payments', tenantId] })
@@ -125,15 +128,21 @@ export function BillingSection({
     }
     window.addEventListener('pageshow', onPageShow)
     return () => window.removeEventListener('pageshow', onPageShow)
-  }, [queryClient, tenantId])
+  }, [actionLock, queryClient, tenantId])
 
   async function go(key: string, action: () => Promise<BillingResult>) {
+    if (!actionLock.acquire()) return
+    let redirecting = false
     setBusy(key)
     setError('')
     setPaidByBalance(false)
     try {
       const result = await action()
-      if (result.ok && result.form) return submitToRedsys(result.form)
+      if (result.ok && result.form) {
+        submitToRedsys(result.form)
+        redirecting = true
+        return
+      }
       setPaidByBalance(result.ok && result.paidByBalance === true)
       if (result.ok) setSelection(null)
       else setError(result.message)
@@ -147,7 +156,10 @@ export function BillingSection({
     } catch {
       setError('No se pudo completar la operación. Inténtalo de nuevo.')
     } finally {
-      setBusy(null)
+      if (!redirecting) {
+        actionLock.release()
+        setBusy(null)
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { SelectField } from '@/shared/ui/form'
 
 import type { ServiceContract } from '../application/contract-actions'
@@ -13,6 +14,7 @@ import {
 export function ApplyContractTemplateButton({ contract }: { contract: ServiceContract }) {
   const cache = useQueryClient()
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [selectedId, setSelectedId] = useState(contract.document_template_id ?? '')
   const library = useQuery({
     queryKey: ['contract-template-library', contract.tenant_id],
@@ -21,11 +23,13 @@ export function ApplyContractTemplateButton({ contract }: { contract: ServiceCon
   const template = library.data?.templates.find((item) => item.id === selectedId)
   const operations = useRef(new Map<string, string>())
   async function apply() {
-    if (busy || !template) return
+    if (!template || !actionLock.acquire()) return
     if (
       !window.confirm('Se sustituirán las secciones actuales de este borrador. ¿Quieres continuar?')
-    )
+    ) {
+      actionLock.release()
       return
+    }
     const version = contract.updated_at
     const operationKey = `${version}:${template.id}:${template.revision}`
     const operationId = operations.current.get(operationKey) ?? crypto.randomUUID()
@@ -54,6 +58,7 @@ export function ApplyContractTemplateButton({ contract }: { contract: ServiceCon
       })
       await cache.invalidateQueries({ queryKey: ['contract-template-library', contract.tenant_id] })
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }

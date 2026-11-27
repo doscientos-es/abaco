@@ -2,6 +2,8 @@ import { Button, Input } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { useActionLock } from '@/shared/lib/use-action-lock'
+
 import {
   platformCompaniesQuery,
   platformCompanyReferralQuery,
@@ -22,6 +24,7 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null)
   const [expected, setExpected] = useState<string | null>(null)
+  const saveLock = useActionLock()
   const companies = useQuery({
     ...platformCompaniesQuery(search.trim(), (page - 1) * 50),
     enabled: editing && search.trim().length > 0,
@@ -35,6 +38,9 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
         client.invalidateQueries({ queryKey: ['referral-overview'] }),
       ])
       setEditing(false)
+    },
+    onSettled: () => {
+      saveLock.release()
     },
   })
 
@@ -141,10 +147,11 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
                 <Button
                   isDisabled={save.isPending || (selected?.id ?? null) === expected}
                   onPress={() => {
+                    if (!saveLock.acquire()) return
                     save.mutate(expected)
                   }}
                 >
-                  Guardar asignación
+                  {save.isPending ? 'Guardando…' : 'Guardar asignación'}
                 </Button>
                 <Button
                   variant="outline"

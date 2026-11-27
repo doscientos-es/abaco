@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   states: [] as unknown[],
   cursor: 0,
   ref: { current: new Map<string, string>() },
+  lockRef: { current: false },
   select: undefined as ((value: string) => void) | undefined,
   apply: undefined as (() => void) | undefined,
   disabled: false,
@@ -31,7 +32,7 @@ vi.mock('react', async (original) => ({
       },
     ]
   },
-  useRef: () => state.ref,
+  useRef: (initial: unknown) => (initial === false ? state.lockRef : state.ref),
 }))
 vi.mock('@doscientos/ui', () => ({
   Button: ({
@@ -99,6 +100,7 @@ describe('selector de plantilla del contrato', () => {
   beforeEach(() => {
     state.states = []
     state.ref.current.clear()
+    state.lockRef.current = false
     vi.clearAllMocks()
     state.invalidate.mockResolvedValue(undefined)
     state.save.mockResolvedValue(undefined)
@@ -144,5 +146,24 @@ describe('selector de plantilla del contrato', () => {
       }),
     )
     expect(state.error).toHaveBeenCalled()
+  })
+
+  it('ignora confirmaciones rápidas mientras se aplica una plantilla', async () => {
+    let finish!: () => void
+    state.save.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    state.confirm.mockReturnValue(true)
+    render()
+    state.select?.('template-a')
+    render()
+    state.apply?.()
+    state.apply?.()
+    expect(state.confirm).toHaveBeenCalledTimes(1)
+    expect(state.save).toHaveBeenCalledTimes(1)
+    finish()
+    await vi.waitFor(() => expect(state.success).toHaveBeenCalled())
   })
 })

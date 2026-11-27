@@ -21,6 +21,7 @@ import {
 import { WorkerVacationAllowance } from '@/features/vacations'
 import { calendarColors, resolveCalendarColor } from '@/shared/domain/calendar-color'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { SelectField, TextField } from '@/shared/ui/form'
 import { FormDialog } from '@/shared/ui/form-dialog'
@@ -77,6 +78,7 @@ export function TeamSection({
   const [role, setRole] = useState<Role>('user')
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [inviteOpen, setInviteOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [removing, setRemoving] = useState<TeamMember | null>(null)
@@ -96,6 +98,7 @@ export function TeamSection({
   }
 
   async function run(action: () => Promise<TeamResult>, success: string) {
+    if (!actionLock.acquire()) return false
     setBusy(true)
     try {
       const result = await action()
@@ -118,6 +121,7 @@ export function TeamSection({
       setMessage('No se pudo confirmar la operación. Revisa el equipo antes de reintentar.')
       return false
     } finally {
+      actionLock.release()
       setBusy(false)
     }
   }
@@ -531,7 +535,9 @@ export function TeamSection({
             void run(
               () => removeMember(tenantId, removing.userId),
               'Persona quitada del equipo.',
-            ).then(() => setRemoving(null))
+            ).then((ok) => {
+              if (ok) setRemoving(null)
+            })
         }}
       />
     </div>
