@@ -18,7 +18,7 @@ export async function receiveConnectEvent(
   if (!config.secretKey || !config.webhookSecret) return 'unavailable'
   let event: Stripe.Event
   try {
-    event = verifyConnectEvent(body, signature, config)
+    event = await verifyConnectEvent(body, signature, config)
   } catch {
     return 'invalid'
   }

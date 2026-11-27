@@ -29,25 +29,25 @@ function signed(value: unknown, timestamp?: number) {
 }
 
 describe('Stripe Connect webhook verification', () => {
-  it('accepts the original body with a valid Stripe signature', () => {
+  it('accepts the original body with a valid Stripe signature', async () => {
     const { body, signature } = signed(event)
-    expect(verifyConnectEvent(body, signature, config)).toMatchObject(event)
+    await expect(verifyConnectEvent(body, signature, config)).resolves.toMatchObject(event)
   })
 
-  it('rejects a changed body, wrong secret and missing signature', () => {
+  it('rejects a changed body, wrong secret and missing signature', async () => {
     const { body, signature } = signed(event)
-    expect(() =>
+    await expect(
       verifyConnectEvent(Buffer.concat([body, Buffer.from(' ')]), signature, config),
-    ).toThrow()
-    expect(() =>
+    ).rejects.toThrow()
+    await expect(
       verifyConnectEvent(body, signature, { ...config, webhookSecret: 'whsec_other' }),
-    ).toThrow()
-    expect(() => verifyConnectEvent(body, '', config)).toThrow()
+    ).rejects.toThrow()
+    await expect(verifyConnectEvent(body, '', config)).rejects.toThrow()
   })
 
-  it('rejects a replay outside the SDK signature tolerance', () => {
+  it('rejects a replay outside the SDK signature tolerance', async () => {
     const { body, signature } = signed(event, Math.floor(Date.now() / 1000) - 301)
-    expect(() => verifyConnectEvent(body, signature, config)).toThrow()
+    await expect(verifyConnectEvent(body, signature, config)).rejects.toThrow()
   })
 
   it.each([
@@ -57,8 +57,8 @@ describe('Stripe Connect webhook verification', () => {
     { ...event, id: 'invalid' },
     { ...event, object: 'checkout.session' },
     { ...event, data: null },
-  ])('rejects a signed event outside the expected Connect context', (candidate) => {
+  ])('rejects a signed event outside the expected Connect context', async (candidate) => {
     const { body, signature } = signed(candidate)
-    expect(() => verifyConnectEvent(body, signature, config)).toThrow()
+    await expect(verifyConnectEvent(body, signature, config)).rejects.toThrow()
   })
 })

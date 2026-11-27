@@ -1,10 +1,41 @@
-// The Vercel Node.js endpoints are not yet available on Cloudflare. Never
-// serve the SPA shell as a successful API response while testing the frontend.
+import { createServer } from 'node:http'
+
+import { handleAsNodeRequest } from 'cloudflare:node'
+
+import aiChat from '../api/ai_chat'
+import aiSuggestion from '../api/ai_suggestion'
+import stripeAuthorize from '../api/stripe_connect_authorize'
+import stripeCallback from '../api/stripe_connect_callback'
+import stripeWebhook from '../api/stripe_connect_webhook'
+import reportPdf from '../api/visit_report_pdf'
+import reportPdfWorker from '../api/visit_report_pdf_worker'
+
+const handlers = {
+  '/api/ai_chat': aiChat,
+  '/api/ai_suggestion': aiSuggestion,
+  '/api/stripe_connect_authorize': stripeAuthorize,
+  '/api/stripe_connect_callback': stripeCallback,
+  '/api/stripe_connect_webhook': stripeWebhook,
+  '/api/visit_report_pdf': reportPdf,
+  '/api/visit_report_pdf_worker': reportPdfWorker,
+}
+const server = createServer((request, response) => {
+  const path = new URL(request.url, 'https://worker.invalid').pathname
+  const handler = Object.hasOwn(handlers, path) ? handlers[path] : undefined
+  if (!handler) {
+    response.writeHead(404, { 'Content-Type': 'application/json' })
+    response.end('{"error":"not_found"}')
+    return
+  }
+  Promise.resolve(handler(request, response)).catch(() => {
+    if (!response.headersSent) response.writeHead(500, { 'Content-Type': 'application/json' })
+    response.end('{"error":"unavailable"}')
+  })
+})
+server.listen(8080)
 export default {
-  async fetch(request, env) {
-    if (new URL(request.url).pathname.startsWith('/api/')) {
-      return Response.json({ error: 'api_not_available_on_cloudflare' }, { status: 503 })
-    }
-    return env.ASSETS.fetch(request)
+  fetch(request, env) {
+    if (new URL(request.url).pathname.startsWith('/api/')) return handleAsNodeRequest(8080, request)
+    return env.ASETS.fetch(request)
   },
 }

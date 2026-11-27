@@ -1,0 +1,12 @@
+{
+  "name": "menoslios-pdf-probe",
+  "main": "./probe.js",
+  "compatibility_date": "2026-11-27",
+  "images": { "binding": "IMAGES" },
+  "alias": {
+    "sharp": "./sharp.js",
+    "yoga-layout/load": "../node_modules/workerd-yoga/dist/load.js",
+    "@react-pdf/pdfkit": "../node_modules/@react-pdf/pdfkit/lib/pdfkit.js",
+    "buffer": "./buffer.js",
+  },
+}

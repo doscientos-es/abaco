@@ -1,4 +1,4 @@
-import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer'
+import { Document, Image, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer'
 import sharp from 'sharp'
 
 import type { ReportProjection } from './projection'
@@ -114,7 +114,7 @@ export async function renderVisitReport(report: ReportProjection, photoBytes: Bu
     ['Inicio', date(report.visit.actualStartAt)],
     ['Fin', date(report.visit.actualEndAt)],
   ]
-  return renderToBuffer(
+  const document = (
     <Document title="Parte de visita" author={report.company.name}>
       <Page size="A4" style={styles.page} wrap>
         <Text style={styles.muted}>{report.company.name || 'Empresa'}</Text>
@@ -207,6 +207,7 @@ export async function renderVisitReport(report: ReportProjection, photoBytes: Bu
           <Text render={({ pageNumber }) => `Página ${pageNumber}`} />
         </View>
       </Page>
-    </Document>,
+    </Document>
   )
+  return Buffer.from(await (await pdf(document).toBlob()).arrayBuffer())
 }

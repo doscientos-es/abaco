@@ -4,16 +4,16 @@ const accountIdPattern = /^acct_[a-zA-Z0-9]+$/
 const eventIdPattern = /^evt_[a-zA-Z0-9]+$/
 
 /** Verify the unmodified request body before inspecting or storing a Connect event. */
-export function verifyConnectEvent(
+export async function verifyConnectEvent(
   body: Buffer,
   signature: string,
   config: { secretKey: string; webhookSecret: string; liveMode: boolean },
-): Stripe.Event {
+): Promise<Stripe.Event> {
   if (!body.length || !signature || !config.secretKey || !config.webhookSecret)
     throw new Error('Stripe webhook not configured or invalid')
 
   const stripe = new Stripe(config.secretKey)
-  const event = stripe.webhooks.constructEvent(body, signature, config.webhookSecret)
+  const event = await stripe.webhooks.constructEventAsync(body, signature, config.webhookSecret)
   if (
     event.object !== 'event' ||
     !eventIdPattern.test(event.id) ||

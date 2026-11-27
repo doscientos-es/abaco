@@ -29,6 +29,7 @@
     "@dnd-kit/react": "^0.5.3",
     "@doscientos/ui": "^0.1.43",
     "@phosphor-icons/react": "^2.1.10",
+    "@react-pdf/pdfkit": "5.1.1",
     "@react-pdf/renderer": "4.5.1",
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.101.1",
@@ -43,6 +44,7 @@
     "read-excel-file": "^9.3.20",
     "sharp": "^0.35.5",
     "stripe": "^23.2.0",
+    "workerd-yoga": "^1.0.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -63,7 +65,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.11",
-    "web-push": "3.6.7"
+    "web-push": "3.6.7",
+    "wrangler": "^4.168.0"
   },
   "engines": {
     "node": ">=22.18.0",

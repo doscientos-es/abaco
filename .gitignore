@@ -12,3 +12,6 @@ supabase/.branches/
 supabase/.temp/
 
 .vercel
+.wrangler/
+.wrangler-dry-run/
+worker-startup.cpuprofile
