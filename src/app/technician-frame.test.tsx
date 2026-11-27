@@ -127,7 +127,7 @@ describe('worker navigation', () => {
       expect(html).not.toContain(`href="${path}"`)
     }
     expect(html).toContain('Menú de usuario')
-    expect(html).not.toContain('Administración de Ábaco')
+    expect(html).not.toContain('Administración de Menoslios')
     expect(html).toContain('Buscar secciones')
     expect(html).toContain('>Buscar</span>')
     expect(html).not.toContain('Datos de empresa')
@@ -140,7 +140,7 @@ describe('worker navigation', () => {
     expect(platformAccess).toHaveBeenCalledWith({ queryKey: ['platform-access', 'worker-user'] })
     expect(html).toContain('Plataforma')
     const items = menuItem.mock.calls.filter(
-      ([props]) => props.children === 'Administración de Ábaco',
+      ([props]) => props.children === 'Administración de Menoslios',
     )
     expect(items).toHaveLength(2)
     for (const [item] of items) item.onAction()

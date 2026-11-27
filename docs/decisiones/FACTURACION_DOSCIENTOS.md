@@ -4,6 +4,13 @@ DEV-42 prepara la emisión desde Ábaco, con una serie distinta de la del
 backoffice. Las facturas son de Doscientos a cada empresa; no son facturas
 emitidas por esas empresas a sus clientes.
 
+## Serie actual en Backoffice
+
+Las nuevas facturas de suscripción y ampliación de Menoslios las emite
+Backoffice en la serie reservada `ML-SUS`. Las facturas históricas
+conservan su numeración. Cambiar de serie no cambia el emisor ni la modalidad
+fiscal.
+
 ## Modalidad fiscal
 
 La preferencia actual es **NO VERI\*FACTU**: no enviar automáticamente los

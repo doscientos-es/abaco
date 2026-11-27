@@ -19,6 +19,13 @@ describe('platform search parameters', () => {
     expect(directorySearch(result)).toEqual({ q: 'taller', page: 3 })
   })
 
+  it('preserves company status when opening details but isolates it from other views', () => {
+    const result = parsePlatformSearch({ estado: 'attention', q: 'Norte', page: 2 })
+    expect(directorySearch(result)).toEqual({ estado: 'attention', q: 'Norte', page: 2 })
+    expect(parsePlatformSearch({ ...result, vista: 'resumen' })).toEqual({ vista: 'resumen' })
+    expect(parsePlatformSearch({ estado: 'bogus' })).toEqual({})
+  })
+
   it('rejects invalid identifiers, unsupported sections and offsets outside the RPC range', () => {
     expect(
       parsePlatformSearch({ empresa: 'taller', seccion: 'pagos', page: platformMaxPage + 1 }),

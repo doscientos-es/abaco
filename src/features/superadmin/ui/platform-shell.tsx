@@ -13,6 +13,7 @@ import {
 import {
   ArrowLeft,
   Buildings,
+  ChartBar,
   CreditCard,
   IdentificationCard,
   Package,
@@ -136,7 +137,7 @@ export function PlatformShell({
         </AppShellMobileHeader>
         <AppShellMain ref={main} id="platform-content" tabIndex={-1}>
           <AppShellContent ref={content} density="compact" size="full" padded={false}>
-            <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 lg:px-6">{children}</div>
+            <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">{children}</div>
           </AppShellContent>
         </AppShellMain>
       </div>
@@ -149,7 +150,7 @@ function PlatformBrand() {
     <div className="flex shrink-0 items-center gap-2">
       <ShieldCheck aria-hidden="true" className="text-muted-foreground size-4" />
       <div>
-        <p className="text-foreground text-sm font-semibold">Ábaco</p>
+        <p className="text-foreground text-sm font-semibold">Menoslios</p>
         <p className="text-muted-foreground text-xs">Plataforma</p>
       </div>
     </div>
@@ -157,6 +158,7 @@ function PlatformBrand() {
 }
 
 const platformSections = [
+  { id: 'resumen', label: 'Resumen', icon: ChartBar },
   { id: undefined, label: 'Empresas', icon: Buildings },
   { id: 'facturas', label: 'Facturas', icon: Receipt },
   { id: 'planes', label: 'Planes y precios', icon: Wallet },
@@ -164,7 +166,7 @@ const platformSections = [
 
 function PlatformNavigation({ search, mobile }: { search: PlatformSearch; mobile?: boolean }) {
   return (
-    <ul className={mobile ? 'grid grid-cols-[1fr_1fr_1.3fr] gap-1' : 'space-y-1'}>
+    <ul className={mobile ? 'grid grid-cols-2 gap-1 min-[420px]:grid-cols-4' : 'space-y-1'}>
       {platformSections.map(({ id, label, icon: Icon }) => (
         <li key={label} className="min-w-0">
           <Link
@@ -187,7 +189,7 @@ function PlatformNavigation({ search, mobile }: { search: PlatformSearch; mobile
             className={cn(
               buttonVariants({ variant: search.vista === id ? 'secondary' : 'ghost', size: 'sm' }),
               'w-full',
-              !mobile && 'justify-start',
+              mobile ? 'min-h-10 px-2' : 'justify-start',
             )}
           >
             <Icon aria-hidden="true" className={mobile ? 'hidden min-[380px]:block' : undefined} />

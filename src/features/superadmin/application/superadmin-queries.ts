@@ -4,6 +4,7 @@ import type { BillingTerms } from '@/features/billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { CompanyProfile, CompanyProfileValues } from '../domain/company-profile'
+import { platformPageSize, type CompanyFilter } from '../domain/platform-navigation'
 
 export type CompanyReferral = { referrer_id: string | null; referrer_name: string | null }
 
@@ -125,6 +126,7 @@ export type PlatformCompany = {
   current_period_end: string | null
   is_complimentary: boolean
   member_count: number
+  billing_bucket?: CompanyFilter
 }
 
 export type PlatformPayment = {
@@ -159,16 +161,43 @@ export const platformAccessQuery = (userId: string) =>
     },
   })
 
-export const platformCompaniesQuery = (search: string, offset: number) =>
+export type PlatformOverview = {
+  companies: Partial<Record<CompanyFilter, number>>
+  collections: { month: string; cents: number; count: number }[]
+}
+
+export const platformOverviewQuery = (userId: string) =>
   queryOptions({
-    queryKey: ['platform-companies', search, offset],
-    queryFn: async (): Promise<PlatformCompany[]> => {
-      const { data, error } = await createBrowserSupabaseClient().rpc('superadmin_companies', {
-        p_search: search,
-        p_offset: offset,
-      })
+    queryKey: ['platform-overview', userId],
+    staleTime: 30_000,
+    queryFn: async ({ signal }): Promise<PlatformOverview> => {
+      const { data, error } = await createBrowserSupabaseClient()
+        .rpc('superadmin_overview')
+        .abortSignal(signal)
+      if (error || !data) throw new Error('No se pudo cargar el resumen de plataforma.')
+      return data as PlatformOverview
+    },
+  })
+
+export const platformCompaniesQuery = (
+  userId: string,
+  search: string,
+  offset: number,
+  status?: CompanyFilter,
+) =>
+  queryOptions({
+    queryKey: ['platform-companies', userId, search, offset, status ?? null],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await createBrowserSupabaseClient()
+        .rpc('superadmin_company_directory', {
+          p_search: search,
+          p_offset: offset,
+          p_status: status ?? null,
+        })
+        .abortSignal(signal)
       if (error) throw new Error('No se pudieron cargar las empresas.')
-      return data as PlatformCompany[]
+      const rows = data as PlatformCompany[]
+      return { rows: rows.slice(0, platformPageSize), hasMore: rows.length > platformPageSize }
     },
   })
 

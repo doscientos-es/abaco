@@ -8,8 +8,18 @@ export type CompanySection = (typeof companySections)[number]
 export const invoiceFilters = ['issued', 'in_progress'] as const
 export type InvoiceFilter = (typeof invoiceFilters)[number]
 
+export const companyFilters = [
+  { id: 'active', label: 'Activas de pago' },
+  { id: 'attention', label: 'Cobro por revisar' },
+  { id: 'courtesy', label: 'Cortesía' },
+  { id: 'without_plan', label: 'Sin plan activo' },
+  { id: 'canceled', label: 'Canceladas' },
+] as const
+export type CompanyFilter = (typeof companyFilters)[number]['id']
+
 export type PlatformSearch = {
-  vista?: 'facturas' | 'planes'
+  vista?: 'resumen' | 'facturas' | 'planes'
+  estado?: CompanyFilter
   q?: string
   page?: number
   empresa?: string
@@ -47,6 +57,7 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
   // Redsys orders start with four digits; the database enforces this format.
   const referencia = /^[0-9]{4}[a-z0-9]{4,8}$/i.test(reference) ? reference : undefined
 
+  if (raw.vista === 'resumen') return { vista: 'resumen' }
   if (raw.vista === 'planes') {
     const plan = paidPlans.find((item) => item === raw.plan)
     return plan ? planSearch(plan, raw.edicion === 'plan') : { vista: 'planes' }
@@ -55,6 +66,10 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
     return { ...invoiceSearch(q, factura, pagination.page), ...(referencia && { referencia }) }
   }
 
+  const estado =
+    raw.origen === 'facturas' && empresa
+      ? undefined
+      : companyFilters.find(({ id }) => id === raw.estado)?.id
   const modulo =
     empresa && section === 'modulos' && typeof raw.modulo === 'string' && isModuleCode(raw.modulo)
       ? raw.modulo
@@ -76,6 +91,7 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
   return {
     ...(q && { q }),
     ...pagination,
+    ...(estado && { estado }),
     ...(empresa && { empresa, ...(section && section !== 'suscripcion' && { seccion: section }) }),
     ...(modulo && { modulo }),
     ...(edicion && { edicion }),
@@ -116,8 +132,16 @@ export function platformLocationKey(search: PlatformSearch): string {
   ].join(':')
 }
 
-export const directorySearch = ({ q, page, vista, origen }: PlatformSearch): PlatformSearch =>
-  vista || origen ? {} : { ...(q && { q }), ...(page && page > 1 && { page }) }
+export const directorySearch = ({
+  q,
+  page,
+  estado,
+  vista,
+  origen,
+}: PlatformSearch): PlatformSearch =>
+  vista || origen
+    ? {}
+    : { ...(q && { q }), ...(page && page > 1 && { page }), ...(estado && { estado }) }
 
 export const invoiceSearch = (q: string, factura?: InvoiceFilter, page = 1): PlatformSearch => ({
   vista: 'facturas',

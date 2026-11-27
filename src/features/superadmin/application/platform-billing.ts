@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 
+import type { ModuleRate } from '@/features/product-modules'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { CatalogUpdate } from '../domain/catalog-update'
@@ -86,4 +87,26 @@ export async function saveCatalogPlan(update: CatalogUpdate) {
     throw new Error('Otra persona ha actualizado el plan. Recarga el catálogo antes de guardar.')
   }
   if (error) throw new Error('No se pudo guardar el plan. Revisa los campos e inténtalo de nuevo.')
+}
+
+export async function saveModulePrice({
+  rate,
+  monthlyCents,
+  yearlyCents,
+}: {
+  rate: ModuleRate
+  monthlyCents: number
+  yearlyCents: number
+}) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_update_module_price', {
+    p_code: rate.code,
+    p_expected_monthly: rate.monthly_cents,
+    p_expected_yearly: rate.yearly_cents,
+    p_monthly: monthlyCents,
+    p_yearly: yearlyCents,
+  })
+  if (error?.code === '40001') {
+    throw new Error('El módulo cambió. Recarga el catálogo antes de guardar.')
+  }
+  if (error) throw new Error('No se pudo publicar el precio del módulo.')
 }

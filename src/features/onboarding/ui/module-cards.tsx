@@ -81,7 +81,9 @@ export function ModuleCards({
               <span className="text-muted-foreground">o</span> +{formatEuros(yearly_cents / 100)}
               /año
             </p>
-            <p className="text-muted-foreground text-xs">Sin IVA, por empresa.</p>
+            <p className="text-muted-foreground text-xs">
+              Sin IVA, {code === 'ai' ? 'por usuario (una licencia)' : 'por empresa'}.
+            </p>
             <details className="border-border mt-4 border-t pt-3 text-sm">
               <summary className="text-primary cursor-pointer font-semibold">
                 Ver qué incluye

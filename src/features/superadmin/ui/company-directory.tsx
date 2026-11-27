@@ -11,6 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  buttonVariants,
 } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -20,6 +21,7 @@ import { billingCatalogQuery, planLabel } from '@/features/billing'
 import type { PlatformCompany } from '../application/superadmin-queries'
 import {
   companySectionSearch,
+  companyFilters,
   directorySearch,
   type PlatformSearch,
 } from '../domain/platform-navigation'
@@ -40,11 +42,13 @@ export function CompanyDirectory({
   companies,
   search,
   loading,
+  hasMore,
   onRetry,
 }: {
   companies: PlatformCompany[]
   search: PlatformSearch
   loading: boolean
+  hasMore: boolean
   onRetry: (() => void) | undefined
 }) {
   const q = search.q
@@ -56,21 +60,47 @@ export function CompanyDirectory({
         <PageHeaderHeading>
           <PageHeaderTitle>Empresas</PageHeaderTitle>
           <PageHeaderDescription>
-            Consulta suscripciones, configura módulos y revisa los cobros de cada empresa.
+            Encuentra un cliente y gestiona su plan, cuota, módulos y cobros.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
+      <nav aria-label="Filtrar empresas por estado">
+        <ul className="flex flex-wrap gap-1.5">
+          {[{ id: undefined, label: 'Todas' }, ...companyFilters].map(({ id, label }) => (
+            <li key={label}>
+              <Link
+                to="/superadmin"
+                search={{ ...(q && { q }), ...(id && { estado: id }) }}
+                aria-current={search.estado === id ? 'page' : undefined}
+                className={buttonVariants({
+                  variant: search.estado === id ? 'secondary' : 'outline',
+                  size: 'sm',
+                })}
+              >
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
       <section aria-label="Directorio de empresas" className={platformPanelClass}>
         <div className="border-border flex flex-wrap items-end gap-2 border-b p-3">
           <PlatformSearchForm
             query={q ?? ''}
             label="Buscar empresa"
             placeholder="Ej. Taller Norte"
-            onSearch={(value) => void navigate({ search: value ? { q: value } : {} })}
+            onSearch={(value) =>
+              void navigate({
+                search: {
+                  ...(value && { q: value }),
+                  ...(search.estado && { estado: search.estado }),
+                },
+              })
+            }
           />
-          {q ? (
+          {q || search.estado ? (
             <Link to="/superadmin" search={{}} className={platformTextActionClass}>
-              Limpiar búsqueda
+              Limpiar filtros
             </Link>
           ) : null}
         </div>
@@ -87,21 +117,22 @@ export function CompanyDirectory({
                 title={
                   page > 1
                     ? 'No hay más empresas'
-                    : q
+                    : q || search.estado
                       ? 'No encontramos ninguna empresa'
                       : 'Aún no hay empresas'
                 }
               >
                 {page > 1
                   ? 'Vuelve a la página anterior.'
-                  : q
-                    ? 'Prueba con otro nombre o limpia la búsqueda.'
+                  : q || search.estado
+                    ? 'Prueba con otro nombre o limpia los filtros.'
                     : null}
               </PlatformMessage>
             )}
             <PlatformPagination
               page={page}
               count={companies.length}
+              hasMore={hasMore}
               onChange={(nextPage) =>
                 void navigate({ search: directorySearch({ ...search, page: nextPage }) })
               }
@@ -138,7 +169,7 @@ function CompanyTable({
       <TableBody>
         {companies.map((company) => (
           <TableRow key={company.id}>
-            <TableCell className="whitespace-normal">
+            <TableCell className="w-3/5 min-w-0 whitespace-normal lg:w-auto">
               <PlatformRecordLink search={{ ...directorySearch(search), empresa: company.id }}>
                 {company.name}
               </PlatformRecordLink>
@@ -146,7 +177,7 @@ function CompanyTable({
                 {company.member_count} {company.member_count === 1 ? 'persona' : 'personas'}
                 <span className="lg:hidden"> · {planLabel(company.plan, rates)}</span>
               </p>
-              <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                 <Link
                   to="/superadmin"
                   search={companySectionSearch(
@@ -154,7 +185,7 @@ function CompanyTable({
                     'datos',
                   )}
                   aria-label={`Ver ficha de ${company.name}`}
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary focus-visible:outline-ring inline-flex min-h-8 items-center rounded-sm underline underline-offset-2 focus-visible:outline-2"
                 >
                   Ver ficha
                 </Link>
@@ -162,16 +193,33 @@ function CompanyTable({
                   to="/superadmin"
                   search={{ ...directorySearch(search), empresa: company.id }}
                   aria-label={`Ver suscripción y precio de ${company.name}`}
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary focus-visible:outline-ring inline-flex min-h-8 items-center rounded-sm underline underline-offset-2 focus-visible:outline-2"
                 >
                   Suscripción y precio
+                </Link>
+                <Link
+                  to="/superadmin"
+                  search={companySectionSearch(
+                    { ...directorySearch(search), empresa: company.id },
+                    'modulos',
+                  )}
+                  aria-label={`Ver módulos de ${company.name}`}
+                  className="text-primary focus-visible:outline-ring inline-flex min-h-8 items-center rounded-sm underline underline-offset-2 focus-visible:outline-2"
+                >
+                  Módulos
                 </Link>
               </div>
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap items-center gap-1">
-                <CompanyStatus status={company.subscription_status} />
-                {company.is_complimentary ? <Badge variant="outline">Cortesía</Badge> : null}
+                {company.is_complimentary ? (
+                  <Badge variant="outline">Cortesía</Badge>
+                ) : company.billing_bucket === 'attention' &&
+                  company.subscription_status === 'active' ? (
+                  <Badge variant="warning">Renovación vencida</Badge>
+                ) : (
+                  <CompanyStatus status={company.subscription_status} />
+                )}
               </div>
             </TableCell>
             <TableCell className="hidden lg:table-cell">

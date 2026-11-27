@@ -25,6 +25,15 @@ describe('guided company onboarding persistence', () => {
         'utf8',
       ),
     )
+    await db.exec(
+      await readFile(
+        new URL(
+          '../../../supabase/migrations/20261127164726_platform_pricing_catalog.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
     // PGlite doesn't ship pg_cron, pg_net, or Vault. Their server adapter is not invoked here.
     await db.exec(`
       create schema cron;
@@ -79,12 +88,12 @@ describe('guided company onboarding persistence', () => {
         [tenant, actor, total],
       )
 
-    const claim = async () =>
-      (
-        await db.query<{ id: string; lease_id: string; payload: unknown }>(
-          'select * from public.claim_menoslios_crm_event()',
-        )
-      ).rows[0]!
+    const claim = async () => {
+      const { rows } = await db.query<{ id: string; lease_id: string; payload: unknown }>(
+        'select * from public.claim_menoslios_crm_event()',
+      )
+      return rows[0]
+    }
     const finish = (job: { id: string; lease_id: string }, delivered: boolean) =>
       db.query('select public.finish_menoslios_crm_event($1,$2,$3)', [
         job.id,
@@ -95,6 +104,7 @@ describe('guided company onboarding persistence', () => {
     await expect(claim()).rejects.toThrow('permission denied')
     await db.exec('reset role')
     const registration = await claim()
+    if (!registration) throw new Error('Expected registration event')
     expect(registration.payload).toEqual({
       tenantId: tenant,
       kind: 'registration',
@@ -107,6 +117,7 @@ describe('guided company onboarding persistence', () => {
     expect(await claim()).toBeUndefined()
     await db.exec('update app_private.menoslios_crm_outbox set due_at=now()')
     const retry = await claim()
+    if (!retry) throw new Error('Expected retry event')
     expect(retry.id).toBe(registration.id)
     expect(retry.lease_id).not.toBe(registration.lease_id)
     await finish(retry, true)
@@ -115,12 +126,12 @@ describe('guided company onboarding persistence', () => {
     expect(await access(tenant)).toBe(false)
     expect(await state()).toMatchObject({ stage: 'selection', booking_reference: null })
     expect(await book('owner@example.test')).toBe(false)
-    await expect(reserve(other, 5185)).rejects.toThrow('No autorizado')
+    await expect(reserve(other, 4598)).rejects.toThrow('No autorizado')
     await expect(reserve(owner, 1)).rejects.toThrow('invalid quote')
     expect((await db.query('select * from public.tenant_modules')).rows).toHaveLength(0)
-    await reserve(owner, 5185)
+    await reserve(owner, 4598)
     expect(await state()).toMatchObject({ stage: 'pending', booking_reference: null })
-    await expect(reserve(owner, 5185)).rejects.toThrow('pago pendiente')
+    await expect(reserve(owner, 4598)).rejects.toThrow('pago pendiente')
     await db.query("update public.billing_payments set status='succeeded' where tenant_id=$1", [
       tenant,
     ])
@@ -143,6 +154,7 @@ describe('guided company onboarding persistence', () => {
     expect(await book('owner@example.test')).toBe(true)
     expect(await book('owner@example.test')).toBe(false)
     const meeting = await claim()
+    if (!meeting) throw new Error('Expected booking event')
     expect(meeting.payload).toMatchObject({
       tenantId: tenant,
       kind: 'booking',
@@ -155,5 +167,26 @@ describe('guided company onboarding persistence', () => {
     await db.exec('set role authenticated')
     expect((await db.query('select * from public.clients')).rows).toHaveLength(1)
     await db.exec('reset role')
+  })
+  it('keeps an admin-agreed first charge on its assigned plan, seats and period', async () => {
+    await db.query("select set_config('test.uid',$1,false)", [owner])
+    const tenant = (
+      await db.query<{ tenant: string }>(
+        "select public.create_company('Empresa con cuota pactada') tenant",
+      )
+    ).rows[0]?.tenant
+    await db.query(
+      "update public.tenants set next_plan='team',next_interval='year',next_billing_seats=5,next_billing_managed=true,billing_fixed_net_cents=44893 where id=$1",
+      [tenant],
+    )
+    const reserve = (period: string, seats: number, amount: number) =>
+      db.query<{ amount: number }>(
+        "select public.reserve_onboarding_payment($1,'{}','1234ABC2',$2,$3,$4,$5,array[]::text[]) amount",
+        [tenant, owner, period, seats, amount],
+      )
+    await expect(reserve('month', 5, 54321)).rejects.toThrow('condiciones pactadas')
+    await expect(reserve('year', 4, 54321)).rejects.toThrow('condiciones pactadas')
+    await expect(reserve('year', 5, 100)).rejects.toThrow('invalid quote')
+    expect((await reserve('year', 5, 54321)).rows[0]?.amount).toBe(54321)
   })
 })

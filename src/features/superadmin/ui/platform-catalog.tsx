@@ -36,6 +36,7 @@ import {
 } from '../domain/catalog-update'
 import { planSearch, type PlatformSearch } from '../domain/platform-navigation'
 import { PlatformField } from './platform-form-field'
+import { PlatformModuleCatalog } from './platform-module-catalog'
 import {
   PlatformBackLink,
   PlatformEditLink,
@@ -57,6 +58,8 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
   }
   const plan = search.plan
   const selectedRates = plan ? plans.get(plan) : undefined
+  const standardRate = plans.get('standard')?.[0]
+  const legacyPlans = [...plans].filter(([id]) => id !== 'standard')
   const display = selectedRates?.[0]?.plan_info
   const editing = search.edicion === 'plan'
 
@@ -99,7 +102,7 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-muted-foreground text-sm">
             Importes sin IVA. La cuota base anual equivale a 10 mensualidades. Las plazas
-            adicionales de Ábaco se cobran durante los 12 meses.
+            adicionales de Menoslios se cobran durante los 12 meses.
           </p>
           <Button
             variant="outline"
@@ -128,48 +131,91 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
       ) : null}
       {!plan && !catalog.isPending && !catalog.isError ? (
         <section aria-label="Catálogo de planes" className={platformPanelClass}>
-          {plans.size ? (
-            <Table aria-label="Tarifas de catálogo" density="compact">
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Plan</TableHead>
-                  <TableHead scope="col" className="text-right">
-                    Mensual · sin IVA
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...plans].map(([id, planRates]) => {
-                  const info = planRates[0]?.plan_info
-                  const monthly = Math.min(
-                    ...planRates.map((rate) => catalogQuote(rate, 'month').net_cents),
-                  )
-                  return (
-                    <TableRow key={id}>
-                      <TableCell className="whitespace-normal">
-                        <PlatformRecordLink search={planSearch(id)}>
-                          {info?.name ?? id}
-                        </PlatformRecordLink>
-                        <p className="text-muted-foreground text-xs">
-                          {info?.audience ?? 'Sin datos comerciales'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {planRates.length > 1 ? (
-                          <span className="text-muted-foreground text-xs">Desde </span>
-                        ) : null}
-                        <span className="font-medium">{formatEuros(monthly)}</span>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+          {standardRate ? (
+            <div className="space-y-4 p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="font-semibold">Plan base de Menoslios</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Primera persona incluida. Importes sin IVA.
+                  </p>
+                </div>
+                <PlatformEditLink search={planSearch('standard', true)}>
+                  Editar cuota y asientos
+                </PlatformEditLink>
+              </div>
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ['Cuota mensual', standardRate.monthly_cents],
+                  ['Cuota anual · 10 meses', standardRate.yearly_cents],
+                  ['Asiento extra al mes', standardRate.seat_monthly_cents ?? 0],
+                  ['Asiento extra al año', (standardRate.seat_monthly_cents ?? 0) * 12],
+                ].map(([label, cents]) => (
+                  <div key={label}>
+                    <dt className="text-muted-foreground text-sm">{label}</dt>
+                    <dd>
+                      <span className="text-xl font-semibold tabular-nums">
+                        {formatEuros(Number(cents))}
+                      </span>
+                      {label === 'Cuota anual · 10 meses' ? (
+                        <span className="text-muted-foreground block text-xs">
+                          Equivale a {formatEuros(Math.round(standardRate.yearly_cents / 12))}/mes
+                        </span>
+                      ) : null}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           ) : (
-            <PlatformMessage title="No hay planes en el catálogo." />
+            <PlatformMessage title="No está disponible la tarifa base de Menoslios." />
           )}
+          {legacyPlans.length ? (
+            <details className="border-border border-t">
+              <summary className="focus-visible:outline-ring cursor-pointer px-4 py-3 text-sm font-semibold focus-visible:outline-2">
+                Planes anteriores
+              </summary>
+              <Table aria-label="Tarifas de catálogo" density="compact">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead scope="col">Plan</TableHead>
+                    <TableHead scope="col" className="text-right">
+                      Mensual · sin IVA
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {legacyPlans.map(([id, planRates]) => {
+                    const info = planRates[0]?.plan_info
+                    const monthly = Math.min(
+                      ...planRates.map((rate) => catalogQuote(rate, 'month').net_cents),
+                    )
+                    return (
+                      <TableRow key={id}>
+                        <TableCell className="whitespace-normal">
+                          <PlatformRecordLink search={planSearch(id)}>
+                            {info?.name ?? id}
+                          </PlatformRecordLink>
+                          <p className="text-muted-foreground text-xs">
+                            {info?.audience ?? 'Sin datos comerciales'}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {planRates.length > 1 ? (
+                            <span className="text-muted-foreground text-xs">Desde </span>
+                          ) : null}
+                          <span className="font-medium">{formatEuros(monthly)}</span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </details>
+          ) : null}
         </section>
       ) : null}
+      {!plan ? <PlatformModuleCatalog /> : null}
     </PageStack>
   )
 }

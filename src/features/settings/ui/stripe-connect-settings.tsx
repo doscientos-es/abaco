@@ -5,7 +5,6 @@ import { useState } from 'react'
 
 import { beginStripeConnection, stripeConnectionQuery } from '../application/stripe-connect-actions'
 import { IntegrationCard } from './integration-card'
-import stripeLogo from './stripe-logo.svg'
 
 export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
   const callback = useSearch({ from: '/ajustes' }).stripe
@@ -37,7 +36,7 @@ export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
   return (
     <IntegrationCard
       name="Stripe"
-      logo={stripeLogo}
+      logo="/integrations/stripe-logo.svg"
       description="Vincula la cuenta de tu empresa para futuros cobros."
       status={
         <>

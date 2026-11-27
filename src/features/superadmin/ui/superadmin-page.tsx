@@ -12,6 +12,7 @@ import { CompanyBackLink, CompanyDetail } from './company-detail'
 import { CompanyDirectory } from './company-directory'
 import { PlatformCatalog } from './platform-catalog'
 import { PlatformInvoices } from './platform-invoices'
+import { PlatformOverviewPage } from './platform-overview'
 import { PlatformShell } from './platform-shell'
 import { PlatformMessage } from './platform-ui'
 
@@ -38,26 +39,29 @@ export function SuperadminPage({ search }: { search: PlatformSearch }) {
 
   return (
     <PlatformShell session={session} search={search}>
-      {search.vista === 'planes' ? (
+      {search.vista === 'resumen' && session ? (
+        <PlatformOverviewPage userId={session.userId} />
+      ) : search.vista === 'planes' ? (
         <PlatformCatalog search={search} />
       ) : search.vista === 'facturas' && session ? (
         <PlatformInvoices search={search} userId={session.userId} />
       ) : search.empresa ? (
         <CompanyPage search={search} tenantId={search.empresa} />
       ) : (
-        <DirectoryPage search={search} />
+        <DirectoryPage search={search} userId={session?.userId ?? ''} />
       )}
     </PlatformShell>
   )
 }
 
-function DirectoryPage({ search }: { search: PlatformSearch }) {
+function DirectoryPage({ search, userId }: { search: PlatformSearch; userId: string }) {
   const offset = ((search.page ?? 1) - 1) * platformPageSize
-  const companies = useQuery(platformCompaniesQuery(search.q ?? '', offset))
+  const companies = useQuery(platformCompaniesQuery(userId, search.q ?? '', offset, search.estado))
 
   return (
     <CompanyDirectory
-      companies={companies.data ?? []}
+      companies={companies.data?.rows ?? []}
+      hasMore={companies.data?.hasMore ?? false}
       search={search}
       loading={companies.isPending}
       onRetry={companies.isError ? () => void companies.refetch() : undefined}

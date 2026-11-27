@@ -2,10 +2,15 @@ import {
   catalogQuote,
   catalogRateForCapacity,
   withModulePrice,
+  type BillingTerms,
   type CatalogRate,
   type Interval,
 } from '@/features/billing'
-import type { ModuleCode, ModuleRate } from '@/features/product-modules'
+import {
+  isModuleIncludedInPlan,
+  type ModuleCode,
+  type ModuleRate,
+} from '@/features/product-modules'
 
 export const offerModules = ['workers', 'procurement', 'ai'] as const
 export type OfferModule = (typeof offerModules)[number]
@@ -16,18 +21,42 @@ export function onboardingOffer(
   selection: readonly ModuleCode[],
   seats: number,
   period: Interval,
+  agreed?: BillingTerms,
+  vatPercent?: number,
 ) {
-  const rate = catalogRateForCapacity(catalog, 'standard', seats)
-  if (!rate || selection.some((code) => !offerModules.some((available) => available === code)))
+  const rate = agreed ? null : catalogRateForCapacity(catalog, 'standard', seats)
+  if (
+    (!agreed && !rate) ||
+    selection.some((code) => !offerModules.some((available) => available === code))
+  )
     return null
-  const extras = [...new Set(selection)].map((code) => modules.find((item) => item.code === code))
+  const extras = [...new Set(selection)]
+    .filter((code) => !agreed || !isModuleIncludedInPlan(code, agreed.plan))
+    .map((code) => modules.find((item) => item.code === code))
   if (extras.some((item) => !item)) return null
   const moduleNet = extras.reduce(
-    (sum, item) => sum + (item ? (period === 'year' ? item.yearly_cents : item.monthly_cents) : 0),
+    (sum, item) =>
+      sum +
+      (item ? ((agreed?.period ?? period) === 'year' ? item.yearly_cents : item.monthly_cents) : 0),
     0,
   )
-  const base = catalogQuote(rate, period)
-  const included = catalogQuote({ ...rate, seats: 1 }, period)
+  if (agreed) {
+    const base = agreed.base_net_cents ?? agreed.net_cents
+    const terms = withModulePrice(
+      {
+        ...agreed,
+        net_cents: base,
+        base_net_cents: base,
+        module_net_cents: 0,
+        amount_cents: Math.round((base * (100 + agreed.vat_percent)) / 100),
+      },
+      moduleNet,
+    )
+    return { terms, baseCents: base, seatsCents: 0, extras }
+  }
+  if (!rate) return null
+  const base = catalogQuote(rate, period, vatPercent)
+  const included = catalogQuote({ ...rate, seats: 1 }, period, vatPercent)
   return {
     terms: withModulePrice(base, moduleNet),
     baseCents: included.net_cents,

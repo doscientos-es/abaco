@@ -2,6 +2,7 @@ import { Button, Input } from '@doscientos/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { useSession } from '@/features/auth'
 import { useActionLock } from '@/shared/lib/use-action-lock'
 
 import {
@@ -18,6 +19,7 @@ import {
 
 export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
   const client = useQueryClient()
+  const userId = useSession()?.userId ?? ''
   const referral = useQuery(platformCompanyReferralQuery(tenantId))
   const [editing, setEditing] = useState(false)
   const [search, setSearch] = useState('')
@@ -26,8 +28,8 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
   const [expected, setExpected] = useState<string | null>(null)
   const saveLock = useActionLock()
   const companies = useQuery({
-    ...platformCompaniesQuery(search.trim(), (page - 1) * 50),
-    enabled: editing && search.trim().length > 0,
+    ...platformCompaniesQuery(userId, search.trim(), (page - 1) * 50),
+    enabled: Boolean(userId) && editing && search.trim().length > 0,
   })
   const save = useMutation({
     mutationFn: (expected: string | null) =>
@@ -110,9 +112,11 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
               ) : null}
               {search.trim() && !companies.isFetching && !companies.isError ? (
                 <div className="space-y-2">
-                  {!companies.data?.length ? <p className="text-sm">No hay resultados.</p> : null}
-                  {companies.data
-                    ?.filter((company) => company.id !== tenantId)
+                  {!companies.data?.rows.length ? (
+                    <p className="text-sm">No hay resultados.</p>
+                  ) : null}
+                  {companies.data?.rows
+                    .filter((company) => company.id !== tenantId)
                     .map((company) => (
                       <div key={company.id} className="flex flex-wrap items-center gap-2 text-sm">
                         <Button
@@ -130,7 +134,8 @@ export function CompanyReferralSection({ tenantId }: { tenantId: string }) {
                     ))}
                   <PlatformPagination
                     page={page}
-                    count={companies.data?.length ?? 0}
+                    count={companies.data?.rows.length ?? 0}
+                    hasMore={companies.data?.hasMore ?? false}
                     onChange={setPage}
                   />
                 </div>

@@ -61,7 +61,7 @@ export function PricingCatalog({
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm">
         Una cuota base con una persona incluida, más un importe por cada plaza adicional. Los
-        módulos opcionales se cobran por empresa, no por persona.
+        módulos opcionales se cobran por empresa, salvo el asistente de IA, que va por usuario.
       </p>
       <p className="text-muted-foreground text-sm">
         Las plazas contratadas cubren a las personas con acceso, incluida la persona administradora
@@ -130,8 +130,8 @@ export function PricingCatalog({
           {addons.data?.length ? (
             <>
               <p className="text-muted-foreground text-sm">
-                Los suplementos son un precio fijo por empresa, no por persona. Puedes contratarlos
-                desde Ajustes → Suscripción de Ábaco.
+                Puedes contratar los módulos desde los ajustes de suscripción. El asistente de IA
+                cubre una licencia individual para una persona administradora.
               </p>
               <ul className="space-y-2 text-sm">
                 {addons.data.map((addon) => (
@@ -140,7 +140,8 @@ export function PricingCatalog({
                     {formatEuros(
                       (period === 'year' ? addon.yearly_cents : addon.monthly_cents) / 100,
                     )}{' '}
-                    {period === 'year' ? 'al año' : 'al mes'}, sin IVA.
+                    {period === 'year' ? 'al año' : 'al mes'}{' '}
+                    {addon.code === 'ai' ? 'por usuario' : 'por empresa'}, sin IVA.
                     <p className="text-muted-foreground">{modules[addon.code].description}</p>
                   </li>
                 ))}

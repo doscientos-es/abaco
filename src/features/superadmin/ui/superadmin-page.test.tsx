@@ -32,6 +32,7 @@ const state = vi.hoisted(() => ({
   role: null as 'user' | 'admin' | null,
   missingCompany: false,
   pendingPayment: false,
+  latestFailed: false,
 }))
 vi.mock('@/features/auth', () => ({
   useSession: () => ({
@@ -74,6 +75,8 @@ vi.mock('./company-billing-agreement', () => ({
   CompanyBillingAgreement: () => <p>Condiciones de facturación</p>,
 }))
 vi.mock('@/features/product-modules', () => ({
+  moduleCatalogQuery: { queryKey: ['module-catalog'] },
+  modules: {},
   ModuleSubscriptions: ({ blocked }: { blocked: boolean }) => (
     <p>{blocked ? 'Cambios bloqueados' : 'Módulos opcionales'}</p>
   ),
@@ -82,11 +85,21 @@ vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
   useQueryClient: () => ({}),
   useMutation: () => ({}),
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+  useQuery: ({ queryKey, enabled }: { queryKey: unknown[]; enabled?: boolean }) => {
+    if (enabled === false) return {}
     state.queries.push(queryKey)
     if (queryKey[0] === 'platform-access') return { data: state.allowed }
-    if (queryKey[0] === 'platform-companies') return { data: [company] }
+    if (queryKey[0] === 'platform-companies') return { data: { rows: [company], hasMore: false } }
+    if (queryKey[0] === 'platform-overview')
+      return {
+        data: {
+          companies: { active: 2, courtesy: 1, attention: 1 },
+          collections: [{ month: '2026-11', cents: 3400, count: 1 }],
+        },
+      }
     if (queryKey[0] === 'platform-company') return { data: state.missingCompany ? null : company }
+    if (queryKey[0] === 'platform-company-referral')
+      return { data: { referrer_id: null, referrer_name: null } }
     if (queryKey[0] === 'platform-company-profile') {
       return {
         data: {
@@ -103,6 +116,7 @@ vi.mock('@tanstack/react-query', () => ({
         },
       }
     }
+    if (queryKey[0] === 'module-catalog') return { data: [] }
     if (queryKey[0] === 'billing-catalog') {
       return {
         data: [
@@ -149,7 +163,7 @@ vi.mock('@tanstack/react-query', () => ({
             plan: 'team',
             period: 'year',
             amount_cents: 3400,
-            status: 'succeeded',
+            status: state.latestFailed ? 'failed' : 'succeeded',
             created_at: '2030-07-15T12:00:00Z',
             invoice_number: 'PRUEBA-001',
             invoice_status: 'sent',
@@ -168,6 +182,7 @@ describe('platform administration navigation', () => {
     state.role = null
     state.missingCompany = false
     state.pendingPayment = false
+    state.latestFailed = false
   })
 
   it.each<PlatformSearch>([
@@ -175,10 +190,33 @@ describe('platform administration navigation', () => {
     { vista: 'facturas' },
     { vista: 'facturas', referencia: invoice.merchant_order },
     { vista: 'planes' },
+    { vista: 'resumen' },
   ])('does not request platform data without access: %j', (search) => {
     const html = renderToStaticMarkup(<SuperadminPage search={search} />)
     expect(html).toContain('No tienes acceso')
     expect(state.queries).toEqual([['platform-access', 'platform-user']])
+  })
+
+  it('shows platform aggregates with links to matching companies', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(<SuperadminPage search={{ vista: 'resumen' }} />)
+    expect(html).toContain('Resumen de Menoslios')
+    expect(html).toContain('Cobros confirmados')
+    expect(html).toContain('noviembre de 2026')
+    expect(html).toContain('estado=attention')
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['platform-overview', 'platform-user'],
+    ])
+  })
+
+  it('shows all-time collected amount and a separate failed-renewal alert', () => {
+    state.allowed = true
+    state.latestFailed = true
+    const html = renderToStaticMarkup(<SuperadminPage search={{ empresa: tenantId }} />)
+    expect(html).toContain('Total cobrado')
+    expect(html).toContain('Falló el cobro automático')
+    expect(html).toContain('Ver historial de pagos')
   })
 
   it('queries the chosen directory page and carries it into the company link', () => {
@@ -192,7 +230,7 @@ describe('platform administration navigation', () => {
     expect(html).toContain('Suscripción y precio')
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
-      ['platform-companies', 'prueba', 100],
+      ['platform-companies', 'platform-user', 'prueba', 100, null],
       ['billing-catalog'],
     ])
   })
@@ -210,6 +248,7 @@ describe('platform administration navigation', () => {
       ['platform-company', tenantId],
       ['billing-catalog'],
       ['platform-company-profile', tenantId],
+      ['platform-company-referral', tenantId],
     ])
   })
 
@@ -313,7 +352,11 @@ describe('platform administration navigation', () => {
   it('shows the published catalog as a list, then a plan detail, then an explicit editor', () => {
     state.allowed = true
     const list = renderToStaticMarkup(<SuperadminPage search={{ vista: 'planes' }} />)
-    expect(state.queries).toEqual([['platform-access', 'platform-user'], ['billing-catalog']])
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['billing-catalog'],
+      ['module-catalog'],
+    ])
     expect(list).toContain('Equipo Plus')
     expect(list).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Tarifas de catálogo"/)
     expect(list).toContain('href="/precios"')

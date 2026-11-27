@@ -14,7 +14,6 @@ import {
   googleCalendarStatusQuery,
   queueGoogleCalendarSync,
 } from '../application/google-calendar-actions'
-import calendarLogo from './google-calendar-logo.svg'
 import { IntegrationCard } from './integration-card'
 
 const dateFormatter = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
@@ -142,7 +141,7 @@ export function GoogleCalendarSettings() {
     <>
       <IntegrationCard
         name="Google Calendar"
-        logo={calendarLogo}
+        logo="/integrations/google-calendar-logo.svg"
         description="Sincroniza tus visitas asignadas con un calendario de tu cuenta."
         status={
           <Badge

@@ -265,3 +265,13 @@ etiquetada. Sin embargo, la decisión de versión referencia
 automática también necesita recuperarlo o reemplazarlo. Usa `pnpm changelog:sync`
 para actualizar `CHANGELOG.md` y `src/shared/lib/changelog.json`; no los edites
 manualmente.
+
+### Catálogo de Menoslios
+
+**Superadmin → Planes y precios** es el editor de la cuota base, asientos
+adicionales y precios de módulos. El catálogo de Supabase alimenta tanto el
+alta guiada y los cobros para nuevas contrataciones como `/api/public-pricing`,
+que lee la landing. La cuota anual base se calcula como 10 mensualidades; cada
+asiento adicional se factura por 12 meses. Los módulos se tarifan por empresa
+salvo IA (una licencia individual en el alta). Se conservan las condiciones
+pactadas y los importes de facturas ya emitidas.

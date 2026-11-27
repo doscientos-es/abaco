@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react'
 import { FormError, useCompanyActions, useSession, useSignOut } from '@/features/auth'
 import {
   billingCatalogQuery,
+  billingPreviewQuery,
   billingProfileQuery,
+  planLabel,
   formatEuros,
   MAX_SCALE_PLAN_MEMBERS,
   startOnboardingCheckout,
@@ -240,10 +242,13 @@ function PlanSelection({
 }) {
   const rates = useQuery(billingCatalogQuery)
   const moduleRates = useQuery(moduleCatalogQuery)
+  const agreement = useQuery(billingPreviewQuery(tenantId))
+  const agreed = agreement.data?.next_managed ? (agreement.data.next ?? undefined) : undefined
   const profile = useQuery({ ...billingProfileQuery(tenantId), enabled: step === 2 })
   const [selected, setSelected] = useState<OfferModule[]>([])
   const [seats, setSeats] = useState('1')
-  const [period, setPeriod] = useState<Interval>('month')
+  const [selectedPeriod, setPeriod] = useState<Interval>('month')
+  const period = agreed?.period ?? selectedPeriod
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -251,7 +256,15 @@ function PlanSelection({
     const rate = moduleRates.data?.find((item) => item.code === code)
     return rate ? [{ ...rate, code }] : []
   })
-  const quote = onboardingOffer(rates.data ?? [], offers, selected, Number(seats), period)
+  const quote = onboardingOffer(
+    rates.data ?? [],
+    offers,
+    selected,
+    Number(seats),
+    period,
+    agreed,
+    agreement.data?.vat_percent,
+  )
   const periodLabel = period === 'year' ? 'año' : 'mes'
 
   async function pay() {
@@ -260,8 +273,11 @@ function PlanSelection({
     setError(null)
     try {
       const result = await startOnboardingCheckout(tenantId, quote.terms, selected, bookingUrl)
-      if (!result.ok) setError(result.message)
-      else if (result.form) submitToRedsys(result.form)
+      if (!result.ok) {
+        setError(result.message)
+        setConsent(false)
+        await Promise.all([rates.refetch(), moduleRates.refetch(), agreement.refetch()])
+      } else if (result.form) submitToRedsys(result.form)
       else if (!result.paidByBalance)
         setError('No se recibió el acceso al pago. Comprueba el estado antes de reintentar.')
       refresh()
@@ -273,14 +289,22 @@ function PlanSelection({
     }
   }
 
-  if (rates.isPending || moduleRates.isPending) return <output>Cargando el catálogo…</output>
-  if (rates.isError || moduleRates.isError || offers.length !== offerModules.length)
+  if (rates.isPending || moduleRates.isPending || agreement.isPending)
+    return <output>Cargando el catálogo…</output>
+  if (
+    rates.isError ||
+    moduleRates.isError ||
+    agreement.isError ||
+    offers.length !== offerModules.length
+  )
     return (
       <div className="bg-card border-border space-y-3 rounded-xl border p-5">
         <p role="alert">No se pudo cargar la oferta completa. No se ha iniciado ningún cobro.</p>
         <Button
           variant="outline"
-          onPress={() => void Promise.all([rates.refetch(), moduleRates.refetch()])}
+          onPress={() =>
+            void Promise.all([rates.refetch(), moduleRates.refetch(), agreement.refetch()])
+          }
         >
           Reintentar
         </Button>
@@ -323,62 +347,83 @@ function PlanSelection({
             incluidas las invitaciones pendientes. Las personas registradas sin acceso no ocupan
             plaza.
           </p>
-          <label className="grid w-fit gap-2 font-medium">
-            Licencias, incluyéndote
-            <input
-              className="border-input bg-background w-32 rounded-lg border px-3 py-2"
-              type="number"
-              min={1}
-              max={MAX_SCALE_PLAN_MEMBERS}
-              step={1}
-              value={seats}
-              onChange={(event) => {
-                setSeats(event.target.value)
-                setConsent(false)
-              }}
-            />
-          </label>
-          {quote ? (
-            <p className="text-sm">
-              Plazas adicionales: {formatEuros(quote.seatsCents / 100)}/{periodLabel}, sin IVA.
-            </p>
+          {agreed ? (
+            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+              <p className="font-semibold">Condiciones pactadas para tu empresa</p>
+              <p>
+                {planLabel(agreed.plan, rates.data)} · {agreed.seats}{' '}
+                {agreed.seats === 1 ? 'licencia' : 'licencias'} ·{' '}
+                {period === 'year' ? 'Pago anual' : 'Pago mensual'}
+              </p>
+            </div>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              Introduce entre 1 y {MAX_SCALE_PLAN_MEMBERS} licencias.
-            </p>
-          )}
-          <fieldset className="flex flex-wrap gap-4">
-            <legend className="mb-2 font-medium">Periodicidad de pago</legend>
-            {(['month', 'year'] as const).map((value) => (
-              <label
-                key={value}
-                className="border-border flex cursor-pointer gap-2 rounded-lg border p-3"
-              >
+            <>
+              <label className="grid w-fit gap-2 font-medium">
+                Licencias, incluyéndote
                 <input
-                  type="radio"
-                  className="accent-primary"
-                  name="period"
-                  value={value}
-                  checked={period === value}
-                  onChange={() => {
-                    setPeriod(value)
+                  className="border-input bg-background w-32 rounded-lg border px-3 py-2"
+                  type="number"
+                  min={1}
+                  max={MAX_SCALE_PLAN_MEMBERS}
+                  step={1}
+                  value={seats}
+                  onChange={(event) => {
+                    setSeats(event.target.value)
                     setConsent(false)
                   }}
                 />
-                {value === 'month' ? 'Mensual' : 'Anual, en un solo cobro'}
               </label>
-            ))}
-          </fieldset>
+              {quote ? (
+                <p className="text-sm">
+                  Plazas adicionales: {formatEuros(quote.seatsCents / 100)}/{periodLabel}, sin IVA.
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Introduce entre 1 y {MAX_SCALE_PLAN_MEMBERS} licencias.
+                </p>
+              )}
+              <fieldset className="flex flex-wrap gap-4">
+                <legend className="mb-2 font-medium">Periodicidad de pago</legend>
+                {(['month', 'year'] as const).map((value) => (
+                  <label
+                    key={value}
+                    className="border-border flex cursor-pointer gap-2 rounded-lg border p-3"
+                  >
+                    <input
+                      type="radio"
+                      className="accent-primary"
+                      name="period"
+                      value={value}
+                      checked={period === value}
+                      onChange={() => {
+                        setPeriod(value)
+                        setConsent(false)
+                      }}
+                    />
+                    {value === 'month' ? 'Mensual' : 'Anual, en un solo cobro'}
+                  </label>
+                ))}
+              </fieldset>
+            </>
+          )}
         </section>
       ) : null}
       {step === 2 && quote ? (
         <section className="bg-card border-border space-y-4 rounded-2xl border p-5 sm:p-6">
           <h2 className="text-xl font-semibold">Revisa y activa tu suscripción</h2>
           <dl className="grid grid-cols-[1fr_auto] gap-2 text-sm">
-            <dt>Plan base · 1 licencia</dt>
+            <dt>
+              {agreed
+                ? `${planLabel(agreed.plan, rates.data)} · ${agreed.seats} licencias pactadas`
+                : 'Plan base · 1 licencia'}
+            </dt>
             <dd>{formatEuros(quote.baseCents / 100)}</dd>
-            <dt>{quote.terms.seats - 1} licencias adicionales</dt>
-            <dd>{formatEuros(quote.seatsCents / 100)}</dd>
+            {!agreed && quote.terms.seats > 1 ? (
+              <>
+                <dt>{quote.terms.seats - 1} licencias adicionales</dt>
+                <dd>{formatEuros(quote.seatsCents / 100)}</dd>
+              </>
+            ) : null}
             {quote.extras.map((item) =>
               item ? (
                 <div key={item.code} className="contents">

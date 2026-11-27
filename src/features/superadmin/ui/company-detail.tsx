@@ -20,7 +20,7 @@ import {
   type PlatformSearch,
 } from '../domain/platform-navigation'
 import { CompanyBillingAgreement } from './company-billing-agreement'
-import { CompanyPayments } from './company-payments'
+import { CompanyCollectionOverview, CompanyPayments } from './company-payments'
 import { CompanyProfileSection } from './company-profile'
 import { CompanyReferralSection } from './company-referral'
 import { CompanyNavigation } from './platform-shell'
@@ -72,13 +72,16 @@ export function CompanyDetail({
             </PageHeaderDescription>
           </PageHeaderHeading>
           <div className="flex flex-wrap items-center gap-2">
-            <CompanyStatus status={company.subscription_status} />
-            {company.is_complimentary ? <Badge variant="outline">Cortesía</Badge> : null}
+            {company.is_complimentary ? (
+              <Badge variant="outline">Cortesía</Badge>
+            ) : (
+              <CompanyStatus status={company.subscription_status} />
+            )}
           </div>
         </PageHeader>
         <dl className="border-border bg-card mt-3 grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm sm:grid-cols-4">
           <CompanyFact label="Plan" value={planLabel(company.plan, rates)} />
-          <CompanyFact label="Personas" value={company.member_count} />
+          <CompanyFact label="Personas registradas" value={company.member_count} />
           <CompanyFact label="Periodicidad" value={billingPeriodLabel(company.billing_interval)} />
           <CompanyFact
             label="Fin del periodo"
@@ -103,6 +106,7 @@ export function CompanyDetail({
           <h2 id="platform-subscription" className="text-base font-semibold">
             Suscripción
           </h2>
+          <CompanyCollectionOverview company={company} search={search} />
           {company.is_complimentary ? (
             <div className="border-border bg-card rounded-lg border">
               <PlatformMessage title="Suscripción de cortesía">

@@ -72,7 +72,7 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(html).toContain('Proveedores')
   expect(html).toMatch(/\+90,00\s*€ al año/)
   expect(html).toMatch(/\+150,00\s*€ al año/)
-  expect(html).toContain('Ajustes → Suscripción de Ábaco')
+  expect(html).toContain('los ajustes de suscripción')
   expect(action).toHaveBeenCalledWith(
     expect.objectContaining({ net_cents: 34800, amount_cents: 42108 }),
     expect.objectContaining({ id: 'standard', name: 'Ábaco', benefit: 'Coordina el equipo' }),

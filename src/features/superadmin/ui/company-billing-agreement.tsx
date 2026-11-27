@@ -29,6 +29,7 @@ import {
   scheduleBillingAgreement,
   type BillingAgreement,
 } from '../application/superadmin-queries'
+import { baseForGrossCharge } from '../domain/agreed-charge'
 import { withoutEditor, type PlatformSearch } from '../domain/platform-navigation'
 import { CompanyBillingVat } from './company-billing-vat'
 import { PlatformField, PlatformSelect } from './platform-form-field'
@@ -81,7 +82,10 @@ export function CompanyBillingAgreement({
   const vatBlocked = preview.data?.pending || subscriptionStatus === 'past_due'
   const catalogRate =
     next && catalog.data ? catalogRateForCapacity(catalog.data, next.plan, next.seats) : null
-  const catalogNet = next && catalogRate ? catalogQuote(catalogRate, next.period).net_cents : null
+  const catalogNet =
+    next && catalogRate
+      ? catalogQuote({ ...catalogRate, seats: next.seats }, next.period).net_cents
+      : null
   const blocked = preview.data?.cancel_at_period_end
     ? 'Retira la cancelación antes de cambiar las condiciones.'
     : vatBlocked
@@ -98,19 +102,22 @@ export function CompanyBillingAgreement({
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">
             {editing === 'cuota'
-              ? 'Editar cuota'
+              ? 'Editar plan y cuota'
               : editing === 'iva'
                 ? 'Editar IVA'
                 : 'Condiciones de facturación'}
           </h3>
           <p className="text-muted-foreground text-sm">
-            Los cambios se aplican al próximo cobro u oferta, sin cargo inmediato.
+            El plan y la cuota guardados se aplican a la próxima renovación automática o al primer
+            pago. Guardar no realiza un cargo.
           </p>
         </div>
         {editing ? (
           <PlatformBackLink search={withoutEditor(search)}>Volver a suscripción</PlatformBackLink>
         ) : preview.isSuccess && catalog.isSuccess && !blocked ? (
-          <PlatformEditLink search={{ ...search, edicion: 'cuota' }}>Editar cuota</PlatformEditLink>
+          <PlatformEditLink search={{ ...search, edicion: 'cuota' }}>
+            Editar plan y cuota
+          </PlatformEditLink>
         ) : null}
       </div>
       {preview.isPending || catalog.isPending ? (
@@ -293,7 +300,9 @@ function AgreementForm({
       ? `${initialRate.plan}:${initialRate.plan === 'standard' || initialRate.plan === 'scale' ? 'variable' : initialRate.seats}`
       : '',
   )
-  const [seats, setSeats] = useState(String(initialRate?.seats ?? Math.max(members, 1)))
+  const [seats, setSeats] = useState(
+    String(terms?.seats ?? initialRate?.seats ?? Math.max(members, 1)),
+  )
   const [period, setPeriod] = useState<Interval>(terms?.period ?? 'month')
   const base = terms?.base_net_cents ?? terms?.net_cents
   const [mode, setMode] = useState(fixedNet !== null ? 'agreed' : 'catalog')
@@ -317,20 +326,31 @@ function AgreementForm({
       ? { ...selected.entry, seats: count }
       : null
     : (selected?.entry ?? null)
-  const agreed = mode === 'agreed'
+  const agreed = mode === 'agreed' || mode === 'gross'
+  const exactGross = mode === 'gross'
   const raw = price.trim()
   const customCents = /^\d{1,6}([,.]\d{1,2})?$/.test(raw) ? parseEuros(raw) : 0
-  const validPrice = customCents >= 1 && customCents <= 10_000_000
-  const netCents = agreed ? (validPrice ? customCents : null) : null
   const quote = rate ? catalogQuote(rate, period) : null
   const moduleNet = rate ? moduleNetForPlan(rate.plan, period, moduleSubscriptions) : 0
+  const netCents = !agreed
+    ? null
+    : exactGross
+      ? baseForGrossCharge(customCents, moduleNet, vatPercent)
+      : customCents >= 1 && customCents <= 10_000_000
+        ? customCents
+        : null
   const baseNet = agreed ? netCents : (quote?.net_cents ?? null)
   const totalNet = baseNet === null ? null : baseNet + moduleNet
   const amount = rate && totalNet !== null ? totalNet + applyRate(totalNet, vatPercent) : null
   const canSave = Boolean(rate && rate.seats >= members && amount !== null && !saving)
   const capacityError = rate && rate.seats < members ? 'El tramo no cubre al equipo.' : undefined
   const priceHelp = 'Introduce entre 0,01 € y 100.000 € con hasta dos decimales.'
-  const priceError = raw && !validPrice ? priceHelp : undefined
+  const priceError =
+    raw && netCents === null
+      ? exactGross
+        ? 'No se puede obtener ese total con el IVA y los módulos seleccionados. Prueba otro importe.'
+        : priceHelp
+      : undefined
 
   return (
     <form
@@ -431,10 +451,20 @@ function AgreementForm({
                 isDisabled={saving}
                 options={[
                   { id: 'catalog', label: 'Tarifa de catálogo' },
-                  { id: 'agreed', label: 'Precio pactado' },
+                  { id: 'agreed', label: 'Base pactada sin IVA' },
+                  { id: 'gross', label: 'Total exacto con IVA y módulos' },
                 ]}
                 onChange={(value) => {
                   onEdit()
+                  if (value !== mode && (value === 'gross' || mode === 'gross')) {
+                    setPrice(
+                      value === 'gross' && amount !== null
+                        ? centsToInput(amount)
+                        : baseNet === null
+                          ? ''
+                          : centsToInput(baseNet),
+                    )
+                  }
                   setMode(value)
                 }}
               />
@@ -442,8 +472,18 @@ function AgreementForm({
           </PlatformField>
           {agreed ? (
             <PlatformField
-              label={`Precio base sin IVA por ${periodUnit(period)}`}
-              hint={priceError ? undefined : priceHelp}
+              label={
+                exactGross
+                  ? `Total a cobrar por ${periodUnit(period)}`
+                  : `Precio base sin IVA por ${periodUnit(period)}`
+              }
+              hint={
+                priceError
+                  ? undefined
+                  : exactGross
+                    ? 'Con los módulos y el IVA actuales, antes de descuentos. Si cambian, el total puede variar.'
+                    : priceHelp
+              }
               error={priceError}
             >
               {(control) => (
@@ -474,8 +514,8 @@ function AgreementForm({
           )}
         </output>
         <p className="text-muted-foreground text-xs">
-          Los módulos se añaden al precio base. Si pactas un precio, se mantiene al cambiar de
-          capacidad. Los cambios se aplican al contratar o renovar, sin cobro inmediato.
+          Se guarda el precio base pactado, independientemente de la capacidad. El importe final
+          puede variar si cambian los módulos, el IVA o se aplica un descuento.
         </p>
       </FieldSet>
       <div className="border-border mt-3 flex flex-wrap items-center gap-2 border-t pt-3">

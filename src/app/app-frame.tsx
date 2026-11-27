@@ -99,7 +99,7 @@ const navGroups: NavigationGroup<NavItem>[] = [
     label: 'Cuenta',
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
-      { to: '/superadmin', label: 'Administración de Ábaco', icon: navIcons.settings },
+      { to: '/superadmin', label: 'Administración de Menoslios', icon: navIcons.settings },
     ],
   },
 ]
@@ -249,7 +249,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <DropdownMenuSeparator />
       {hasPlatformAccess === true ? (
         <>
-          <PlatformMenuSection onOpen={() => void navigate({ to: '/superadmin' })} />
+          <PlatformMenuSection
+            onOpen={() => void navigate({ to: '/superadmin', search: { vista: 'resumen' } })}
+          />
           <DropdownMenuSeparator />
         </>
       ) : null}

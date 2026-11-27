@@ -111,7 +111,7 @@ describe('company billing controls', () => {
     const html = renderBilling(3, 'cuota')
     expect(html).toMatch(/41,14\s*€ con IVA \/ mes/)
     expect(html).toMatch(/Total previsto: 589,88\s*€ con IVA \/ año/)
-    expect(html).toMatch(/data-slot="select-value"[^>]*>Precio pactado<\/span>/)
+    expect(html).toMatch(/data-slot="select-value"[^>]*>Base pactada sin IVA<\/span>/)
     expect(html).toContain('value="297,50"')
     expect(html).toMatch(/<button\b(?![^>]*\bdisabled=)[^>]*>Guardar condiciones<\/button>/)
   })

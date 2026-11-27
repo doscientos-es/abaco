@@ -25,6 +25,30 @@ describe('onboarding selection', () => {
       module_net_cents: 4500,
     })
   })
+  it('honors the managed base and does not charge modules already included in the plan', () => {
+    const offer = onboardingOffer(
+      catalog,
+      [...modules, { code: 'workers', monthly_cents: 900, yearly_cents: 9000 }],
+      ['workers', 'ai'],
+      1,
+      'month',
+      {
+        plan: 'team',
+        seats: 5,
+        period: 'year',
+        amount_cents: 50000,
+        net_cents: 50000,
+        vat_percent: 0,
+      },
+    )
+    expect(offer?.extras.map((module) => module?.code)).toEqual(['ai'])
+    expect(offer?.terms).toMatchObject({
+      plan: 'team',
+      seats: 5,
+      period: 'year',
+      amount_cents: 54500,
+    })
+  })
   it('does not allow a legacy plan or an unavailable module', () => {
     expect(onboardingOffer(catalog, modules, ['supplier_logistics'], 1, 'month')).toBeNull()
     expect(onboardingOffer(catalog, modules, ['mcp'], 1, 'month')).toBeNull()

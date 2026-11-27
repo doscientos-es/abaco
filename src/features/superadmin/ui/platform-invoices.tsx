@@ -1,4 +1,5 @@
 import {
+  Badge,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
@@ -69,7 +70,8 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
         <PageHeaderHeading>
           <PageHeaderTitle>Facturas de suscripción</PageHeaderTitle>
           <PageHeaderDescription>
-            Consulta las facturas de Ábaco que gestiona Backoffice y el estado de su envío.
+            Consulta las facturas de Menoslios y su envío. Backoffice emite las nuevas suscripciones
+            en la serie ML-SUS.
           </PageHeaderDescription>
         </PageHeaderHeading>
       </PageHeader>
@@ -120,10 +122,20 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
             {invoices.data.rows.length ? (
               <InvoiceTable invoices={invoices.data.rows} search={search} />
             ) : (
-              <PlatformMessage title={page > 1 ? 'No hay más facturas' : 'No encontramos facturas'}>
+              <PlatformMessage
+                title={
+                  page > 1
+                    ? 'No hay más facturas'
+                    : q || filter
+                      ? 'No encontramos facturas'
+                      : 'Aún no hay facturas de suscripción'
+                }
+              >
                 {page > 1
                   ? 'Vuelve a la página anterior.'
-                  : 'Prueba con otra búsqueda o cambia el filtro.'}
+                  : q || filter
+                    ? 'Prueba con otra búsqueda o cambia el filtro.'
+                    : 'Aparecerán aquí cuando Backoffice reciba un cobro para facturar.'}
               </PlatformMessage>
             )}
             <PlatformPagination
@@ -168,11 +180,15 @@ function InvoiceTable({
                 <PlatformRecordLink search={{ ...search, referencia: invoice.merchant_order }}>
                   {invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`}
                 </PlatformRecordLink>
-                <p className="text-muted-foreground text-xs">{invoice.company_name}</p>
-                <p className="text-muted-foreground text-xs md:hidden">{status}</p>
+                <p className="text-muted-foreground text-xs">
+                  {invoice.company_name} · Cobro del {formatPlatformDate(invoice.paid_at)}
+                </p>
+                <p className="mt-1 md:hidden">
+                  <InvoiceStatus status={invoice.invoice_status} label={status} />
+                </p>
               </TableCell>
               <TableCell className="text-muted-foreground hidden whitespace-normal md:table-cell">
-                {status}
+                <InvoiceStatus status={invoice.invoice_status} label={status} />
               </TableCell>
               <TableCell className="text-right font-medium tabular-nums">
                 {formatEuros(invoice.amount_cents)}
@@ -182,6 +198,22 @@ function InvoiceTable({
         })}
       </TableBody>
     </Table>
+  )
+}
+
+function InvoiceStatus({ status, label }: { status: string | null; label: string }) {
+  const variant =
+    status === 'sent'
+      ? 'success'
+      : status?.endsWith('_review') || status === 'retrying'
+        ? 'danger'
+        : status
+          ? 'warning'
+          : 'neutral'
+  return (
+    <Badge variant={variant} icon={false} className="h-auto whitespace-normal">
+      {label}
+    </Badge>
   )
 }
 
