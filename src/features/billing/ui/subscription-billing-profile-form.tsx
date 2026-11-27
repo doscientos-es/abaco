@@ -6,13 +6,28 @@ import {
   billingProfileQuery,
   saveBillingProfile,
 } from '../application/subscription-billing-profile'
+import { subscriptionTaxQuery } from '../application/subscription-tax'
 
-export function SubscriptionBillingProfileForm({ tenantId }: { tenantId: string }) {
+export function SubscriptionBillingProfileForm({
+  tenantId,
+  onChange,
+  onSaved,
+}: {
+  tenantId: string
+  onChange?: () => void
+  onSaved?: () => void
+}) {
   const profile = useQuery(billingProfileQuery(tenantId))
   const queryClient = useQueryClient()
   const save = useMutation({
     mutationFn: (form: FormData) => saveBillingProfile(tenantId, form),
-    onSuccess: () => queryClient.invalidateQueries(billingProfileQuery(tenantId)),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries(billingProfileQuery(tenantId)),
+        queryClient.invalidateQueries(subscriptionTaxQuery(tenantId)),
+      ])
+      onSaved?.()
+    },
   })
 
   return (
@@ -21,8 +36,9 @@ export function SubscriptionBillingProfileForm({ tenantId }: { tenantId: string 
         Datos fiscales de la suscripción
       </summary>
       <p className="text-muted-foreground text-xs">
-        Doscientos usará estos datos para enviarte las facturas de Ábaco. No cambian las facturas
-        que emites a tus clientes. Por ahora solo se admite facturación en España con IVA del 21 %.
+        Indica la dirección fiscal del negocio o establecimiento que recibe la suscripción.
+        Detectaremos el territorio mediante el código postal. No cambia las facturas que emites a
+        tus clientes.
       </p>
       {profile.isPending ? <output className="block">Cargando datos fiscales…</output> : null}
       {profile.isError ? (
@@ -33,8 +49,10 @@ export function SubscriptionBillingProfileForm({ tenantId }: { tenantId: string 
       {profile.isSuccess ? (
         <form
           className="grid gap-3 sm:grid-cols-2"
+          onChange={onChange}
           onSubmit={(event) => {
             event.preventDefault()
+            onChange?.()
             save.mutate(new FormData(event.currentTarget))
           }}
         >

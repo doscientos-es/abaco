@@ -105,3 +105,18 @@ Calendar existente. El cliente recibe la cita normal de Cal.com; el contexto
 se crea en el calendario principal de Gerard como evento privado, libre y sin
 invitados. Este flujo copia únicamente las reservas iniciales, no los cambios
 o cancelaciones posteriores. No hace backfill de cuentas existentes.
+
+## Territorio fiscal de la suscripción
+
+El alta detecta el territorio a partir del código postal de la dirección fiscal
+guardada. Península y Baleares pasan al cálculo general. Canarias, Ceuta,
+Melilla y datos incoherentes se muestran pendientes de revisión, sin iniciar
+Redsys. El emisor actual de Backoffice solo admite IVA al 21 %; no sustituir un
+tratamiento fuera de ese territorio por un 0 % genérico.
+
+En Superadmin → Empresas → Suscripción → Editar fiscalidad se puede corregir
+la clasificación o volver al modo automático. Si la clasificación contradice
+el código postal, permanece bloqueada hasta corregir la dirección. Las
+correcciones están vinculadas al código postal y no alteran cobros ni facturas
+anteriores. Antes de automatizar otros territorios, valida el tratamiento B2B y
+la emisión correspondiente con el asesor fiscal.

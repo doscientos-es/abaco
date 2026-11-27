@@ -32,6 +32,7 @@ vi.mock('@/features/billing', async () => ({
   ...(await import('@/features/billing/domain/plans')),
   billingCatalogQuery: { queryKey: ['catalog'] },
   billingPreviewQuery: () => ({ queryKey: ['agreement'] }),
+  subscriptionTaxQuery: () => ({ queryKey: ['subscription-tax'] }),
   billingProfileQuery: () => ({ queryKey: ['profile'] }),
   startOnboardingCheckout: vi.fn(),
   submitToRedsys: vi.fn(),

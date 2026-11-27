@@ -2,7 +2,7 @@ import { Button } from '@doscientos/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 
-import { billingPreviewQuery, STANDARD_BILLING_VAT } from '@/features/billing'
+import { billingPreviewQuery, STANDARD_BILLING_VAT, subscriptionTaxQuery } from '@/features/billing'
 
 import { setCompanyBillingVat } from '../application/superadmin-queries'
 import { PlatformField, PlatformSelect } from './platform-form-field'
@@ -24,7 +24,10 @@ export function CompanyBillingVat({
   const update = useMutation({
     mutationFn: (vat: number) => setCompanyBillingVat(tenantId, vat),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: billingPreviewQuery(tenantId).queryKey })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: billingPreviewQuery(tenantId).queryKey }),
+        queryClient.invalidateQueries(subscriptionTaxQuery(tenantId)),
+      ])
       setDraft(null)
     },
   })
@@ -45,7 +48,7 @@ export function CompanyBillingVat({
       <PlatformField
         label="Tipo de IVA"
         className="max-w-lg"
-        hint="Selecciona el 0 % solo si fiscalmente corresponde. Se aplica al próximo cobro; no modifica pagos anteriores ni las facturas que emite la empresa."
+        hint="Un 0 % manual no activa la facturación fuera del territorio del IVA. El cambio no modifica facturas anteriores."
       >
         {(control) => (
           <PlatformSelect
@@ -54,7 +57,7 @@ export function CompanyBillingVat({
             isDisabled={blocked || update.isPending}
             options={[
               { id: String(STANDARD_BILLING_VAT), label: `${STANDARD_BILLING_VAT} % · General` },
-              { id: '0', label: '0 % · Sin IVA' },
+              { id: '0', label: '0 % · Revisión manual' },
             ]}
             onChange={(value) => {
               update.reset()

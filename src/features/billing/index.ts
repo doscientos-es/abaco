@@ -30,3 +30,9 @@ export { PricingCatalog } from './ui/pricing-catalog'
 export { SubscriptionAccessPage } from './ui/subscription-access-page'
 export { billingProfileQuery } from './application/subscription-billing-profile'
 export { SubscriptionBillingProfileForm } from './ui/subscription-billing-profile-form'
+export {
+  subscriptionTaxQuery,
+  subscriptionTerritories,
+  setSubscriptionTaxTerritory,
+  type SubscriptionTerritory,
+} from './application/subscription-tax'

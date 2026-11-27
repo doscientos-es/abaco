@@ -100,7 +100,7 @@ beforeEach(() => {
 describe('company billing controls', () => {
   it('shows both edit links, but no editable fields, in the subscription detail', () => {
     const html = renderBilling(3)
-    expect(html).toContain('IVA del próximo cobro')
+    expect(html).toContain('Tipo de IVA configurado')
     expect(html).toContain('21 %')
     expect(html).toContain(`href="/superadmin?empresa=${tenantId}&amp;edicion=cuota"`)
     expect(html).toContain(`href="/superadmin?empresa=${tenantId}&amp;edicion=iva"`)
@@ -199,7 +199,7 @@ describe('company billing controls', () => {
       next: { ...next, vat_percent: 0, amount_cents: 48750 },
     })
     const vat = renderBilling(3, 'iva')
-    expect(vat).toMatch(/data-slot="select-value"[^>]*>0 % · Sin IVA<\/span>/)
+    expect(vat).toMatch(/data-slot="select-value"[^>]*>0 % · Revisión manual<\/span>/)
     expect(vat).not.toContain('Guardar condiciones')
     const agreement = renderBilling(3, 'cuota')
     expect(agreement).toMatch(/Total previsto: 487,50\s*€ sin IVA \(0 %\) \/ año/)

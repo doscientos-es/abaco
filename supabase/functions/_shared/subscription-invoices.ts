@@ -41,6 +41,15 @@ export async function prepareCharge(client: SupabaseClient, tenantId: string) {
   if (error) return { message: 'No se pudieron consultar los datos de facturación.' }
   if (!profile) return { message: 'Guarda los datos fiscales de tu suscripción antes de pagar.' }
 
+  const { data: fiscal, error: fiscalError } = await client.rpc('subscription_billing_tax', {
+    p_tenant: tenantId,
+  })
+  if (fiscalError || fiscal?.status !== 'ready')
+    return {
+      message:
+        'La facturación de esta dirección necesita revisión. No se ha iniciado ningún cobro.',
+    }
+
   const { status } = await requestBackoffice({ action: 'prepare', tenantId, recipient: profile })
   if (status === 'ready') return { profile }
   if (status === 'fiscal_identity_invalid') {

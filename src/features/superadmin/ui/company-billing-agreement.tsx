@@ -32,6 +32,7 @@ import {
 import { baseForGrossCharge } from '../domain/agreed-charge'
 import { withoutEditor, type PlatformSearch } from '../domain/platform-navigation'
 import { CompanyBillingVat } from './company-billing-vat'
+import { CompanyFiscalTerritory } from './company-fiscal-territory'
 import { PlatformField, PlatformSelect } from './platform-form-field'
 import {
   PlatformBackLink,
@@ -104,7 +105,7 @@ export function CompanyBillingAgreement({
             {editing === 'cuota'
               ? 'Editar plan y cuota'
               : editing === 'iva'
-                ? 'Editar IVA'
+                ? 'Editar fiscalidad'
                 : 'Condiciones de facturación'}
           </h3>
           <p className="text-muted-foreground text-sm">
@@ -176,20 +177,25 @@ export function CompanyBillingAgreement({
         </div>
       ) : null}
       {preview.isSuccess && editing === 'iva' ? (
-        <CompanyBillingVat
-          tenantId={tenantId}
-          vatPercent={preview.data.vat_percent}
-          blocked={vatBlocked}
-        />
+        <>
+          <CompanyFiscalTerritory tenantId={tenantId} blocked={vatBlocked} />
+          <CompanyBillingVat
+            tenantId={tenantId}
+            vatPercent={preview.data.vat_percent}
+            blocked={vatBlocked}
+          />
+        </>
       ) : null}
       {preview.isSuccess && !editing ? (
         <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <dl className="text-sm">
-            <dt className="text-muted-foreground">IVA del próximo cobro</dt>
+            <dt className="text-muted-foreground">Tipo de IVA configurado</dt>
             <dd className="mt-0.5 font-semibold">{preview.data.vat_percent} %</dd>
           </dl>
           {!vatBlocked ? (
-            <PlatformEditLink search={{ ...search, edicion: 'iva' }}>Editar IVA</PlatformEditLink>
+            <PlatformEditLink search={{ ...search, edicion: 'iva' }}>
+              Editar fiscalidad
+            </PlatformEditLink>
           ) : null}
         </div>
       ) : null}

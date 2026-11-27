@@ -14,6 +14,8 @@ import {
   startOnboardingCheckout,
   submitToRedsys,
   SubscriptionBillingProfileForm,
+  subscriptionTaxQuery,
+  subscriptionTerritories,
   tenantAccessQuery,
   type Interval,
 } from '@/features/billing'
@@ -245,6 +247,13 @@ function PlanSelection({
   const agreement = useQuery(billingPreviewQuery(tenantId))
   const agreed = agreement.data?.next_managed ? (agreement.data.next ?? undefined) : undefined
   const profile = useQuery({ ...billingProfileQuery(tenantId), enabled: step === 2 })
+  const fiscal = useQuery({
+    ...subscriptionTaxQuery(tenantId),
+    enabled: step === 2 && Boolean(profile.data),
+  })
+  const [fiscalDraft, setFiscalDraft] = useState(false)
+  const taxReady =
+    !fiscalDraft && !fiscal.isError && !fiscal.isFetching && fiscal.data?.status === 'ready'
   const [selected, setSelected] = useState<OfferModule[]>([])
   const [seats, setSeats] = useState('1')
   const [selectedPeriod, setPeriod] = useState<Interval>('month')
@@ -268,7 +277,7 @@ function PlanSelection({
   const periodLabel = period === 'year' ? 'año' : 'mes'
 
   async function pay() {
-    if (busy || !quote || !bookingUrl || !consent || !profile.data) return
+    if (busy || !quote || !bookingUrl || !consent || !profile.data || !taxReady) return
     setBusy(true)
     setError(null)
     try {
@@ -436,23 +445,67 @@ function PlanSelection({
                 </div>
               ) : null,
             )}
-            <dt>IVA ({quote.terms.vat_percent} %)</dt>
-            <dd>{formatEuros((quote.terms.amount_cents - quote.terms.net_cents) / 100)}</dd>
-            <dt className="border-border border-t pt-2 font-semibold">Total a pagar ahora</dt>
-            <dd className="border-border border-t pt-2 font-semibold">
-              {formatEuros(quote.terms.amount_cents / 100)} / {periodLabel}
-            </dd>
+            {taxReady ? (
+              <>
+                <dt>IVA ({quote.terms.vat_percent} %)</dt>
+                <dd>{formatEuros((quote.terms.amount_cents - quote.terms.net_cents) / 100)}</dd>
+                <dt className="border-border border-t pt-2 font-semibold">Total a pagar ahora</dt>
+                <dd className="border-border border-t pt-2 font-semibold">
+                  {formatEuros(quote.terms.amount_cents / 100)} / {periodLabel}
+                </dd>
+              </>
+            ) : null}
           </dl>
           <p className="text-muted-foreground text-sm">
             La suscripción se renueva automáticamente cada {periodLabel}. Podrás desactivar la
             renovación desde el plan. Después del pago, elige hora para la puesta en marcha.
           </p>
-          <SubscriptionBillingProfileForm tenantId={tenantId} />
+          <SubscriptionBillingProfileForm
+            tenantId={tenantId}
+            onChange={() => {
+              setFiscalDraft(true)
+              setConsent(false)
+            }}
+            onSaved={() => setFiscalDraft(false)}
+          />
+          <div className="border-border space-y-1 rounded-lg border p-3 text-sm" aria-live="polite">
+            {!profile.data || fiscalDraft ? (
+              <p>Guarda tu dirección fiscal para calcular el total.</p>
+            ) : fiscal.isError ? (
+              <>
+                <p>No se pudo comprobar el territorio fiscal.</p>
+                <Button variant="outline" onPress={() => void fiscal.refetch()}>
+                  Reintentar
+                </Button>
+              </>
+            ) : fiscal.isFetching || !fiscal.data ? (
+              <p>Comprobando territorio fiscal…</p>
+            ) : (
+              <>
+                <p>
+                  Territorio fiscal:{' '}
+                  <strong>{subscriptionTerritories[fiscal.data.territory]}</strong>
+                </p>
+                {fiscal.data.status === 'outside_iva' ? (
+                  <p>
+                    Fuera del territorio del IVA peninsular. Revisaremos el impuesto aplicable antes
+                    de cobrar. Contacta con Menos Líos para continuar.
+                  </p>
+                ) : fiscal.data.status === 'review' ? (
+                  <p>
+                    Revisa el código postal o contacta con Menos Líos. No se iniciará ningún cobro
+                    hasta resolverlo.
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input
               className="accent-primary mt-0.5 size-4"
               type="checkbox"
-              checked={consent}
+              checked={consent && taxReady}
+              disabled={!taxReady}
               onChange={(event) => setConsent(event.target.checked)}
             />
             Confirmo las licencias, los módulos y el pago recurrente mostrado.
@@ -464,7 +517,7 @@ function PlanSelection({
           ) : null}
           <FormError message={error} />
           <Button
-            isDisabled={busy || !consent || !profile.data || !bookingUrl}
+            isDisabled={busy || !consent || !profile.data || !bookingUrl || !taxReady}
             onPress={() => void pay()}
           >
             {busy ? 'Abriendo Redsys…' : 'Pagar y suscribirme con Redsys'}
