@@ -105,7 +105,7 @@ export function ModuleCards({
                   className="border-border w-full rounded-xl border"
                 />
                 <figcaption className="text-muted-foreground mt-1 text-xs">
-                  Captura de Menoslios con datos ficticios.
+                  Captura de Menos Líos con datos ficticios.
                 </figcaption>
               </figure>
             </details>

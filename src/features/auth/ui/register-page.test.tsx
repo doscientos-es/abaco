@@ -85,7 +85,7 @@ describe('RegisterPage', () => {
     expect(html).toContain('Correo')
     expect(html).toContain('Contraseña')
     expect(html).toContain('href="/precios"')
-    expect(html).toContain('Activa tu suscripción para empezar a usar Ábaco')
+    expect(html).toContain('Activa tu suscripción para empezar a usar Menos Líos')
     expect(html).toContain('Crear cuenta')
     expect(html).toContain('autoComplete="new-password"')
     expect(html).toContain('Continuar con Google')

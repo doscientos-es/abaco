@@ -20,7 +20,7 @@ export function ChangelogSection({ releases = changelog.releases }: { releases?:
           Novedades
         </h2>
         <p className="text-muted-foreground text-sm">
-          Las nuevas funciones, mejoras y correcciones de Ábaco.
+          Las nuevas funciones, mejoras y correcciones de Menos Líos.
         </p>
       </div>
       {pager.total ? (

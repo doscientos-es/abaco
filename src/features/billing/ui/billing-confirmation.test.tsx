@@ -112,7 +112,7 @@ vi.mock('./pricing-catalog', () => ({
         'year',
         vatPercent,
       ),
-      { name: 'Ábaco' },
+      { name: 'Menos Líos' },
     ),
 }))
 vi.mock('./payment-history', () => ({ PaymentHistory: () => null }))
@@ -169,7 +169,7 @@ describe('billing confirmation', () => {
     fixtures.moduleYearly = 15000
     fixtures.accept.mockResolvedValue({ ok: true })
     render()
-    action('Elegir Ábaco').onPress()
+    action('Elegir Menos Líos').onPress()
     expect(render()).toMatch(/690,00\s*€ sin IVA \(0 %\)/)
     action('Continuar al pago').onPress()
     await vi.waitFor(() =>
@@ -185,7 +185,7 @@ describe('billing confirmation', () => {
     fixtures.moduleYearly = 15000
     fixtures.accept.mockResolvedValue({ ok: true, form: { url: 'https://example.test' } })
     render()
-    action('Elegir Ábaco').onPress()
+    action('Elegir Menos Líos').onPress()
     expect(fixtures.accept).not.toHaveBeenCalled()
     const html = render()
     expect(html).toMatch(/834,90\s*€/)
@@ -210,7 +210,7 @@ describe('billing confirmation', () => {
       }),
     )
     render()
-    action('Elegir Ábaco').onPress()
+    action('Elegir Menos Líos').onPress()
     render()
     const confirm = action('Continuar al pago')
     confirm.onPress()
@@ -223,7 +223,7 @@ describe('billing confirmation', () => {
   it('keeps checkout locked while redirecting to Redsys', async () => {
     fixtures.accept.mockResolvedValue({ ok: true, form: { url: 'https://example.test' } })
     render()
-    action('Elegir Ábaco').onPress()
+    action('Elegir Menos Líos').onPress()
     render()
     const confirm = action('Continuar al pago')
     confirm.onPress()
@@ -236,7 +236,7 @@ describe('billing confirmation', () => {
     fixtures.status = 'active'
     fixtures.accept.mockResolvedValue({ ok: true })
     render()
-    action('Elegir Ábaco').onPress()
+    action('Elegir Menos Líos').onPress()
     expect(render()).toContain('sin cobro inmediato')
     action('Programar cambio').onPress()
     await vi.waitFor(() => expect(fixtures.accept).toHaveBeenCalledWith('company', 'change', terms))
@@ -246,7 +246,7 @@ describe('billing confirmation', () => {
   it('does not let users repeat an unresolved payment or buy a tier too small', () => {
     fixtures.pending = true
     expect(render()).toContain('No repitas el pago')
-    expect(action('Elegir Ábaco').isDisabled).toBe(true)
+    expect(action('Elegir Menos Líos').isDisabled).toBe(true)
     fixtures.pending = false
     fixtures.members = 4
     render()
@@ -258,14 +258,14 @@ describe('billing confirmation', () => {
     fixtures.managed = true
     const html = render()
     expect(html).toContain('Próxima renovación')
-    expect(html).toContain('Ábaco ha programado las próximas condiciones')
+    expect(html).toContain('Menos Líos ha programado las próximas condiciones')
     expect(action('Retirar el cambio programado')).toBeUndefined()
   })
 
   it('does not offer payments for a courtesy company', () => {
     fixtures.courtesy = true
     expect(render()).toContain('Acceso de cortesía')
-    expect(action('Elegir Ábaco')).toBeUndefined()
+    expect(action('Elegir Menos Líos')).toBeUndefined()
   })
 
   it.each([false, true])(
@@ -280,7 +280,7 @@ describe('billing confirmation', () => {
       )
       expect(referral).toContain('Detalles de referidos')
       expect(referral).toContain('Volver a la suscripción')
-      expect(referral).not.toContain('Elegir Ábaco')
+      expect(referral).not.toContain('Elegir Menos Líos')
     },
   )
 })

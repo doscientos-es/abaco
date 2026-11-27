@@ -102,7 +102,7 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-muted-foreground text-sm">
             Importes sin IVA. La cuota base anual equivale a 10 mensualidades. Las plazas
-            adicionales de Menoslios se cobran durante los 12 meses.
+            adicionales de Menos Líos se cobran durante los 12 meses.
           </p>
           <Button
             variant="outline"
@@ -135,7 +135,7 @@ export function PlatformCatalog({ search }: { search: PlatformSearch }) {
             <div className="space-y-4 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h2 className="font-semibold">Plan base de Menoslios</h2>
+                  <h2 className="font-semibold">Plan base de Menos Líos</h2>
                   <p className="text-muted-foreground text-sm">
                     Primera persona incluida. Importes sin IVA.
                   </p>

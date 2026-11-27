@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
+import { brand } from '@/shared/lib/brand'
+
 import { sessionQuery } from '../application/auth-actions'
 import { finishGoogleAuth } from '../application/google-auth'
 import { LoginLayout } from './login-layout'
@@ -50,7 +52,7 @@ export function GoogleCallbackPage() {
               <>
                 <span className="absolute inset-0 rounded-full border-2 border-[#e4eee0]" />
                 <span className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#476f42] motion-safe:animate-spin" />
-                <img src="/abaco-logo.svg" alt="" className="w-12" />
+                <img src={brand.mark} alt="" className="w-12" />
               </>
             )}
           </div>

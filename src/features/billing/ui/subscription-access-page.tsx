@@ -41,7 +41,7 @@ export function SubscriptionAccessPage() {
       {session.role === 'admin' ? (
         <>
           {subscription.data?.canWrite ? (
-            <Button onPress={() => void enter()}>Entrar en Ábaco</Button>
+            <Button onPress={() => void enter()}>Entrar en Menos Líos</Button>
           ) : null}
           <BillingSection
             tenantId={tenantId}

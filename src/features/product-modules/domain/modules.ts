@@ -31,7 +31,7 @@ export const modules = {
   },
   mcp: {
     name: 'MCP',
-    description: 'Conexión de Ábaco con asistentes y herramientas compatibles con MCP.',
+    description: 'Conexión de Menos Líos con asistentes y herramientas compatibles con MCP.',
     includedIn: ['scale'],
   },
 } as const

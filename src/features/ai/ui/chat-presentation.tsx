@@ -114,7 +114,7 @@ export function ChatWelcome({
       </div>
       <h2 className="text-xl font-semibold tracking-tight">¿En qué puedo ayudarte?</h2>
       <p className="text-muted-foreground mt-2 max-w-xs text-sm leading-relaxed">
-        Consulta información o prepara cambios en Ábaco. Tú decides antes de aplicar cualquier
+        Consulta información o prepara cambios en Menos Líos. Tú decides antes de aplicar cualquier
         propuesta.
       </p>
       {suggestions.length ? (

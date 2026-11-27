@@ -83,7 +83,7 @@ export function PricingCatalog({
         {fixedPrice ? (
           <p className="text-muted-foreground max-w-md text-sm">
             Tu precio base pactado se mantiene al cambiar de capacidad. Para cambiar el periodo de
-            facturación, contacta con Ábaco.
+            facturación, contacta con Menos Líos.
           </p>
         ) : (
           <Tabs

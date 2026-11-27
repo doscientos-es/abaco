@@ -149,7 +149,7 @@ async function run() {
     }
 
     await page.goto(`${origin}/superadmin`)
-    await page.getByRole('table', { name: 'Empresas de Menoslios' }).waitFor()
+    await page.getByRole('table', { name: 'Empresas de Menos Líos' }).waitFor()
     await assertFits()
     await openMenu()
     await page.getByRole('menuitem', { name: 'Pausar renovación' }).click()

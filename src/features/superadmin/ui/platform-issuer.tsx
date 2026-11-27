@@ -35,7 +35,7 @@ export function PlatformIssuer({ userId }: { userId: string }) {
     <details className={`${platformPanelClass} p-4`}>
       <summary className="cursor-pointer font-semibold">Datos fiscales de Doscientos</summary>
       <p className="text-muted-foreground mt-2 text-sm">
-        Estos datos preparan la futura emisión desde Ábaco. Guardarlos no la activa ni modifica
+        Estos datos preparan la futura emisión desde Menos Líos. Guardarlos no la activa ni modifica
         Backoffice.
       </p>
       {settings.isPending ? <PlatformLoading>Cargando datos fiscales…</PlatformLoading> : null}

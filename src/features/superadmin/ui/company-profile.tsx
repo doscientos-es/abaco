@@ -68,7 +68,7 @@ export function CompanyProfileSection({
             Datos de la empresa
           </h2>
           <p className="text-muted-foreground text-sm">
-            Identidad y contacto que la empresa utiliza en Ábaco.
+            Identidad y contacto que la empresa utiliza en Menos Líos.
           </p>
         </div>
         {profile.data && search.edicion !== 'empresa' ? (
@@ -101,7 +101,7 @@ export function CompanyProfileSection({
               ))}
             </dl>
             <p className="text-muted-foreground border-border mt-5 border-t pt-4 text-xs">
-              Estos datos no modifican el perfil de facturación de la suscripción de Ábaco.
+              Estos datos no modifican el perfil de facturación de la suscripción de Menos Líos.
             </p>
             <div className="mt-3">
               <PlatformBackLink search={companySectionSearch(search, 'suscripcion')}>

@@ -22,7 +22,7 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
   let urgent = false
   if (!sub.canWrite) {
     urgent = true
-    text = 'Activa tu suscripción para utilizar Ábaco.'
+    text = 'Activa tu suscripción para utilizar Menos Líos.'
   } else if (sub.status === 'past_due') {
     urgent = true
     text = 'No hemos podido cobrar tu última cuota.'
@@ -36,7 +36,7 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
           <WarningCircle aria-hidden="true" className="size-4" />
           <AlertTitle className="text-xs font-semibold">Suscripción necesaria</AlertTitle>
           <AlertDescription className="space-y-2 text-xs">
-            <span className="block">Activa un plan para utilizar Ábaco.</span>
+            <span className="block">Activa un plan para utilizar Menos Líos.</span>
             {isAdmin ? (
               <PlanLink label="Activar plan" fullWidth />
             ) : (
@@ -54,7 +54,7 @@ export function PlanBanner({ placement = 'top' }: { placement?: 'top' | 'sidebar
         <AlertTitle className="text-sm font-semibold">Suscripción necesaria</AlertTitle>
         <AlertDescription className="mt-1">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <span>Activa un plan para utilizar Ábaco.</span>
+            <span>Activa un plan para utilizar Menos Líos.</span>
             {isAdmin ? (
               <PlanLink label="Activar plan" />
             ) : (

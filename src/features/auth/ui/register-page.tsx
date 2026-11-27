@@ -29,7 +29,7 @@ const steps = [
   },
   {
     title: 'Crea tu acceso',
-    description: 'Usarás estos datos para entrar en Ábaco.',
+    description: 'Usarás estos datos para entrar en Menos Líos.',
   },
 ] as const
 
@@ -186,7 +186,7 @@ export function RegisterPage() {
         ) : null}
       </form>
       <p className="text-muted-foreground text-xs">
-        Activa tu suscripción para empezar a usar Ábaco.{' '}
+        Activa tu suscripción para empezar a usar Menos Líos.{' '}
         <Link to="/precios" className="font-medium underline">
           Ver precios
         </Link>

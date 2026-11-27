@@ -151,7 +151,7 @@ function PlatformBrand() {
     <div className="flex shrink-0 items-center gap-2">
       <ShieldCheck aria-hidden="true" className="text-muted-foreground size-4" />
       <div>
-        <p className="text-foreground text-sm font-semibold">Menoslios</p>
+        <p className="text-foreground text-sm font-semibold">Menos Líos</p>
         <p className="text-muted-foreground text-xs">Plataforma</p>
       </div>
     </div>

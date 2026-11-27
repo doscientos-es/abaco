@@ -8,7 +8,11 @@ function worker() {
   const cache = {
     addAll: vi.fn(async () => {}),
     match: vi.fn(async (path: string) =>
-      path === '/index.html' ? 'shell' : path === '/assets/app.js' ? 'script' : undefined,
+      new Map([
+        ['/index.html', 'shell'],
+        ['/assets/app.js', 'script'],
+        ['/manifest.webmanifest', 'manifest'],
+      ]).get(path),
     ),
   }
   const caches = {
@@ -71,6 +75,20 @@ describe('PWA service worker', () => {
       respondWith,
     })
     await expect(respondWith.mock.calls[0]?.[0]).resolves.toBe('script')
+  })
+
+  it('revalidates the install manifest online and falls back to the built manifest offline', async () => {
+    const { handlers, fetch } = worker()
+    const request = { method: 'GET', mode: 'cors', url: 'https://abaco.test/manifest.webmanifest' }
+    const respondWith = vi.fn()
+    handlers.get('fetch')?.({ request, respondWith })
+    await expect(respondWith.mock.calls[0]?.[0]).resolves.toBe('network')
+    expect(fetch).toHaveBeenCalledWith(request, { cache: 'no-cache' })
+
+    fetch.mockRejectedValueOnce(new Error('offline'))
+    respondWith.mockClear()
+    handlers.get('fetch')?.({ request, respondWith })
+    await expect(respondWith.mock.calls[0]?.[0]).resolves.toBe('manifest')
   })
 
   it('never intercepts APIs, cross-origin requests, writes or unlisted assets', () => {

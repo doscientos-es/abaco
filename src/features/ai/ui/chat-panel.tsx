@@ -235,7 +235,7 @@ export function AiChatPanel({
     .at(-1)
     ?.parts.some((part) => part.type === 'tool-buscar' && part.state !== 'output-available')
   const activity = searching
-    ? 'Buscando en Ábaco…'
+    ? 'Buscando en Menos Líos…'
     : currentTool?.type === 'tool-proponer_cliente'
       ? 'Preparando los datos del cliente…'
       : currentTool?.type === 'tool-proponer_materiales' ||
@@ -302,7 +302,7 @@ export function AiChatPanel({
         </Button>
       ) : (
         <aside
-          aria-label="Asistente de Ábaco"
+          aria-label="Asistente de Menos Líos"
           className="bg-background border-border fixed right-2 bottom-2 z-40 flex h-[min(46rem,calc(100dvh-1rem))] w-[min(30rem,calc(100vw-1rem))] flex-col rounded-2xl border shadow-xl"
         >
           <header className="border-border space-y-3 border-b px-4 pt-4 pb-3">

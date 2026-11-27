@@ -27,7 +27,7 @@ export function ManualAcceptanceCard({
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
           Registra una aceptación que ya hayas recibido. No representa una firma del cliente en
-          Ábaco y no se puede deshacer.{' '}
+          Menos Líos y no se puede deshacer.{' '}
           {draft
             ? 'Al confirmar se publicará y bloqueará esta versión, sin enviar ningún correo.'
             : ''}

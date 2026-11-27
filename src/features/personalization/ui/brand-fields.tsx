@@ -6,7 +6,7 @@ import { TextField } from '@/shared/ui/form'
 import { UploadFileField } from '@/shared/ui/upload-file-field'
 
 const palettes = [
-  { name: 'Ábaco', color: defaultBrandColor },
+  { name: 'Menos Líos', color: defaultBrandColor },
   { name: 'Azul', color: '#2563eb' },
   { name: 'Terracota', color: '#c2410c' },
   { name: 'Marino', color: '#1e3a5f' },
@@ -41,7 +41,8 @@ export function BrandFields({
       <div>
         <h2 className="font-semibold">Identidad de marca</h2>
         <p className="text-muted-foreground mt-1 text-xs">
-          Personaliza el color y el logo que identifican a tu empresa en Ábaco y en tus documentos.
+          Personaliza el color y el logo que identifican a tu empresa en Menos Líos y en tus
+          documentos.
         </p>
       </div>
       <fieldset disabled={uploading} className="space-y-3">
@@ -89,7 +90,7 @@ export function BrandFields({
             isDisabled={uploading}
             onPress={() => onColorChange('')}
           >
-            Restaurar color de Ábaco
+            Restaurar color de Menos Líos
           </Button>
         ) : null}
       </fieldset>

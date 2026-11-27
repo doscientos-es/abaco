@@ -87,7 +87,7 @@ export function GlobalSearch({
         >
           <MagnifyingGlass aria-hidden="true" className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate text-left">
-            {navigationOnly ? 'Buscar una sección…' : 'Buscar en Ábaco…'}
+            {navigationOnly ? 'Buscar una sección…' : 'Buscar en Menos Líos…'}
           </span>
           <Kbd className="hidden sm:inline-flex">Ctrl / ⌘ K</Kbd>
         </Button>

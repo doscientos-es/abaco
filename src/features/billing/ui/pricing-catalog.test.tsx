@@ -28,7 +28,7 @@ function catalogClient() {
       seat_monthly_cents: 800,
       vat_percent: 21,
       plan_info: {
-        name: 'Ábaco',
+        name: 'Menos Líos',
         audience: 'Para cuadrillas',
         benefit: 'Coordina el equipo',
         revision: 2,
@@ -49,7 +49,7 @@ it('shows the annual base and additional-person prices for the requested capacit
       <PricingCatalog actualMembers={3} />
     </QueryClientProvider>,
   )
-  expect(html).toContain('Ábaco, 3 personas')
+  expect(html).toContain('Menos Líos, 3 personas')
   expect(html).toMatch(/45,00\s*€/)
   expect(html).toMatch(/653,40\s*€ con IVA/)
   expect(html).toMatch(/348,00\s*€ de cuota base/)
@@ -75,7 +75,7 @@ it('lists the pilot surcharge separately from the amount sent to plan checkout',
   expect(html).toContain('los ajustes de suscripción')
   expect(action).toHaveBeenCalledWith(
     expect.objectContaining({ net_cents: 34800, amount_cents: 42108 }),
-    expect.objectContaining({ id: 'standard', name: 'Ábaco', benefit: 'Coordina el equipo' }),
+    expect.objectContaining({ id: 'standard', name: 'Menos Líos', benefit: 'Coordina el equipo' }),
   )
 })
 

@@ -20,7 +20,10 @@ export function AuthLayout({
       <span className="auth-blob" aria-hidden="true" />
       <div className="w-full max-w-sm space-y-7">
         <div className="flex flex-col items-center gap-3 text-center">
-          <img src="/abaco-logo.svg" alt={brand.name} className="h-16 w-auto" />
+          <div className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+            <img src={brand.mark} alt="" className="size-9 shrink-0" />
+            <span>{brand.name}</span>
+          </div>
           <p className="text-sm text-[#2a4227]/80">{brand.tagline}</p>
         </div>
         <section className="space-y-5 rounded-2xl border border-white/70 bg-white/80 p-7 shadow-xl shadow-[#2a4227]/10 backdrop-blur-xl">

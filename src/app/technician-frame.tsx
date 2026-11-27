@@ -91,7 +91,7 @@ export function UserFrame({ children }: { children: ReactNode }) {
             className="hover:bg-muted/70 flex min-w-0 items-center gap-3 rounded-xl px-2 py-2 transition-colors"
           >
             <span className="bg-card border-border flex h-10 w-12 shrink-0 items-center justify-center">
-              <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+              <img src={brand.mark} alt={brand.name} className="h-5 w-auto" />
             </span>
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-sm font-semibold tracking-tight">

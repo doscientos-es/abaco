@@ -69,8 +69,8 @@ function EnabledMaterialShortages({ estimateId }: { estimateId: string | undefin
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Se ha descontado el stock disponible al aceptar. Puedes contactar al proveedor; Ábaco no
-          envía ni confirma el pedido por ti.
+          Se ha descontado el stock disponible al aceptar. Puedes contactar al proveedor; Menos Líos
+          no envía ni confirma el pedido por ti.
         </p>
         <ul className="divide-y">
           {shortages.data.map((shortage) => {

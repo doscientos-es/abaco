@@ -20,6 +20,7 @@ import {
   type Interval,
 } from '@/features/billing'
 import { moduleCatalogQuery, modules } from '@/features/product-modules'
+import { brand } from '@/shared/lib/brand'
 
 import { companyOnboardingQuery } from '../application/company-onboarding'
 import { offerModules, onboardingOffer, publicBookingUrl, type OfferModule } from '../domain/offer'
@@ -73,7 +74,10 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xl font-bold tracking-tight">Menoslios</span>
+            <div className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+              <img src={brand.mark} alt="" className="size-8 shrink-0" />
+              <span>{brand.name}</span>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {otherCompanies.length ? (
                 <label className="text-sm">
@@ -103,7 +107,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
           <div>
             <p className="text-primary text-sm font-semibold">Tu empresa, lista para empezar</p>
             <h1 className="text-foreground mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-              Configura Menoslios
+              Configura Menos Líos
             </h1>
           </div>
           <ol
@@ -155,7 +159,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
           <section className="bg-card border-border space-y-3 rounded-2xl border p-6">
             <h2 className="text-xl font-semibold">Necesitamos revisar tu suscripción</h2>
             <p>
-              Contacta con Menoslios para recuperar tu alta. No repitas el pago mientras se revisa.
+              Contacta con Menos Líos para recuperar tu alta. No repitas el pago mientras se revisa.
             </p>
             <Button variant="outline" onPress={() => void status.refetch()}>
               Comprobar estado
@@ -196,7 +200,7 @@ function BookingStep({
       {url ? (
         <>
           <p className="text-muted-foreground text-sm">
-            Reserva con <strong>{email}</strong>. Si Cal.com no rellena la referencia de Menoslios,
+            Reserva con <strong>{email}</strong>. Si Cal.com no rellena la referencia de Menos Líos,
             copia este código:
           </p>
           <code className="bg-muted block w-fit rounded px-2 py-1 text-xs break-all sm:text-sm">
@@ -218,7 +222,7 @@ function BookingStep({
         </>
       ) : (
         <p role="alert">
-          No se puede abrir la agenda con esta cuenta. Contacta con Menoslios para completar la
+          No se puede abrir la agenda con esta cuenta. Contacta con Menos Líos para completar la
           reserva sin volver a pagar.
         </p>
       )}

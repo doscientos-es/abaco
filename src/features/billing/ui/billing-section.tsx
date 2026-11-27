@@ -48,7 +48,7 @@ const dateFormat = new Intl.DateTimeFormat('es-ES', {
 function currentLine(sub: Subscription, name: string): string {
   const until = sub.currentPeriodEnd ? dateFormat.format(sub.currentPeriodEnd) : ''
   if (sub.status === 'trialing' || sub.status === 'canceled')
-    return 'Sin plan activo. Activa tu suscripción para utilizar Ábaco.'
+    return 'Sin plan activo. Activa tu suscripción para utilizar Menos Líos.'
   if (sub.status === 'past_due')
     return `Plan ${name}: no hemos podido cobrar la última cuota. Puedes reintentar el pago con tarjeta.`
   if (sub.cancelAtPeriodEnd)
@@ -201,7 +201,7 @@ export function BillingSection({
   if (subscription?.isComplimentary) {
     return (
       <section className="border-border bg-card rounded-xl border px-5 py-4">
-        <h2 className="text-sm font-semibold">Suscripción de Ábaco</h2>
+        <h2 className="text-sm font-semibold">Suscripción de Menos Líos</h2>
         <p className="text-muted-foreground text-sm">
           Acceso de cortesía: sin caducidad ni renovaciones automáticas.
         </p>
@@ -220,7 +220,7 @@ export function BillingSection({
   return (
     <section className="border-border bg-card rounded-xl border">
       <div className="border-border border-b px-5 py-4">
-        <h2 className="text-sm font-semibold">Suscripción de Ábaco</h2>
+        <h2 className="text-sm font-semibold">Suscripción de Menos Líos</h2>
         <p className="text-muted-foreground text-xs">
           {subscription
             ? currentLine(subscription, planLabel(subscription.plan, rates))
@@ -283,7 +283,7 @@ export function BillingSection({
         {pending ? (
           <output className="block">
             Hay un pago pendiente de verificar. No repitas el pago. Si el estado no cambia, contacta
-            con Ábaco.
+            con Menos Líos.
           </output>
         ) : null}
         {upcoming && !subscription?.cancelAtPeriodEnd && (active || scheduled || pastDue) ? (
@@ -310,7 +310,8 @@ export function BillingSection({
         ) : null}
         {active && managedChange ? (
           <p className="text-muted-foreground text-sm">
-            Ábaco ha programado las próximas condiciones. Contacta con soporte para modificarlas.
+            Menos Líos ha programado las próximas condiciones. Contacta con soporte para
+            modificarlas.
           </p>
         ) : active && scheduled ? (
           <Button
@@ -469,7 +470,7 @@ export function BillingSection({
 function ReferralLink() {
   return (
     <div className="border-border flex flex-wrap items-center justify-between gap-2 rounded-lg border p-4">
-      <p className="text-sm font-medium">¿Conoces otra empresa que pueda usar Ábaco?</p>
+      <p className="text-sm font-medium">¿Conoces otra empresa que pueda usar Menos Líos?</p>
       <Link
         to="/ajustes"
         search={{ tab: 'plan', seccion: 'referidos' }}

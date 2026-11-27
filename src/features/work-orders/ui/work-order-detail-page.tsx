@@ -220,7 +220,7 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
             </p>
             {order.acceptance.mode === 'office_manual' ? (
               <p className="border-warning/40 bg-warning/5 rounded-lg border p-3 text-sm">
-                La aceptación se registró manualmente; Ábaco no capturó una firma del cliente.
+                La aceptación se registró manualmente; Menos Líos no capturó una firma del cliente.
                 {order.acceptance.evidence_description
                   ? ` Evidencia indicada: ${order.acceptance.evidence_description}`
                   : ''}

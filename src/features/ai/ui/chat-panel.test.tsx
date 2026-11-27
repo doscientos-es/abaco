@@ -241,7 +241,7 @@ it('shows when a real search is running', () => {
       ],
     },
   ]
-  expect(render().html).toContain('Buscando en Ábaco…')
+  expect(render().html).toContain('Buscando en Menos Líos…')
 })
 
 it('renders assistant markdown and keeps returned reasoning behind a disclosure', () => {

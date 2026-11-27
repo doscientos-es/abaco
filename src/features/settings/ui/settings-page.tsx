@@ -45,7 +45,7 @@ const labels: Record<SettingsTab, string> = {
   cuenta: 'Mi cuenta',
   interfaz: 'Interfaz',
   integraciones: 'Integraciones',
-  plan: 'Suscripción de Ábaco',
+  plan: 'Suscripción de Menos Líos',
   novedades: 'Novedades',
 }
 
@@ -152,7 +152,7 @@ function SettingsContent({ tenant }: { tenant: Tenant }) {
       <footer className="border-border flex flex-wrap items-center justify-between gap-4 border-t pt-5">
         <div className="flex items-center gap-4">
           <span className="flex h-10 w-12 shrink-0 items-center justify-center">
-            <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+            <img src={brand.mark} alt={brand.name} className="h-5 w-auto" />
           </span>
           <div className="leading-tight">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">

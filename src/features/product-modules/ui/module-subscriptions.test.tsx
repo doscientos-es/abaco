@@ -44,7 +44,7 @@ it('lets a trial customer preselect a formerly included module for the new paid 
     />,
   )
   expect(html).toContain('Incluido en el plan')
-  expect(html).toContain('Contratar para Ábaco: Trabajadores')
+  expect(html).toContain('Contratar para Menos Líos: Trabajadores')
   expect(html).toMatch(/\+9,00\s*€\/mes/)
 })
 
@@ -53,5 +53,5 @@ it('retains the old read-only included-module treatment when no migration is off
     <ModuleSubscriptions tenantId="company" active plan="team" onChanged={() => {}} />,
   )
   expect(html).toContain('Incluido en el plan')
-  expect(html).not.toContain('Contratar para Ábaco')
+  expect(html).not.toContain('Contratar para Menos Líos')
 })

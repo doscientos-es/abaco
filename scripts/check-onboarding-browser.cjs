@@ -238,7 +238,7 @@ const products = [
     await page.getByRole('button', { name: 'Crear una empresa' }).click()
     await page.getByRole('textbox', { name: 'Nombre de la empresa' }).fill('Empresa de pruebas')
     await page.getByRole('button', { name: 'Crear empresa', exact: true }).click()
-    await page.getByRole('heading', { name: 'Configura Menoslios' }).waitFor()
+    await page.getByRole('heading', { name: 'Configura Menos Líos' }).waitFor()
     await page.getByRole('checkbox', { name: 'Añadir Trabajadores' }).check()
     await page.getByRole('checkbox', { name: 'Añadir Asistente de IA' }).check()
     await page.getByText('Ver qué incluye').first().click()
@@ -335,7 +335,7 @@ const products = [
     await page.screenshot({ path: join(tmpdir(), 'abaco-module-procurement.png') })
     await page.goto(origin + '/')
     await page.getByRole('button', { name: 'Asistente', exact: true }).click()
-    await page.getByRole('heading', { name: 'Asistente de Ábaco' }).waitFor()
+    await page.getByRole('heading', { name: 'Asistente de Menos Líos' }).waitFor()
     await page.screenshot({ path: join(tmpdir(), 'abaco-module-ai.png') })
     // A separate tenant granted explicit courtesy by the platform bypasses the paid flow.
     courtesy = true

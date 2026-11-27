@@ -43,6 +43,16 @@ self.addEventListener('fetch', (event) => {
         return cached
       }),
     )
+  } else if (url.pathname === '/manifest.webmanifest') {
+    // Browsers use the latest manifest to discover installed name/icon updates.
+    event.respondWith(
+      fetch(request, { cache: 'no-cache' }).catch(async () => {
+        const cached = await (await caches.open(CACHE_NAME)).match(url.pathname)
+        if (!cached)
+          throw new Error('El manifiesto de la aplicación no está disponible sin conexión.')
+        return cached
+      }),
+    )
   } else if (ASSETS.includes(url.pathname)) {
     event.respondWith(
       caches

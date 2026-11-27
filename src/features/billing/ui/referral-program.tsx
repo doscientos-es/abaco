@@ -97,7 +97,7 @@ export function ReferralProgram({
             <output className="text-muted-foreground mt-2 block text-xs">{message}</output>
           ) : null}
           <p className="text-muted-foreground mt-2 text-xs">
-            La recomendación se asigna al crear la empresa. Solo el equipo de Ábaco puede
+            La recomendación se asigna al crear la empresa. Solo el equipo de Menos Líos puede
             corregirla.
           </p>
         </>

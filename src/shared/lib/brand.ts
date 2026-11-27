@@ -1,12 +1,12 @@
 /** Product identity and the customer-facing positioning shared by public screens. */
 export const brand = {
-  name: 'Ábaco',
+  name: 'Menos Líos',
+  mark: '/menoslios-mark.svg',
   maker: 'Doscientos',
   makerUrl: 'https://doscientos.es',
-  tagline: 'Gestión unificada para servicios',
+  tagline: 'Software de gestión para empresas de servicios',
   audience: 'Para autónomos y pequeñas empresas de servicios.',
-  promise:
-    'Prepara presupuestos, facilita la respuesta de tu cliente y controla lo pendiente de cobrar.',
-  /** "Ábaco · un producto de Doscientos" */
+  promise: 'Del presupuesto al cobro, sin líos.',
+  /** "Menos Líos · un producto de Doscientos" */
   byline: 'Un producto de Doscientos',
 } as const

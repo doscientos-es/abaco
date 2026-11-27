@@ -79,13 +79,13 @@ export function StripeConnectSettings({ tenantId }: { tenantId: string }) {
       <div className="bg-muted rounded-lg p-3">
         <h3 className="font-medium">Cobros aún no disponibles</h3>
         <p className="text-muted-foreground mt-1">
-          Conectar la cuenta no activa los cobros con Stripe en Ábaco.
+          Conectar la cuenta no activa los cobros con Stripe en Menos Líos.
         </p>
       </div>
       {connection?.connected && !status.isError ? (
         <p className="text-muted-foreground text-sm">
           La cuenta está vinculada. Por ahora no hay más opciones de configuración de Stripe en
-          Ábaco.
+          Menos Líos.
         </p>
       ) : null}
       {status.isError ? (

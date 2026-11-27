@@ -40,7 +40,7 @@ function downloadReceipt(payment: Payment, companyName: string, description: str
   const date = day.format(payment.settledAt ?? payment.createdAt)
   const html = `<!doctype html><html lang="es"><meta charset="utf-8"><title>Justificante de pago ${escapeHtml(payment.order)}</title>
 <body style="font-family:Arial,sans-serif;max-width:560px;margin:40px auto;color:#1a1a1a">
-<h1 style="font-size:20px">Justificante de pago · Ábaco</h1>
+<h1 style="font-size:20px">Justificante de pago · Menos Líos</h1>
 <p>Cliente: <strong>${escapeHtml(companyName)}</strong><br>Fecha: ${date}<br>Referencia de la operación: ${escapeHtml(payment.order)}</p>
 <table style="width:100%;border-collapse:collapse"><tr><td>${escapeHtml(description)}</td><td style="text-align:right">${cents(base)}</td></tr>
 <tr><td>IVA (${payment.vatPercent} %)</td><td style="text-align:right">${cents(payment.amountCents - base)}</td></tr>

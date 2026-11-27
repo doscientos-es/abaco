@@ -224,7 +224,9 @@ export function ModuleSubscriptions({
             const selectForStandard = allowIncludedSelection && included && !gifted && !includedNext
             const action = pending !== null ? 'Deshacer cambio' : enabled ? 'Desactivar' : 'Activar'
             const actionLabel =
-              selectForStandard && !enabled && pending === null ? 'Contratar para Ábaco' : action
+              selectForStandard && !enabled && pending === null
+                ? 'Contratar para Menos Líos'
+                : action
             const modulePrice = item && (enabled || pending === true) ? item : rate
             const surcharge =
               courtesy ||

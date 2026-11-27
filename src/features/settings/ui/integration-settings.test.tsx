@@ -49,7 +49,7 @@ describe('Stripe settings', () => {
     expect(details).toContain('>Conectar Stripe</')
     expect(details.split('<dialog ')[1]).toContain('Sin conectar')
     expect(details.split('<dialog ')[1]).toContain('Modo de pruebas')
-    expect(details).toContain('Conectar la cuenta no activa los cobros con Stripe en Ábaco.')
+    expect(details).toContain('Conectar la cuenta no activa los cobros con Stripe en Menos Líos.')
     expect(details).toContain('Continuar con Stripe')
   })
 
@@ -108,7 +108,7 @@ describe('Google Calendar settings', () => {
     const details = render()
     expect(details.split('<dialog ')[1]).toContain('Requiere acceso')
     expect(details).toContain('Qué se sincroniza')
-    expect(details).toContain('Los cambios en Google Calendar no modifican Ábaco.')
+    expect(details).toContain('Los cambios en Google Calendar no modifican Menos Líos.')
     expect(details).toContain('Tu calendario y las cuotas')
     expect(details).toContain('Qué pasa al desconectar')
     expect(details).toContain('Continuar con Google')

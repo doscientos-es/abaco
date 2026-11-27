@@ -24,7 +24,7 @@ const connectionLabels = {
   reauthorize: 'Requiere acceso',
 }
 const disconnectDescription =
-  'Ábaco deja de sincronizar y elimina la credencial guardada. Los eventos siguen en tu calendario. Puedes borrar los eventos en Calendar y retirar el permiso desde tu cuenta de Google.'
+  'Menos Líos deja de sincronizar y elimina la credencial guardada. Los eventos siguen en tu calendario. Puedes borrar los eventos en Calendar y retirar el permiso desde tu cuenta de Google.'
 
 function errorMessage(code: string | null | undefined) {
   if (code === 'reauthorize') return 'Google ha retirado el permiso. Vuelve a conectar tu cuenta.'
@@ -32,7 +32,7 @@ function errorMessage(code: string | null | undefined) {
   if (code === 'invalid_visit')
     return 'Hay una visita con horario no válido que no se ha sincronizado.'
   if (code === 'google_unavailable')
-    return 'Google no está disponible ahora. Ábaco volverá a intentarlo.'
+    return 'Google no está disponible ahora. Menos Líos volverá a intentarlo.'
   return null
 }
 
@@ -197,15 +197,15 @@ export function GoogleCalendarSettings() {
             <dt className="font-medium">Qué se sincroniza</dt>
             <dd className="text-muted-foreground">
               Solo el horario y un título genérico. No se envían nombres de clientes, direcciones,
-              notas ni partes de trabajo. Los cambios en Google Calendar no modifican Ábaco.
+              notas ni partes de trabajo. Los cambios en Google Calendar no modifican Menos Líos.
             </dd>
           </div>
           <div>
             <dt className="font-medium">Tu calendario y las cuotas</dt>
             <dd className="text-muted-foreground">
-              El calendario secundario queda en tu cuenta. La integración usa las cuotas de Ábaco,
-              no las de un proyecto tuyo. El uso estándar no tiene coste adicional dentro de los
-              límites de Google.
+              El calendario secundario queda en tu cuenta. La integración usa las cuotas de Menos
+              Líos, no las de un proyecto tuyo. El uso estándar no tiene coste adicional dentro de
+              los límites de Google.
             </dd>
           </div>
           <div>

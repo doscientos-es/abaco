@@ -13,19 +13,22 @@ export function pwaPlugin(): Plugin {
     name: 'menoslios-pwa',
     apply: 'build',
     async buildStart() {
-      const icon = await readFile(`${root}/public/abaco-mark.svg`)
+      const icon = await readFile(`${root}/public/menoslios-mark.svg`)
       for (const size of [192, 512]) {
         const source = await sharp(icon).resize(size, size).png().toBuffer()
-        this.emitFile({ type: 'asset', fileName: `pwa-icon-${size}.png`, source })
+        this.emitFile({ type: 'asset', fileName: `menoslios-pwa-icon-${size}.png`, source })
       }
-      const mark = await sharp(icon).resize(384, 384).png().toBuffer()
+      // The centered glyph in the 128px source fits within the maskable safe circle at 512px.
+      const mark = await sharp(icon).resize(512, 512).png().toBuffer()
       const maskable = await sharp({
         create: { width: 512, height: 512, channels: 4, background: '#2a4227' },
       })
         .composite([{ input: mark, gravity: 'centre' }])
         .png()
         .toBuffer()
-      this.emitFile({ type: 'asset', fileName: 'pwa-maskable-512.png', source: maskable })
+      this.emitFile({ type: 'asset', fileName: 'menoslios-pwa-maskable-512.png', source: maskable })
+      const appleIcon = await sharp(maskable).resize(180, 180).png().toBuffer()
+      this.emitFile({ type: 'asset', fileName: 'menoslios-pwa-apple-180.png', source: appleIcon })
     },
     generateBundle: {
       order: 'post',
@@ -37,14 +40,16 @@ export function pwaPlugin(): Plugin {
             (name) =>
               name === 'index.html' ||
               name.startsWith('assets/') ||
-              name.startsWith('pwa-icon-') ||
-              name === 'pwa-maskable-512.png',
+              name.startsWith('menoslios-pwa-'),
           )
           .map((name) => `/${name}`)
         if (!assets.includes('/index.html')) this.error('PWA: falta index.html en el build.')
-        assets.push('/manifest.webmanifest', '/abaco-mark.svg')
+        assets.push('/manifest.webmanifest', '/menoslios-mark.svg')
         assets.sort()
-        const hash = createHash('sha256').update(worker).update(manifest)
+        const hash = createHash('sha256')
+          .update(worker)
+          .update(manifest)
+          .update(await readFile(`${root}/public/menoslios-mark.svg`))
         for (const asset of assets) {
           hash.update(asset)
           const file = bundle[asset.slice(1)]

@@ -18,9 +18,19 @@
 }
 
 .login-brand-logo {
-  width: 145px;
-  margin: -1rem 0;
-  filter: invert(1);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1.375rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.login-brand-logo img {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
 }
 
 .login-brand-content {
@@ -45,52 +55,6 @@
   line-height: 1.7;
 }
 
-.login-abacus {
-  display: grid;
-  gap: 1.5rem;
-  max-width: 26rem;
-  margin-top: 4rem;
-  padding: 2rem 0;
-  border-top: 1px solid #ffffff30;
-  border-bottom: 1px solid #ffffff30;
-}
-
-.login-abacus > div {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-left: 12%;
-}
-
-.login-abacus > div:nth-child(2) {
-  padding-left: 40%;
-}
-.login-abacus > div:nth-child(3) {
-  padding-left: 22%;
-}
-.login-abacus > div::before {
-  position: absolute;
-  z-index: 0;
-  right: 0;
-  left: 0;
-  height: 1px;
-  background: #ffffff45;
-  content: '';
-}
-.login-abacus span {
-  position: relative;
-  width: clamp(1.75rem, 3vw, 2.5rem);
-  aspect-ratio: 1;
-  border: 1px solid #d0e4c5;
-  border-radius: 50%;
-  background: #52724d;
-}
-.login-abacus > div:first-child span:first-child,
-.login-abacus > div:last-child span:last-child {
-  background: #bdff7b;
-  border-color: #bdff7b;
-}
 .login-brand-tagline {
   color: #c6d8c3;
   font-size: 0.875rem;
@@ -160,11 +124,11 @@
     color: #607465;
     font-size: 0.75rem;
   }
-  .login-mobile-brand img {
-    width: 105px;
-    margin: -0.5rem 0;
+  .login-mobile-brand .login-brand-logo {
+    color: #2a4227;
+    font-size: 1.125rem;
   }
-  .login-mobile-brand span {
+  .login-mobile-brand > span {
     text-align: right;
   }
   .login-content {

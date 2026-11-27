@@ -46,7 +46,7 @@ export function PlatformOverviewPage({ userId }: { userId: string }) {
     <PageStack>
       <PageHeader>
         <PageHeaderHeading>
-          <PageHeaderTitle>Resumen de Menoslios</PageHeaderTitle>
+          <PageHeaderTitle>Resumen de Menos Líos</PageHeaderTitle>
           <PageHeaderDescription>
             Revisa clientes, suscripciones y cobros desde un solo sitio.
           </PageHeaderDescription>

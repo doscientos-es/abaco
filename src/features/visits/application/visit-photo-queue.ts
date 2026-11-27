@@ -32,7 +32,7 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error ?? new Error('No se pudo abrir la cola de fotos.'))
     request.onblocked = () =>
-      reject(new Error('Cierra otras pestañas de Ábaco e inténtalo de nuevo.'))
+      reject(new Error('Cierra otras pestañas de Menos Líos e inténtalo de nuevo.'))
   })
 }
 

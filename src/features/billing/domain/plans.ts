@@ -22,7 +22,7 @@ export const SCALE_PLAN_MIN_MEMBERS = 16
 export const planCatalog: readonly PlanInfo[] = [
   {
     id: 'standard',
-    name: 'Ábaco',
+    name: 'Menos Líos',
     audience: 'Para profesionales y equipos de cualquier tamaño.',
     benefit: 'El mismo núcleo para todos, con módulos opcionales por empresa.',
   },

@@ -99,7 +99,7 @@ const navGroups: NavigationGroup<NavItem>[] = [
     label: 'Cuenta',
     items: [
       { to: '/personalizar', label: 'Personalizar', icon: navIcons.personalize },
-      { to: '/superadmin', label: 'Administración de Menoslios', icon: navIcons.settings },
+      { to: '/superadmin', label: 'Administración de Menos Líos', icon: navIcons.settings },
     ],
   },
 ]
@@ -258,7 +258,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       {canSeeSettings ? (
         <>
           <DropdownMenuItem onAction={() => void navigate({ to: '/personalizar' })}>
-            Personalizar Ábaco
+            Personalizar Menos Líos
           </DropdownMenuItem>
           <DropdownMenuItem onAction={() => void navigate({ to: '/ajustes' })}>
             Ajustes
@@ -325,7 +325,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                       className="max-h-8 max-w-12 object-contain"
                     />
                   ) : (
-                    <img src="/abaco-logo-short.svg" alt={brand.name} className="h-5 w-auto" />
+                    <img src={brand.mark} alt={brand.name} className="h-5 w-auto" />
                   )}
                 </span>
                 <span className="min-w-0 leading-tight">

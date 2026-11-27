@@ -94,7 +94,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
           <PageHeaderDescription>
             {isScoped
               ? 'Solo se muestran las facturas vinculadas a esta empresa.'
-              : 'Consulta las facturas de Menoslios y su envío. Backoffice emite las nuevas suscripciones en la serie ML-SUS.'}
+              : 'Consulta las facturas de Menos Líos y su envío. Backoffice emite las nuevas suscripciones en la serie ML-SUS.'}
           </PageHeaderDescription>
         </PageHeaderHeading>
         {isScoped ? (

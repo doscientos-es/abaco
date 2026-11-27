@@ -62,7 +62,7 @@ const actionLabels = {
 
 const actionConfirm = {
   pause:
-    'No habrá renovación ni reintentos automáticos. Si hay un periodo pagado vigente, la empresa podrá seguir usando Menoslios hasta que termine. No se cobra nada al confirmar.',
+    'No habrá renovación ni reintentos automáticos. Si hay un periodo pagado vigente, la empresa podrá seguir usando Menos Líos hasta que termine. No se cobra nada al confirmar.',
   resume:
     'Se volverá a intentar el cobro automáticamente cuando termine el periodo actual, si la tarjeta sigue disponible. No se hace ningún cobro ahora.',
   archive:
@@ -376,7 +376,7 @@ function CompanyTable({
 }) {
   const { data: rates } = useQuery(billingCatalogQuery)
   return (
-    <Table aria-label="Empresas de Menoslios" density="compact">
+    <Table aria-label="Empresas de Menos Líos" density="compact">
       <TableHeader className="bg-muted/40">
         <TableRow>
           <TableHead scope="col">Empresa</TableHead>

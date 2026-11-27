@@ -9,38 +9,25 @@ export function LoginLayout({ children }: { children: ReactNode }) {
   return (
     <main className="login-layout">
       <aside className="login-brand-panel">
-        <img src="/abaco-logo.svg" alt={brand.name} className="login-brand-logo" />
+        <div className="login-brand-logo">
+          <img src={brand.mark} alt="" />
+          <span>{brand.name}</span>
+        </div>
         <div className="login-brand-content">
-          <h2>
-            Tu negocio,
-            <br />
-            en orden.
-          </h2>
-          <p>{brand.promise}</p>
-          <div className="login-abacus" aria-hidden="true">
-            <div>
-              <span />
-              <span />
-              <span />
-            </div>
-            <div>
-              <span />
-              <span />
-              <span />
-            </div>
-            <div>
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
+          <h2>{brand.promise}</h2>
+          <p>
+            Presupuestos, visitas y partes de trabajo. La oficina y el equipo, en la misma página.
+          </p>
         </div>
         <p className="login-brand-tagline">{brand.tagline}</p>
       </aside>
 
       <div className="login-main">
         <div className="login-mobile-brand">
-          <img src="/abaco-logo.svg" alt={brand.name} />
+          <div className="login-brand-logo">
+            <img src={brand.mark} alt="" />
+            <span>{brand.name}</span>
+          </div>
           <span>{brand.tagline}</span>
         </div>
         <section className="login-content" aria-labelledby="login-title">

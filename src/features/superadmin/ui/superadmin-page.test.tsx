@@ -237,7 +237,7 @@ describe('platform administration navigation', () => {
   it('shows platform aggregates with links to matching companies', () => {
     state.allowed = true
     const html = renderToStaticMarkup(<SuperadminPage search={{ vista: 'resumen' }} />)
-    expect(html).toContain('Resumen de Menoslios')
+    expect(html).toContain('Resumen de Menos Líos')
     expect(html).toContain('Cobros confirmados')
     expect(html).toContain('noviembre de 2026')
     expect(html).toContain('estado=attention')
@@ -259,7 +259,9 @@ describe('platform administration navigation', () => {
   it('queries the chosen directory page and carries it into the company link', () => {
     state.allowed = true
     const html = renderToStaticMarkup(<SuperadminPage search={{ q: 'prueba', page: 3 }} />)
-    expect(html).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Empresas de Menoslios"/)
+    expect(html).toMatch(
+      /<table[^>]*data-density="compact"[^>]*aria-label="Empresas de Menos Líos"/,
+    )
     expect(html).toContain('Empresa de prueba')
     expect(html).toContain('3 personas')
     expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}`)

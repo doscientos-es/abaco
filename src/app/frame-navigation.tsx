@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { brand } from '@/shared/lib/brand'
+
 export type NavTo =
   | '/'
   | '/presupuestos'
@@ -64,11 +66,7 @@ export function MobileBrandLink({
       aria-label={label}
       className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 leading-tight"
     >
-      <img
-        src={logoUrl || '/abaco-logo-short.svg'}
-        alt=""
-        className="h-7 w-9 shrink-0 object-contain"
-      />
+      <img src={logoUrl || brand.mark} alt="" className="h-7 w-9 shrink-0 object-contain" />
       <span className="truncate text-sm font-semibold tracking-tight">{name}</span>
     </Link>
   )
