@@ -9,7 +9,8 @@ import { MyVisitsCalendar } from './my-visits-calendar'
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   selectedId: null as string | null,
-  openGroup: undefined as (() => void) | undefined,
+  view: 'week' as 'week' | 'month',
+  actions: new Map<string, () => void>(),
   query: null as null | (() => Promise<unknown>),
   items: [] as CalendarEvent[],
   click: null as null | ((item: CalendarEvent) => void),
@@ -20,12 +21,25 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('react', async (load) => ({
   ...(await load<typeof React>()),
-  useState: () => [mocks.selectedId, (id: string | null) => (mocks.selectedId = id)],
+  useState: (initial: unknown) =>
+    initial === 'week'
+      ? [mocks.view, (view: 'week' | 'month') => (mocks.view = view)]
+      : [mocks.selectedId, (id: string | null) => (mocks.selectedId = id)],
 }))
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children, onPress }: { children: string; onPress: () => void }) => {
-    mocks.openGroup = onPress
-    return <button>{children}</button>
+  Button: ({
+    children,
+    onPress,
+    'aria-label': ariaLabel,
+  }: {
+    children: React.ReactNode
+    onPress: () => void
+    'aria-label'?: string
+  }) => {
+    const name =
+      ariaLabel ?? (typeof children === 'string' ? children : renderToStaticMarkup(<>{children}</>))
+    mocks.actions.set(name, onPress)
+    return <button aria-label={ariaLabel}>{children}</button>
   },
 }))
 vi.mock('@/shared/ui/calendar-details-dialog', () => ({
@@ -36,9 +50,15 @@ vi.mock('@/shared/ui/calendar-details-dialog', () => ({
   ),
 }))
 vi.mock('@/shared/ui/calendar-toolbar', () => ({
-  CalendarToolbar: ({ onDateChange }: { onDateChange: (day: Date) => void }) => {
+  CalendarToolbar: ({
+    onDateChange,
+    actions,
+  }: {
+    onDateChange: (day: Date) => void
+    actions: React.ReactNode
+  }) => {
     mocks.navigateMonth = onDateChange
-    return null
+    return <>{actions}</>
   },
 }))
 vi.mock('@tanstack/react-query', () => ({
@@ -69,7 +89,8 @@ describe('calendario de trabajos del usuario', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.selectedId = null
-    mocks.openGroup = undefined
+    mocks.view = 'week'
+    mocks.actions.clear()
     mocks.data = []
     mocks.query = null
     mocks.items = []
@@ -79,7 +100,27 @@ describe('calendario de trabajos del usuario', () => {
     mocks.list.mockResolvedValue([])
   })
 
+  it('defaults to a readable weekly agenda and gives a useful empty state', async () => {
+    const html = renderToStaticMarkup(
+      <MyVisitsCalendar
+        tenantId="tenant"
+        date="2026-11-13"
+        onDateChange={vi.fn()}
+        onSelectDay={vi.fn()}
+        onOpenVisit={vi.fn()}
+      />,
+    )
+    expect(html).toContain('No tienes visitas esta semana')
+    expect(html).toContain('Semana')
+    expect(mocks.actions.has('Mes')).toBe(true)
+    await mocks.query?.()
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith('tenant', '2026-11-09', '2026-11-15')
+    mocks.actions.get('Mes')?.()
+    expect(mocks.view).toBe('month')
+  })
+
   it('opens the selected day without changing the calendar month navigation', () => {
+    mocks.view = 'month'
     const selectDay = vi.fn()
     const navigateMonth = vi.fn()
     renderToStaticMarkup(
@@ -88,7 +129,7 @@ describe('calendario de trabajos del usuario', () => {
         date="2026-11-13"
         onDateChange={navigateMonth}
         onSelectDay={selectDay}
-        onOpenGroup={vi.fn()}
+        onOpenVisit={vi.fn()}
       />,
     )
     mocks.selectDay?.(new Date(2026, 10, 17, 12))
@@ -100,13 +141,14 @@ describe('calendario de trabajos del usuario', () => {
   })
 
   it('loads the complete month grid in ranges accepted by the assigned-visits API', async () => {
+    mocks.view = 'month'
     renderToStaticMarkup(
       <MyVisitsCalendar
         tenantId="tenant"
         date="2026-11-13"
         onDateChange={vi.fn()}
         onSelectDay={vi.fn()}
-        onOpenGroup={vi.fn()}
+        onOpenVisit={vi.fn()}
       />,
     )
     await mocks.query?.()
@@ -114,7 +156,8 @@ describe('calendario de trabajos del usuario', () => {
     expect(mocks.list).toHaveBeenCalledWith('tenant', '2026-11-27', '2026-12-06')
   })
 
-  it('shows the individual jobs in a dialog before navigating to the selected contract and day', () => {
+  it('opens a precise visit from the contracted day dialog', () => {
+    mocks.view = 'month'
     const visit = {
       id: 'one',
       title: 'Fregar',
@@ -135,7 +178,7 @@ describe('calendario de trabajos del usuario', () => {
           date="2026-11-13"
           onDateChange={vi.fn()}
           onSelectDay={vi.fn()}
-          onOpenGroup={open}
+          onOpenVisit={open}
         />,
       )
     render()
@@ -149,8 +192,10 @@ describe('calendario de trabajos del usuario', () => {
     expect(details).toContain('aria-label="Oficina"')
     expect(details).toContain('Fregar')
     expect(details).toContain('Cristales')
-    mocks.openGroup?.()
-    expect(open).toHaveBeenCalledWith('2026-11-13', 'contract')
+    const second = [...mocks.actions].find(([key]) => key.includes('Cristales'))
+    expect(second).toBeDefined()
+    second?.[1]()
+    expect(open).toHaveBeenCalledWith('2026-11-13', 'contract', 'two')
     expect(mocks.selectedId).toBeNull()
   })
 })

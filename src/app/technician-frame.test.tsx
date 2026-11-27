@@ -35,6 +35,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@/features/auth', () => ({
   useSession: session,
   useSignOut: () => signOut,
+  UserAvatar: () => <span aria-hidden="true" />,
   roleLabels: { user: 'Usuario', admin: 'Administrador' },
 }))
 vi.mock('@/features/global-search', () => ({

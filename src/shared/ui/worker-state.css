@@ -5,7 +5,7 @@
   min-width: 0;
 }
 .worker-title {
-  font-size: 1.25rem;
+  font-size: clamp(1.5rem, 2.4vw, 1.875rem);
   font-weight: 650;
   letter-spacing: -0.035em;
   line-height: 1.15;
@@ -36,10 +36,10 @@
 }
 .worker-count {
   padding: 0.3rem 0.7rem;
-  border: 1px solid #e1e7df;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: white;
-  color: #59665a;
+  background: var(--card);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
@@ -52,9 +52,9 @@
   justify-content: center;
   gap: 0.6rem;
   padding: 2.5rem 1.5rem;
-  border: 1px solid #e1e7df;
+  border: 1px solid var(--border);
   border-radius: 1rem;
-  background: #fff;
+  background: var(--card);
   text-align: center;
   box-shadow: 0 2px 8px rgb(35 60 35 / 3%);
 }
@@ -64,10 +64,10 @@
   height: 3.5rem;
   margin-bottom: 0.35rem;
   place-items: center;
-  border: 1px solid #dce9d9;
+  border: 1px solid color-mix(in oklab, var(--primary) 22%, transparent);
   border-radius: 1.1rem;
-  background: #f0f6ed;
-  color: #426441;
+  background: color-mix(in oklab, var(--primary) 10%, var(--card));
+  color: var(--primary);
 }
 .worker-state h3 {
   font-size: 1rem;
@@ -75,14 +75,14 @@
 }
 .worker-state p {
   max-width: 28rem;
-  color: #667267;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
   line-height: 1.6;
 }
 .worker-state--error .worker-state__icon {
-  border-color: #f2d7d1;
-  background: #fff3f0;
-  color: #b34134;
+  border-color: color-mix(in oklab, var(--destructive) 22%, transparent);
+  background: color-mix(in oklab, var(--destructive) 10%, var(--card));
+  color: var(--destructive);
 }
 .worker-state--error button {
   margin-top: 0.5rem;
@@ -100,7 +100,7 @@
 .worker-skeleton span {
   height: 0.8rem;
   border-radius: 999px;
-  background: #edf1eb;
+  background: var(--muted);
   animation: worker-pulse 1.5s ease-in-out infinite;
 }
 .worker-skeleton span:first-child {
@@ -116,7 +116,7 @@
   width: 90%;
 }
 .worker-visit-card {
-  border-color: #dfe7dd;
+  border-color: var(--border);
   border-radius: 1rem;
   box-shadow: 0 2px 8px rgb(35 60 35 / 3%);
 }
@@ -124,7 +124,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  color: #657267;
+  color: var(--muted-foreground);
   font-size: 0.75rem;
   line-height: 1.5;
 }

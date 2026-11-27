@@ -2,6 +2,8 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { useActionLock } from '@/shared/lib/use-action-lock'
+
 import {
   listVisitFieldEntries,
   recordVisitFieldEntry,
@@ -60,6 +62,7 @@ export function VisitFieldEntriesPanel({
   const [occurredAt, setOccurredAt] = useState(() => localDateTime(new Date().toISOString()))
   const [supersedesId, setSupersedesId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const actionLock = useActionLock()
   const [storageFailed, setStorageFailed] = useState(false)
   const supersededIds = new Set(entries.data?.supersededIds ?? [])
 
@@ -110,6 +113,7 @@ export function VisitFieldEntriesPanel({
       unit.trim().length > 30
     )
       return toast.error('Revisa la cantidad y la unidad antes de registrar la actividad')
+    if (!actionLock.acquire()) return
     const item: PendingFieldEntry = {
       operationId: crypto.randomUUID(),
       kind,
@@ -121,6 +125,7 @@ export function VisitFieldEntriesPanel({
     }
     const next = [...queue, item]
     if (!writeFieldEntryQueue(queueKey, next)) {
+      actionLock.release()
       setStorageFailed(true)
       toast.error('No se pudo conservar la actividad en este dispositivo')
       return
@@ -141,11 +146,12 @@ export function VisitFieldEntriesPanel({
       })
     } finally {
       setBusy(false)
+      actionLock.release()
     }
   }
 
   async function retry(item: PendingFieldEntry) {
-    if (busy) return
+    if (busy || !actionLock.acquire()) return
     setBusy(true)
     try {
       await send(item)
@@ -156,6 +162,7 @@ export function VisitFieldEntriesPanel({
       })
     } finally {
       setBusy(false)
+      actionLock.release()
     }
   }
 
@@ -182,17 +189,25 @@ export function VisitFieldEntriesPanel({
   return (
     <section className="border-border space-y-3 border-t pt-4" aria-label="Actividad de campo">
       <h3 className="font-semibold">Tiempo, desplazamientos y consumos</h3>
+      {entries.isPending ? (
+        <output className="text-muted-foreground text-sm">Cargando actividad…</output>
+      ) : null}
       {entries.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          No se pudo cargar la actividad de la visita.
-        </p>
+        <div className="space-y-2">
+          <p role="alert" className="text-destructive text-sm">
+            No se pudo cargar la actividad de la visita.
+          </p>
+          <Button variant="outline" size="sm" onPress={() => void entries.refetch()}>
+            Volver a cargar actividad
+          </Button>
+        </div>
       ) : null}
       {!closed ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="min-w-0 text-sm">
             Tipo
             <select
-              className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
               value={kind}
               onChange={(event) => chooseKind(event.target.value as FieldEntryKind)}
             >
@@ -203,20 +218,20 @@ export function VisitFieldEntriesPanel({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="min-w-0 text-sm">
             Descripción
             <input
-              className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
               value={description}
               maxLength={300}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Qué se hizo o utilizó"
             />
           </label>
-          <label className="text-sm">
+          <label className="min-w-0 text-sm">
             Cantidad
             <input
-              className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
               type="number"
               min="0.001"
               step="0.001"
@@ -225,17 +240,17 @@ export function VisitFieldEntriesPanel({
               onChange={(event) => setQuantity(event.target.value)}
             />
           </label>
-          <label className="text-sm">
+          <label className="min-w-0 text-sm">
             Unidad
             {kind === 'labor' || kind === 'corrective_action' ? (
               <input
-                className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+                className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
                 value={unit}
                 readOnly
               />
             ) : kind === 'travel' ? (
               <select
-                className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+                className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
                 value={unit}
                 onChange={(event) => setUnit(event.target.value)}
               >
@@ -244,17 +259,17 @@ export function VisitFieldEntriesPanel({
               </select>
             ) : (
               <input
-                className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+                className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
                 value={unit}
                 maxLength={30}
                 onChange={(event) => setUnit(event.target.value)}
               />
             )}
           </label>
-          <label className="text-sm sm:col-span-2">
+          <label className="min-w-0 text-sm sm:col-span-2">
             Fecha y hora de la actividad
             <input
-              className="border-input bg-background mt-1 w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
               type="datetime-local"
               step="1"
               value={occurredAt}

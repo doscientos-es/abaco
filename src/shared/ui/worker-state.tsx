@@ -21,11 +21,15 @@ export function WorkerState({
   description,
   error = false,
   onRetry,
+  onAction,
+  actionLabel,
 }: {
   title: string
   description: string
   error?: boolean
   onRetry?: () => void
+  onAction?: () => void
+  actionLabel?: string
 }) {
   const Icon = error ? WarningCircleIcon : CalendarBlankIcon
   return (
@@ -38,6 +42,11 @@ export function WorkerState({
       </span>
       <h3>{title}</h3>
       <p>{description}</p>
+      {onAction && actionLabel ? (
+        <Button variant="outline" onPress={onAction}>
+          {actionLabel}
+        </Button>
+      ) : null}
       {onRetry ? (
         <Button variant="outline" onPress={onRetry}>
           Volver a intentarlo

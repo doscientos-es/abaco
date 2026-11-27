@@ -1,11 +1,14 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
+import { CheckCircleIcon, ClipboardTextIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import { VisitFieldEntriesPanel } from '@/features/field-entries/ui/visit-field-entries-panel'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { TextareaField } from '@/shared/ui/form'
+import { WorkerLoading } from '@/shared/ui/worker-state'
 
 import type { VisitSummary } from '../application/visit-actions'
 import {
@@ -49,6 +52,8 @@ export function VisitReportEditor({
     readVisitReportLocalDraft(key),
   )
   const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const saveLock = useActionLock()
   const [localStorageFailed, setLocalStorageFailed] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const closed = !['scheduled', 'in_progress'].includes(visit.status)
@@ -58,9 +63,13 @@ export function VisitReportEditor({
   const changed = Boolean(
     draft && JSON.stringify(draft.data) !== JSON.stringify(report.data?.data ?? emptyData()),
   )
+  const canEdit = !closed && !busy && (report.isSuccess || report.isError || draft !== null)
+  const invalidChecklist = data.checklist.some((item) => !item.label.trim())
+  const completedChecks = data.checklist.filter(({ done }) => done).length
 
   function change(next: VisitReportData) {
-    if (busy || closed) return
+    if (!canEdit) return
+    setSaveError(null)
     const updated: LocalVisitReportDraft = {
       baseRevision: draft?.baseRevision ?? serverRevision,
       data: next,
@@ -73,11 +82,9 @@ export function VisitReportEditor({
   function useServerVersion() {
     if (!report.isSuccess || busy) return
     removeVisitReportLocalDraft(key)
-    setDraft({
-      baseRevision: serverRevision,
-      data: report.data?.data ?? emptyData(),
-      operationId: crypto.randomUUID(),
-    })
+    setDraft(null)
+    setLocalStorageFailed(false)
+    setSaveError(null)
   }
 
   function keepLocalVersion() {
@@ -85,11 +92,14 @@ export function VisitReportEditor({
     const updated = { ...draft, baseRevision: serverRevision, operationId: crypto.randomUUID() }
     setDraft(updated)
     setLocalStorageFailed(!writeVisitReportLocalDraft(key, updated))
+    setSaveError(null)
   }
 
   async function save() {
-    if (busy || !draft || conflict || closed) return
+    if (busy || !draft || conflict || closed || !changed || invalidChecklist || !saveLock.acquire())
+      return
     setBusy(true)
+    setSaveError(null)
     try {
       const revision = await saveVisitReport({
         tenantId,
@@ -100,6 +110,7 @@ export function VisitReportEditor({
       })
       removeVisitReportLocalDraft(key)
       setDraft({ ...draft, baseRevision: revision, operationId: crypto.randomUUID() })
+      setLocalStorageFailed(false)
       await queryClient.invalidateQueries({ queryKey })
       toast.success('Parte guardado en la empresa')
     } catch (error) {
@@ -107,33 +118,58 @@ export function VisitReportEditor({
       if (fresh.data && JSON.stringify(fresh.data.data) === JSON.stringify(draft.data)) {
         removeVisitReportLocalDraft(key)
         setDraft({ ...draft, baseRevision: fresh.data.revision, operationId: crypto.randomUUID() })
+        setLocalStorageFailed(false)
         toast.success('Guardado confirmado')
       } else {
-        toast.error('No se pudo guardar el parte', {
-          description:
-            error instanceof Error ? error.message : 'El borrador sigue en este dispositivo.',
-        })
+        const message =
+          error instanceof Error ? error.message : 'Comprueba tu conexión e inténtalo de nuevo.'
+        setSaveError(message)
+        toast.error('No se pudo guardar el parte', { description: message })
       }
     } finally {
       setBusy(false)
+      saveLock.release()
     }
   }
 
+  function addCheck() {
+    const label = newLabel.trim()
+    if (!canEdit || !label || data.checklist.length >= 50) return
+    change({
+      ...data,
+      checklist: [...data.checklist, { id: crypto.randomUUID(), label, done: false }],
+    })
+    setNewLabel('')
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Parte de visita</CardTitle>
+    <Card className="border-border bg-card overflow-visible shadow-none">
+      <CardHeader className="space-y-1">
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          <ClipboardTextIcon size={18} aria-hidden="true" /> <h4>Parte de visita</h4>
+        </CardTitle>
+        <p className="text-muted-foreground text-sm">
+          {closed
+            ? 'Consulta lo registrado en este trabajo.'
+            : 'Anota lo realizado y los próximos pasos antes de cerrar la visita.'}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {visit.status === 'completed' ? (
           <ClosedVisitReport tenantId={tenantId} visitId={visit.id} />
         ) : null}
-        {report.isPending && !draft ? <p className="text-sm">Cargando parte…</p> : null}
+        {report.isPending && !draft ? <WorkerLoading label="Cargando parte…" /> : null}
         {report.isError ? (
-          <p role="alert" className="text-warning text-sm">
-            No se pudo consultar el parte de la empresa. Puedes continuar en este dispositivo y
-            reintentar el guardado cuando vuelva a estar disponible.
-          </p>
+          <div className="border-border flex flex-wrap items-center gap-3 rounded-md border p-3 text-sm">
+            <p role="alert" className="min-w-0 flex-1">
+              {closed
+                ? 'No se pudo consultar el parte de la empresa.'
+                : 'No se pudo consultar el parte de la empresa. Puedes seguir escribiendo y guardar cuando vuelva la conexión.'}
+            </p>
+            <Button size="sm" variant="outline" onPress={() => void report.refetch()}>
+              Reintentar carga
+            </Button>
+          </div>
         ) : null}
         {localStorageFailed ? (
           <p role="alert" className="text-destructive text-sm">
@@ -188,156 +224,189 @@ export function VisitReportEditor({
             </div>
           </div>
         ) : null}
-        <fieldset disabled={busy} className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Lista de comprobación</p>
-            {data.checklist.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Añade las tareas realizadas en la visita.
-              </p>
-            ) : null}
-            {data.checklist.map((item) => (
-              <div key={item.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={item.done}
-                  disabled={closed}
-                  aria-label={`Completar ${item.label}`}
-                  onChange={(event) =>
-                    change({
-                      ...data,
-                      checklist: data.checklist.map((row) =>
-                        row.id === item.id ? { ...row, done: event.target.checked } : row,
-                      ),
-                    })
-                  }
-                />
-                <input
-                  type="text"
-                  value={item.label}
-                  disabled={closed}
-                  maxLength={160}
-                  aria-label="Comprobación"
-                  className="border-input bg-background min-w-0 flex-1 rounded-lg border px-2 py-1"
-                  onChange={(event) =>
-                    change({
-                      ...data,
-                      checklist: data.checklist.map((row) =>
-                        row.id === item.id ? { ...row, label: event.target.value } : row,
-                      ),
-                    })
-                  }
-                />
-                {!closed ? (
-                  <Button
-                    variant="outline"
-                    onPress={() =>
-                      change({
-                        ...data,
-                        checklist: data.checklist.filter((row) => row.id !== item.id),
-                      })
-                    }
-                  >
-                    Quitar
-                  </Button>
+        {closed && !report.data && !draft && !report.isSuccess ? null : (
+          <fieldset disabled={!closed && !canEdit} className="min-w-0 space-y-4">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-1">
+                <h3 className="text-sm font-semibold">Lista de comprobación</h3>
+                {data.checklist.length ? (
+                  <p className="text-muted-foreground text-xs">
+                    {completedChecks} de {data.checklist.length} hechas
+                  </p>
                 ) : null}
               </div>
-            ))}
-            {!closed && data.checklist.length < 50 ? (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newLabel}
-                  maxLength={160}
-                  aria-label="Nueva comprobación"
-                  placeholder="Nueva comprobación"
-                  className="border-input bg-background min-w-0 flex-1 rounded-lg border px-2 py-1"
-                  onChange={(event) => setNewLabel(event.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  isDisabled={!newLabel.trim()}
-                  onPress={() => {
-                    change({
-                      ...data,
-                      checklist: [
-                        ...data.checklist,
-                        { id: crypto.randomUUID(), label: newLabel.trim(), done: false },
-                      ],
-                    })
-                    setNewLabel('')
-                  }}
-                >
-                  Añadir
-                </Button>
+              {data.checklist.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  {closed
+                    ? 'No hay comprobaciones registradas.'
+                    : 'Añade las tareas realizadas en la visita.'}
+                </p>
+              ) : null}
+              {data.checklist.map((item) => (
+                <div key={item.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="accent-primary size-5 shrink-0"
+                    checked={item.done}
+                    disabled={closed}
+                    aria-label={`Completar ${item.label}`}
+                    onChange={(event) =>
+                      change({
+                        ...data,
+                        checklist: data.checklist.map((row) =>
+                          row.id === item.id ? { ...row, done: event.target.checked } : row,
+                        ),
+                      })
+                    }
+                  />
+                  <input
+                    type="text"
+                    value={item.label}
+                    disabled={closed}
+                    maxLength={160}
+                    aria-label={`Editar comprobación: ${item.label || 'sin nombre'}`}
+                    className="border-input bg-background min-h-11 min-w-0 flex-1 rounded-lg border px-2 py-1"
+                    onChange={(event) =>
+                      change({
+                        ...data,
+                        checklist: data.checklist.map((row) =>
+                          row.id === item.id ? { ...row, label: event.target.value } : row,
+                        ),
+                      })
+                    }
+                  />
+                  {!closed ? (
+                    <Button
+                      variant="outline"
+                      className="min-h-11"
+                      aria-label={`Quitar comprobación: ${item.label || 'sin nombre'}`}
+                      onPress={() =>
+                        change({
+                          ...data,
+                          checklist: data.checklist.filter((row) => row.id !== item.id),
+                        })
+                      }
+                    >
+                      Quitar
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+              {!closed && data.checklist.length < 50 ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newLabel}
+                    maxLength={160}
+                    aria-label="Nueva comprobación"
+                    placeholder="Nueva comprobación"
+                    className="border-input bg-background min-h-11 min-w-0 flex-1 rounded-lg border px-2 py-1"
+                    onChange={(event) => setNewLabel(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                        event.preventDefault()
+                        addCheck()
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    className="min-h-11"
+                    isDisabled={!canEdit || !newLabel.trim()}
+                    onPress={addCheck}
+                  >
+                    Añadir
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            {closed ? (
+              <div>
+                <p className="text-sm font-medium">Notas del técnico</p>
+                <p className="text-sm whitespace-pre-line">{data.notes || 'Sin notas'}</p>
+                <p className="mt-2 text-sm font-medium">Recomendaciones</p>
+                <p className="text-sm whitespace-pre-line">
+                  {data.recommendations || 'Sin recomendaciones'}
+                </p>
+                <p className="mt-2 text-sm font-medium">Próximas actuaciones</p>
+                <p className="text-sm whitespace-pre-line">
+                  {data.next_actions || 'Sin actuaciones previstas'}
+                </p>
               </div>
-            ) : null}
-          </div>
-          {closed ? (
-            <div>
-              <p className="text-sm font-medium">Notas del técnico</p>
-              <p className="text-sm whitespace-pre-line">{data.notes || 'Sin notas'}</p>
-              <p className="mt-2 text-sm font-medium">Recomendaciones</p>
-              <p className="text-sm whitespace-pre-line">
-                {data.recommendations || 'Sin recomendaciones'}
-              </p>
-              <p className="mt-2 text-sm font-medium">Próximas actuaciones</p>
-              <p className="text-sm whitespace-pre-line">
-                {data.next_actions || 'Sin actuaciones previstas'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <TextareaField
-                label="Notas del técnico"
-                value={data.notes}
-                maxLength={4000}
-                onChange={(notes) => change({ ...data, notes })}
-                placeholder="Qué se hizo y qué se encontró"
-              />
-              <TextareaField
-                label="Recomendaciones al cliente"
-                value={data.recommendations ?? ''}
-                maxLength={2000}
-                onChange={(recommendations) => change({ ...data, recommendations })}
-                placeholder="Cuidados, seguimiento y recomendaciones"
-              />
-              <TextareaField
-                label="Próximas actuaciones"
-                value={data.next_actions ?? ''}
-                maxLength={2000}
-                onChange={(nextActions) => change({ ...data, next_actions: nextActions })}
-                placeholder="Trabajo pendiente o próxima revisión"
-              />
-            </div>
-          )}
-        </fieldset>
+            ) : (
+              <div className="space-y-3">
+                <TextareaField
+                  label="Notas del técnico"
+                  value={data.notes}
+                  maxLength={4000}
+                  onChange={(notes) => change({ ...data, notes })}
+                  placeholder="Qué se hizo y qué se encontró"
+                />
+                <TextareaField
+                  label="Recomendaciones al cliente"
+                  value={data.recommendations ?? ''}
+                  maxLength={2000}
+                  onChange={(recommendations) => change({ ...data, recommendations })}
+                  placeholder="Cuidados, seguimiento y recomendaciones"
+                />
+                <TextareaField
+                  label="Próximas actuaciones"
+                  value={data.next_actions ?? ''}
+                  maxLength={2000}
+                  onChange={(nextActions) => change({ ...data, next_actions: nextActions })}
+                  placeholder="Trabajo pendiente o próxima revisión"
+                />
+              </div>
+            )}
+          </fieldset>
+        )}
         {closed ? (
           <p className="text-muted-foreground text-sm">
             La visita está cerrada; el parte es de solo lectura.
           </p>
         ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              isDisabled={
-                busy || conflict || !changed || data.checklist.some((item) => !item.label.trim())
-              }
-              onPress={() => void save()}
-            >
-              {busy ? 'Guardando…' : 'Guardar parte'}
-            </Button>
-            {draft && !conflict ? (
-              <Button variant="outline" isDisabled={busy} onPress={useServerVersion}>
-                Descartar cambios locales
+          <div className="border-border bg-card sticky bottom-0 z-[2] grid gap-2 rounded-lg border p-3 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                className="min-h-11 max-sm:flex-1"
+                isDisabled={busy || conflict || !changed || invalidChecklist}
+                onPress={() => void save()}
+              >
+                {busy ? 'Guardando…' : 'Guardar parte'}
               </Button>
+              {changed && !conflict ? (
+                <Button
+                  variant="ghost"
+                  className="min-h-11"
+                  isDisabled={busy || !report.isSuccess}
+                  onPress={useServerVersion}
+                >
+                  Descartar cambios locales
+                </Button>
+              ) : null}
+            </div>
+            <output
+              className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs"
+              aria-live="polite"
+            >
+              {!changed && report.data ? <CheckCircleIcon size={16} aria-hidden="true" /> : null}
+              {busy
+                ? 'Guardando en la empresa…'
+                : invalidChecklist
+                  ? 'Pon un nombre a todas las comprobaciones para guardar.'
+                  : changed
+                    ? localStorageFailed
+                      ? 'Cambios sin guardar; el dispositivo no pudo conservar una copia.'
+                      : 'Borrador en este dispositivo. Guarda el parte para enviarlo a la empresa.'
+                    : report.data
+                      ? `Guardado en la empresa · revisión ${serverRevision}`
+                      : 'Aún no hay un parte guardado.'}
+            </output>
+            {saveError ? (
+              <p role="alert" className="text-destructive text-sm sm:col-span-2">
+                No se pudo guardar el parte. {saveError}
+              </p>
             ) : null}
-            <p className="text-muted-foreground text-xs">
-              {changed
-                ? 'Cambios conservados en este dispositivo hasta guardarlos.'
-                : report.data
-                  ? `Guardado en la empresa · revisión ${serverRevision}`
-                  : 'Aún no hay un parte guardado.'}
-            </p>
           </div>
         )}
         <VisitPhotosPanel tenantId={tenantId} visitId={visit.id} userId={userId} closed={closed} />

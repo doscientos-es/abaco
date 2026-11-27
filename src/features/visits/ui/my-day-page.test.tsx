@@ -153,6 +153,22 @@ describe('navegación por días', () => {
     expect(mocks.date).toBe('2026-12-31')
   })
 
+  it('prioritizes ongoing work and renders a separate empty-day action', () => {
+    mocks.visits = [
+      { ...visit, status: 'in_progress' },
+      { ...visit, id: 'done', status: 'completed' },
+    ]
+    const html = renderToStaticMarkup(<MyDayPage />)
+    expect(html).toContain('Ir a la visita en curso')
+    expect(html).toContain('Resumen de la jornada')
+    expect(html).toContain('id="worker-visit-visit"')
+    expect(html).toContain('Ver parte')
+    mocks.visits = []
+    const empty = renderToStaticMarkup(<MyDayPage />)
+    expect(empty).toContain('Tu agenda está despejada')
+    expect(empty).toContain('Ver calendario')
+  })
+
   it('links only the authorized visit address to Maps and handles missing addresses', () => {
     mocks.visits = [
       { ...visit, address: 'C/ Peñón 4 & Norte', notes: 'Información privada 612345678' },
@@ -206,6 +222,24 @@ describe('starting an assigned visit', () => {
         nextStatus: 'in_progress',
         startLocation: { latitude: 41.3, longitude: 2.1 },
       }),
+    )
+  })
+
+  it('locks a double tap before the geolocation prompt and refreshes all visit views', async () => {
+    const pending: { resolve?: PositionCallback } = {}
+    const getCurrentPosition = vi.fn((resolve: PositionCallback) => {
+      pending.resolve = resolve
+    })
+    vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } })
+    renderToStaticMarkup(<MyDayPage />)
+
+    mocks.start?.()
+    mocks.start?.()
+    expect(getCurrentPosition).toHaveBeenCalledOnce()
+    pending.resolve?.({ coords: { latitude: 41.3, longitude: 2.1 } } as GeolocationPosition)
+    await vi.waitFor(() => expect(mocks.transition).toHaveBeenCalledOnce())
+    await vi.waitFor(() =>
+      expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['my-visits', 'tenant'] }),
     )
   })
 

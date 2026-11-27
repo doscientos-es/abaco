@@ -415,9 +415,9 @@ describe('AgendaPage: nueva visita', () => {
     }
     const html = render()
     expect(html.indexOf('aria-label="Buscar cliente o centro"')).toBeLessThan(
-      html.indexOf('Filtros adicionales, 2 activos'),
+      html.indexOf('Filtros de planificación, 2 activos'),
     )
-    expect(html).toContain('Filtros adicionales, 2 activos')
+    expect(html).toContain('Filtros de planificación, 2 activos')
     mocks.fields.get('Buscar cliente o centro')?.('Oficinas')
     const navigation = mocks.navigate.mock.calls.at(-1)?.[0] as {
       search: (previous: WorkPlanningSearch) => WorkPlanningSearch

@@ -1,7 +1,14 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
-import { CaretLeftIcon, CaretRightIcon, MapPinIcon } from '@phosphor-icons/react'
+import {
+  CalendarBlankIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  ClockIcon,
+  MapPinIcon,
+  NotePencilIcon,
+} from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import {
@@ -13,7 +20,8 @@ import {
   visitIncidentQueueKey,
 } from '@/features/incidents/application/incident-queue'
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
-import { moveDays, todayInMadrid } from '@/shared/lib/date-range'
+import { calendarDate, moveDays, todayInMadrid } from '@/shared/lib/date-range'
+import { useActionLock } from '@/shared/lib/use-action-lock'
 import { VisitMapsAction } from '@/shared/ui/contact-actions'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
@@ -33,13 +41,22 @@ import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerPaperReport } from './worker-paper-report'
+import { WorkerVisitStatus } from './worker-visit-status'
 
-const statusLabels = {
-  scheduled: 'Planificada',
-  in_progress: 'En curso',
-  completed: 'Completada',
-  skipped: 'Omitida',
-  canceled: 'Cancelada',
+const longDay = new Intl.DateTimeFormat('es-ES', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+const visitAnchor = (id: string) => `worker-visit-${id}`
+const reportAnchor = (id: string) => `worker-report-${id}`
+
+function focusSection(anchor: string) {
+  const target = document.getElementById(anchor)
+  target?.focus({ preventScroll: true })
+  target?.scrollIntoView({ block: 'start' })
 }
 
 const taskStatusLabels = {
@@ -55,6 +72,9 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   const queryClient = useQueryClient()
   const [date, setDate] = useState(() => calendarVisit?.fecha ?? todayInMadrid())
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [visitError, setVisitError] = useState<{ id: string; message: string } | null>(null)
+  const [focusTarget, setFocusTarget] = useState<string | null>(null)
+  const statusLock = useActionLock()
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
@@ -69,10 +89,15 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       return listMyVisits(tenantId, date, date)
     },
   })
-  const visitIds = visits.data?.map((visit) => visit.id) ?? []
+  const dayVisits = visits.data ?? []
+  const completed = dayVisits.filter(({ status }) => status === 'completed').length
+  const activeVisits = dayVisits.filter(({ status }) => status === 'in_progress')
+  const activeVisit = activeVisits[0]
+  const scheduled = dayVisits.filter(({ status }) => status === 'scheduled').length
+  const hasVisitTasks = dayVisits.some((visit) => visit.work_order_id)
   const tasks = useQuery({
     queryKey: ['my-day-tasks', tenantId, date, visits.data],
-    enabled: Boolean(tenantId) && visits.isSuccess && visitIds.length > 0,
+    enabled: Boolean(tenantId) && visits.isSuccess && hasVisitTasks,
     queryFn: () => {
       if (!tenantId || !visits.data) throw new Error('Selecciona una empresa.')
       return listMyDayTasks(tenantId, visits.data)
@@ -87,12 +112,66 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       ? visits.data?.find((visit) => visit.id === calendarVisit.visita)
       : undefined
 
+  useEffect(() => {
+    if (!calendarOpen && visits.isSuccess) {
+      const target = focusTarget ?? (linkedVisit ? visitAnchor(linkedVisit.id) : null)
+      if (target) focusSection(target)
+    }
+  }, [calendarOpen, focusTarget, linkedVisit, visits.isSuccess])
+
+  function goToDate(nextDate: string | ((current: string) => string)) {
+    setSelectedContractId(null)
+    setOpenReportId(null)
+    setFocusTarget(null)
+    setDate(nextDate)
+  }
+
+  function openVisit(nextDate: string, contractId: string | null, visitId: string) {
+    setDate(nextDate)
+    setSelectedContractId(contractId)
+    setOpenReportId(null)
+    setFocusTarget(visitAnchor(visitId))
+    setCalendarOpen(false)
+    if (nextDate === date && !calendarOpen && selectedContractId === contractId) {
+      focusSection(visitAnchor(visitId))
+    }
+  }
+
+  function openReport(id: string) {
+    setOpenReportId(id)
+    setFocusTarget(reportAnchor(id))
+    if (openReportId === id) focusSection(reportAnchor(id))
+  }
+
+  function statusProblem(id: string, message: string) {
+    setVisitError({ id, message })
+    toast.error(message)
+  }
+
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
-    if (!tenantId || busyId) return
+    if (!tenantId || !statusLock.acquire()) return
+    setBusyId(visit.id)
+    setVisitError(null)
+    try {
+      await applyStatus(tenantId, visit, nextStatus)
+    } finally {
+      setBusyId(null)
+      statusLock.release()
+    }
+  }
+
+  async function applyStatus(
+    tenantId: string,
+    visit: VisitSummary,
+    nextStatus: 'in_progress' | 'completed',
+  ) {
     let startLocation: { latitude: number; longitude: number } | null = null
     if (nextStatus === 'in_progress' && session?.role === 'user') {
       if (!navigator.geolocation) {
-        toast.error('Este dispositivo no permite compartir la ubicación requerida por la empresa.')
+        statusProblem(
+          visit.id,
+          'Este dispositivo no permite compartir la ubicación requerida por la empresa.',
+        )
         return
       }
       try {
@@ -108,20 +187,29 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           longitude: position.coords.longitude,
         }
       } catch {
-        toast.error('No se pudo obtener la ubicación. Autorízala para iniciar esta visita.')
+        statusProblem(
+          visit.id,
+          'No se pudo obtener tu ubicación. Activa el permiso de ubicación en el navegador e inténtalo de nuevo.',
+        )
         return
       }
     }
     if (nextStatus === 'completed' && session?.userId) {
       try {
         if ((await listPendingVisitPhotos(session.userId, tenantId, visit.id)).length > 0) {
-          setOpenReportId(visit.id)
-          toast.error('Envía o descarta las fotografías pendientes antes de completar la visita.')
+          openReport(visit.id)
+          statusProblem(
+            visit.id,
+            'Envía o descarta las fotografías pendientes antes de completar la visita.',
+          )
           return
         }
       } catch {
-        setOpenReportId(visit.id)
-        toast.error('No se pudo comprobar si hay fotografías pendientes en este dispositivo.')
+        openReport(visit.id)
+        statusProblem(
+          visit.id,
+          'No se pudo comprobar si hay fotografías pendientes en este dispositivo.',
+        )
         return
       }
     }
@@ -130,8 +218,11 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       session?.userId &&
       readVisitIncidentQueue(visitIncidentQueueKey(session.userId, tenantId, visit.id)).length > 0
     ) {
-      setOpenReportId(visit.id)
-      toast.error('Envía o descarta las incidencias pendientes antes de completar la visita.')
+      openReport(visit.id)
+      statusProblem(
+        visit.id,
+        'Envía o descarta las incidencias pendientes antes de completar la visita.',
+      )
       return
     }
     if (
@@ -139,8 +230,11 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       session?.userId &&
       readFieldEntryQueue(fieldEntryQueueKey(session.userId, tenantId, visit.id)).length > 0
     ) {
-      setOpenReportId(visit.id)
-      toast.error('Envía o descarta la actividad pendiente antes de completar la visita.')
+      openReport(visit.id)
+      statusProblem(
+        visit.id,
+        'Envía o descarta la actividad pendiente antes de completar la visita.',
+      )
       return
     }
     if (
@@ -148,8 +242,11 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       session?.userId &&
       readVisitReportLocalDraft(visitReportDraftKey(session.userId, tenantId, visit.id))
     ) {
-      setOpenReportId(visit.id)
-      toast.error('Guarda o descarta el borrador del parte antes de completar la visita.')
+      openReport(visit.id)
+      statusProblem(
+        visit.id,
+        'Guarda o descarta el borrador del parte antes de completar la visita.',
+      )
       return
     }
     const key = `${visit.id}:${nextStatus}:${visit.updated_at}`
@@ -158,7 +255,6 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       operationId = crypto.randomUUID()
       operations.current.set(key, operationId)
     }
-    setBusyId(visit.id)
     try {
       await transitionServiceVisit({
         tenantId,
@@ -170,15 +266,16 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
         startLocation,
       })
       operations.current.delete(key)
-      await queryClient.invalidateQueries({ queryKey })
+      await queryClient.invalidateQueries({ queryKey: ['my-visits', tenantId] })
       toast.success(nextStatus === 'completed' ? 'Visita completada' : 'Visita iniciada')
     } catch (error) {
-      toast.error('No se pudo cambiar la visita', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
-      })
-      await queryClient.invalidateQueries({ queryKey })
-    } finally {
-      setBusyId(null)
+      statusProblem(
+        visit.id,
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cambiar la visita. Inténtalo de nuevo.',
+      )
+      await queryClient.invalidateQueries({ queryKey: ['my-visits', tenantId] })
     }
   }
 
@@ -191,15 +288,19 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           No se encuentra esta visita en tu jornada. Puede haber cambiado de fecha o asignación.
         </p>
       ) : null}
-      <div className="worker-hero flex flex-wrap items-end justify-between gap-5">
-        <div>
+      <header className="worker-hero flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 space-y-1">
           <h1 className="worker-title">Mi jornada</h1>
+          <p className="text-muted-foreground text-sm">
+            Consulta tus visitas, cómo llegar y los partes de cada trabajo.
+          </p>
         </div>
         <div className="worker-day-controls">
-          <fieldset className="flex rounded-lg border p-1">
+          <fieldset className="border-border bg-card flex rounded-lg border p-1">
             <legend className="sr-only">Vista de mi jornada</legend>
             <Button
               size="sm"
+              className="min-h-10"
               variant={!calendarOpen ? 'default' : 'ghost'}
               aria-pressed={!calendarOpen}
               onPress={() => setCalendarOpen(false)}
@@ -208,9 +309,13 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </Button>
             <Button
               size="sm"
+              className="min-h-10"
               variant={calendarOpen ? 'default' : 'ghost'}
               aria-pressed={calendarOpen}
-              onPress={() => setCalendarOpen(true)}
+              onPress={() => {
+                setFocusTarget(null)
+                setCalendarOpen(true)
+              }}
             >
               Calendario
             </Button>
@@ -219,10 +324,8 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             <>
               <Button
                 variant="outline"
-                onPress={() => {
-                  setSelectedContractId(null)
-                  setDate(todayInMadrid())
-                }}
+                className="min-h-10"
+                onPress={() => goToDate(todayInMadrid())}
               >
                 Hoy
               </Button>
@@ -231,10 +334,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                   variant="outline"
                   className="size-10 p-0"
                   aria-label="Día anterior"
-                  onPress={() => {
-                    setSelectedContractId(null)
-                    setDate((current) => moveDays(current, -1))
-                  }}
+                  onPress={() => goToDate((current) => moveDays(current, -1))}
                 >
                   <CaretLeftIcon aria-hidden="true" />
                 </Button>
@@ -244,10 +344,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     type="date"
                     value={date}
                     onChange={(event) => {
-                      if (event.target.value) {
-                        setSelectedContractId(null)
-                        setDate(event.target.value)
-                      }
+                      if (event.target.value) goToDate(event.target.value)
                     }}
                     className="border-input bg-background h-10 w-full min-w-0 rounded-lg border px-3 py-2"
                   />
@@ -256,10 +353,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                   variant="outline"
                   className="size-10 p-0"
                   aria-label="Día siguiente"
-                  onPress={() => {
-                    setSelectedContractId(null)
-                    setDate((current) => moveDays(current, 1))
-                  }}
+                  onPress={() => goToDate((current) => moveDays(current, 1))}
                 >
                   <CaretRightIcon aria-hidden="true" />
                 </Button>
@@ -267,36 +361,64 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </>
           ) : null}
         </div>
-      </div>
+      </header>
       {calendarOpen && tenantId ? (
         <MyVisitsCalendar
           tenantId={tenantId}
           date={date}
-          onDateChange={(nextDate) => {
-            setSelectedContractId(null)
-            setDate(nextDate)
-          }}
+          onDateChange={goToDate}
           onSelectDay={(nextDate) => {
-            setSelectedContractId(null)
-            setDate(nextDate)
+            goToDate(nextDate)
             setCalendarOpen(false)
           }}
-          onOpenGroup={(nextDate, contractId) => {
-            setDate(nextDate)
-            setSelectedContractId(contractId)
-            setCalendarOpen(false)
-          }}
+          onOpenVisit={openVisit}
         />
       ) : null}
       <div hidden={calendarOpen} className="space-y-6">
-        {visits.isSuccess && visits.data.length > 0 && tenantId ? (
-          <WorkerBatchPaperReports
-            key={`${tenantId}:${date}`}
-            tenantId={tenantId}
-            visits={visits.data ?? []}
-            disabled={!visits.isSuccess || visits.isFetching}
-          />
-        ) : null}
+        <section
+          className="border-border bg-card grid gap-4 rounded-xl border p-4 sm:px-5"
+          aria-label="Resumen de la jornada"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                <CalendarBlankIcon aria-hidden="true" />{' '}
+                {date === todayInMadrid() ? 'Hoy' : 'Día seleccionado'}
+              </div>
+              <time
+                dateTime={date}
+                className="block text-base font-semibold first-letter:uppercase"
+              >
+                {longDay.format(calendarDate(date))}
+              </time>
+            </div>
+            {activeVisit ? (
+              <Button
+                variant="outline"
+                className="min-h-11"
+                onPress={() => openVisit(date, activeVisit.contract_id ?? null, activeVisit.id)}
+              >
+                <ClockIcon aria-hidden="true" /> Ir a la visita en curso
+              </Button>
+            ) : null}
+          </div>
+          {visits.isSuccess ? (
+            <dl className="grid grid-cols-3 gap-2 text-sm">
+              <div className="bg-muted/60 min-w-0 rounded-lg p-2.5">
+                <dt className="text-muted-foreground text-xs">Planificadas</dt>
+                <dd className="text-lg font-semibold tabular-nums">{scheduled}</dd>
+              </div>
+              <div className="bg-primary/10 min-w-0 rounded-lg p-2.5">
+                <dt className="text-xs">En curso</dt>
+                <dd className="text-lg font-semibold tabular-nums">{activeVisits.length}</dd>
+              </div>
+              <div className="bg-muted/60 min-w-0 rounded-lg p-2.5">
+                <dt className="text-muted-foreground text-xs">Completadas</dt>
+                <dd className="text-lg font-semibold tabular-nums">{completed}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </section>
         <div className="worker-section-heading">
           <h2>Visitas del día</h2>
           {visits.isSuccess ? (
@@ -317,127 +439,185 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
         {visits.data?.length === 0 ? (
           <WorkerState
             title="Tu agenda está despejada"
-            description="No tienes visitas asignadas para este día. Usa las flechas para consultar otra jornada."
+            description="No tienes visitas asignadas para este día."
+            actionLabel="Ver calendario"
+            onAction={() => {
+              setFocusTarget(null)
+              setCalendarOpen(true)
+            }}
           />
         ) : null}
         {groupVisitsByContractDay(visits.data ?? []).map((group) => {
           const cards = group.visits.map((visit) => (
-            <Card key={visit.id} className="worker-visit-card">
-              <CardHeader className="gap-2 pb-3">
-                {linkedVisit?.id === visit.id ? <p>Visita abierta desde tu calendario</p> : null}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <CardTitle>{visit.title}</CardTitle>
-                  <span className="bg-muted rounded-full px-2.5 py-1 text-xs font-medium">
-                    {statusLabels[visit.status]}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p className="font-medium">
-                  {new Date(visit.scheduled_start_at).toLocaleTimeString('es-ES', {
-                    timeZone: visit.timezone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}{' '}
-                  –{' '}
-                  {new Date(visit.scheduled_end_at).toLocaleTimeString('es-ES', {
-                    timeZone: visit.timezone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}{' '}
-                  <span className="text-muted-foreground font-normal"> · {visit.timezone}</span>
-                </p>
-                <p>{visit.client_name}</p>
-                {visit.work_team_id ? (
-                  <p className="text-muted-foreground">Visita de tu equipo</p>
-                ) : null}
-                {visit.location_name ? <p>{visit.location_name}</p> : null}
-                <VisitMapsAction
-                  addressMayBeIncomplete
-                  address={visit.address}
-                  label={`Cómo llegar a ${visit.title} en Google Maps`}
-                />
-                {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
-                {visit.work_order_id ? (
-                  <section
-                    aria-label="Tareas del servicio"
-                    className="space-y-2 rounded-lg border p-3"
-                  >
-                    <h3 className="font-medium">Tareas del servicio</h3>
-                    {tasks.isPending ? (
-                      <p className="text-muted-foreground">Cargando tareas…</p>
-                    ) : null}
-                    {tasks.isError ? (
-                      <p role="alert" className="text-destructive">
-                        No se pudieron cargar las tareas: {tasks.error.message}
-                      </p>
-                    ) : null}
-                    {tasks.isSuccess && !tasksByVisit.get(visit.id)?.length ? (
-                      <p className="text-muted-foreground">
-                        Este servicio no tiene tareas añadidas.
-                      </p>
-                    ) : null}
-                    {tasksByVisit.get(visit.id)?.map((task) => (
-                      <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                          <p className="font-medium">{task.title}</p>
-                          <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
-                            {taskStatusLabels[task.status]}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground">{task.phaseTitle}</p>
-                        {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
-                        {task.checklist.length ? (
-                          <ul className="mt-1 space-y-1 pl-4">
-                            {task.checklist.map((item) => (
-                              <li key={item.id} className="flex gap-2">
-                                <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
-                                <span>{item.label}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
-                    ))}
-                  </section>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {visit.status === 'scheduled' ? (
-                    <Button
-                      isDisabled={Boolean(busyId)}
-                      onPress={() => void changeStatus(visit, 'in_progress')}
-                    >
-                      Iniciar visita
-                    </Button>
+            <article
+              key={visit.id}
+              id={visitAnchor(visit.id)}
+              aria-label={visit.title}
+              tabIndex={-1}
+              className="focus-visible:outline-ring scroll-m-3 rounded-xl outline-offset-2"
+            >
+              <Card
+                className={`worker-visit-card overflow-visible ${visit.status === 'in_progress' ? '!border-primary' : ''}`}
+              >
+                <CardHeader className="gap-2 pb-3">
+                  {linkedVisit?.id === visit.id ? <p>Visita abierta desde tu calendario</p> : null}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <CardTitle>
+                      <h3 className="wrap-break-word">{visit.title}</h3>
+                    </CardTitle>
+                    <WorkerVisitStatus status={visit.status} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p className="flex flex-wrap items-center gap-1 font-medium tabular-nums">
+                    <ClockIcon aria-hidden="true" />
+                    {new Date(visit.scheduled_start_at).toLocaleTimeString('es-ES', {
+                      timeZone: visit.timezone,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    –{' '}
+                    {new Date(visit.scheduled_end_at).toLocaleTimeString('es-ES', {
+                      timeZone: visit.timezone,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    <span className="text-muted-foreground font-normal"> · {visit.timezone}</span>
+                  </p>
+                  <p>{visit.client_name}</p>
+                  {visit.work_team_id ? (
+                    <p className="text-muted-foreground">Visita de tu equipo</p>
                   ) : null}
-                  {visit.status === 'in_progress' ? (
-                    <Button
-                      isDisabled={Boolean(busyId)}
-                      onPress={() => void changeStatus(visit, 'completed')}
-                    >
-                      Completar visita
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    onPress={() => setOpenReportId(openReportId === visit.id ? null : visit.id)}
-                  >
-                    {openReportId === visit.id ? 'Ocultar parte' : 'Abrir parte'}
-                  </Button>
-                </div>
-                {tenantId ? (
-                  <WorkerPaperReport key={visit.id} tenantId={tenantId} visit={visit} />
-                ) : null}
-                {openReportId === visit.id && tenantId && session?.userId ? (
-                  <VisitReportEditor
-                    key={`${session.userId}:${tenantId}:${visit.id}`}
-                    visit={visit}
-                    tenantId={tenantId}
-                    userId={session.userId}
+                  {visit.location_name ? <p>{visit.location_name}</p> : null}
+                  <VisitMapsAction
+                    addressMayBeIncomplete
+                    address={visit.address}
+                    label={`Cómo llegar a ${visit.title} en Google Maps`}
                   />
-                ) : null}
-              </CardContent>
-            </Card>
+                  {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
+                  {visit.work_order_id ? (
+                    <section
+                      aria-label="Tareas del servicio"
+                      className="space-y-2 rounded-lg border p-3"
+                    >
+                      <h4 className="font-medium">Tareas del servicio</h4>
+                      {tasks.isPending ? (
+                        <p className="text-muted-foreground">Cargando tareas…</p>
+                      ) : null}
+                      {tasks.isError ? (
+                        <div className="space-y-1">
+                          <p role="alert" className="text-destructive">
+                            No se pudieron cargar las tareas.
+                          </p>
+                          <Button size="sm" variant="outline" onPress={() => void tasks.refetch()}>
+                            Volver a cargar tareas
+                          </Button>
+                        </div>
+                      ) : null}
+                      {tasks.isSuccess && !tasksByVisit.get(visit.id)?.length ? (
+                        <p className="text-muted-foreground">
+                          Este servicio no tiene tareas añadidas.
+                        </p>
+                      ) : null}
+                      {tasksByVisit.get(visit.id)?.map((task) => (
+                        <div key={task.id} className="border-t pt-2 first:border-0 first:pt-0">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <p className="font-medium">{task.title}</p>
+                            <span aria-label={`Estado: ${taskStatusLabels[task.status]}`}>
+                              {taskStatusLabels[task.status]}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground">{task.phaseTitle}</p>
+                          {task.notes ? <p className="whitespace-pre-line">{task.notes}</p> : null}
+                          {task.checklist.length ? (
+                            <ul className="mt-1 space-y-1 pl-4">
+                              {task.checklist.map((item) => (
+                                <li key={item.id} className="flex gap-2">
+                                  <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
+                                  <span>
+                                    <span className="sr-only">
+                                      {item.done ? 'Hecha: ' : 'Pendiente: '}
+                                    </span>
+                                    {item.label}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ))}
+                    </section>
+                  ) : null}
+                  {visitError?.id === visit.id ? (
+                    <p
+                      role="alert"
+                      className="bg-destructive/10 text-destructive rounded-md px-3 py-2"
+                    >
+                      {visitError.message}
+                    </p>
+                  ) : null}
+                  <div className="grid gap-2 sm:flex sm:flex-wrap">
+                    {visit.status === 'scheduled' ? (
+                      <Button
+                        className="min-h-11"
+                        isDisabled={Boolean(busyId)}
+                        onPress={() => void changeStatus(visit, 'in_progress')}
+                      >
+                        {busyId === visit.id ? 'Iniciando…' : 'Iniciar visita'}
+                      </Button>
+                    ) : null}
+                    {visit.status === 'in_progress' ? (
+                      <Button
+                        className="min-h-11"
+                        isDisabled={Boolean(busyId)}
+                        onPress={() => void changeStatus(visit, 'completed')}
+                      >
+                        {busyId === visit.id ? 'Completando…' : 'Completar visita'}
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      className="min-h-11"
+                      aria-expanded={openReportId === visit.id}
+                      {...(openReportId === visit.id
+                        ? { 'aria-controls': reportAnchor(visit.id) }
+                        : {})}
+                      onPress={() => {
+                        if (openReportId === visit.id) {
+                          setOpenReportId(null)
+                          setFocusTarget(null)
+                        } else openReport(visit.id)
+                      }}
+                    >
+                      <NotePencilIcon aria-hidden="true" />
+                      {openReportId === visit.id
+                        ? 'Ocultar parte'
+                        : visit.status === 'completed'
+                          ? 'Ver parte'
+                          : 'Abrir parte'}
+                    </Button>
+                  </div>
+                  {tenantId ? (
+                    <WorkerPaperReport key={visit.id} tenantId={tenantId} visit={visit} />
+                  ) : null}
+                  {openReportId === visit.id && tenantId && session?.userId ? (
+                    <section
+                      id={reportAnchor(visit.id)}
+                      aria-label={`Parte de ${visit.title}`}
+                      tabIndex={-1}
+                      className="focus-visible:outline-ring scroll-m-3 rounded-xl outline-offset-2"
+                    >
+                      <VisitReportEditor
+                        key={`${session.userId}:${tenantId}:${visit.id}`}
+                        visit={visit}
+                        tenantId={tenantId}
+                        userId={session.userId}
+                      />
+                    </section>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </article>
           ))
           const contractId = group.visits[0]?.contract_id
           return contractId ? (
@@ -479,6 +659,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             cards
           )
         })}
+        {visits.isSuccess && dayVisits.length > 0 && tenantId ? (
+          <WorkerBatchPaperReports
+            key={`${tenantId}:${date}`}
+            tenantId={tenantId}
+            visits={dayVisits}
+            disabled={visits.isFetching}
+          />
+        ) : null}
         {session?.role === 'user' ? (
           <p className="worker-privacy">
             <MapPinIcon size={16} aria-hidden="true" /> Al iniciar una visita se guarda la hora y
