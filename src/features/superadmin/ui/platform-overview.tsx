@@ -94,7 +94,10 @@ export function PlatformOverviewPage({ userId }: { userId: string }) {
 }
 
 function OverviewMetrics({ data }: { data: PlatformOverview }) {
-  const total = companyFilters.reduce((sum, { id }) => sum + (data.companies[id] ?? 0), 0)
+  const total = companyFilters.reduce(
+    (sum, { id }) => (id === 'archived' ? sum : sum + (data.companies[id] ?? 0)),
+    0,
+  )
   const peak = Math.max(1, ...data.collections.map(({ cents }) => cents))
   const currentMonth = data.collections.at(-1)
   const collected = data.collections.some(({ count }) => count > 0)
@@ -111,7 +114,7 @@ function OverviewMetrics({ data }: { data: PlatformOverview }) {
           </h2>
           <p className="mt-1 text-3xl font-semibold tabular-nums">{number.format(total)}</p>
           <p className="text-muted-foreground text-sm">
-            Empresas registradas, incluidas las de cortesía.
+            Empresas no archivadas, incluidas las de cortesía.
           </p>
         </div>
         <ul className="divide-border divide-y">

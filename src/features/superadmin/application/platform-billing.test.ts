@@ -1,8 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { platformPageSize } from '../domain/platform-navigation'
-import { platformInvoiceQuery, type PlatformInvoice } from './platform-billing'
+import {
+  platformInvoiceQuery,
+  platformInvoicesQuery,
+  type PlatformInvoice,
+} from './platform-billing'
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }))
 vi.mock('@/shared/lib/supabase/client', () => ({ createBrowserSupabaseClient: () => ({ rpc }) }))
@@ -27,22 +30,31 @@ describe('platform invoice lookup', () => {
     rpc.mockReset()
   })
 
-  it('returns the exact bank order even when search yields other invoices first', async () => {
-    const broadMatches = Array.from({ length: platformPageSize + 1 }, (_, index) => ({
-      ...invoice,
-      merchant_order: `0123${String(index).padStart(4, '0')}`,
-      company_name: `Empresa ${reference}`,
-    }))
-    rpc.mockImplementation((_fn, { p_offset }) => ({
-      abortSignal: async () => ({ data: p_offset === 0 ? broadMatches : [invoice], error: null }),
-    }))
-
-    await expect(lookup()).resolves.toEqual(invoice)
-    expect(rpc).toHaveBeenCalledTimes(2)
-    expect(rpc).toHaveBeenLastCalledWith('superadmin_subscription_invoices', {
-      p_search: reference,
-      p_offset: platformPageSize,
+  it('looks up the exact order with one server query pinned to the company', async () => {
+    rpc.mockReturnValue({ abortSignal: async () => ({ data: [invoice], error: null }) })
+    await expect(
+      new QueryClient().fetchQuery(platformInvoiceQuery('admin', reference, 'company')),
+    ).resolves.toEqual(invoice)
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('superadmin_subscription_invoice_directory', {
+      p_search: '',
+      p_offset: 0,
       p_filter: null,
+      p_tenant: 'company',
+      p_reference: reference,
+    })
+  })
+
+  it('preserves the company scope, page, search and invoice status in list requests', async () => {
+    rpc.mockReturnValue({ abortSignal: async () => ({ data: [invoice], error: null }) })
+    await expect(
+      new QueryClient().fetchQuery(platformInvoicesQuery('admin', 'TEST', 2, 'issued', 'company')),
+    ).resolves.toMatchObject({ rows: [invoice] })
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('superadmin_subscription_invoice_directory', {
+      p_search: 'TEST',
+      p_offset: 50,
+      p_filter: 'issued',
+      p_tenant: 'company',
+      p_reference: null,
     })
   })
 

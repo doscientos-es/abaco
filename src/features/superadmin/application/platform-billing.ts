@@ -4,11 +4,7 @@ import type { ModuleRate } from '@/features/product-modules'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { CatalogUpdate } from '../domain/catalog-update'
-import {
-  platformMaxPage,
-  platformPageSize,
-  type InvoiceFilter,
-} from '../domain/platform-navigation'
+import { platformPageSize, type InvoiceFilter } from '../domain/platform-navigation'
 
 export type PlatformInvoice = {
   id: string
@@ -27,12 +23,16 @@ async function fetchInvoicePage(
   page: number,
   signal: AbortSignal,
   filter?: InvoiceFilter,
+  tenantId?: string,
+  reference?: string,
 ) {
   const { data, error } = await createBrowserSupabaseClient()
-    .rpc('superadmin_subscription_invoices', {
+    .rpc('superadmin_subscription_invoice_directory', {
       p_search: q,
       p_offset: (page - 1) * platformPageSize,
       p_filter: filter ?? null,
+      p_tenant: tenantId ?? null,
+      p_reference: reference ?? null,
     })
     .abortSignal(signal)
   if (error) throw new Error('No se pudieron cargar las facturas.')
@@ -44,11 +44,12 @@ export const platformInvoicesQuery = (
   q: string,
   page: number,
   filter?: InvoiceFilter,
+  tenantId?: string,
 ) =>
   queryOptions({
-    queryKey: ['platform-invoices', userId, q, page, filter ?? null],
+    queryKey: ['platform-invoices', userId, q, page, filter ?? null, tenantId ?? null],
     queryFn: async ({ signal }) => {
-      const invoices = await fetchInvoicePage(q, page, signal, filter)
+      const invoices = await fetchInvoicePage(q, page, signal, filter, tenantId)
       return {
         rows: invoices.slice(0, platformPageSize),
         hasMore: invoices.length > platformPageSize,
@@ -56,18 +57,12 @@ export const platformInvoicesQuery = (
     },
   })
 
-export const platformInvoiceQuery = (userId: string, reference: string) =>
+export const platformInvoiceQuery = (userId: string, reference: string, tenantId?: string) =>
   queryOptions({
-    queryKey: ['platform-invoice', userId, reference],
+    queryKey: ['platform-invoice', userId, reference, tenantId ?? null],
     queryFn: async ({ signal }) => {
-      // The search RPC also matches company names and invoice numbers; only the exact order identifies a payment.
-      for (let page = 1; page <= platformMaxPage; page++) {
-        const invoices = await fetchInvoicePage(reference, page, signal)
-        const invoice = invoices.find((row) => row.merchant_order === reference)
-        if (invoice) return invoice
-        if (invoices.length <= platformPageSize) break
-      }
-      return null
+      const invoices = await fetchInvoicePage('', 1, signal, undefined, tenantId, reference)
+      return invoices.find((row) => row.merchant_order === reference) ?? null
     },
   })
 

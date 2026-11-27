@@ -6,7 +6,9 @@ import {
   PageHeaderTitle,
   PageStack,
 } from '@doscientos/ui'
+import { Receipt } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 
 import { billingCatalogQuery, billingPreviewQuery, planLabel } from '@/features/billing'
 import { ModuleSubscriptions } from '@/features/product-modules'
@@ -16,6 +18,7 @@ import type { PlatformCompany } from '../application/superadmin-queries'
 import {
   companyBackSearch,
   companySectionSearch,
+  invoiceSearch,
   withoutEditor,
   type PlatformSearch,
 } from '../domain/platform-navigation'
@@ -33,6 +36,7 @@ import {
   PlatformLoading,
   PlatformMessage,
   PlatformRowLink,
+  platformActionClass,
   platformRowMetaClass,
   platformRowTitleClass,
 } from './platform-ui'
@@ -72,6 +76,13 @@ export function CompanyDetail({
             </PageHeaderDescription>
           </PageHeaderHeading>
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/superadmin"
+              search={invoiceSearch('', undefined, 1, company.id)}
+              className={platformActionClass}
+            >
+              <Receipt aria-hidden="true" /> Ver facturas
+            </Link>
             {company.is_complimentary ? (
               <Badge variant="outline">Cortesía</Badge>
             ) : (

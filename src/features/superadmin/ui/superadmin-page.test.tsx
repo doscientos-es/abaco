@@ -89,7 +89,8 @@ vi.mock('@tanstack/react-query', () => ({
     if (enabled === false) return {}
     state.queries.push(queryKey)
     if (queryKey[0] === 'platform-access') return { data: state.allowed }
-    if (queryKey[0] === 'platform-companies') return { data: { rows: [company], hasMore: false } }
+    if (queryKey[0] === 'platform-companies')
+      return { data: { rows: [company], hasMore: false, counts: { active: 1 }, total: 1 } }
     if (queryKey[0] === 'platform-overview')
       return {
         data: {
@@ -222,15 +223,16 @@ describe('platform administration navigation', () => {
   it('queries the chosen directory page and carries it into the company link', () => {
     state.allowed = true
     const html = renderToStaticMarkup(<SuperadminPage search={{ q: 'prueba', page: 3 }} />)
-    expect(html).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Empresas de Ábaco"/)
+    expect(html).toMatch(/<table[^>]*data-density="compact"[^>]*aria-label="Empresas de Menoslios"/)
     expect(html).toContain('Empresa de prueba')
     expect(html).toContain('3 personas')
     expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}`)
-    expect(html).toContain(`?q=prueba&amp;page=3&amp;empresa=${tenantId}&amp;seccion=datos`)
-    expect(html).toContain('Suscripción y precio')
+    expect(html).toContain('aria-label="Acciones de Empresa de prueba"')
+    expect(html).toContain('Fin del periodo')
+    expect(html).toContain('Archivadas')
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
-      ['platform-companies', 'platform-user', 'prueba', 100, null],
+      ['platform-companies', 'platform-user', 'prueba', 100, null, null, 'name'],
       ['billing-catalog'],
     ])
   })
@@ -296,7 +298,7 @@ describe('platform administration navigation', () => {
     )
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
-      ['platform-invoices', 'platform-user', 'FA', 2, 'issued'],
+      ['platform-invoices', 'platform-user', 'FA', 2, 'issued', null],
       ['platform-invoice-issuer', 'platform-user'],
     ])
     expect(html).toContain('FA-2030-01')
@@ -308,6 +310,21 @@ describe('platform administration navigation', () => {
       `vista=facturas&amp;q=FA&amp;factura=issued&amp;page=2&amp;referencia=${invoice.merchant_order}`,
     )
     expect(html).not.toContain('href="https://example.test/factura"')
+  })
+
+  it('scopes the invoice view by company ID without mounting global issuer settings', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(
+      <SuperadminPage search={{ vista: 'facturas', empresa: tenantId }} />,
+    )
+    expect(html).toContain('Facturas de Empresa de prueba')
+    expect(html).toContain('Ver todas las facturas')
+    expect(html).toContain('Acciones de factura FA-2030-01')
+    expect(state.queries).toEqual([
+      ['platform-access', 'platform-user'],
+      ['platform-invoices', 'platform-user', '', 1, null, tenantId],
+      ['platform-company', tenantId],
+    ])
   })
 
   it('opens an invoice detail directly and retains the original list and company links', () => {
@@ -322,7 +339,7 @@ describe('platform administration navigation', () => {
     const html = renderToStaticMarkup(<SuperadminPage search={search} />)
     expect(state.queries).toEqual([
       ['platform-access', 'platform-user'],
-      ['platform-invoice', 'platform-user', invoice.merchant_order],
+      ['platform-invoice', 'platform-user', invoice.merchant_order, null],
     ])
     expect(html).toContain('Referencia bancaria')
     expect(html).toContain(invoice.merchant_order)

@@ -1,5 +1,9 @@
 import {
   Badge,
+  Button,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   PageHeader,
   PageHeaderDescription,
   PageHeaderHeading,
@@ -12,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@doscientos/ui'
+import { ArrowSquareOut, DotsThreeVertical, Receipt } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 
@@ -22,6 +27,7 @@ import {
   platformInvoicesQuery,
   type PlatformInvoice,
 } from '../application/platform-billing'
+import { platformCompanyQuery } from '../application/superadmin-queries'
 import {
   companyFromInvoice,
   invoiceFilters,
@@ -61,28 +67,52 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
   const page = search.page ?? 1
   const q = search.q ?? ''
   const filter = search.factura
+  const tenantId = search.empresa
   const navigate = useNavigate({ from: '/superadmin' })
-  const invoices = useQuery(platformInvoicesQuery(userId, q, page, filter))
+  const invoices = useQuery(platformInvoicesQuery(userId, q, page, filter, tenantId))
+  const company = useQuery({ ...platformCompanyQuery(tenantId ?? ''), enabled: Boolean(tenantId) })
+  const isScoped = Boolean(tenantId)
+  const updateFilters = (query: string, status: typeof filter, nextPage = 1) =>
+    void navigate({ search: invoiceSearch(query, status, nextPage, tenantId) })
 
   return (
     <PageStack>
+      {tenantId ? (
+        <PlatformBackLink search={{ empresa: tenantId, seccion: 'pagos' }}>
+          Volver a los pagos de la empresa
+        </PlatformBackLink>
+      ) : null}
       <PageHeader>
         <PageHeaderHeading>
-          <PageHeaderTitle>Facturas de suscripción</PageHeaderTitle>
+          <PageHeaderTitle>
+            {company.data
+              ? `Facturas de ${company.data.name}`
+              : isScoped
+                ? 'Facturas de la empresa'
+                : 'Facturas de suscripción'}
+          </PageHeaderTitle>
           <PageHeaderDescription>
-            Consulta las facturas de Menoslios y su envío. Backoffice emite las nuevas suscripciones
-            en la serie ML-SUS.
+            {isScoped
+              ? 'Solo se muestran las facturas vinculadas a esta empresa.'
+              : 'Consulta las facturas de Menoslios y su envío. Backoffice emite las nuevas suscripciones en la serie ML-SUS.'}
           </PageHeaderDescription>
         </PageHeaderHeading>
+        {isScoped ? (
+          <Link to="/superadmin" search={{ vista: 'facturas' }} className={platformActionClass}>
+            Ver todas las facturas
+          </Link>
+        ) : null}
       </PageHeader>
-      <PlatformIssuer userId={userId} />
+      {isScoped ? null : <PlatformIssuer userId={userId} />}
       <section aria-label="Buscador de facturas" className={platformPanelClass}>
         <div className="border-border flex flex-wrap items-end gap-2 border-b p-3">
           <PlatformSearchForm
             query={q}
             label="Buscar factura"
-            placeholder="Empresa, nº de factura o referencia"
-            onSearch={(value) => void navigate({ search: invoiceSearch(value, filter) })}
+            placeholder={
+              isScoped ? 'N.º de factura o referencia' : 'Empresa, n.º de factura o referencia'
+            }
+            onSearch={(value) => updateFilters(value, filter)}
           />
           <PlatformField label="Numeración de factura" className="flex-1 sm:flex-none">
             {(control) => (
@@ -96,7 +126,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
                 ]}
                 onChange={(value) => {
                   const factura = invoiceFilters.find((item) => item === value)
-                  void navigate({ search: invoiceSearch(q, factura) })
+                  updateFilters(q, factura)
                 }}
               />
             )}
@@ -104,7 +134,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
           {q || filter ? (
             <Link
               to="/superadmin"
-              search={{ vista: 'facturas' }}
+              search={invoiceSearch('', undefined, 1, tenantId)}
               className={platformTextActionClass}
             >
               Limpiar filtros
@@ -142,7 +172,7 @@ function PlatformInvoiceList({ search, userId }: { search: PlatformSearch; userI
               page={page}
               count={invoices.data.rows.length}
               hasMore={invoices.data.hasMore}
-              onChange={(nextPage) => void navigate({ search: invoiceSearch(q, filter, nextPage) })}
+              onChange={(nextPage) => updateFilters(q, filter, nextPage)}
             />
           </>
         ) : null}
@@ -158,40 +188,88 @@ function InvoiceTable({
   invoices: PlatformInvoice[]
   search: PlatformSearch
 }) {
+  const navigate = useNavigate({ from: '/superadmin' })
+  const showCompany = !search.empresa
   return (
     <Table density="compact" aria-label="Facturas de suscripción">
-      <TableHeader>
+      <TableHeader className="bg-muted/40">
         <TableRow>
           <TableHead scope="col">Factura</TableHead>
-          <TableHead scope="col" className="hidden md:table-cell">
+          {showCompany ? (
+            <TableHead scope="col" className="hidden lg:table-cell">
+              Empresa
+            </TableHead>
+          ) : null}
+          <TableHead scope="col" className="hidden lg:table-cell">
+            Fecha de cobro
+          </TableHead>
+          <TableHead scope="col" className="hidden lg:table-cell">
             Estado
           </TableHead>
           <TableHead scope="col" className="text-right">
             Importe
+          </TableHead>
+          <TableHead scope="col" className="text-right">
+            <span className="sr-only">Acciones</span>
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {invoices.map((invoice) => {
           const status = invoiceStatusLabel(invoice.invoice_status, invoice.invoice_number)
+          const label = invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`
+          const target = { ...search, referencia: invoice.merchant_order }
+          const url = invoice.invoice_number ? invoiceLink(invoice.invoice_portal_url) : null
+          const date = formatPlatformDate(invoice.paid_at)
           return (
-            <TableRow key={invoice.id}>
-              <TableCell className="whitespace-normal">
-                <PlatformRecordLink search={{ ...search, referencia: invoice.merchant_order }}>
-                  {invoice.invoice_number ?? `Sin número · ${invoice.merchant_order}`}
-                </PlatformRecordLink>
-                <p className="text-muted-foreground text-xs">
-                  {invoice.company_name} · Cobro del {formatPlatformDate(invoice.paid_at)}
-                </p>
-                <p className="mt-1 md:hidden">
+            <TableRow key={invoice.id} className="align-top">
+              <TableCell className="min-w-0 py-3 whitespace-normal">
+                <PlatformRecordLink search={target}>{label}</PlatformRecordLink>
+                <div className="mt-1 space-y-1.5 lg:hidden">
+                  <p className="text-muted-foreground text-xs">
+                    {showCompany ? `${invoice.company_name} · ` : ''}
+                    {date}
+                  </p>
                   <InvoiceStatus status={invoice.invoice_status} label={status} />
-                </p>
+                </div>
               </TableCell>
-              <TableCell className="text-muted-foreground hidden whitespace-normal md:table-cell">
+              {showCompany ? (
+                <TableCell className="text-muted-foreground hidden py-3 whitespace-normal lg:table-cell">
+                  {invoice.company_name}
+                </TableCell>
+              ) : null}
+              <TableCell className="text-muted-foreground hidden py-3 lg:table-cell">
+                {date}
+              </TableCell>
+              <TableCell className="hidden py-3 whitespace-normal lg:table-cell">
                 <InvoiceStatus status={invoice.invoice_status} label={status} />
               </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
+              <TableCell className="py-3 text-right font-semibold tabular-nums">
                 {formatEuros(invoice.amount_cents)}
+              </TableCell>
+              <TableCell className="w-12 px-1 py-1.5 text-right sm:w-14 sm:px-2">
+                <DropdownMenuTrigger>
+                  <Button
+                    variant="ghost"
+                    className="size-10 p-0 sm:size-11"
+                    aria-label={`Acciones de factura ${label}`}
+                  >
+                    <DotsThreeVertical aria-hidden="true" weight="bold" className="size-5" />
+                  </Button>
+                  <DropdownMenuContent placement="bottom end">
+                    <DropdownMenuItem
+                      id="details"
+                      onAction={() => void navigate({ search: target })}
+                    >
+                      <Receipt aria-hidden="true" /> Ver detalle
+                    </DropdownMenuItem>
+                    {url ? (
+                      <DropdownMenuItem id="portal" href={url} target="_blank" rel="noreferrer">
+                        <ArrowSquareOut aria-hidden="true" /> Abrir factura en Backoffice
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenuTrigger>
               </TableCell>
             </TableRow>
           )
@@ -226,7 +304,7 @@ function PlatformInvoiceDetail({
   userId: string
   reference: string
 }) {
-  const query = useQuery(platformInvoiceQuery(userId, reference))
+  const query = useQuery(platformInvoiceQuery(userId, reference, search.empresa))
   const invoice = query.data
   const url = invoice?.invoice_number ? invoiceLink(invoice.invoice_portal_url) : null
 

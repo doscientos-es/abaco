@@ -56,12 +56,23 @@ export function SuperadminPage({ search }: { search: PlatformSearch }) {
 
 function DirectoryPage({ search, userId }: { search: PlatformSearch; userId: string }) {
   const offset = ((search.page ?? 1) - 1) * platformPageSize
-  const companies = useQuery(platformCompaniesQuery(userId, search.q ?? '', offset, search.estado))
+  const companies = useQuery(
+    platformCompaniesQuery(
+      userId,
+      search.q ?? '',
+      offset,
+      search.estado,
+      search.periodo,
+      search.orden,
+    ),
+  )
 
   return (
     <CompanyDirectory
       companies={companies.data?.rows ?? []}
       hasMore={companies.data?.hasMore ?? false}
+      counts={companies.data?.counts}
+      total={companies.data?.total}
       search={search}
       loading={companies.isPending}
       onRetry={companies.isError ? () => void companies.refetch() : undefined}

@@ -13,19 +13,28 @@ export const companyFilters = [
   { id: 'attention', label: 'Cobro por revisar' },
   { id: 'courtesy', label: 'Cortesía' },
   { id: 'without_plan', label: 'Sin plan activo' },
+  { id: 'paused', label: 'Renovación pausada' },
   { id: 'canceled', label: 'Canceladas' },
+  { id: 'archived', label: 'Archivadas' },
 ] as const
 export type CompanyFilter = (typeof companyFilters)[number]['id']
+export const companyPeriods = ['month', 'year', 'none'] as const
+export type CompanyPeriod = (typeof companyPeriods)[number]
+export const companySorts = ['name', 'newest', 'renewal'] as const
+export type CompanySort = (typeof companySorts)[number]
 
 export type PlatformSearch = {
   vista?: 'resumen' | 'facturas' | 'planes'
   estado?: CompanyFilter
+  periodo?: CompanyPeriod
+  orden?: CompanySort
   q?: string
   page?: number
   empresa?: string
   seccion?: CompanySection
   factura?: InvoiceFilter
   origen?: 'facturas'
+  ambitoFacturas?: 'empresa'
   plan?: PaidPlan
   modulo?: ModuleCode
   referencia?: string
@@ -63,13 +72,24 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
     return plan ? planSearch(plan, raw.edicion === 'plan') : { vista: 'planes' }
   }
   if (raw.vista === 'facturas') {
-    return { ...invoiceSearch(q, factura, pagination.page), ...(referencia && { referencia }) }
+    return {
+      ...invoiceSearch(q, factura, pagination.page, empresa),
+      ...(referencia && { referencia }),
+    }
   }
 
   const estado =
     raw.origen === 'facturas' && empresa
       ? undefined
       : companyFilters.find(({ id }) => id === raw.estado)?.id
+  const periodo =
+    !empresa || raw.origen !== 'facturas'
+      ? companyPeriods.find((item) => item === raw.periodo)
+      : undefined
+  const orden =
+    !empresa || raw.origen !== 'facturas'
+      ? companySorts.find((item) => item === raw.orden && item !== 'name')
+      : undefined
   const modulo =
     empresa && section === 'modulos' && typeof raw.modulo === 'string' && isModuleCode(raw.modulo)
       ? raw.modulo
@@ -92,12 +112,15 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
     ...(q && { q }),
     ...pagination,
     ...(estado && { estado }),
+    ...(periodo && { periodo }),
+    ...(orden && { orden }),
     ...(empresa && { empresa, ...(section && section !== 'suscripcion' && { seccion: section }) }),
     ...(modulo && { modulo }),
     ...(edicion && { edicion }),
     ...(empresa &&
       raw.origen === 'facturas' && {
         origen: 'facturas',
+        ...(raw.ambitoFacturas === 'empresa' && { ambitoFacturas: 'empresa' as const }),
         ...(factura && { factura }),
         ...(referencia && { referencia }),
       }),
@@ -136,17 +159,31 @@ export const directorySearch = ({
   q,
   page,
   estado,
+  periodo,
+  orden,
   vista,
   origen,
 }: PlatformSearch): PlatformSearch =>
   vista || origen
     ? {}
-    : { ...(q && { q }), ...(page && page > 1 && { page }), ...(estado && { estado }) }
+    : {
+        ...(q && { q }),
+        ...(page && page > 1 && { page }),
+        ...(estado && { estado }),
+        ...(periodo && { periodo }),
+        ...(orden && { orden }),
+      }
 
-export const invoiceSearch = (q: string, factura?: InvoiceFilter, page = 1): PlatformSearch => ({
+export const invoiceSearch = (
+  q: string,
+  factura?: InvoiceFilter,
+  page = 1,
+  empresa?: string,
+): PlatformSearch => ({
   vista: 'facturas',
   ...(q && { q }),
   ...(factura && { factura }),
+  ...(empresa && { empresa }),
   ...(page > 1 && { page }),
 })
 
@@ -156,6 +193,8 @@ export function companyFromInvoice(search: PlatformSearch, tenantId: string): Pl
     empresa: tenantId,
     seccion: 'pagos',
     origen: 'facturas',
+    ...(search.vista === 'facturas' &&
+      search.empresa === tenantId && { ambitoFacturas: 'empresa' as const }),
     ...(q && { q }),
     ...(page && { page }),
     ...(factura && { factura }),
@@ -173,6 +212,13 @@ export function companyBackSearch(search: PlatformSearch): PlatformSearch {
 
 export function invoiceNavigation(search: PlatformSearch): PlatformSearch {
   return search.origen === 'facturas' || search.vista === 'facturas'
-    ? invoiceSearch(search.q ?? '', search.factura, search.page)
+    ? invoiceSearch(
+        search.q ?? '',
+        search.factura,
+        search.page,
+        search.vista === 'facturas' || search.ambitoFacturas === 'empresa'
+          ? search.empresa
+          : undefined,
+      )
     : { vista: 'facturas' }
 }

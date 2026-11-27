@@ -114,3 +114,31 @@ describe('platform search parameters', () => {
     expect(parsePlatformSearch({ ...company, edicion: 'empresa' })).toEqual(company)
   })
 })
+
+it('preserves directory filters within a company and pins scoped invoices by exact company', () => {
+  const empresa = '37b30000-0000-4000-8000-000000000001'
+  expect(
+    parsePlatformSearch({ empresa, estado: 'archived', periodo: 'year', orden: 'renewal' }),
+  ).toEqual({
+    empresa,
+    estado: 'archived',
+    periodo: 'year',
+    orden: 'renewal',
+  })
+  expect(
+    parsePlatformSearch({
+      vista: 'facturas',
+      empresa,
+      estado: 'archived',
+      periodo: 'year',
+      q: 'ML-SUS',
+    }),
+  ).toEqual({
+    vista: 'facturas',
+    empresa,
+    q: 'ML-SUS',
+  })
+  expect(parsePlatformSearch({ estado: 'not-a-state', periodo: 'invalid', orden: 'name' })).toEqual(
+    {},
+  )
+})

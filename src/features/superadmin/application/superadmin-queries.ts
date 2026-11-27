@@ -4,7 +4,12 @@ import type { BillingTerms } from '@/features/billing'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
 import type { CompanyProfile, CompanyProfileValues } from '../domain/company-profile'
-import { platformPageSize, type CompanyFilter } from '../domain/platform-navigation'
+import {
+  platformPageSize,
+  type CompanyFilter,
+  type CompanyPeriod,
+  type CompanySort,
+} from '../domain/platform-navigation'
 
 export type CompanyReferral = { referrer_id: string | null; referrer_name: string | null }
 
@@ -127,6 +132,12 @@ export type PlatformCompany = {
   is_complimentary: boolean
   member_count: number
   billing_bucket?: CompanyFilter
+  created_at?: string
+  archived_at?: string | null
+  cancel_at_period_end?: boolean
+  has_pending_payment?: boolean
+  pausable?: boolean | null
+  resumable?: boolean | null
 }
 
 export type PlatformPayment = {
@@ -179,27 +190,60 @@ export const platformOverviewQuery = (userId: string) =>
     },
   })
 
+export type CompanyCounts = Partial<Record<CompanyFilter, number>>
+
+type CompanyDirectoryResponse = { rows: PlatformCompany[]; counts: CompanyCounts; total: number }
+
 export const platformCompaniesQuery = (
   userId: string,
   search: string,
   offset: number,
   status?: CompanyFilter,
+  period?: CompanyPeriod,
+  sort: CompanySort = 'name',
 ) =>
   queryOptions({
-    queryKey: ['platform-companies', userId, search, offset, status ?? null],
+    queryKey: ['platform-companies', userId, search, offset, status ?? null, period ?? null, sort],
     queryFn: async ({ signal }) => {
       const { data, error } = await createBrowserSupabaseClient()
-        .rpc('superadmin_company_directory', {
+        .rpc('superadmin_company_directory_v2', {
           p_search: search,
           p_offset: offset,
           p_status: status ?? null,
+          p_period: period ?? null,
+          p_sort: sort,
         })
         .abortSignal(signal)
       if (error) throw new Error('No se pudieron cargar las empresas.')
-      const rows = data as PlatformCompany[]
-      return { rows: rows.slice(0, platformPageSize), hasMore: rows.length > platformPageSize }
+      const { rows, counts, total } = data as CompanyDirectoryResponse
+      return {
+        rows: rows.slice(0, platformPageSize),
+        hasMore: rows.length > platformPageSize,
+        counts,
+        total,
+      }
     },
   })
+
+export type PlatformCompanyAction = 'pause' | 'resume' | 'archive' | 'restore'
+
+export async function applyPlatformCompanyAction(
+  company: PlatformCompany,
+  action: PlatformCompanyAction,
+) {
+  const { error } = await createBrowserSupabaseClient().rpc('superadmin_company_action', {
+    p_tenant: company.id,
+    p_action: action,
+    p_expected_pause: company.cancel_at_period_end ?? false,
+    p_expected_archived_at: company.archived_at ?? null,
+  })
+  if (error)
+    throw new Error(
+      ['P0001', '40001'].includes(error.code)
+        ? error.message
+        : 'No se pudo guardar el cambio en la empresa.',
+    )
+}
 
 export const platformCompanyQuery = (tenantId: string) =>
   queryOptions({
