@@ -1,5 +1,5 @@
 import { projectClosedReport } from '../server/visit-report-pdf/projection'
-import { renderVisitReport } from '../server/visit-report-pdf/render'
+import { renderVisitReport } from '../server/visit-report-pdf/render-node'
 
 export default {
   async fetch() {
