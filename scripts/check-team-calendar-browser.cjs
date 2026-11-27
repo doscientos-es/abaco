@@ -51,7 +51,6 @@ async function run() {
         refresh_token: 'fixture',
       },
     )
-    const accessed = []
     await context.route('**/*', async (route) => {
       const request = route.request()
       const url = new URL(request.url())
@@ -112,7 +111,6 @@ async function run() {
           // The app shell also fetches the existing requests badge, which is separate from this view.
           if (!url.searchParams.get('start_date')) return json([])
           assert.equal(url.searchParams.get('select'), 'requester_id,start_date,end_date,status')
-          accessed.push(url.searchParams.get('start_date'))
           return json(
             url.searchParams.get('start_date') === `lte.${ends}`
               ? [
@@ -169,10 +167,18 @@ async function run() {
     await calendar.getByRole('button', { name: 'General', exact: true }).click()
     await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
     await calendar.getByRole('link', { name: 'Bruno Sin Equipo' }).waitFor()
+    const nextWeekRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return (
+        request.method() === 'GET' &&
+        url.pathname.endsWith('/absence_requests') &&
+        url.searchParams.get('start_date') === 'lte.2026-12-06'
+      )
+    })
     await calendar.getByRole('button', { name: 'Semana siguiente' }).click()
     await page.waitForURL((url) => url.searchParams.get('fecha') === '2026-12-01')
+    await nextWeekRequest
     await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
-    assert.ok(accessed.includes('lte.2026-12-06'))
     await assertFits()
 
     await page.setViewportSize({ width: 1440, height: 900 })
