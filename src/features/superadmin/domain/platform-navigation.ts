@@ -23,8 +23,22 @@ export type CompanyPeriod = (typeof companyPeriods)[number]
 export const companySorts = ['name', 'newest', 'renewal'] as const
 export type CompanySort = (typeof companySorts)[number]
 
+export const activityKinds = {
+  renovacion: 'Renovación',
+  archivo: 'Archivo y restauración',
+  acuerdo: 'Plan y cuota',
+  iva: 'IVA',
+  territorio: 'Territorio fiscal',
+  tarifa_plan: 'Tarifas de planes',
+  tarifa_modulo: 'Tarifas de módulos',
+  cortesia_modulo: 'Cortesía de módulos',
+} as const
+export type ActivityKind = keyof typeof activityKinds
+export const maxActivityPage = 100
+
 export type PlatformSearch = {
-  vista?: 'resumen' | 'facturas' | 'planes'
+  vista?: 'resumen' | 'facturas' | 'planes' | 'actividad'
+  accion?: ActivityKind
   estado?: CompanyFilter
   periodo?: CompanyPeriod
   orden?: CompanySort
@@ -66,6 +80,13 @@ export function parsePlatformSearch(raw: Record<string, unknown>): PlatformSearc
   // Redsys orders start with four digits; the database enforces this format.
   const referencia = /^[0-9]{4}[a-z0-9]{4,8}$/i.test(reference) ? reference : undefined
 
+  if (raw.vista === 'actividad') {
+    const action =
+      typeof raw.accion === 'string' && Object.hasOwn(activityKinds, raw.accion)
+        ? (raw.accion as ActivityKind)
+        : undefined
+    return activitySearch(empresa, action, page)
+  }
   if (raw.vista === 'resumen') return { vista: 'resumen' }
   if (raw.vista === 'planes') {
     const plan = paidPlans.find((item) => item === raw.plan)
@@ -221,4 +242,13 @@ export function invoiceNavigation(search: PlatformSearch): PlatformSearch {
           : undefined,
       )
     : { vista: 'facturas' }
+}
+
+export function activitySearch(empresa?: string, accion?: ActivityKind, page = 1): PlatformSearch {
+  return {
+    vista: 'actividad',
+    ...(empresa && { empresa }),
+    ...(accion && { accion }),
+    ...(Number.isInteger(page) && page > 1 && page <= maxActivityPage && { page }),
+  }
 }

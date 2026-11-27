@@ -89,6 +89,25 @@ vi.mock('@tanstack/react-query', () => ({
     if (enabled === false) return {}
     state.queries.push(queryKey)
     if (queryKey[0] === 'platform-access') return { data: state.allowed }
+    if (queryKey[0] === 'platform-activity')
+      return {
+        data: {
+          rows: [
+            {
+              id: 'billing:1',
+              tenant_id: tenantId,
+              company_name: company.name,
+              actor_email: 'operadora@example.test',
+              occurred_at: '2026-11-27T18:00:00Z',
+              kind: 'iva',
+              subject: null,
+              before: { vat_percent: 21 },
+              after: { vat_percent: 0 },
+            },
+          ],
+          hasMore: false,
+        },
+      }
     if (queryKey[0] === 'platform-companies')
       return { data: { rows: [company], hasMore: false, counts: { active: 1 }, total: 1 } }
     if (queryKey[0] === 'platform-overview')
@@ -196,6 +215,23 @@ describe('platform administration navigation', () => {
     const html = renderToStaticMarkup(<SuperadminPage search={search} />)
     expect(html).toContain('No tienes acceso')
     expect(state.queries).toEqual([['platform-access', 'platform-user']])
+  })
+
+  it('does not query activity without platform access', () => {
+    renderToStaticMarkup(<SuperadminPage search={{ vista: 'actividad' }} />)
+    expect(state.queries).toEqual([['platform-access', 'platform-user']])
+  })
+
+  it('shows the scoped actor and before/after in company activity', () => {
+    state.allowed = true
+    const html = renderToStaticMarkup(
+      <SuperadminPage search={{ vista: 'actividad', empresa: tenantId, accion: 'iva' }} />,
+    )
+    expect(html).toContain('Actividad de Empresa de prueba')
+    expect(html).toContain('operadora@example.test')
+    expect(html).toContain('IVA 21 %')
+    expect(html).toContain('IVA 0 %')
+    expect(state.queries).toContainEqual(['platform-activity', 'platform-user', tenantId, 'iva', 1])
   })
 
   it('shows platform aggregates with links to matching companies', () => {

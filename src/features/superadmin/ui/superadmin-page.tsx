@@ -10,6 +10,7 @@ import {
 import { platformPageSize, type PlatformSearch } from '../domain/platform-navigation'
 import { CompanyBackLink, CompanyDetail } from './company-detail'
 import { CompanyDirectory } from './company-directory'
+import { PlatformActivity } from './platform-activity'
 import { PlatformCatalog } from './platform-catalog'
 import { PlatformInvoices } from './platform-invoices'
 import { PlatformOverviewPage } from './platform-overview'
@@ -41,6 +42,8 @@ export function SuperadminPage({ search }: { search: PlatformSearch }) {
     <PlatformShell session={session} search={search}>
       {search.vista === 'resumen' && session ? (
         <PlatformOverviewPage userId={session.userId} />
+      ) : search.vista === 'actividad' && session ? (
+        <PlatformActivity userId={session.userId} search={search} />
       ) : search.vista === 'planes' ? (
         <PlatformCatalog search={search} />
       ) : search.vista === 'facturas' && session ? (

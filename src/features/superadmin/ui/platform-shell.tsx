@@ -16,6 +16,7 @@ import {
   ChartBar,
   CreditCard,
   IdentificationCard,
+  ListChecks,
   Package,
   Receipt,
   ShieldCheck,
@@ -162,11 +163,18 @@ const platformSections = [
   { id: undefined, label: 'Empresas', icon: Buildings },
   { id: 'facturas', label: 'Facturas', icon: Receipt },
   { id: 'planes', label: 'Planes y precios', icon: Wallet },
+  { id: 'actividad', label: 'Actividad', icon: ListChecks },
 ] as const
 
 function PlatformNavigation({ search, mobile }: { search: PlatformSearch; mobile?: boolean }) {
   return (
-    <ul className={mobile ? 'grid grid-cols-2 gap-1 min-[420px]:grid-cols-4' : 'space-y-1'}>
+    <ul
+      className={
+        mobile
+          ? 'grid grid-cols-2 gap-1 min-[440px]:grid-cols-3 min-[600px]:grid-cols-5'
+          : 'space-y-1'
+      }
+    >
       {platformSections.map(({ id, label, icon: Icon }) => (
         <li key={label} className="min-w-0">
           <Link

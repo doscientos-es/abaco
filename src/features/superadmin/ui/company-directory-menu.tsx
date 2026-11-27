@@ -10,6 +10,7 @@ import {
   CreditCard,
   DotsThreeVertical,
   IdentificationCard,
+  ListChecks,
   Package,
   Pause,
   Play,
@@ -20,6 +21,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 import type { PlatformCompany, PlatformCompanyAction } from '../application/superadmin-queries'
 import {
+  activitySearch,
   companySectionSearch,
   directorySearch,
   invoiceSearch,
@@ -69,6 +71,9 @@ export function CompanyDirectoryMenu({
           onAction={() => open(invoiceSearch('', undefined, 1, company.id))}
         >
           <Receipt aria-hidden="true" /> Ver facturas
+        </DropdownMenuItem>
+        <DropdownMenuItem id="activity" onAction={() => open(activitySearch(company.id))}>
+          <ListChecks aria-hidden="true" /> Ver actividad
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {company.pausable ? (

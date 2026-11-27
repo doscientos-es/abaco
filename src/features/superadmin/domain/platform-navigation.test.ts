@@ -142,3 +142,25 @@ it('preserves directory filters within a company and pins scoped invoices by exa
     {},
   )
 })
+
+it('parses an activity link without retaining unrelated company or invoice filters', () => {
+  const empresa = '10000000-0000-4000-8000-000000000001'
+  expect(
+    parsePlatformSearch({
+      vista: 'actividad',
+      empresa,
+      accion: 'iva',
+      page: 2,
+      seccion: 'pagos',
+      factura: 'issued',
+    }),
+  ).toEqual({ vista: 'actividad', empresa, accion: 'iva', page: 2 })
+  expect(
+    parsePlatformSearch({
+      vista: 'actividad',
+      empresa: 'nonsense',
+      accion: 'constructor',
+      page: 101,
+    }),
+  ).toEqual({ vista: 'actividad' })
+})
