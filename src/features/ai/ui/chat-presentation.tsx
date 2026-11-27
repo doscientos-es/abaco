@@ -1,3 +1,4 @@
+import { Button, Spinner } from '@doscientos/ui'
 import {
   ArrowUpRight,
   FileText,
@@ -19,9 +20,6 @@ export function ChatCredits({
   error: boolean
 }) {
   const remaining = credits ? Math.max(0, credits.monthly_limit - credits.monthly_used) : 0
-  const percent = credits?.monthly_limit
-    ? Math.min(100, (remaining / credits.monthly_limit) * 100)
-    : 0
   return (
     <div className="flex items-center gap-2">
       {credits ? (
@@ -33,21 +31,17 @@ export function ChatCredits({
               {credits.extra_remaining > 0 ? ` · +${credits.extra_remaining} extra` : ''}
             </span>
           </div>
-          <div
-            role="progressbar"
+          <progress
             aria-label="Solicitudes mensuales disponibles"
-            aria-valuemin={0}
-            aria-valuemax={Math.max(1, credits.monthly_limit)}
-            aria-valuenow={Math.min(remaining, Math.max(1, credits.monthly_limit))}
             aria-valuetext={`${remaining} de ${credits.monthly_limit} solicitudes mensuales disponibles`}
-            className="bg-muted mt-1.5 h-1 overflow-hidden rounded-full"
-          >
-            <div className="bg-primary/70 h-full rounded-full" style={{ width: `${percent}%` }} />
-          </div>
+            max={Math.max(1, credits.monthly_limit)}
+            value={Math.min(remaining, Math.max(1, credits.monthly_limit))}
+            className="bg-muted [&::-moz-progress-bar]:bg-primary/70 [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:bg-primary/70 mt-1.5 block h-1 w-full appearance-none overflow-hidden rounded-full [&::-moz-progress-bar]:rounded-full [&::-webkit-progress-value]:rounded-full"
+          />
         </div>
       ) : (
         <span className="text-muted-foreground flex-1 text-xs">
-          {error ? 'No se pudo consultar el saldo' : 'Consultando saldo…'}
+          {error || credits === null ? 'No se pudo consultar el saldo' : 'Consultando saldo…'}
         </span>
       )}
       <details className="relative shrink-0">
@@ -58,10 +52,7 @@ export function ChatCredits({
           <Question aria-hidden="true" className="size-4" />
         </summary>
         <div className="bg-popover text-popover-foreground border-border absolute top-full right-0 z-10 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-2 rounded-xl border p-4 text-xs leading-relaxed shadow-lg">
-          <p>
-            Las solicitudes mensuales se renuevan según tu plan. Los créditos extra se muestran por
-            separado.
-          </p>
+          <p>El saldo mensual y los créditos extra se muestran por separado.</p>
           <p>
             Cada llamada al modelo consume una solicitud, incluso si falla después de reservarse.
             Continuar tras una búsqueda puede consumir otra.
@@ -129,16 +120,18 @@ export function ChatWelcome({
       {suggestions.length ? (
         <div className="mt-6 grid gap-2">
           {suggestions.map(({ label, prompt, icon: Icon }) => (
-            <button
+            <Button
               key={label}
               type="button"
-              onClick={() => onSuggest(prompt)}
-              className="border-border hover:bg-muted/60 focus-visible:ring-ring group flex min-h-12 items-center gap-3 rounded-xl border px-3 text-left text-sm focus-visible:ring-2 focus-visible:outline-none"
+              variant="outline"
+              aria-label={label}
+              onPress={() => onSuggest(prompt)}
+              className="hover:bg-muted/60 h-auto min-h-12 w-full justify-start gap-3 rounded-xl px-3 text-left text-sm shadow-none"
             >
               <Icon aria-hidden="true" className="text-primary size-4 shrink-0" />
               <span className="flex-1">{label}</span>
               <ArrowUpRight aria-hidden="true" className="text-muted-foreground size-4" />
-            </button>
+            </Button>
           ))}
         </div>
       ) : null}
@@ -148,10 +141,10 @@ export function ChatWelcome({
 
 export function ChatActivity({ children }: { children: ReactNode }) {
   return (
-    <div role="status" className="text-muted-foreground flex items-center gap-2 py-1 text-xs">
-      <Sparkle aria-hidden="true" className="text-primary size-4" />
+    <output className="text-muted-foreground flex items-center gap-2 py-1 text-xs">
+      <Spinner aria-hidden="true" size="sm" speed="slow" className="text-primary" />
       <span>{children}</span>
-    </div>
+    </output>
   )
 }
 
@@ -163,7 +156,7 @@ export function ChatMessage({ text, user }: { text: string; user: boolean }) {
       </div>
     )
   return (
-    <div className="[&_a]:text-primary [&_blockquote]:border-border [&_code]:bg-muted min-w-0 text-sm leading-relaxed break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p:not(:first-child)]:mt-3 [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ul]:pl-5">
+    <div className="[&_a]:text-primary [&_blockquote]:border-border [&_code]:bg-muted min-w-0 text-sm leading-relaxed break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:whitespace-pre-wrap [&_p:not(:first-child)]:mt-3 [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ul]:pl-5">
       <ReactMarkdown skipHtml disallowedElements={['img']} unwrapDisallowed>
         {text}
       </ReactMarkdown>

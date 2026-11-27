@@ -12,13 +12,20 @@ const mocks = vi.hoisted(() => ({
   preview: vi.fn(),
   invalidate: vi.fn(),
   stop: vi.fn(),
+  setText: vi.fn(),
+  credits: { monthly_limit: 500, monthly_used: 24, extra_remaining: 3 } as {
+    monthly_limit: number
+    monthly_used: number
+    extra_remaining: number
+  } | null,
+  inventory: true,
   onFinish: null as null | (() => void),
   onError: null as null | (() => void),
   prepareRequest: null as
     | null
     | ((options: { messages: unknown[] }) => Promise<{ body: { messages: unknown[] } }>),
   effects: [] as Array<() => void>,
-  status: 'ready' as 'ready' | 'streaming',
+  status: 'ready' as 'ready' | 'streaming' | 'submitted',
 }))
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof React>()),
@@ -47,7 +54,7 @@ vi.mock('@ai-sdk/react', () => ({
   },
 }))
 vi.mock('@assistant-ui/ai-sdk', () => ({
-  useAISDKRuntime: () => ({ thread: { composer: { setText: vi.fn() } } }),
+  useAISDKRuntime: () => ({ thread: { composer: { setText: mocks.setText } } }),
 }))
 vi.mock('@assistant-ui/react', () => ({
   AssistantRuntimeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -58,10 +65,20 @@ vi.mock('@assistant-ui/react', () => ({
   },
 }))
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children, onPress }: { children: ReactNode; onPress?: () => void }) => {
+  Button: ({
+    children,
+    onPress,
+    'aria-label': label,
+  }: {
+    children: ReactNode
+    onPress?: () => void
+    'aria-label'?: string
+  }) => {
     if (typeof children === 'string' && onPress) mocks.buttons.set(children, onPress)
+    if (label && onPress) mocks.buttons.set(label, onPress)
     return <button>{children}</button>
   },
+  Spinner: () => <span />,
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
 vi.mock('@tanstack/react-query', () => ({
@@ -70,6 +87,10 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@/features/auth', () => ({
   useSession: () => ({ role: 'admin' }),
   can: (role: string) => role === 'admin',
+}))
+vi.mock('@/features/product-modules', () => ({ useModuleEnabled: () => mocks.inventory }))
+vi.mock('../application/search-records', () => ({
+  searchRecords: async () => ({ type: 'clientes', matches: [{ id: 'client-id', name: 'Marta' }] }),
 }))
 vi.mock('@/shared/store/store', () => ({
   newId: () => 'line-id',
@@ -85,7 +106,7 @@ vi.mock('@/shared/lib/supabase/client', () => ({
 }))
 vi.mock('../application/ai-access', () => ({
   useAiAccess: () => ({ data: true }),
-  useAiCredits: () => ({ data: { monthly_limit: 500, monthly_used: 24, extra_remaining: 3 } }),
+  useAiCredits: () => ({ data: mocks.credits }),
 }))
 vi.mock('./estimate-suggestion-preview', () => ({
   EstimateSuggestionPreview: (props: { disabled: boolean }) => {
@@ -101,6 +122,8 @@ beforeEach(() => {
   mocks.messages = []
   mocks.effects = []
   mocks.status = 'ready'
+  mocks.credits = { monthly_limit: 500, monthly_used: 24, extra_remaining: 3 }
+  mocks.inventory = true
   mocks.prepareRequest = null
   mocks.buttons.clear()
   vi.clearAllMocks()
@@ -129,7 +152,7 @@ function render(
   return { html, onCreateClient, onClientProgress }
 }
 
-it('returns matching real records to the model when it requests a search', () => {
+it('returns matching records to the model when it requests a search', async () => {
   render()
   mocks.onToolCall?.({
     toolCall: {
@@ -138,21 +161,103 @@ it('returns matching real records to the model when it requests a search', () =>
       input: { type: 'clientes', query: 'mart' },
     },
   })
-  expect(mocks.output).toHaveBeenCalledWith({
-    tool: 'buscar',
-    toolCallId: 'call1',
-    output: { type: 'clientes', matches: [{ id: 'client-id', name: 'Marta' }] },
-  })
+  await vi.waitFor(() =>
+    expect(mocks.output).toHaveBeenCalledWith({
+      tool: 'buscar',
+      toolCallId: 'call1',
+      output: { type: 'clientes', matches: [{ id: 'client-id', name: 'Marta' }] },
+    }),
+  )
 })
 
 it('refreshes the credit balance after successful and failed model calls', () => {
   const { html } = render()
   expect(html).toContain('476')
-  expect(html).toContain('Créditos extra: 3')
+  expect(html).toContain('+3 extra')
   mocks.onFinish?.()
   mocks.onError?.()
   expect(mocks.invalidate).toHaveBeenCalledTimes(2)
   expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['ai-credits', 'tenant', 'user'] })
+})
+
+it('offers starter prompts without sending them and reflects the remaining allowance', () => {
+  const { html } = render()
+  expect(html).toContain('¿En qué puedo ayudarte?')
+  expect(html).toContain('Solicitudes disponibles')
+  expect(html).toContain('value="476"')
+  expect(html).toContain('max="500"')
+  expect(html).toContain('Información sobre el asistente y las solicitudes')
+  mocks.buttons.get('Buscar un cliente')?.()
+  expect(mocks.setText).toHaveBeenCalledWith('Ayúdame a buscar un cliente')
+  expect(mocks.output).not.toHaveBeenCalled()
+})
+
+it('does not offer inventory suggestions when the module is unavailable', () => {
+  mocks.inventory = false
+  const { html } = render()
+  expect(html).not.toContain('Consultar inventario')
+})
+
+it('handles an exhausted or unavailable allowance without inventing a balance', () => {
+  mocks.credits = { monthly_limit: 0, monthly_used: 0, extra_remaining: 3 }
+  expect(render().html).toContain('0 / 0')
+  mocks.credits = null
+  expect(render().html).toContain('No se pudo consultar el saldo')
+})
+
+it('shows the real active tool while streaming and keeps stop available', () => {
+  mocks.status = 'streaming'
+  mocks.messages = [
+    {
+      id: 'a',
+      role: 'assistant',
+      parts: [
+        { type: 'tool-proponer_cliente', state: 'input-streaming', toolCallId: 'c', input: {} },
+      ],
+    },
+  ]
+  const { html } = render()
+  expect(html).toContain('Preparando los datos del cliente…')
+  expect(html).toContain('Detener')
+  expect(html).not.toContain('¿En qué puedo ayudarte?')
+  mocks.buttons.get('Detener respuesta')?.()
+  expect(mocks.stop).toHaveBeenCalledOnce()
+})
+
+it('shows when a real search is running', () => {
+  mocks.status = 'streaming'
+  mocks.messages = [
+    {
+      id: 'a',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'tool-buscar',
+          state: 'input-available',
+          toolCallId: 'c',
+          input: { type: 'clientes', query: 'Mar' },
+        },
+      ],
+    },
+  ]
+  expect(render().html).toContain('Buscando en Ábaco…')
+})
+
+it('renders assistant markdown and keeps returned reasoning behind a disclosure', () => {
+  mocks.messages = [
+    {
+      id: 'a',
+      role: 'assistant',
+      parts: [
+        { type: 'reasoning', text: 'Comprobando datos' },
+        { type: 'text', text: 'Revisa **este dato**.' },
+      ],
+    },
+  ]
+  const { html } = render()
+  expect(html).toContain('<details')
+  expect(html).toContain('Ver razonamiento')
+  expect(html).toContain('<strong>este dato</strong>')
 })
 
 it('sends a fresh context after the client proposal was saved', async () => {

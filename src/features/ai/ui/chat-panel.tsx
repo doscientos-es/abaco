@@ -224,10 +224,11 @@ export function AiChatPanel({
   const runtime = useAISDKRuntime(chat)
   const stop = chat.stop
   const busy = chat.status === 'streaming' || chat.status === 'submitted'
-  const currentTool = [...chat.messages]
-    .reverse()
-    .find((message) => message.role === 'assistant')
-    ?.parts.find((part) => 'state' in part && part.state === 'input-streaming')
+  const latestMessage = chat.messages.at(-1)
+  const currentTool =
+    latestMessage?.role === 'assistant'
+      ? latestMessage.parts.find((part) => 'state' in part && part.state === 'input-streaming')
+      : undefined
   const searching = chat.messages
     .at(-1)
     ?.parts.some((part) => part.type === 'tool-buscar' && part.state !== 'output-available')
@@ -733,6 +734,7 @@ export function AiChatPanel({
                     type="button"
                     variant="outline"
                     size="sm"
+                    aria-label="Detener respuesta"
                     onPress={() => void chat.stop()}
                   >
                     <Stop aria-hidden="true" weight="fill" /> Detener
