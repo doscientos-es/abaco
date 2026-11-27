@@ -1,4 +1,5 @@
 import { Button } from '@doscientos/ui'
+import { ArrowRight } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
@@ -8,8 +9,9 @@ import { PasswordField, TextField } from '@/shared/ui/form'
 
 import { sessionQuery, signIn } from '../application/auth-actions'
 import { firstError, loginSchema } from '../domain/credentials'
-import { AuthLayout, FormError } from './auth-layout'
+import { FormError } from './auth-layout'
 import { GoogleAuthButton } from './google-auth-button'
+import { LoginLayout } from './login-layout'
 
 export function LoginPage({ redirect }: { redirect?: string | undefined }) {
   const navigate = useNavigate()
@@ -44,26 +46,26 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
   }
 
   return (
-    <AuthLayout
-      title="Entrar"
-      description="Accede al espacio de trabajo de tu empresa."
-      footer={
-        <span>
-          ¿Primera vez? Si te han invitado, abre el enlace del correo para aceptar la invitación y
-          crear tu contraseña. ¿Vas a empezar con tu empresa?{' '}
-          <Link to="/registro" className="hover:text-foreground underline">
-            Crea una cuenta
-          </Link>
-          .{' '}
-          <Link to="/precios" className="hover:text-foreground underline">
-            Ver planes y precios
-          </Link>
-          .
-        </span>
-      }
-    >
+    <LoginLayout>
+      <header className="mb-8 space-y-2">
+        <h1 id="login-title" className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+          Bienvenido de nuevo
+        </h1>
+        <p className="text-sm leading-6 text-[#667468] sm:text-base">
+          Accede al espacio de trabajo de tu empresa.
+        </p>
+      </header>
       <GoogleAuthButton redirect={redirect} />
-      <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+      <div className="my-7 flex items-center gap-4 text-xs text-[#738176]">
+        <span className="h-px flex-1 bg-[#dfe6dc]" />
+        <span>o entra con tu correo</span>
+        <span className="h-px flex-1 bg-[#dfe6dc]" />
+      </div>
+      <form
+        onSubmit={(event) => void submit(event)}
+        className="login-form-fields space-y-5"
+        noValidate
+      >
         <TextField
           label="Correo"
           type="email"
@@ -85,15 +87,41 @@ export function LoginPage({ redirect }: { redirect?: string | undefined }) {
           onChange={setPassword}
         />
         <FormError message={error} />
-        <Button type="submit" className="w-full" isDisabled={busy}>
+        <Button type="submit" className="h-12 w-full rounded-xl" isDisabled={busy}>
           {busy ? 'Entrando…' : 'Entrar'}
+          {!busy ? <ArrowRight aria-hidden="true" className="size-4" /> : null}
         </Button>
         <p className="text-center text-sm">
-          <Link to="/recuperar" className="text-muted-foreground hover:text-foreground underline">
-            He olvidado mi contraseña
+          <Link
+            to="/recuperar"
+            className="font-medium text-[#425d45] underline-offset-4 hover:underline"
+          >
+            ¿Has olvidado tu contraseña?
           </Link>
         </p>
       </form>
-    </AuthLayout>
+      <div className="mt-9 border-t border-[#dfe6dc] pt-6 text-sm leading-6 text-[#667468]">
+        <p>
+          ¿Primera vez? Si te han invitado, abre el enlace del correo para aceptar la invitación y
+          crear tu contraseña.
+        </p>
+        <p className="mt-3">
+          ¿Vas a empezar con tu empresa?{' '}
+          <Link
+            to="/registro"
+            className="font-semibold text-[#294b32] underline-offset-4 hover:underline"
+          >
+            Crea una cuenta
+          </Link>
+          {' · '}
+          <Link
+            to="/precios"
+            className="font-semibold text-[#294b32] underline-offset-4 hover:underline"
+          >
+            Ver planes y precios
+          </Link>
+        </p>
+      </div>
+    </LoginLayout>
   )
 }
