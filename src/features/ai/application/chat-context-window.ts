@@ -94,5 +94,21 @@ export function chatContextWindow(
   const firstUser = bounded.findIndex((message) => message.role === 'user')
   if (firstUser > 0 && bounded.slice(0, firstUser).some(hasPending))
     throw new Error(pendingContextLimitMessage)
-  return firstUser < 0 ? bounded : bounded.slice(firstUser)
+  const selected = firstUser < 0 ? bounded : bounded.slice(firstUser)
+  const lastUser = selected.findLastIndex((message) => message.role === 'user')
+  return selected.map((message, index) => {
+    if (
+      message.role !== 'user' ||
+      index === lastUser ||
+      !message.parts.some((part) => part.type === 'file')
+    )
+      return message
+    return {
+      ...message,
+      parts: [
+        ...message.parts.filter((part) => part.type !== 'file'),
+        { type: 'text' as const, text: '[Adjuntos anteriores no incluidos]' },
+      ],
+    }
+  })
 }

@@ -26,6 +26,7 @@ export default async function handler(request: IncomingMessage, response: Server
   })
   return createChatHandler({
     origin: APP_ORIGIN,
+    audioAllowed: ai.provider === 'google',
     authenticate: async (token) => {
       const { data, error } = await admin.auth.getUser(token)
       return error ? null : (data.user?.id ?? null)

@@ -8,11 +8,14 @@ import {
 } from 'ai'
 import { z } from 'zod'
 
+import { maxChatRequestBytes } from '../../src/features/ai/domain/chat-attachment-limits.js'
 import { readJson, reply } from '../visit-report-pdf/http.js'
+import { validateChatAttachments } from './chat-attachments.js'
 import { chatTools, type streamChat } from './chat-provider.js'
 
 type Dependencies = {
   origin: string
+  audioAllowed?: boolean
   authenticate: (token: string) => Promise<string | null>
   reserve: (tenantId: string, userId: string) => Promise<'allowed' | 'forbidden' | 'limit'>
   stream: (
@@ -73,7 +76,7 @@ export function createChatHandler(dependencies: Dependencies) {
     let messages: UIMessage[]
     let context: ChatContext
     try {
-      const parsed = envelope.parse(await readJson(request, 48_000))
+      const parsed = envelope.parse(await readJson(request, maxChatRequestBytes))
       tenantId = parsed.tenantId
       context = parsed.context
       messages = await validateUIMessages({ messages: parsed.messages, tools: chatTools })
@@ -83,11 +86,13 @@ export function createChatHandler(dependencies: Dependencies) {
           (message) =>
             message.role === 'system' ||
             (message.role === 'user' &&
-              (!message.parts.some((part) => part.type === 'text' && part.text.trim()) ||
+              (!message.parts.some(
+                (part) => (part.type === 'text' && part.text.trim()) || part.type === 'file',
+              ) ||
                 message.parts.some((part) => part.type === 'text' && part.text.length > 4000))) ||
             message.parts.some((part) =>
               message.role === 'user'
-                ? part.type !== 'text'
+                ? part.type !== 'text' && part.type !== 'file'
                 : ![
                     'text',
                     'step-start',
@@ -105,6 +110,7 @@ export function createChatHandler(dependencies: Dependencies) {
         )
       )
         throw new Error('invalid message')
+      await validateChatAttachments(messages, dependencies.audioAllowed === true)
     } catch {
       return reply(response, 400, { error: 'invalid_input' })
     }
