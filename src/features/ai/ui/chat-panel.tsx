@@ -2,7 +2,7 @@ import { useChat } from '@ai-sdk/react'
 import { useAISDKRuntime } from '@assistant-ui/ai-sdk'
 import { AssistantRuntimeProvider, ComposerPrimitive } from '@assistant-ui/react'
 import { Button } from '@doscientos/ui'
-import { Sparkle, X } from '@phosphor-icons/react'
+import { ArrowUp, ArrowsClockwise, Sparkle, Stop, X } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai'
@@ -33,6 +33,13 @@ import {
 import { appendEstimateSuggestion, estimateSuggestionSchema } from '../domain/suggestions'
 import { CatalogBatchProposal } from './catalog-batch-proposal'
 import type { ClientProgress, DraftTarget } from './chat-context'
+import {
+  ChatActivity,
+  ChatCredits,
+  ChatMessage,
+  ChatProposal,
+  ChatWelcome,
+} from './chat-presentation'
 import { EstimateSuggestionPreview } from './estimate-suggestion-preview'
 import { RecordProposal } from './record-proposal'
 
@@ -217,6 +224,24 @@ export function AiChatPanel({
   const runtime = useAISDKRuntime(chat)
   const stop = chat.stop
   const busy = chat.status === 'streaming' || chat.status === 'submitted'
+  const currentTool = [...chat.messages]
+    .reverse()
+    .find((message) => message.role === 'assistant')
+    ?.parts.find((part) => 'state' in part && part.state === 'input-streaming')
+  const searching = chat.messages
+    .at(-1)
+    ?.parts.some((part) => part.type === 'tool-buscar' && part.state !== 'output-available')
+  const activity = searching
+    ? 'Buscando en Ábaco…'
+    : currentTool?.type === 'tool-proponer_cliente'
+      ? 'Preparando los datos del cliente…'
+      : currentTool?.type === 'tool-proponer_materiales' ||
+          currentTool?.type === 'tool-proponer_precios_catalogo'
+        ? 'Preparando la propuesta del catálogo…'
+        : currentTool?.type === 'tool-proponer_partidas' ||
+            currentTool?.type === 'tool-proponer_presupuesto'
+          ? 'Preparando las partidas…'
+          : 'Preparando respuesta…'
   useEffect(() => {
     if (completedClientProposalId) completedProposals.current.add(completedClientProposalId)
   }, [completedClientProposalId])
@@ -275,53 +300,78 @@ export function AiChatPanel({
       ) : (
         <aside
           aria-label="Asistente de Ábaco"
-          className="bg-background border-border fixed right-2 bottom-2 z-40 flex h-[min(42rem,85dvh)] w-[min(27rem,calc(100vw-1rem))] flex-col rounded-2xl border shadow-xl"
+          className="bg-background border-border fixed right-2 bottom-2 z-40 flex h-[min(46rem,calc(100dvh-1rem))] w-[min(30rem,calc(100vw-1rem))] flex-col rounded-2xl border shadow-xl"
         >
-          <header className="flex items-center justify-between gap-3 border-b p-4">
-            <div>
-              <h2 className="font-semibold">Asistente de Ábaco</h2>
-              <p className="text-muted-foreground text-xs">
-                Consulta y prepara cambios para revisar
-              </p>
+          <header className="border-border space-y-3 border-b px-4 pt-4 pb-3">
+            <div className="flex items-center gap-3">
+              <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
+                <Sparkle aria-hidden="true" weight="fill" className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold">Asistente</h2>
+                <p className="text-muted-foreground text-xs">
+                  Tu espacio para consultar y preparar
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Limpiar chat"
+                isDisabled={busy || !chat.messages.length}
+                onPress={() => {
+                  chat.setMessages([])
+                  setApplied(new Set())
+                  clientProgress.current.clear()
+                  completedProposals.current.clear()
+                  setApplyError('')
+                }}
+              >
+                <ArrowsClockwise aria-hidden="true" className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Cerrar asistente"
+                onPress={() => onOpenChange(false)}
+              >
+                <X aria-hidden="true" className="size-4" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label="Cerrar asistente"
-              onPress={() => onOpenChange(false)}
-            >
-              <X aria-hidden="true" className="size-4" />
-            </Button>
+            <ChatCredits credits={credits.data} error={credits.isError} />
           </header>
           <div
             ref={messagesRef}
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4"
+            className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-5"
             aria-live="polite"
           >
             {!chat.messages.length ? (
-              <p className="text-muted-foreground text-sm">
-                Pregúntame por tus clientes, presupuestos o inventario, o dime qué quieres preparar.
-              </p>
+              <ChatWelcome
+                onSuggest={(value) => runtime.thread.composer.setText(value)}
+                clients={can(session?.role, 'clients:read')}
+                estimates={can(session?.role, 'estimates:read')}
+                inventory={procurement && can(session?.role, 'catalog:read')}
+              />
             ) : null}
             {chat.messages.map((message) => (
-              <div key={message.id} className="space-y-2">
+              <div key={message.id} className="min-w-0 space-y-3">
                 {message.parts.map((part, index) => {
                   if (part.type === 'text')
                     return (
-                      <p
-                        key={index}
-                        className={`rounded-xl p-3 text-sm whitespace-pre-wrap ${message.role === 'user' ? 'bg-primary/10' : 'bg-muted'}`}
-                      >
-                        {part.text}
-                      </p>
+                      <ChatMessage key={index} text={part.text} user={message.role === 'user'} />
+                    )
+                  if (part.type === 'reasoning' && part.text)
+                    return (
+                      <details key={index} className="text-muted-foreground text-xs">
+                        <summary className="cursor-pointer py-1">Ver razonamiento</summary>
+                        <p className="mt-2 border-l pl-3 leading-relaxed whitespace-pre-wrap">
+                          {part.text}
+                        </p>
+                      </details>
                     )
                   if (part.type === 'tool-buscar') {
-                    if (part.state !== 'output-available')
-                      return (
-                        <p key={index} className="text-muted-foreground text-sm">
-                          Buscando en Ábaco…
-                        </p>
-                      )
+                    if (part.state !== 'output-available') return null
                     const result = part.output as {
                       type: 'clientes' | 'presupuestos' | 'inventario'
                       matches: { id: string; name: string }[]
@@ -329,36 +379,41 @@ export function AiChatPanel({
                       truncated?: boolean
                     }
                     return (
-                      <div key={index} className="space-y-1 rounded-xl border p-3 text-sm">
-                        <p>Resultados de búsqueda</p>
-                        {result.matches.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="text-primary block text-left underline"
-                            onClick={() =>
-                              void navigate(
-                                result.type === 'clientes'
-                                  ? { to: '/clientes/$clientId', params: { clientId: item.id } }
-                                  : result.type === 'presupuestos'
-                                    ? {
-                                        to: '/presupuestos/$estimateId',
-                                        params: { estimateId: item.id },
-                                      }
-                                    : { to: '/catalogo', search: { q: item.name } },
-                              )
-                            }
-                          >
-                            {item.name}
-                          </button>
-                        ))}
+                      <ChatProposal key={index} title="Resultados de búsqueda">
+                        <div className="divide-border divide-y">
+                          {result.matches.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className="hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+                              onClick={() =>
+                                void navigate(
+                                  result.type === 'clientes'
+                                    ? { to: '/clientes/$clientId', params: { clientId: item.id } }
+                                    : result.type === 'presupuestos'
+                                      ? {
+                                          to: '/presupuestos/$estimateId',
+                                          params: { estimateId: item.id },
+                                        }
+                                      : { to: '/catalogo', search: { q: item.name } },
+                                )
+                              }
+                            >
+                              {item.name}
+                              <ArrowUp
+                                aria-hidden="true"
+                                className="text-muted-foreground size-4 rotate-45"
+                              />
+                            </button>
+                          ))}
+                        </div>
                         {result.error ? (
                           <p>{result.error}</p>
                         ) : !result.matches.length ? (
                           <p>No hay resultados.</p>
                         ) : null}
                         {result.truncated ? <p>Hay más resultados; concreta la búsqueda.</p> : null}
-                      </div>
+                      </ChatProposal>
                     )
                   }
                   if (
@@ -366,11 +421,7 @@ export function AiChatPanel({
                       part.type === 'tool-proponer_precios_catalogo') &&
                     part.state === 'input-streaming'
                   ) {
-                    return (
-                      <output key={index} className="text-muted-foreground block text-sm">
-                        Preparando la propuesta del catálogo…
-                      </output>
-                    )
+                    return null
                   }
                   if (
                     (part.type === 'tool-proponer_materiales' ||
@@ -450,20 +501,19 @@ export function AiChatPanel({
                         : undefined
                     const patch = target ? applyEstimateLineEdit(target.estimate, proposal) : null
                     return (
-                      <section key={index} className="space-y-2 rounded-xl border p-3 text-sm">
-                        <strong>Editar partida</strong>
+                      <ChatProposal key={index} title="Editar partida">
                         {line ? (
-                          <>
-                            <p>
+                          <div className="bg-muted/40 space-y-2 rounded-xl p-3 text-xs leading-relaxed">
+                            <p className="text-muted-foreground">
                               Actual: {line.description} · {line.quantity} {line.unit} ·{' '}
                               {formatEuros(line.unitPriceCents)} / unidad
                             </p>
-                            <p>
+                            <p className="font-medium">
                               Propuesta: {proposal.description ?? line.description} ·{' '}
                               {proposal.quantity ?? line.quantity} {proposal.unit ?? line.unit} ·{' '}
                               {formatEuros(proposal.unitPriceCents ?? line.unitPriceCents)} / unidad
                             </p>
-                          </>
+                          </div>
                         ) : (
                           <p>Abre el presupuesto en borrador para revisar esta partida.</p>
                         )}
@@ -494,7 +544,7 @@ export function AiChatPanel({
                         {applied.has(part.toolCallId) ? (
                           <p>Partida actualizada en el borrador. Revisa el presupuesto.</p>
                         ) : null}
-                      </section>
+                      </ChatProposal>
                     )
                   }
                   if (
@@ -503,13 +553,7 @@ export function AiChatPanel({
                       part.type === 'tool-proponer_presupuesto') &&
                     part.state === 'input-streaming'
                   ) {
-                    return (
-                      <output key={index} className="text-muted-foreground block text-sm">
-                        {part.type === 'tool-proponer_cliente'
-                          ? 'Preparando los datos del cliente…'
-                          : 'Preparando las partidas…'}
-                      </output>
-                    )
+                    return null
                   }
                   if (
                     part.type === 'tool-proponer_cliente' &&
@@ -517,9 +561,8 @@ export function AiChatPanel({
                   ) {
                     const proposal = clientProposalSchema.safeParse(part.input)
                     return proposal.success ? (
-                      <section key={index} className="space-y-2 rounded-xl border p-3 text-sm">
-                        <strong>Nuevo cliente: {proposal.data.name}</strong>
-                        <p>
+                      <ChatProposal key={index} title={`Nuevo cliente: ${proposal.data.name}`}>
+                        <p className="text-muted-foreground break-words">
                           {[
                             proposal.data.email,
                             proposal.data.phone,
@@ -539,7 +582,7 @@ export function AiChatPanel({
                         >
                           Revisar formulario
                         </Button>
-                      </section>
+                      </ChatProposal>
                     ) : null
                   }
                   if (
@@ -568,7 +611,7 @@ export function AiChatPanel({
                     const proposedTitle = draft?.success ? (draft.data.title ?? '') : ''
                     const draftReady = part.type !== 'tool-proponer_presupuesto' || target?.isNew
                     return suggestion ? (
-                      <div key={index}>
+                      <div key={index} className="space-y-3">
                         {draft?.success ? (
                           <p className="text-sm">
                             {proposedTitle || 'Presupuesto sin título'} ·{' '}
@@ -661,6 +704,7 @@ export function AiChatPanel({
                 })}
               </div>
             ))}
+            {busy ? <ChatActivity>{activity}</ChatActivity> : null}
             {chat.error ? (
               <p role="alert" className="text-destructive text-sm">
                 {chat.error.message === pendingContextLimitMessage
@@ -674,64 +718,35 @@ export function AiChatPanel({
               </p>
             ) : null}
           </div>
-          <div className="space-y-2 border-t p-3">
-            {target ? (
-              <p className="text-muted-foreground text-xs">
-                Presupuesto abierto: {target.estimate.number} {target.estimate.title}
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Para aplicar partidas, abre un presupuesto en borrador.
-              </p>
-            )}
-            <ComposerPrimitive.Root className="space-y-2">
+          <div className="border-border space-y-2 border-t p-3">
+            <ComposerPrimitive.Root className="border-input bg-background focus-within:ring-ring/30 rounded-2xl border p-2 shadow-sm focus-within:ring-2">
               <ComposerPrimitive.Input
                 aria-label="Mensaje al asistente"
                 placeholder="¿En qué te ayudo?"
                 maxLength={4000}
-                className="border-input bg-background w-full resize-none rounded-xl border p-3 text-sm"
+                className="placeholder:text-muted-foreground max-h-32 min-h-12 w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onPress={() => {
-                    chat.setMessages([])
-                    setApplied(new Set())
-                    clientProgress.current.clear()
-                    completedProposals.current.clear()
-                    setApplyError('')
-                  }}
-                  isDisabled={busy}
-                >
-                  Limpiar chat
-                </Button>
+              <div className="flex items-center justify-between gap-2 pl-2">
+                <span className="text-muted-foreground text-xs">Revisa siempre las propuestas</span>
                 {busy ? (
-                  <Button type="button" variant="outline" onPress={() => void chat.stop()}>
-                    Detener
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onPress={() => void chat.stop()}
+                  >
+                    <Stop aria-hidden="true" weight="fill" /> Detener
                   </Button>
                 ) : (
-                  <ComposerPrimitive.Send className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm disabled:opacity-50">
-                    Enviar
+                  <ComposerPrimitive.Send
+                    aria-label="Enviar mensaje"
+                    className="bg-primary text-primary-foreground focus-visible:ring-ring flex size-9 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+                  >
+                    <ArrowUp aria-hidden="true" className="size-4" />
                   </ComposerPrimitive.Send>
                 )}
               </div>
             </ComposerPrimitive.Root>
-            <p className="text-muted-foreground text-xs">
-              Cada llamada al modelo consume una solicitud, incluso si falla después de reservarse.
-              Continuar tras una búsqueda puede consumir otra.
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Tras completar una acción, el asistente puede iniciar un contexto nuevo; los mensajes
-              siguen visibles.
-            </p>
-            {credits.data ? (
-              <p className="text-muted-foreground text-xs">
-                Solicitudes mensuales restantes:{' '}
-                {Math.max(0, credits.data.monthly_limit - credits.data.monthly_used)} · Créditos
-                extra: {credits.data.extra_remaining}
-              </p>
-            ) : null}
           </div>
         </aside>
       )}

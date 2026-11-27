@@ -19,6 +19,7 @@ import {
   type PriceChange,
 } from '../application/catalog-batch'
 import { catalogCreateProposalSchema, type catalogPriceProposalSchema } from '../domain/chat-tools'
+import { ChatProposal } from './chat-presentation'
 
 type Proposal =
   | { type: 'create'; value: z.infer<typeof catalogCreateProposalSchema> }
@@ -143,8 +144,8 @@ export function CatalogBatchProposal({
   }
 
   return (
-    <section className="space-y-2 rounded-xl border p-3 text-sm">
-      <p>
+    <ChatProposal title={proposal.type === 'create' ? 'Crear materiales' : 'Actualizar precios'}>
+      <p className="text-muted-foreground">
         {proposal.type === 'create'
           ? `Propuesta: ${proposal.value.items.length} materiales nuevos`
           : `Propuesta: variación de precios del ${proposal.value.basisPoints / 100}%`}
@@ -216,6 +217,6 @@ export function CatalogBatchProposal({
           </p>
         ) : null}
       </FormDialog>
-    </section>
+    </ChatProposal>
   )
 }

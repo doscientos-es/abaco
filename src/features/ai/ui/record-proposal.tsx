@@ -13,6 +13,7 @@ import { currentTenantData, refreshStore, synchronizeStoreSaves } from '@/shared
 import { catalogFromRow, clientFromRow } from '@/shared/store/supabase-mappers'
 
 import type { clientEditProposalSchema, inventoryProposalSchema } from '../domain/chat-tools'
+import { ChatProposal } from './chat-presentation'
 
 type Proposal =
   | { type: 'cliente'; value: z.infer<typeof clientEditProposalSchema> }
@@ -104,11 +105,11 @@ export function RecordProposal({
         )
       : {}
   return (
-    <section className="space-y-2 rounded-xl border p-3 text-sm">
-      <p>
+    <ChatProposal title={proposal.type === 'cliente' ? 'Editar cliente' : 'Actualizar stock'}>
+      <p className="text-muted-foreground">
         {proposal.type === 'cliente'
-          ? 'Propuesta de edición de cliente'
-          : `Propuesta de stock: ${proposal.value.quantity}`}
+          ? 'Revisa los datos propuestos antes de guardar.'
+          : `Cantidad propuesta: ${proposal.value.quantity}`}
       </p>
       <Button
         type="button"
@@ -137,6 +138,6 @@ export function RecordProposal({
           onSaved={onSaved}
         />
       ) : null}
-    </section>
+    </ChatProposal>
   )
 }

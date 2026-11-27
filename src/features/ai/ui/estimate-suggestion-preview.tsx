@@ -1,9 +1,9 @@
 import { Button } from '@doscientos/ui'
-import { Sparkle } from '@phosphor-icons/react'
 
 import { formatEuros } from '@/shared/domain/money'
 
 import { isCompleteEstimateSuggestion, type EstimateSuggestion } from '../domain/suggestions'
+import { ChatProposal } from './chat-presentation'
 
 /** A suggestion is never applied until the user explicitly confirms it. */
 export function EstimateSuggestionPreview({
@@ -19,24 +19,13 @@ export function EstimateSuggestionPreview({
   const incomplete = suggestion.lines.length - complete
 
   return (
-    <section
-      aria-label="Propuesta de presupuesto"
-      className="border-border bg-card min-w-0 space-y-4 rounded-2xl border p-4 shadow-sm"
-    >
-      <div className="flex items-start gap-3">
-        <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
-          <Sparkle aria-hidden="true" className="size-5" />
-        </span>
-        <div className="min-w-0 space-y-1">
-          <h3 className="text-sm font-semibold">Tu propuesta</h3>
-          <p className="text-muted-foreground text-sm break-words whitespace-pre-wrap">
-            {suggestion.message}
-          </p>
-        </div>
-      </div>
+    <ChatProposal title="Propuesta de presupuesto">
+      <p className="text-muted-foreground text-sm break-words whitespace-pre-wrap">
+        {suggestion.message}
+      </p>
 
       {suggestion.lines.length ? (
-        <ul className="divide-border divide-y rounded-xl border">
+        <ul className="divide-border bg-muted/20 divide-y rounded-xl border">
           {suggestion.lines.map((line, index) => (
             <li
               key={index}
@@ -82,6 +71,6 @@ export function EstimateSuggestionPreview({
           </Button>
         </div>
       ) : null}
-    </section>
+    </ChatProposal>
   )
 }
