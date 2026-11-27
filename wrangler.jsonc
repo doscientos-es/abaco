@@ -9,6 +9,22 @@
     "@react-pdf/pdfkit": "./node_modules/@react-pdf/pdfkit/lib/pdfkit.js",
     "buffer": "./cloudflare/buffer.js",
   },
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true,
+    },
+    "traces": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "persist": true,
+    },
+    "issue_detection": {
+      "enabled": true,
+    },
+  },
   "vars": {
     "AI_MODEL": "gpt-6-luna",
     "AI_PROVIDER": "openai",
