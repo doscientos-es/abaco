@@ -220,6 +220,18 @@ describe('billing confirmation', () => {
     await vi.waitFor(() => expect(fixtures.invalidate).toHaveBeenCalled())
   })
 
+  it('keeps checkout locked while redirecting to Redsys', async () => {
+    fixtures.accept.mockResolvedValue({ ok: true, form: { url: 'https://example.test' } })
+    render()
+    action('Elegir Ábaco').onPress()
+    render()
+    const confirm = action('Continuar al pago')
+    confirm.onPress()
+    await vi.waitFor(() => expect(fixtures.submit).toHaveBeenCalledTimes(1))
+    confirm.onPress()
+    expect(fixtures.accept).toHaveBeenCalledTimes(1)
+  })
+
   it('lets a monthly customer schedule annual billing without starting checkout', async () => {
     fixtures.status = 'active'
     fixtures.accept.mockResolvedValue({ ok: true })
