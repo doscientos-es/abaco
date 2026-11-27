@@ -4,7 +4,13 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-import { isSuccess, readNotification, readRedsysConfig, sealReference } from '../_shared/redsys.ts'
+import {
+  isSuccess,
+  readNotification,
+  readRedsysConfig,
+  redsysTerminalMatches,
+  sealReference,
+} from '../_shared/redsys.ts'
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response('Método no permitido', { status: 405 })
@@ -27,11 +33,14 @@ Deno.serve(async (request) => {
     signature = typeof rawSignature === 'string' ? rawSignature : ''
   }
 
+  // Sandbox notifications must never settle rows or enqueue invoices in this project.
+  if (config.environment !== 'prod') return new Response('Entorno de prueba', { status: 409 })
+
   const notice = readNotification(config, parameters, signature)
   if (!notice) return new Response('Firma no válida', { status: 400 })
   if (
     notice.merchantCode !== config.merchantCode ||
-    notice.terminal !== config.terminal ||
+    !redsysTerminalMatches(notice.terminal, config.terminal) ||
     notice.currency !== config.currency
   ) {
     return new Response('Contexto no válido', { status: 400 })
@@ -53,7 +62,10 @@ Deno.serve(async (request) => {
     p_order: notice.order,
     p_succeeded: succeeded,
     p_code: notice.code,
-    p_reference: succeeded && notice.identifier ? sealReference(notice.identifier) : null,
+    p_reference:
+      succeeded && notice.identifier
+        ? sealReference({ identifier: notice.identifier, cofTxnId: notice.cofTxnId })
+        : null,
   })
   if (error) return new Response('No se pudo aplicar', { status: 500 })
   return new Response('ok', { status: 200 })

@@ -3,41 +3,41 @@
  *
  * checkout/change/retry send the amount confirmed by the customer; the database verifies it.
  * cancel/resume/undo manage already scheduled subscription changes.
- * Secretos: REDSYS_*, APP_URL.
+ * Secretos: REDSYS_*, APP_URL, MENOSLIOS_ONBOARDING_PAYMENTS_LIVE.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+import { billingOrigin, menosliosOrigin } from '../_shared/billing-origin.ts'
 import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
 import { renamedEnv } from '../_shared/renamed-env.ts'
 import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') ?? '',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  Vary: 'Origin',
-}
-
-function reply(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (request) => {
+  const origin = billingOrigin(request.headers.get('Origin'), Deno.env.get('APP_URL'))
+  const corsHeaders = {
+    ...(origin ? { 'Access-Control-Allow-Origin': origin } : {}),
+    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    Vary: 'Origin',
+  }
+  const reply = (status: number, body: Record<string, unknown>) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (request.method !== 'POST') return reply(405, { error: 'Método no permitido' })
 
   const url = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const appUrl = Deno.env.get('APP_URL')
+  const appUrl = origin ?? menosliosOrigin
   const config = readRedsysConfig()
   const authorization = request.headers.get('Authorization')
-  if (!url || !anonKey || !serviceKey || !appUrl || !config)
+  if (!url || !anonKey || !serviceKey || !config)
     return reply(500, { error: 'Función sin configurar' })
   if (!authorization) return reply(401, { error: 'Inicia sesión' })
 
@@ -58,6 +58,10 @@ Deno.serve(async (request) => {
   const isCharge = isOnboarding || action === 'checkout' || action === 'retry'
   const modules = input?.modules
   if (isOnboarding) {
+    if (Deno.env.get('MENOSLIOS_ONBOARDING_PAYMENTS_LIVE') !== 'true')
+      return reply(409, {
+        error: 'La contratación todavía no está abierta. No se ha iniciado ningún cobro.',
+      })
     const bookingUrl = renamedEnv('CAL_BOOKING_URL')
     const eventType = renamedEnv('CAL_EVENT_TYPE_ID')
     const secret = renamedEnv('CAL_WEBHOOK_SECRET')

@@ -109,7 +109,7 @@ export async function chargeReference(args: {
   config: RedsysConfig
   order: string
   amountCents: number
-  reference: string
+  reference: StoredRedsysReference
 }): Promise<{ ok: boolean; code: string }> {
   const { config, order } = args
   const parameters = encode({
@@ -119,7 +119,8 @@ export async function chargeReference(args: {
     DS_MERCHANT_CURRENCY: config.currency,
     DS_MERCHANT_TRANSACTIONTYPE: '0',
     DS_MERCHANT_AMOUNT: String(args.amountCents),
-    DS_MERCHANT_IDENTIFIER: args.reference,
+    DS_MERCHANT_IDENTIFIER: args.reference.identifier,
+    ...(args.reference.cofTxnId ? { DS_MERCHANT_COF_TXNID: args.reference.cofTxnId } : {}),
     DS_MERCHANT_COF_TYPE: 'R',
     DS_MERCHANT_EXCEP_SCA: 'MIT',
     DS_MERCHANT_DIRECTPAYMENT: 'true',
@@ -142,7 +143,7 @@ export async function chargeReference(args: {
     notice.order !== order ||
     notice.amountCents !== args.amountCents ||
     notice.merchantCode !== config.merchantCode ||
-    notice.terminal !== config.terminal ||
+    !redsysTerminalMatches(notice.terminal, config.terminal) ||
     notice.currency !== config.currency
   )
     throw new Error('redsys_unconfirmed_response')
@@ -159,6 +160,7 @@ export type Notification = {
   terminal: string
   currency: string
   identifier?: string
+  cofTxnId?: string
 }
 
 /** Comprueba la firma del aviso de Redsys y devuelve sus datos; null si no es válido. */
@@ -179,6 +181,7 @@ export function readNotification(
     const received = Buffer.from(signature.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
     if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null
     const identifier = d.Ds_Merchant_Identifier
+    const cofTxnId = d.Ds_Merchant_Cof_Txnid ?? d.Ds_Merchant_COF_TXNID
     return {
       order,
       code: typeof d.Ds_Response === 'string' ? d.Ds_Response : '',
@@ -188,6 +191,7 @@ export function readNotification(
       currency: typeof d.Ds_Currency === 'string' ? d.Ds_Currency : '',
       identifier:
         typeof identifier === 'string' && identifier.trim() ? identifier.trim() : undefined,
+      cofTxnId: typeof cofTxnId === 'string' && cofTxnId.trim() ? cofTxnId.trim() : undefined,
     }
   } catch {
     return null
@@ -200,17 +204,36 @@ const referenceKey = () => {
   return createHash('sha256').update(secret, 'utf8').digest()
 }
 
-/** Cifra la referencia de tarjeta antes de guardarla (AES-256-GCM). */
-export function sealReference(reference: string): string {
+export const redsysTerminalMatches = (received: string, configured: string) =>
+  /^\d{1,3}$/.test(received) &&
+  /^\d{1,3}$/.test(configured) &&
+  Number(received) === Number(configured)
+
+export type StoredRedsysReference = { identifier: string; cofTxnId?: string }
+
+/** Cifra la referencia y el identificador original antes de guardarlos (AES-256-GCM). */
+export function sealReference(reference: StoredRedsysReference): string {
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', referenceKey(), iv)
-  const body = Buffer.concat([cipher.update(reference, 'utf8'), cipher.final()])
+  const body = Buffer.concat([cipher.update(JSON.stringify(reference), 'utf8'), cipher.final()])
   return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64')
 }
 
-export function openReference(sealed: string): string {
+export function openReference(sealed: string): StoredRedsysReference {
   const raw = Buffer.from(sealed, 'base64')
   const decipher = createDecipheriv('aes-256-gcm', referenceKey(), raw.subarray(0, 12))
   decipher.setAuthTag(raw.subarray(12, 28))
-  return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')
+  const plain = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString(
+    'utf8',
+  )
+  if (!plain.startsWith('{')) return { identifier: plain } // Legacy Redsys-managed tokens.
+  const decoded = JSON.parse(plain) as Partial<StoredRedsysReference>
+  if (typeof decoded.identifier !== 'string' || !decoded.identifier.trim())
+    throw new Error('invalid_redsys_reference')
+  return {
+    identifier: decoded.identifier,
+    ...(typeof decoded.cofTxnId === 'string' && decoded.cofTxnId
+      ? { cofTxnId: decoded.cofTxnId }
+      : {}),
+  }
 }

@@ -10,6 +10,7 @@ import {
   newMerchantOrder,
   openReference,
   readRedsysConfig,
+  type StoredRedsysReference,
 } from '../_shared/redsys.ts'
 import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
@@ -34,10 +35,19 @@ Deno.serve(async (request) => {
   let charged = 0
   let failed = 0
   let fiscalBlocked = 0
+  let methodBlocked = 0
   for (const row of (due ?? []) as {
     tenant_id: string
     redsys_reference: string
   }[]) {
+    let reference: StoredRedsysReference
+    try {
+      reference = openReference(row.redsys_reference)
+      if (!reference.identifier.trim()) throw new Error('empty_redsys_token')
+    } catch {
+      methodBlocked++
+      continue
+    }
     const prepared = await prepareCharge(admin, row.tenant_id)
     if (!prepared.profile) {
       fiscalBlocked++
@@ -67,7 +77,7 @@ Deno.serve(async (request) => {
         config,
         order,
         amountCents: amount,
-        reference: openReference(row.redsys_reference),
+        reference,
       })
       const { error: settlementError } = await admin.rpc('apply_billing_payment', {
         p_order: order,
@@ -81,5 +91,5 @@ Deno.serve(async (request) => {
       failed++
     }
   }
-  return Response.json({ charged, failed, fiscalBlocked })
+  return Response.json({ charged, failed, fiscalBlocked, methodBlocked })
 })
