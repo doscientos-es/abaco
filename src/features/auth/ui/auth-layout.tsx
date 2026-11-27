@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import doscientosLogo from '@/shared/assets/logo.svg'
 import { brand } from '@/shared/lib/brand'
 
+import '@/shared/ui/public-flow.css'
+
 /** Centered card shared by every public auth screen. */
 export function AuthLayout({
   title,
@@ -16,7 +18,7 @@ export function AuthLayout({
   footer?: ReactNode
 }) {
   return (
-    <main className="auth-bg flex min-h-svh items-center justify-center p-4">
+    <main className="public-flow auth-bg flex min-h-svh items-center justify-center p-4">
       <span className="auth-blob" aria-hidden="true" />
       <div className="w-full max-w-sm space-y-7">
         <div className="flex flex-col items-center gap-3 text-center">

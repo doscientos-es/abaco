@@ -56,7 +56,9 @@ export function planInfo(plan: string, rates?: readonly CatalogRate[]): PlanInfo
   const fallback = planCatalog.find((p) => p.id === plan)
   if (!fallback) return null
   const display = rates?.find((rate) => rate.plan === plan)?.plan_info
-  return display ? { ...display, id: fallback.id } : fallback
+  if (!display) return fallback
+  const legacyName = plan === 'standard' && display.name.trim().toLocaleLowerCase('es') === 'ábaco'
+  return { ...display, id: fallback.id, name: legacyName ? fallback.name : display.name }
 }
 
 export function planLabel(plan: string, rates?: readonly CatalogRate[]): string {

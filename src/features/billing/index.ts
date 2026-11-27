@@ -27,6 +27,7 @@ export type { BillingTerms, CatalogRate, Interval, PaidPlan } from './domain/pla
 export { BillingSection } from './ui/billing-section'
 export { PlanBanner } from './ui/plan-banner'
 export { PricingCatalog } from './ui/pricing-catalog'
+export { PublicPricing } from './ui/public-pricing'
 export { SubscriptionAccessPage } from './ui/subscription-access-page'
 export { billingProfileQuery } from './application/subscription-billing-profile'
 export { SubscriptionBillingProfileForm } from './ui/subscription-billing-profile-form'

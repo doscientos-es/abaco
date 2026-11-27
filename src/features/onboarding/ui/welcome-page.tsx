@@ -1,7 +1,7 @@
 import { Button } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouter } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { FormError, useCompanyActions, useSession, useSignOut } from '@/features/auth'
 import {
@@ -20,7 +20,7 @@ import {
   type Interval,
 } from '@/features/billing'
 import { moduleCatalogQuery, modules } from '@/features/product-modules'
-import { brand } from '@/shared/lib/brand'
+import { FlowBrand, FlowIllustration, FlowProgress } from '@/shared/ui/public-flow'
 
 import { companyOnboardingQuery } from '../application/company-onboarding'
 import { offerModules, onboardingOffer, publicBookingUrl, type OfferModule } from '../domain/offer'
@@ -60,6 +60,15 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
         ? 2
         : step
 
+  const previousStep = useRef(activeStep)
+  const stepHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (previousStep.current === activeStep) return
+    previousStep.current = activeStep
+    window.scrollTo(0, 0)
+    stepHeading.current?.focus({ preventScroll: true })
+  }, [activeStep])
+
   useEffect(() => {
     if (stage !== 'complete') return
     void (async () => {
@@ -70,14 +79,11 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
   }, [cache, navigate, router, stage, tenantId])
 
   return (
-    <main className="auth-bg min-h-svh px-4 py-8 sm:py-12">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
-              <img src={brand.mark} alt="" className="size-8 shrink-0" />
-              <span>{brand.name}</span>
-            </div>
+    <main className="public-flow">
+      <div className="flow-wrap space-y-4 pb-6 [--flow-width:54rem]">
+        <header className="space-y-3 pb-2">
+          <div className="flow-top">
+            <FlowBrand />
             <div className="flex flex-wrap items-center gap-2">
               {otherCompanies.length ? (
                 <label className="text-sm">
@@ -104,26 +110,17 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
               </Button>
             </div>
           </div>
-          <div>
-            <p className="text-primary text-sm font-semibold">Tu empresa, lista para empezar</p>
-            <h1 className="text-foreground mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h1
+              ref={stepHeading}
+              tabIndex={-1}
+              className="text-xl font-extrabold tracking-tight sm:text-2xl"
+            >
               Configura Menos Líos
             </h1>
+            <span className="flow-kicker">Puesta en marcha</span>
           </div>
-          <ol
-            aria-label="Pasos del alta"
-            className="border-border bg-card grid grid-cols-2 gap-2 rounded-2xl border p-2 text-sm sm:grid-cols-4"
-          >
-            {steps.map((label, index) => (
-              <li
-                key={label}
-                aria-current={index === activeStep ? 'step' : undefined}
-                className={`rounded-xl px-3 py-2 ${index === activeStep ? 'bg-primary text-primary-foreground font-semibold' : 'text-muted-foreground'}`}
-              >
-                {index + 1}. {label}
-              </li>
-            ))}
-          </ol>
+          <FlowProgress labels={steps} step={activeStep} name="Pasos del alta" />
         </header>
         {status.isError ? (
           <div className="bg-card border-border space-y-3 rounded-xl border p-5">
@@ -144,7 +141,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
           />
         ) : null}
         {stage === 'pending' ? (
-          <section className="bg-card border-border space-y-3 rounded-2xl border p-6">
+          <section className="flow-panel flow-enter space-y-3 p-5 sm:p-6">
             <h2 className="text-xl font-semibold">Estamos comprobando el pago</h2>
             <p>
               Esperamos la confirmación de Redsys. No vuelvas a pagar ni cierres otra operación.
@@ -156,7 +153,7 @@ function CompanyWelcome({ tenantId, email }: { tenantId: string; email: string }
           </section>
         ) : null}
         {stage === 'billing_issue' ? (
-          <section className="bg-card border-border space-y-3 rounded-2xl border p-6">
+          <section className="flow-panel flow-enter space-y-3 p-5 sm:p-6">
             <h2 className="text-xl font-semibold">Necesitamos revisar tu suscripción</h2>
             <p>
               Contacta con Menos Líos para recuperar tu alta. No repitas el pago mientras se revisa.
@@ -190,13 +187,10 @@ function BookingStep({
   const url = bookingUrl && reference ? new URL(bookingUrl) : null
   url?.searchParams.set('abaco_reference', reference ?? '')
   return (
-    <section className="bg-card border-border space-y-4 rounded-2xl border p-6">
-      <p className="text-primary text-sm font-semibold">✓ Suscripción confirmada</p>
+    <section className="flow-panel flow-enter space-y-4 p-5 sm:p-6">
+      <p className="flow-kicker">Suscripción confirmada</p>
       <h2 className="text-xl font-semibold">Reserva tu sesión de puesta en marcha</h2>
-      <p>
-        Elige una hora disponible. Te ayudaremos a configurar los módulos que has contratado y a
-        importar tus Excel. Tenlos a mano para la sesión; no hace falta enviarlos ahora.
-      </p>
+      <p>Elige una hora. Configuraremos tus módulos y te ayudaremos a importar tus Excel.</p>
       {url ? (
         <>
           <p className="text-muted-foreground text-sm">
@@ -211,7 +205,7 @@ function BookingStep({
               href={url.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline"
+              className="flow-link flow-link--primary"
             >
               Ver horas disponibles ↗
             </a>
@@ -325,220 +319,242 @@ function PlanSelection({
     )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {failed ? (
         <output className="bg-card border-border block rounded-xl border p-4">
           El último pago no se completó. Puedes volver a elegir y reintentarlo.
         </output>
       ) : null}
-      {step === 0 ? (
-        <>
-          <section className="bg-card border-border rounded-2xl border p-5">
-            <h2 className="text-xl font-semibold">Elige cómo quieres trabajar</h2>
-            <p className="text-muted-foreground mt-1">
-              El plan base ya incluye clientes, catálogo, presupuestos, trabajos, mantenimientos y
-              facturación. Añade solo lo que necesites.
+      <div key={step} className="flow-enter space-y-4">
+        {step === 0 ? (
+          <>
+            <section className="flow-panel grid items-center gap-3 p-4 min-[400px]:grid-cols-[1fr_7.5rem] sm:grid-cols-[1fr_12rem] sm:p-6">
+              <div>
+                <h2 className="text-xl font-bold">Añade lo que te ayude</h2>
+                <p className="flow-muted mt-1 text-sm">
+                  Clientes, presupuestos, trabajos y facturación ya van incluidos. Estos módulos son
+                  opcionales.
+                </p>
+              </div>
+              <div className="flow-hero-art hidden min-[400px]:block">
+                <FlowIllustration variant="start" />
+              </div>
+            </section>
+            <ModuleCards
+              offers={offers}
+              selected={selected}
+              toggle={(code) => {
+                setConsent(false)
+                setSelected((current) =>
+                  current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
+                )
+              }}
+            />
+          </>
+        ) : null}
+        {step === 1 ? (
+          <section className="flow-panel flow-enter space-y-4 p-5 sm:p-6">
+            <h2 className="text-xl font-semibold">¿Cuántas personas necesitan entrar?</h2>
+            <p className="text-muted-foreground">
+              Tu plaza está incluida. Añade una por cada persona que vaya a entrar.
             </p>
-          </section>
-          <ModuleCards
-            offers={offers}
-            selected={selected}
-            toggle={(code) => {
-              setConsent(false)
-              setSelected((current) =>
-                current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
-              )
-            }}
-          />
-        </>
-      ) : null}
-      {step === 1 ? (
-        <section className="bg-card border-border space-y-4 rounded-2xl border p-6">
-          <h2 className="text-xl font-semibold">¿Cuántas personas necesitan entrar?</h2>
-          <p className="text-muted-foreground">
-            La primera plaza está incluida y es para ti. Cada usuario con acceso ocupa una plaza,
-            incluidas las invitaciones pendientes. Las personas registradas sin acceso no ocupan
-            plaza.
-          </p>
-          {agreed ? (
-            <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-              <p className="font-semibold">Condiciones pactadas para tu empresa</p>
-              <p>
-                {planLabel(agreed.plan, rates.data)} · {agreed.seats}{' '}
-                {agreed.seats === 1 ? 'licencia' : 'licencias'} ·{' '}
-                {period === 'year' ? 'Pago anual' : 'Pago mensual'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <label className="grid w-fit gap-2 font-medium">
-                Licencias, incluyéndote
-                <input
-                  className="border-input bg-background w-32 rounded-lg border px-3 py-2"
-                  type="number"
-                  min={1}
-                  max={MAX_SCALE_PLAN_MEMBERS}
-                  step={1}
-                  value={seats}
-                  onChange={(event) => {
-                    setSeats(event.target.value)
-                    setConsent(false)
-                  }}
-                />
-              </label>
-              {quote ? (
-                <p className="text-sm">
-                  Plazas adicionales: {formatEuros(quote.seatsCents / 100)}/{periodLabel}, sin IVA.
+            {agreed ? (
+              <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                <p className="font-semibold">Condiciones pactadas para tu empresa</p>
+                <p>
+                  {planLabel(agreed.plan, rates.data)} · {agreed.seats}{' '}
+                  {agreed.seats === 1 ? 'licencia' : 'licencias'} ·{' '}
+                  {period === 'year' ? 'Pago anual' : 'Pago mensual'}
                 </p>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Introduce entre 1 y {MAX_SCALE_PLAN_MEMBERS} licencias.
-                </p>
-              )}
-              <fieldset className="flex flex-wrap gap-4">
-                <legend className="mb-2 font-medium">Periodicidad de pago</legend>
-                {(['month', 'year'] as const).map((value) => (
-                  <label
-                    key={value}
-                    className="border-border flex cursor-pointer gap-2 rounded-lg border p-3"
-                  >
-                    <input
-                      type="radio"
-                      className="accent-primary"
-                      name="period"
-                      value={value}
-                      checked={period === value}
-                      onChange={() => {
-                        setPeriod(value)
-                        setConsent(false)
-                      }}
-                    />
-                    {value === 'month' ? 'Mensual' : 'Anual, en un solo cobro'}
-                  </label>
-                ))}
-              </fieldset>
-            </>
-          )}
-        </section>
-      ) : null}
-      {step === 2 && quote ? (
-        <section className="bg-card border-border space-y-4 rounded-2xl border p-5 sm:p-6">
-          <h2 className="text-xl font-semibold">Revisa y activa tu suscripción</h2>
-          <dl className="grid grid-cols-[1fr_auto] gap-2 text-sm">
-            <dt>
-              {agreed
-                ? `${planLabel(agreed.plan, rates.data)} · ${agreed.seats} licencias pactadas`
-                : 'Plan base · 1 licencia'}
-            </dt>
-            <dd>{formatEuros(quote.baseCents / 100)}</dd>
-            {!agreed && quote.terms.seats > 1 ? (
-              <>
-                <dt>{quote.terms.seats - 1} licencias adicionales</dt>
-                <dd>{formatEuros(quote.seatsCents / 100)}</dd>
-              </>
-            ) : null}
-            {quote.extras.map((item) =>
-              item ? (
-                <div key={item.code} className="contents">
-                  <dt>{modules[item.code].name}</dt>
-                  <dd>
-                    {formatEuros(
-                      (period === 'year' ? item.yearly_cents : item.monthly_cents) / 100,
-                    )}
-                  </dd>
-                </div>
-              ) : null,
-            )}
-            {taxReady ? (
-              <>
-                <dt>IVA ({quote.terms.vat_percent} %)</dt>
-                <dd>{formatEuros((quote.terms.amount_cents - quote.terms.net_cents) / 100)}</dd>
-                <dt className="border-border border-t pt-2 font-semibold">Total a pagar ahora</dt>
-                <dd className="border-border border-t pt-2 font-semibold">
-                  {formatEuros(quote.terms.amount_cents / 100)} / {periodLabel}
-                </dd>
-              </>
-            ) : null}
-          </dl>
-          <p className="text-muted-foreground text-sm">
-            La suscripción se renueva automáticamente cada {periodLabel}. Podrás desactivar la
-            renovación desde el plan. Después del pago, elige hora para la puesta en marcha.
-          </p>
-          <SubscriptionBillingProfileForm
-            tenantId={tenantId}
-            onChange={() => {
-              setFiscalDraft(true)
-              setConsent(false)
-            }}
-            onSaved={() => setFiscalDraft(false)}
-          />
-          <div className="border-border space-y-1 rounded-lg border p-3 text-sm" aria-live="polite">
-            {!profile.data || fiscalDraft ? (
-              <p>Guarda tu dirección fiscal para calcular el total.</p>
-            ) : fiscal.isError ? (
-              <>
-                <p>No se pudo comprobar el territorio fiscal.</p>
-                <Button variant="outline" onPress={() => void fiscal.refetch()}>
-                  Reintentar
-                </Button>
-              </>
-            ) : fiscal.isFetching || !fiscal.data ? (
-              <p>Comprobando territorio fiscal…</p>
+              </div>
             ) : (
               <>
-                <p>
-                  Territorio fiscal:{' '}
-                  <strong>{subscriptionTerritories[fiscal.data.territory]}</strong>
-                </p>
-                {fiscal.data.status === 'outside_iva' ? (
-                  <p>
-                    Fuera del territorio del IVA peninsular. Revisaremos el impuesto aplicable antes
-                    de cobrar. Contacta con Menos Líos para continuar.
+                <label className="grid w-fit gap-2 font-medium">
+                  Licencias, incluyéndote
+                  <input
+                    className="border-input bg-background w-32 rounded-lg border px-3 py-2"
+                    type="number"
+                    min={1}
+                    max={MAX_SCALE_PLAN_MEMBERS}
+                    step={1}
+                    value={seats}
+                    onChange={(event) => {
+                      setSeats(event.target.value)
+                      setConsent(false)
+                    }}
+                  />
+                </label>
+                {quote ? (
+                  <p className="text-sm">
+                    Plazas adicionales: {formatEuros(quote.seatsCents / 100)}/{periodLabel}, sin
+                    IVA.
                   </p>
-                ) : fiscal.data.status === 'review' ? (
-                  <p>
-                    Revisa el código postal o contacta con Menos Líos. No se iniciará ningún cobro
-                    hasta resolverlo.
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Introduce entre 1 y {MAX_SCALE_PLAN_MEMBERS} licencias.
                   </p>
-                ) : null}
+                )}
+                <fieldset className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <legend className="mb-2 font-medium">Periodicidad de pago</legend>
+                  {(['month', 'year'] as const).map((value) => (
+                    <label
+                      key={value}
+                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-[#dae5d3] p-3 font-semibold has-checked:border-[#547751] has-checked:bg-[#edf5e5]"
+                    >
+                      <input
+                        type="radio"
+                        className="accent-primary"
+                        name="period"
+                        value={value}
+                        checked={period === value}
+                        onChange={() => {
+                          setPeriod(value)
+                          setConsent(false)
+                        }}
+                      />
+                      {value === 'month' ? 'Mensual' : 'Anual, en un solo cobro'}
+                    </label>
+                  ))}
+                </fieldset>
               </>
             )}
-          </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              className="accent-primary mt-0.5 size-4"
-              type="checkbox"
-              checked={consent && taxReady}
-              disabled={!taxReady}
-              onChange={(event) => setConsent(event.target.checked)}
-            />
-            Confirmo las licencias, los módulos y el pago recurrente mostrado.
-          </label>
-          {!bookingUrl ? (
-            <p role="alert">
-              La agenda de puesta en marcha no está configurada. Todavía no se puede pagar.
+          </section>
+        ) : null}
+        {step === 2 && quote ? (
+          <section className="flow-panel space-y-4 p-4 sm:p-6">
+            <h2 className="text-xl font-semibold">Revisa y activa tu suscripción</h2>
+            <dl className="grid grid-cols-[1fr_auto] gap-2 rounded-xl bg-[#edf5e5] p-3 text-sm">
+              <dt>
+                {agreed
+                  ? `${planLabel(agreed.plan, rates.data)} · ${agreed.seats} licencias pactadas`
+                  : 'Plan base · 1 licencia'}
+              </dt>
+              <dd>{formatEuros(quote.baseCents / 100)}</dd>
+              {!agreed && quote.terms.seats > 1 ? (
+                <>
+                  <dt>{quote.terms.seats - 1} licencias adicionales</dt>
+                  <dd>{formatEuros(quote.seatsCents / 100)}</dd>
+                </>
+              ) : null}
+              {quote.extras.map((item) =>
+                item ? (
+                  <div key={item.code} className="contents">
+                    <dt>{modules[item.code].name}</dt>
+                    <dd>
+                      {formatEuros(
+                        (period === 'year' ? item.yearly_cents : item.monthly_cents) / 100,
+                      )}
+                    </dd>
+                  </div>
+                ) : null,
+              )}
+              {taxReady ? (
+                <>
+                  <dt>IVA ({quote.terms.vat_percent} %)</dt>
+                  <dd>{formatEuros((quote.terms.amount_cents - quote.terms.net_cents) / 100)}</dd>
+                  <dt className="border-border border-t pt-2 font-semibold">Total a pagar ahora</dt>
+                  <dd className="border-border border-t pt-2 font-semibold">
+                    {formatEuros(quote.terms.amount_cents / 100)} / {periodLabel}
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+            <p className="text-muted-foreground text-sm">
+              Renovación automática cada {periodLabel}. Puedes desactivarla desde tu plan. Después,
+              reserva tu puesta en marcha.
             </p>
-          ) : null}
-          <FormError message={error} />
-          <Button
-            isDisabled={busy || !consent || !profile.data || !bookingUrl || !taxReady}
-            onPress={() => void pay()}
-          >
-            {busy ? 'Abriendo Redsys…' : 'Pagar y suscribirme con Redsys'}
-          </Button>
-        </section>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+            <SubscriptionBillingProfileForm
+              tenantId={tenantId}
+              onChange={() => {
+                setFiscalDraft(true)
+                setConsent(false)
+              }}
+              onSaved={() => setFiscalDraft(false)}
+            />
+            <div
+              className="border-border space-y-1 rounded-lg border p-3 text-sm"
+              aria-live="polite"
+            >
+              {!profile.data || fiscalDraft ? (
+                <p>Guarda tu dirección fiscal para calcular el total.</p>
+              ) : fiscal.isError ? (
+                <>
+                  <p>No se pudo comprobar el territorio fiscal.</p>
+                  <Button variant="outline" onPress={() => void fiscal.refetch()}>
+                    Reintentar
+                  </Button>
+                </>
+              ) : fiscal.isFetching || !fiscal.data ? (
+                <p>Comprobando territorio fiscal…</p>
+              ) : (
+                <>
+                  <p>
+                    Territorio fiscal:{' '}
+                    <strong>{subscriptionTerritories[fiscal.data.territory]}</strong>
+                  </p>
+                  {fiscal.data.status === 'outside_iva' ? (
+                    <p>
+                      Fuera del territorio del IVA peninsular. Revisaremos el impuesto aplicable
+                      antes de cobrar. Contacta con Menos Líos para continuar.
+                    </p>
+                  ) : fiscal.data.status === 'review' ? (
+                    <p>
+                      Revisa el código postal o contacta con Menos Líos. No se iniciará ningún cobro
+                      hasta resolverlo.
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                className="accent-primary mt-0.5 size-4"
+                type="checkbox"
+                checked={consent && taxReady}
+                disabled={!taxReady}
+                onChange={(event) => setConsent(event.target.checked)}
+              />
+              Confirmo las licencias, los módulos y el pago recurrente mostrado.
+            </label>
+            {!bookingUrl ? (
+              <p role="alert">
+                La agenda de puesta en marcha no está configurada. Todavía no se puede pagar.
+              </p>
+            ) : null}
+            <FormError message={error} />
+          </section>
+        ) : null}
+      </div>
+      <div className="flow-sticky flex flex-wrap items-center justify-between gap-2">
         {step > 0 ? (
-          <Button variant="outline" isDisabled={busy} onPress={() => onStep(step - 1)}>
+          <Button
+            variant="outline"
+            className="min-h-12"
+            isDisabled={busy}
+            onPress={() => onStep(step - 1)}
+          >
             Atrás
           </Button>
         ) : (
-          <p className="text-muted-foreground text-sm">{selected.length} módulos opcionales</p>
+          <p className="flow-muted text-xs sm:text-sm">
+            {selected.length} {selected.length === 1 ? 'módulo añadido' : 'módulos añadidos'}
+          </p>
         )}
         {step < 2 ? (
-          <Button isDisabled={step === 1 && !quote} onPress={() => onStep(step + 1)}>
+          <Button
+            className="min-h-12"
+            isDisabled={step === 1 && !quote}
+            onPress={() => onStep(step + 1)}
+          >
             {step === 0 ? 'Elegir licencias' : 'Revisar suscripción'}
+          </Button>
+        ) : quote ? (
+          <Button
+            className="min-h-12"
+            isDisabled={busy || !consent || !profile.data || !bookingUrl || !taxReady}
+            onPress={() => void pay()}
+          >
+            {busy ? 'Abriendo Redsys…' : 'Pagar con Redsys'}
           </Button>
         ) : null}
       </div>

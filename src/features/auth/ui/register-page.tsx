@@ -1,10 +1,12 @@
 import { Button } from '@doscientos/ui'
+import { ArrowLeft, ArrowRight } from '@phosphor-icons/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { PasswordField, TextField } from '@/shared/ui/form'
+import { FlowBrand, FlowIllustration, FlowProgress } from '@/shared/ui/public-flow'
 
 import { sessionQuery, signUp } from '../application/auth-actions'
 import { clearReferral, rememberReferral } from '../application/referral-actions'
@@ -21,15 +23,15 @@ const toLogin = (
 const steps = [
   {
     title: 'Empecemos por ti',
-    description: '¿Cómo te llamas?',
+    description: 'Tu nombre será visible para tu equipo.',
   },
   {
-    title: 'Cuéntanos sobre tu empresa',
-    description: 'Podrás completar los demás datos más adelante.',
+    title: '¿Cómo se llama tu empresa?',
+    description: 'Ponle nombre a tu espacio de trabajo. Podrás completar los datos después.',
   },
   {
     title: 'Crea tu acceso',
-    description: 'Usarás estos datos para entrar en Menos Líos.',
+    description: 'Entra con Google o usa tu correo profesional.',
   },
 ] as const
 
@@ -48,10 +50,14 @@ export function RegisterPage() {
   const [invitation] = useState(() =>
     typeof window === 'undefined' ? null : rememberReferral(window.location.search),
   )
-  const formRef = useRef<HTMLFormElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const previousStep = useRef(step)
 
   useEffect(() => {
-    formRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+    if (previousStep.current === step) return
+    previousStep.current = step
+    window.scrollTo(0, 0)
+    headingRef.current?.focus({ preventScroll: true })
   }, [step])
 
   async function submit(event: FormEvent) {
@@ -95,103 +101,142 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout
-      title={steps[step]?.title ?? 'Crea tu cuenta'}
-      description={steps[step]?.description}
-      footer={toLogin}
-    >
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">
-          Paso {step + 1} de {steps.length}
-        </p>
-        <progress
-          className="h-1.5 w-full"
-          value={step + 1}
-          max={steps.length}
-          aria-label="Progreso del registro"
-        />
-      </div>
-      {invitation ? (
-        <p className="text-muted-foreground text-sm">
-          Enlace de invitación detectado. Lo comprobaremos al crear tu empresa.
-        </p>
-      ) : null}
-      {step === 2 ? (
-        <GoogleAuthButton signup={{ fullName, companyName, referralCode: invitation }} />
-      ) : null}
-      <form ref={formRef} onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
-        {step === 0 ? (
-          <TextField
-            label="Tu nombre"
-            name="name"
-            autoComplete="name"
-            placeholder="Nombre y apellidos"
-            maxLength={120}
-            minLength={2}
-            value={fullName}
-            onChange={setFullName}
-          />
-        ) : null}
-        {step === 1 ? (
-          <TextField
-            label="Nombre de la empresa"
-            maxLength={120}
-            minLength={1}
-            placeholder="Ej. Instalaciones García"
-            value={companyName}
-            onChange={setCompanyName}
-          />
-        ) : null}
-        {step === 2 ? (
-          <>
-            <TextField
-              label="Correo"
-              type="email"
-              name="email"
-              autoComplete="email"
-              maxLength={254}
-              placeholder="nombre@empresa.es"
-              icon={fieldIcons.mail}
-              value={email}
-              onChange={setEmail}
-            />
-            <PasswordField
-              label="Contraseña"
-              name="password"
-              autoComplete="new-password"
-              placeholder="Elige una contraseña"
-              helper={passwordRules}
-              value={password}
-              onChange={setPassword}
-            />
-          </>
-        ) : null}
-        <FormError message={error} />
-        <Button type="submit" className="w-full" isDisabled={busy}>
-          {busy ? 'Creando cuenta…' : step === steps.length - 1 ? 'Crear cuenta' : 'Continuar'}
-        </Button>
-        {step > 0 ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            isDisabled={busy}
-            onPress={() => {
-              setError(null)
-              setStep(step - 1)
-            }}
+    <main className="public-flow">
+      <div className="flow-wrap">
+        <header className="flow-top">
+          <FlowBrand />
+          <Link to="/entrar" className="flow-link">
+            Ya tengo cuenta
+          </Link>
+        </header>
+        <div className="mx-auto grid max-w-5xl items-center gap-6 pt-4 pb-8 lg:grid-cols-[1fr_1fr] lg:gap-10 lg:pt-9">
+          <aside className="hidden space-y-5 lg:block">
+            <p className="flow-kicker">Tu nuevo espacio de trabajo</p>
+            <p className="max-w-[12ch] text-5xl leading-[1.06] font-extrabold tracking-[-0.055em]">
+              Del presupuesto al cobro, sin líos.
+            </p>
+            <div className="flow-hero-art">
+              <FlowIllustration variant="start" />
+            </div>
+          </aside>
+          <section
+            className="flow-panel min-w-0 space-y-6 p-4 sm:p-7"
+            aria-labelledby="register-heading"
           >
-            Volver
-          </Button>
-        ) : null}
-      </form>
-      <p className="text-muted-foreground text-xs">
-        Activa tu suscripción para empezar a usar Menos Líos.{' '}
-        <Link to="/precios" className="font-medium underline">
-          Ver precios
-        </Link>
-        .
-      </p>
-    </AuthLayout>
+            <FlowProgress
+              labels={['Sobre ti', 'Tu empresa', 'Acceso']}
+              step={step}
+              name="Progreso del registro"
+            />
+            <div key={step} className="flow-enter space-y-4">
+              <header className="space-y-1">
+                <h1
+                  id="register-heading"
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl"
+                >
+                  {steps[step]?.title ?? 'Crea tu cuenta'}
+                </h1>
+                <p className="flow-muted text-sm">{steps[step]?.description}</p>
+              </header>
+              {step === 0 ? (
+                <div className="flow-hero-art max-w-60 lg:hidden">
+                  <FlowIllustration variant="start" />
+                </div>
+              ) : null}
+              {invitation ? (
+                <p className="rounded-xl bg-[#edf5e5] p-3 text-sm">
+                  Enlace de invitación detectado. Lo comprobaremos al crear tu empresa.
+                </p>
+              ) : null}
+              {step === 2 ? (
+                <GoogleAuthButton signup={{ fullName, companyName, referralCode: invitation }} />
+              ) : null}
+              <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+                {step === 0 ? (
+                  <TextField
+                    label="Tu nombre"
+                    name="name"
+                    autoComplete="name"
+                    placeholder="Nombre y apellidos"
+                    maxLength={120}
+                    minLength={2}
+                    value={fullName}
+                    onChange={setFullName}
+                  />
+                ) : null}
+                {step === 1 ? (
+                  <TextField
+                    label="Nombre de la empresa"
+                    autoComplete="organization"
+                    maxLength={120}
+                    minLength={1}
+                    placeholder="Ej. Instalaciones García"
+                    value={companyName}
+                    onChange={setCompanyName}
+                  />
+                ) : null}
+                {step === 2 ? (
+                  <>
+                    <TextField
+                      label="Correo"
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      maxLength={254}
+                      placeholder="nombre@empresa.es"
+                      icon={fieldIcons.mail}
+                      value={email}
+                      onChange={setEmail}
+                    />
+                    <PasswordField
+                      label="Contraseña"
+                      name="password"
+                      autoComplete="new-password"
+                      placeholder="Elige una contraseña"
+                      helper={passwordRules}
+                      value={password}
+                      onChange={setPassword}
+                    />
+                  </>
+                ) : null}
+                <FormError message={error} />
+                <div className="flex items-center gap-2">
+                  {step > 0 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-12"
+                      isDisabled={busy}
+                      onPress={() => {
+                        setError(null)
+                        setStep(step - 1)
+                      }}
+                    >
+                      <ArrowLeft size={16} aria-hidden="true" /> Volver
+                    </Button>
+                  ) : null}
+                  <Button type="submit" className="min-h-12 flex-1 font-bold" isDisabled={busy}>
+                    {busy
+                      ? 'Creando cuenta…'
+                      : step === steps.length - 1
+                        ? 'Crear cuenta'
+                        : 'Continuar'}
+                    {!busy ? <ArrowRight size={16} aria-hidden="true" /> : null}
+                  </Button>
+                </div>
+              </form>
+            </div>
+            <footer className="flow-muted flex flex-wrap items-center justify-between gap-x-3 border-t border-[#dae5d3] pt-3 text-xs">
+              <p>Configurarás la suscripción después.</p>
+              <Link to="/precios" className="flow-link flow-link--plain">
+                Ver precios <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </footer>
+          </section>
+        </div>
+      </div>
+    </main>
   )
 }

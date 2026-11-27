@@ -139,6 +139,15 @@ const products = [
         }
         return json(profile)
       }
+      if (path.endsWith('/subscription_billing_tax')) {
+        const canary = profile?.postal_code?.startsWith('35')
+        return json({
+          territory: canary ? 'canary' : 'mainland',
+          status: canary ? 'outside_iva' : 'ready',
+          override: null,
+          detected: canary ? 'canary' : 'mainland',
+        })
+      }
       if (path.endsWith('/functions/v1/billing')) {
         const input = request.postDataJSON()
         assert.equal(input.action, 'onboarding-checkout')
@@ -251,7 +260,6 @@ const products = [
       await page.getByRole('spinbutton', { name: 'Licencias, incluyéndote' }).fill('3')
       await page.getByRole('radio', { name: 'Anual, en un solo cobro' }).check()
       await page.getByRole('button', { name: 'Revisar suscripción' }).click()
-      assert.match(await page.locator('main').innerText(), /816,75/)
       if (fillProfile) {
         const form = {
           'Razón social o nombre fiscal': 'Empresa ficticia',
@@ -264,11 +272,21 @@ const products = [
         }
         for (const [label, value] of Object.entries(form))
           await page.getByLabel(label, { exact: true }).fill(value)
+        const postcode = page.getByLabel('Código postal', { exact: true })
+        await postcode.fill('35001')
         await page.getByRole('button', { name: 'Guardar datos fiscales' }).click()
-        await page.getByText('Datos fiscales guardados.').waitFor({ state: 'attached' })
+        await page.getByText('Fuera del territorio del IVA peninsular.', { exact: false }).waitFor()
+        assert.ok(await page.getByRole('button', { name: 'Pagar con Redsys' }).isDisabled())
+        assert.equal(paymentAttempts, 0)
+        const fiscalDetails = page.getByText('Datos fiscales de la suscripción', { exact: true })
+        const field = page.getByLabel('Código postal', { exact: true })
+        if (!(await field.isVisible())) await fiscalDetails.click()
+        await field.fill('08300')
+        await page.getByRole('button', { name: 'Guardar datos fiscales' }).click()
       }
+      await page.getByText(/816,75\s*€/).waitFor()
       await page.getByRole('checkbox', { name: /Confirmo las licencias/ }).check()
-      await page.getByRole('button', { name: 'Pagar y suscribirme con Redsys' }).click()
+      await page.getByRole('button', { name: 'Pagar con Redsys' }).click()
       await page.getByRole('heading', { name: 'Estamos comprobando el pago' }).waitFor()
     }
     await submit(true)
@@ -335,7 +353,7 @@ const products = [
     await page.screenshot({ path: join(tmpdir(), 'abaco-module-procurement.png') })
     await page.goto(origin + '/')
     await page.getByRole('button', { name: 'Asistente', exact: true }).click()
-    await page.getByRole('heading', { name: 'Asistente de Menos Líos' }).waitFor()
+    await page.getByRole('heading', { name: 'Asistente', exact: true }).waitFor()
     await page.screenshot({ path: join(tmpdir(), 'abaco-module-ai.png') })
     // A separate tenant granted explicit courtesy by the platform bypasses the paid flow.
     courtesy = true

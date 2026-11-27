@@ -23,7 +23,7 @@ create table public.billing_catalog (
 );
 insert into public.billing_catalog(plan,seats,monthly_cents,seat_monthly_cents) values ('standard',1,3480,800);
 create table public.billing_module_catalog (code text primary key,status text,monthly_cents int,yearly_cents int);
-insert into public.billing_module_catalog values ('workers','pilot',900,9000),('supplier_logistics','planned',2900,29000);
+insert into public.billing_module_catalog values ('workers','pilot',900,9000),('ai','pilot',375,4500),('supplier_logistics','planned',2900,29000);
 create table public.tenant_modules (tenant_id uuid,module_code text,enabled bool,next_enabled bool,monthly_cents int,
   yearly_cents int,updated_by uuid,updated_at timestamptz default now(),gifted bool default false,
   primary key(tenant_id,module_code));
@@ -42,9 +42,20 @@ create function public.reserve_subscription_invoice_payment(
 begin
   if action <> 'checkout' then raise exception 'invalid quote'; end if;
   if plan = 'standard' then
-    if total is distinct from (select ((monthly_cents + 900)*121)/100 from public.billing_catalog where billing_catalog.plan='standard')
-      or not exists(select 1 from public.tenant_modules where tenant_id=tenant
-        and module_code='workers' and next_enabled and monthly_cents=900) then raise exception 'invalid quote';
+    if not exists(select 1 from public.tenant_modules where tenant_id=tenant
+        and module_code='workers' and next_enabled and monthly_cents=900) then
+      raise exception 'invalid quote';
+    end if;
+    if period = 'year' then
+      if total is distinct from (
+        select round((c.yearly_cents + c.seat_monthly_cents * (reserve_subscription_invoice_payment.seats-1)
+          * 12 + coalesce((select sum(m.yearly_cents) from public.tenant_modules m
+            where m.tenant_id=tenant and m.next_enabled),0)) * 1.21)
+        from public.billing_catalog c where c.plan='standard'
+      ) then raise exception 'invalid quote'; end if;
+    elsif total is distinct from (select ((monthly_cents + 900)*121)/100
+      from public.billing_catalog where billing_catalog.plan='standard') then
+      raise exception 'invalid quote';
     end if;
   elsif plan is distinct from 'team' or period is distinct from 'year' or seats is distinct from 5 or total is distinct from 54321 then
     raise exception 'invalid quote';

@@ -1,0 +1,218 @@
+/* Public forms flow with the document; workspaces keep their internal scroll containers. */
+html:has(#root > .public-flow) {
+  min-height: 100%;
+  height: auto;
+  overflow: hidden auto;
+  scroll-padding-bottom: 7rem;
+}
+
+body:has(#root > .public-flow) {
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.public-flow {
+  --flow-bg: #f6f8f1;
+  --flow-ink: #20381f;
+  --flow-muted: #526451;
+  --flow-line: #dae5d3;
+  --flow-soft: #edf5e5;
+  --flow-active: #2a4928;
+  min-height: 100svh;
+  min-width: 0;
+  color: var(--flow-ink);
+  background: var(--flow-bg);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.flow-wrap {
+  width: min(100% - 2rem, var(--flow-width, 72rem));
+  margin-inline: auto;
+}
+
+.flow-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  color: var(--flow-ink);
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.flow-brand img {
+  flex: none;
+}
+
+.flow-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding-block: 1.25rem 0.85rem;
+}
+
+.flow-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 0.45rem;
+  border: 1px solid var(--flow-line);
+  border-radius: 0.85rem;
+  padding: 0.5rem 0.8rem;
+  background: #fff;
+  color: var(--flow-ink);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.flow-link:hover {
+  background: var(--flow-soft);
+}
+.flow-link:focus-visible {
+  outline: 2px solid var(--flow-active);
+  outline-offset: 3px;
+}
+
+.flow-link--primary {
+  background: var(--flow-active);
+  border-color: var(--flow-active);
+  color: #fff;
+  min-height: 50px;
+  box-shadow: 0 3px 0 #142913;
+}
+.flow-link--primary:hover {
+  background: #395d34;
+}
+.flow-link--plain {
+  border-color: transparent;
+  background: transparent;
+}
+
+.flow-panel {
+  border: 1px solid var(--flow-line);
+  border-radius: 1.3rem;
+  background: #fff;
+  box-shadow: 0 15px 35px -30px #1d3d2090;
+}
+
+.flow-panel[data-selected='true'] {
+  border-color: #5a8550;
+  background: #f3f8ef;
+  box-shadow: 0 0 0 2px #dcebd3;
+}
+
+.flow-hero-art {
+  background: #e7f2dc;
+  border: 1px solid #d5e6cc;
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.flow-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.flow-art-card {
+  animation: flow-art-appear 480ms ease-out both;
+}
+.flow-art-card:nth-of-type(2) {
+  animation-delay: 70ms;
+}
+.flow-art-card:nth-of-type(3) {
+  animation-delay: 140ms;
+}
+
+.flow-kicker {
+  color: #42623a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.115em;
+  text-transform: uppercase;
+}
+
+.flow-muted {
+  color: var(--flow-muted);
+}
+
+.flow-progress {
+  display: grid;
+  gap: 0.62rem;
+}
+.flow-progress-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.88rem;
+}
+.flow-progress-caption span {
+  color: var(--flow-muted);
+  font-variant-numeric: tabular-nums;
+}
+.flow-progress-track {
+  display: flex;
+  gap: 0.4rem;
+}
+.flow-progress-track li {
+  flex: 1;
+  height: 0.44rem;
+  border-radius: 999px;
+  background: #dfead8;
+  transition: background-color 180ms ease;
+}
+.flow-progress-track li[data-reached='true'] {
+  background: #4f7c43;
+}
+
+.flow-enter {
+  animation: flow-enter 240ms cubic-bezier(0.22, 0.72, 0.3, 1) both;
+}
+@keyframes flow-enter {
+  from {
+    opacity: 0;
+    translate: 0 7px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes flow-art-appear {
+  from {
+    opacity: 0;
+    translate: 0 7px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.flow-sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--flow-bg);
+  border-top: 1px solid var(--flow-line);
+  padding-block: 0.8rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-enter,
+  .flow-art-card {
+    animation: none;
+  }
+  .flow-link,
+  .flow-progress-track li {
+    transition: none;
+  }
+}

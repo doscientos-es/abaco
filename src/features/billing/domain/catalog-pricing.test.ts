@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   catalogQuote,
   catalogRateForCapacity,
+  planInfo,
   sameCapacity,
   smallestRateFor,
   withModulePrice,
@@ -46,6 +47,17 @@ describe('catalogue quotes', () => {
       expect(catalogQuote(selected, 'year').amount_cents).toBe(Math.round(yearly * 1.21))
     },
   )
+
+  it('normalizes only the legacy standard brand and keeps configured catalogue titles', () => {
+    const description = { audience: 'Equipos', benefit: 'Coordina', revision: 2 }
+    expect(
+      planInfo('standard', [{ ...standard, plan_info: { ...description, name: 'Ábaco' } }])?.name,
+    ).toBe('Menos Líos')
+    expect(
+      planInfo('standard', [{ ...standard, plan_info: { ...description, name: 'Menos Líos Pro' } }])
+        ?.name,
+    ).toBe('Menos Líos Pro')
+  })
 
   it('prefers the per-person offer and rejects invalid capacities', () => {
     const catalog = [...rates, standard]

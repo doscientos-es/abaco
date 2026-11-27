@@ -1,4 +1,4 @@
-import { ArrowUpRight, Buildings, Sparkle, UsersThree } from '@phosphor-icons/react'
+import { Buildings, CaretDown, Sparkle, UsersThree } from '@phosphor-icons/react'
 
 import { formatEuros } from '@/features/billing'
 import { modules, type ModuleRate } from '@/features/product-modules'
@@ -57,13 +57,14 @@ export function ModuleCards({
         return (
           <article
             key={code}
-            className={`bg-card rounded-2xl border p-4 shadow-sm ${selectedModule ? 'border-primary ring-primary/10 ring-2' : 'border-border'}`}
+            data-selected={selectedModule ? 'true' : undefined}
+            className="flow-panel p-4 transition-colors motion-reduce:transition-none sm:p-5"
           >
             <div className="flex items-start justify-between gap-3">
-              <span className="bg-primary/10 text-primary grid size-11 place-items-center rounded-xl">
+              <span className="text-primary grid size-11 place-items-center rounded-xl bg-[#e8f2db]">
                 <Icon size={22} aria-hidden="true" />
               </span>
-              <label className="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium">
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-[#dae5d3] bg-white px-3 py-2 text-sm font-bold">
                 <input
                   type="checkbox"
                   className="accent-primary size-4"
@@ -84,10 +85,13 @@ export function ModuleCards({
             <p className="text-muted-foreground text-xs">
               Sin IVA, {code === 'ai' ? 'por usuario (una licencia)' : 'por empresa'}.
             </p>
-            <details className="border-border mt-4 border-t pt-3 text-sm">
-              <summary className="text-primary cursor-pointer font-semibold">
+            <details className="group border-border mt-4 border-t pt-2 text-sm">
+              <summary className="text-primary flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 rounded-md font-semibold [&::-webkit-details-marker]:hidden">
                 Ver qué incluye
-                <ArrowUpRight className="ml-1 inline" aria-hidden="true" />
+                <CaretDown
+                  className="transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                  aria-hidden="true"
+                />
               </summary>
               <ul className="my-3 list-disc space-y-1 pl-5">
                 {item.features.map((feature) => (

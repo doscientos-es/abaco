@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { TextField } from '@/shared/ui/form'
@@ -17,11 +17,24 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
   const { create } = useCompanyActions()
   const [name, setName] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submitting = useRef(false)
 
   async function submit() {
-    const result = await create(name)
-    if (result.ok) onClose()
-    else setError(result.message)
+    if (submitting.current || !name.trim()) return
+    submitting.current = true
+    setBusy(true)
+    setError('')
+    try {
+      const result = await create(name)
+      if (result.ok) onClose()
+      else setError(result.message)
+    } catch {
+      setError('No pudimos comprobar el alta. Revisa tus empresas antes de volver a intentarlo.')
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
   }
 
   return (
@@ -31,8 +44,10 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
         if (!next) onClose()
       }}
       title="Nueva empresa"
-      description="Tendrá sus propios clientes, presupuestos y equipo. Tú serás administrador."
-      submitLabel="Crear empresa"
+      description="Un espacio propio para tu equipo, clientes y trabajos."
+      submitLabel={busy ? 'Creando empresa…' : 'Crear empresa'}
+      isSubmitting={busy}
+      compact
       submitDisabled={!name.trim()}
       onSubmit={() => void submit()}
     >
@@ -41,14 +56,17 @@ function CompanyForm({ onClose }: Pick<Props, 'onClose'>) {
         minLength={1}
         maxLength={120}
         required
-        showCount
         className="sm:col-span-2"
-        placeholder="Ej. Reformas Abderrahim"
+        placeholder="Ej. Instalaciones García"
         icon={fieldIcons.user}
         value={name}
         onChange={setName}
       />
-      {error ? <output className="text-destructive text-sm sm:col-span-2">{error}</output> : null}
+      {error ? (
+        <p role="alert" className="text-destructive text-sm sm:col-span-2">
+          {error}
+        </p>
+      ) : null}
     </FormDialog>
   )
 }

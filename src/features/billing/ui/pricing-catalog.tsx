@@ -92,7 +92,7 @@ export function PricingCatalog({
           >
             <TabsList aria-label="Periodo de pago">
               <TabsTrigger id="month">Mensual</TabsTrigger>
-              <TabsTrigger id="year">Anual · 2 meses de ahorro en la cuota base</TabsTrigger>
+              <TabsTrigger id="year">Anual</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
