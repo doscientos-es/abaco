@@ -114,6 +114,7 @@ vi.mock('./estimate-suggestion-preview', () => ({
     return <div>Vista previa</div>
   },
 }))
+vi.mock('./chat-attachments', () => ({ ChatAttachments: () => <div>Adjuntos</div> }))
 
 import type { DraftTarget } from './chat-context'
 import { AiChatPanel } from './chat-panel'

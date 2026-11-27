@@ -32,6 +32,7 @@ import {
 } from '../domain/chat-tools'
 import { appendEstimateSuggestion, estimateSuggestionSchema } from '../domain/suggestions'
 import { CatalogBatchProposal } from './catalog-batch-proposal'
+import { ChatAttachments } from './chat-attachments'
 import type { ClientProgress, DraftTarget } from './chat-context'
 import {
   ChatActivity,
@@ -74,6 +75,7 @@ export function AiChatPanel({
   const procurement = useModuleEnabled(tenantId, 'procurement')
   const [applied, setApplied] = useState<Set<string>>(() => new Set())
   const [applyError, setApplyError] = useState('')
+  const [preparingAttachments, setPreparingAttachments] = useState(false)
   const messagesRef = useRef<HTMLDivElement>(null)
   const latest = useRef(data)
   const targetRef = useRef(target)
@@ -221,7 +223,7 @@ export function AiChatPanel({
         )
     },
   })
-  const runtime = useAISDKRuntime(chat)
+  const runtime = useAISDKRuntime(chat, { isSendDisabled: preparingAttachments })
   const stop = chat.stop
   const busy = chat.status === 'streaming' || chat.status === 'submitted'
   const latestMessage = chat.messages.at(-1)
@@ -362,6 +364,23 @@ export function AiChatPanel({
                     return (
                       <ChatMessage key={index} text={part.text} user={message.role === 'user'} />
                     )
+                  if (part.type === 'file' && message.role === 'user')
+                    return part.mediaType === 'image/jpeg' ? (
+                      <img
+                        key={index}
+                        src={part.url}
+                        alt="Imagen adjunta"
+                        className="ml-auto max-h-40 max-w-40 rounded-xl object-contain"
+                      />
+                    ) : part.mediaType === 'audio/wav' ? (
+                      <audio
+                        key={index}
+                        controls
+                        src={part.url}
+                        aria-label="Audio adjunto"
+                        className="ml-auto max-w-full"
+                      />
+                    ) : null
                   if (part.type === 'reasoning' && part.text)
                     return (
                       <details key={index} className="text-muted-foreground text-xs">
@@ -725,8 +744,10 @@ export function AiChatPanel({
                 aria-label="Mensaje al asistente"
                 placeholder="¿En qué te ayudo?"
                 maxLength={4000}
+                addAttachmentOnPaste={false}
                 className="placeholder:text-muted-foreground max-h-32 min-h-12 w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
+              <ChatAttachments busy={busy} onProcessingChange={setPreparingAttachments} />
               <div className="flex items-center justify-between gap-2 pl-2">
                 <span className="text-muted-foreground text-xs">Revisa siempre las propuestas</span>
                 {busy ? (

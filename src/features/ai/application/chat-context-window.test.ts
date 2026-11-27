@@ -24,6 +24,22 @@ const proposal = (id: string, call: string, text = ''): UIMessage => ({
 })
 
 describe('chat context window', () => {
+  it('retains attachments for continuations but drops them when a new turn starts', () => {
+    const old: UIMessage = {
+      id: 'old',
+      role: 'user',
+      parts: [{ type: 'file', mediaType: 'image/jpeg', url: 'data:image/jpeg;base64,YQ==' }],
+    }
+    const reply: UIMessage = {
+      id: 'reply',
+      role: 'assistant',
+      parts: [{ type: 'text', text: '¿Algo más?' }],
+    }
+    expect(chatContextWindow([old, reply], new Set())[0]).toEqual(old)
+    const result = chatContextWindow([old, reply, user('new')], new Set())
+    expect(result[0]?.parts).toEqual([{ type: 'text', text: '[Adjuntos anteriores no incluidos]' }])
+    expect(old.parts[0]?.type).toBe('file')
+  })
   it('starts a fresh context after a completed action, retaining the next user message', () => {
     const messages = [user('old'), proposal('done', 'client'), user('new')]
     expect(chatContextWindow(messages, new Set(['client'])).map(({ id }) => id)).toEqual(['new'])

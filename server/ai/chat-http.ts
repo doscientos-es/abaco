@@ -59,8 +59,12 @@ const envelope = z
 
 export function createChatHandler(dependencies: Dependencies) {
   return async (request: IncomingMessage, response: ServerResponse) => {
-    if (request.method !== 'POST') return reply(response, 405, { error: 'method_not_allowed' })
-    if (request.headers.origin !== dependencies.origin)
+    if (request.method !== 'POST' && request.method !== 'GET')
+      return reply(response, 405, { error: 'method_not_allowed' })
+    if (
+      request.headers.origin !== dependencies.origin &&
+      !(request.method === 'GET' && !request.headers.origin)
+    )
       return reply(response, 403, { error: 'forbidden' })
     const token = /^Bearer ([^\s]+)$/.exec(request.headers.authorization ?? '')?.[1]
     if (!token || token.length > 8192) return reply(response, 401, { error: 'unauthorized' })
@@ -71,6 +75,10 @@ export function createChatHandler(dependencies: Dependencies) {
       return reply(response, 503, { error: 'unavailable' })
     }
     if (!userId) return reply(response, 401, { error: 'unauthorized' })
+    if (request.method === 'GET') {
+      response.setHeader('Cache-Control', 'no-store')
+      return reply(response, 200, { audioAllowed: dependencies.audioAllowed === true })
+    }
 
     let tenantId: string
     let messages: UIMessage[]

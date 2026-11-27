@@ -95,7 +95,8 @@ export function chatContextWindow(
   if (firstUser > 0 && bounded.slice(0, firstUser).some(hasPending))
     throw new Error(pendingContextLimitMessage)
   const selected = firstUser < 0 ? bounded : bounded.slice(firstUser)
-  const lastUser = selected.findLastIndex((message) => message.role === 'user')
+  const lastUser =
+    selected.length - 1 - [...selected].reverse().findIndex((message) => message.role === 'user')
   return selected.map((message, index) => {
     if (
       message.role !== 'user' ||

@@ -47,7 +47,8 @@ function validateAudio(data: Buffer) {
 
 /** Only the latest user turn may carry bounded, inline files. */
 export async function validateChatAttachments(messages: UIMessage[], audioAllowed: boolean) {
-  const lastUser = messages.findLastIndex((message) => message.role === 'user')
+  const lastUser =
+    messages.length - 1 - [...messages].reverse().findIndex((message) => message.role === 'user')
   let images = 0
   let audio = 0
   for (const [index, message] of messages.entries()) {

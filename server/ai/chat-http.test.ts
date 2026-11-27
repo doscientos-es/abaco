@@ -1,6 +1,7 @@
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
+import sharp from 'sharp'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createChatHandler } from './chat-http'
@@ -28,11 +29,28 @@ const stream = vi.fn(
       }),
     }) as unknown as Awaited<ReturnType<typeof streamChat>>,
 )
-const handler = createChatHandler({ origin: 'https://app.example', authenticate, reserve, stream })
+const handler = createChatHandler({
+  origin: 'https://app.example',
+  audioAllowed: true,
+  authenticate,
+  reserve,
+  stream,
+})
+const noAudioHandler = createChatHandler({
+  origin: 'https://app.example',
+  audioAllowed: false,
+  authenticate,
+  reserve,
+  stream,
+})
 const servers: ReturnType<typeof createServer>[] = []
 
-async function invoke(input: unknown = body, headers: Record<string, string> = {}) {
-  const server = createServer((req, res) => void handler(req, res))
+async function invoke(
+  input: unknown = body,
+  headers: Record<string, string> = {},
+  selectedHandler = handler,
+) {
+  const server = createServer((req, res) => void selectedHandler(req, res))
   servers.push(server)
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   return fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}`, {
@@ -47,6 +65,27 @@ async function invoke(input: unknown = body, headers: Record<string, string> = {
   })
 }
 
+function audio(seconds: number) {
+  const data = Buffer.alloc(44 + seconds * 16_000 * 2)
+  data.write('RIFF', 0)
+  data.writeUInt32LE(data.length - 8, 4)
+  data.write('WAVEfmt ', 8)
+  data.writeUInt32LE(16, 16)
+  data.writeUInt16LE(1, 20)
+  data.writeUInt16LE(1, 22)
+  data.writeUInt32LE(16_000, 24)
+  data.writeUInt32LE(32_000, 28)
+  data.writeUInt16LE(2, 32)
+  data.writeUInt16LE(16, 34)
+  data.write('data', 36)
+  data.writeUInt32LE(data.length - 44, 40)
+  return {
+    type: 'file',
+    mediaType: 'audio/wav',
+    url: `data:audio/wav;base64,${data.toString('base64')}`,
+  }
+}
+
 afterEach(async () => {
   await Promise.all(
     servers
@@ -57,6 +96,57 @@ afterEach(async () => {
 })
 
 describe('chat HTTP boundary', () => {
+  it('accepts at most five bounded images and one short audio in the latest user turn', async () => {
+    const jpeg = await sharp({ create: { width: 32, height: 32, channels: 3, background: 'red' } })
+      .jpeg()
+      .toBuffer()
+    const image = {
+      type: 'file',
+      mediaType: 'image/jpeg',
+      url: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
+    }
+    const message = (parts: unknown[]) => [{ id: 'u', role: 'user', parts }]
+    const attachments = [...Array(5).fill(image), audio(15)]
+    expect((await invoke({ ...body, messages: message(attachments) })).status).toBe(200)
+    expect((await invoke({ ...body, messages: message([...attachments, image]) })).status).toBe(400)
+    expect((await invoke({ ...body, messages: message([audio(15.1)]) })).status).toBe(400)
+    expect((await invoke({ ...body, messages: message([audio(1), audio(1)]) })).status).toBe(400)
+    expect(
+      (await invoke({ ...body, messages: message([audio(1)]) }, {}, noAudioHandler)).status,
+    ).toBe(400)
+    expect(reserve).toHaveBeenCalledOnce()
+  })
+
+  it('rejects remote, forged, oversized and old-turn attachments before reserving', async () => {
+    const large = await sharp({
+      create: { width: 513, height: 20, channels: 3, background: 'red' },
+    })
+      .jpeg()
+      .toBuffer()
+    const file = (mediaType: string, url: string) => ({ type: 'file', mediaType, url })
+    const invalid = [
+      file('image/jpeg', 'https://example.invalid/image.jpg'),
+      file('image/jpeg', `data:image/jpeg;base64,${Buffer.from('fake').toString('base64')}`),
+      file('image/jpeg', `data:image/jpeg;base64,${large.toString('base64')}`),
+      file('image/jpeg', `data:image/jpeg;base64,${Buffer.alloc(90_001).toString('base64')}`),
+      file('image/png', 'data:image/png;base64,YWJj'),
+      file('audio/wav', `data:audio/wav;base64,${Buffer.alloc(100).toString('base64')}`),
+      file('audio/wav', 'data:audio/wav;base64,YWJj=='),
+    ]
+    for (const part of invalid)
+      expect(
+        (await invoke({ ...body, messages: [{ id: 'u', role: 'user', parts: [part] }] })).status,
+      ).toBe(400)
+    expect(
+      (
+        await invoke({
+          ...body,
+          messages: [{ id: 'old', role: 'user', parts: [audio(1)] }, ...body.messages],
+        })
+      ).status,
+    ).toBe(400)
+    expect(reserve).not.toHaveBeenCalled()
+  })
   it('authenticates and reserves before sending SDK streaming events', async () => {
     const response = await invoke()
     expect(response.status).toBe(200)
