@@ -2,10 +2,32 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-24 — Sin publicar
+## 2026-11-27 — Sin publicar
 
 ### Nuevas funciones
 
+- Add explicit consent handling and visit queuing
+- Add consent handling for calendar connections
+- Add calendar visit link parsing and integration
+- DEV-45: enviar altas y reservas de Menoslios al CRM
+- Guide paid company setup and booking (DEV-45)
+- Add new tools for material creation and price adjustments
+- Add new tools for client editing and inventory proposals
+- Enhance chat context handling with pending proposals logic
+- Enhance client proposal handling and context management
+- Add credit balance display and handle provider failure in chat
+- Add credit balance refresh on model call completion
+- Update chat integration to use new estimate state
+- Implement chat functionality with AI integration and tools
+- Add new user authentication flow for improved security
+- Add 'lote' to unit options for lines editor
+- Add VAT breakdown validation and new ledger entry fields
+- Add VAT breakdown component for detailed VAT entry
+- Add VAT breakdown handling and parsing functionality
+- Enhance receipt analysis tests and add autofill functionality
+- Enhance receipt analysis with improved file handling and UI
+- Support configurable AI providers
+- Add referral view and improve payment history filters
 - Improve synchronization status messages and logic
 - Enhance Google Calendar status query with dynamic refresh
 - Add new tests for scheduling and team assignment logic

@@ -2,12 +2,34 @@
   "releases": [
     {
       "version": null,
-      "date": "2026-11-24",
+      "date": "2026-11-27",
       "title": "Sin publicar",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Add explicit consent handling and visit queuing",
+            "Add consent handling for calendar connections",
+            "Add calendar visit link parsing and integration",
+            "DEV-45: enviar altas y reservas de Menoslios al CRM",
+            "Guide paid company setup and booking (DEV-45)",
+            "Add new tools for material creation and price adjustments",
+            "Add new tools for client editing and inventory proposals",
+            "Enhance chat context handling with pending proposals logic",
+            "Enhance client proposal handling and context management",
+            "Add credit balance display and handle provider failure in chat",
+            "Add credit balance refresh on model call completion",
+            "Update chat integration to use new estimate state",
+            "Implement chat functionality with AI integration and tools",
+            "Add new user authentication flow for improved security",
+            "Add 'lote' to unit options for lines editor",
+            "Add VAT breakdown validation and new ledger entry fields",
+            "Add VAT breakdown component for detailed VAT entry",
+            "Add VAT breakdown handling and parsing functionality",
+            "Enhance receipt analysis tests and add autofill functionality",
+            "Enhance receipt analysis with improved file handling and UI",
+            "Support configurable AI providers",
+            "Add referral view and improve payment history filters",
             "Improve synchronization status messages and logic",
             "Enhance Google Calendar status query with dynamic refresh",
             "Add new tests for scheduling and team assignment logic",
@@ -189,6 +211,160 @@
         }
       ],
       "changes": [
+        {
+          "sha": "432923710e7eb7eaa941a7db59b944806764d87b",
+          "type": "feat",
+          "scope": "google_calendar",
+          "breaking": false,
+          "description": "Add explicit consent handling and visit queuing"
+        },
+        {
+          "sha": "fa7250f9909e8784462561f565a79ba7238850e5",
+          "type": "feat",
+          "scope": "google_calendar",
+          "breaking": false,
+          "description": "Add consent handling for calendar connections"
+        },
+        {
+          "sha": "1e391777b20acc003b29110ac43c14480f6930ce",
+          "type": "feat",
+          "scope": "visits",
+          "breaking": false,
+          "description": "Add calendar visit link parsing and integration"
+        },
+        {
+          "sha": "07416f1cb8fc8dba1b2945ece93bbd4c71eb2f2e",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-45: enviar altas y reservas de Menoslios al CRM"
+        },
+        {
+          "sha": "e2533f2653b43073fe150079f6dc1a817e021a67",
+          "type": "feat",
+          "scope": "onboarding",
+          "breaking": false,
+          "description": "Guide paid company setup and booking (DEV-45)"
+        },
+        {
+          "sha": "781bab1d447af93a60d993823062e51688d2b873",
+          "type": "feat",
+          "scope": "chat",
+          "breaking": false,
+          "description": "Add new tools for material creation and price adjustments"
+        },
+        {
+          "sha": "bc7ffe71d2d57ac42c60d9f6db9114a7cdfa0121",
+          "type": "feat",
+          "scope": "chat",
+          "breaking": false,
+          "description": "Add new tools for client editing and inventory proposals"
+        },
+        {
+          "sha": "758c11c1f303e65288b864e02eb1a72422ccc606",
+          "type": "feat",
+          "scope": "chat",
+          "breaking": false,
+          "description": "Enhance chat context handling with pending proposals logic"
+        },
+        {
+          "sha": "299ff9166dc7d8351240ae0667134508da8b0a8f",
+          "type": "feat",
+          "scope": "chat",
+          "breaking": false,
+          "description": "Enhance client proposal handling and context management"
+        },
+        {
+          "sha": "0a82b5537f333f24c8c052c37b83a4f702148bf0",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add credit balance display and handle provider failure in chat"
+        },
+        {
+          "sha": "1b2babc671c599eb9a8dc8721cd874963ad06e17",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add credit balance refresh on model call completion"
+        },
+        {
+          "sha": "eb9c9c5d513f93db7625409b1264e6e5d4ecbca8",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Update chat integration to use new estimate state"
+        },
+        {
+          "sha": "b18e7502ad3ea6705ff3d1ab722e56ab8926df32",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Implement chat functionality with AI integration and tools"
+        },
+        {
+          "sha": "6e86903ccb0ce4047458992a3961a9f1f668662e",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add new user authentication flow for improved security"
+        },
+        {
+          "sha": "095910c9f0c2cc5e39d6cbb3d211521754f25c6f",
+          "type": "feat",
+          "scope": "estimates",
+          "breaking": false,
+          "description": "Add 'lote' to unit options for lines editor"
+        },
+        {
+          "sha": "cde7eec3d7d5ffcc454d9952ced157c216ba8cb8",
+          "type": "feat",
+          "scope": "ledger",
+          "breaking": false,
+          "description": "Add VAT breakdown validation and new ledger entry fields"
+        },
+        {
+          "sha": "aa024c0a10be16d6e3b1e3e3b4ac7b4820400d16",
+          "type": "feat",
+          "scope": "ledger",
+          "breaking": false,
+          "description": "Add VAT breakdown component for detailed VAT entry"
+        },
+        {
+          "sha": "d56e271522bbe4f639c264b6ab7d62f9a93440d3",
+          "type": "feat",
+          "scope": "ledger",
+          "breaking": false,
+          "description": "Add VAT breakdown handling and parsing functionality"
+        },
+        {
+          "sha": "0645cd4f9c53b7971cca42e3fbe0ea752cd04d67",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Enhance receipt analysis tests and add autofill functionality"
+        },
+        {
+          "sha": "8fd35ac5b695670da3a4637bd0bb5d2a7bf84568",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Enhance receipt analysis with improved file handling and UI"
+        },
+        {
+          "sha": "32e2eef2442745de87dde2d802dd07c432e81fd7",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Support configurable AI providers"
+        },
+        {
+          "sha": "bdc01047929c97ce95deb8b14d409ed4e9dce428",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Add referral view and improve payment history filters"
+        },
         {
           "sha": "b23855f340dae2be2b763f02b53f2695dd503c87",
           "type": "feat",
