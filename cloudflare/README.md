@@ -19,6 +19,13 @@ verificar su configuración existente y las URL de callback de Stripe y Supabase
 No activar conexiones reales ni mover el tráfico mientras falte alguna comprobación.
 
 El procesamiento de imágenes usa Cloudflare Images; su cuota y coste son independientes
-de los de Workers. Workers Free limita la CPU por petición y puede no ser suficiente
-para informes: medir con informes reales y contratar Workers Paid si es necesario.
-El proyecto `wrangler.probe.jsonc` es solo para pruebas locales y nunca debe desplegarse.
+de los de Workers. Solo se transforman las fotos al generar un PDF, sin modificar las
+originales. En el plan Images Free hay hasta 5.000 transformaciones únicas al mes;
+al agotarlas, las nuevas fallan y los trabajos de PDF se reintentan. Los planes de pago
+pueden generar cargos. Workers Free limita la CPU por petición y puede no ser suficiente
+para informes: medir con informes reales antes de decidir si se necesita Workers Paid.
+
+Para ejecutar las pruebas locales de Workers y su simulación de Images, ejecutar
+`node --test cloudflare/worker-smoke.test.mjs`. No usan Supabase real ni consumen la
+cuota de Images. El proyecto `wrangler.probe.jsonc` es solo para pruebas locales y nunca
+debe desplegarse. La simulación no sustituye la validación con imágenes reales en Cloudflare.

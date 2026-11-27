@@ -43,7 +43,9 @@ export class SupabaseReportStore {
         method: options.method ?? 'GET',
         headers,
         ...(options.body === undefined ? {} : { body: options.body as BodyInit }),
-        redirect: 'error',
+        // Reject redirects at the caller without forwarding credentials to their destination.
+        // Workers do not support redirect: 'error'.
+        redirect: 'manual',
         signal: AbortSignal.timeout(25_000),
       })
     } catch {

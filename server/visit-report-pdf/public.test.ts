@@ -130,4 +130,18 @@ describe('public PDF download', () => {
     fetchMock.mockRejectedValue(new Error('network'))
     await expect(store.request('/photo')).rejects.toBeInstanceOf(UpstreamError)
   })
+
+  it('does not follow upstream redirects with the service credential', async () => {
+    const store = new SupabaseReportStore('https://example.test', 'test-key')
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'https://evil.test/photo' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await store.request('/photo')).status).toBe(302)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' })
+  })
 })

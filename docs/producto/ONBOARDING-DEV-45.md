@@ -27,19 +27,37 @@ directamente por Superadmin no reciben el nuevo requisito. No se cambia su plan 
 
 ## Configuración y puesta en marcha
 
-1. Preparar un tipo de evento exclusivo para la puesta en marcha, enlazado a los calendarios
+Solo hay tres valores específicos de Cal: URL de reserva, ID numérico y secreto de firma.
+Se configuran con estos nombres y destinos:
+
+| Dónde                                  | Variable                                | Valor                       |
+| -------------------------------------- | --------------------------------------- | --------------------------- |
+| Cloudflare Workers Builds, al compilar | `VITE_MENOSLIOS_ONBOARDING_BOOKING_URL` | URL pública del evento      |
+| Supabase, Edge Function Secrets        | `MENOSLIOS_CAL_BOOKING_URL`             | La misma URL exacta         |
+| Supabase, Edge Function Secrets        | `MENOSLIOS_CAL_EVENT_TYPE_ID`           | ID numérico del evento      |
+| Supabase, Edge Function Secrets        | `MENOSLIOS_CAL_WEBHOOK_SECRET`          | Secreto privado del webhook |
+
+La URL se configura en ambos destinos porque el navegador abre la agenda y el servidor
+comprueba que coincide antes de iniciar el cobro. No poner el secreto en variables `VITE_`.
+Las variables antiguas `VITE_ABACO_ONBOARDING_BOOKING_URL` y `ABACO_CAL_*` siguen siendo
+compatibles durante la transición; no hace falta configurar ambas versiones. No borrar las
+antiguas de producción hasta configurar y verificar las nuevas.
+
+1. Preparar en Cal.com un enlace exclusivo para la puesta en marcha, enlazado a los calendarios
    de disponibilidad de Doscientos. Activar confirmación inmediata (sin aprobación manual).
+   Copiar su URL pública para ambas variables de URL. En Links, abrir el menú de tres puntos
+   del enlace y elegir Troubleshoot: el número tras `eventTypeId=` en la URL es el ID numérico
+   ([ayuda de Cal.com](https://cal.com/help/event-types/link-id)).
 2. Añadir una pregunta de texto obligatoria **Referencia de Ábaco** con identificador
    `abaco_reference`. Ábaco la prerrellena en la URL y muestra el código por si es necesario copiarlo.
-3. Configurar el webhook del tipo de evento para `BOOKING_CREATED` con el payload estándar,
-   no una plantilla personalizada. Destino: `<SUPABASE_URL>/functions/v1/onboarding-cal-webhook`.
-   Guardar la misma clave de firma en Cal.com y como `MENOSLIOS_CAL_WEBHOOK_SECRET` (solo servidor).
-   Configurar `MENOSLIOS_CAL_EVENT_TYPE_ID` con el ID numérico.
-4. Establecer la misma URL HTTPS del evento en `MENOSLIOS_CAL_BOOKING_URL` (Edge Functions)
-   y `VITE_MENOSLIOS_ONBOARDING_BOOKING_URL` (build de frontend). El nombre anterior
-   `VITE_ABACO_ONBOARDING_BOOKING_URL` sigue siendo compatible durante la transición.
-   Las funciones aceptan el prefijo anterior `ABACO_` durante la transición. La ausencia o
-   discrepancia impide empezar un cobro.
+3. En Settings → Developer → Webhooks, configurar un webhook para `BOOKING_CREATED` con el
+   payload estándar, no una plantilla personalizada. Destino:
+   `<SUPABASE_URL>/functions/v1/onboarding-cal-webhook`. Elegir una clave aleatoria segura,
+   guardarla tanto en Cal.com como en `MENOSLIOS_CAL_WEBHOOK_SECRET` y conservarla en un
+   gestor de secretos: Cal.com no permite verla tras guardar
+   ([ayuda de Cal.com](https://cal.com/help/webhooks)).
+4. Configurar las cuatro variables de la tabla. Si falta la agenda o las URL no coinciden,
+   no se inicia el cobro. El ID y el secreto también son necesarios para verificar la reserva.
 5. Coordinar la migración y el deploy de `billing`, `invite-member` y
    `onboarding-cal-webhook`; luego publicar el frontend. No poner el flujo a disposición
    de clientes hasta comprobar el callback autenticado de agenda y el cobro de prueba.
