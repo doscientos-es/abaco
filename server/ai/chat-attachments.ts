@@ -68,6 +68,9 @@ export async function validateChatAttachments(messages: UIMessage[], audioAllowe
           info.height > maxChatImageDimension
         )
           throw new Error('invalid image')
+        await sharp(data, { limitInputPixels: maxChatImageDimension ** 2 })
+          .raw()
+          .toBuffer()
       } else if (part.mediaType === 'audio/wav' && audioAllowed) {
         if (++audio > 1) throw new Error('too many audio files')
         validateAudio(decodeDataUrl(part.url, part.mediaType, maxChatAudioBytes))

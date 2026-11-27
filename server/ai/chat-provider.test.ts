@@ -64,3 +64,36 @@ it('streams a search tool call with validated arguments', async () => {
     }),
   )
 })
+
+it('counts image and audio content before allowing a Gemini request', async () => {
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ totalTokens: 3001 }), {
+      headers: { 'content-type': 'application/json' },
+    }),
+  )
+  vi.stubGlobal('fetch', fetcher)
+  const result = await streamChat(
+    [
+      {
+        id: 'u',
+        role: 'user',
+        parts: [
+          { type: 'text', text: 'Analiza los adjuntos' },
+          { type: 'file', mediaType: 'image/jpeg', url: 'data:image/jpeg;base64,YWJj' },
+          { type: 'file', mediaType: 'audio/wav', url: 'data:audio/wav;base64,ZGVm' },
+        ],
+      },
+    ],
+    { provider: 'google', model: 'gemini-3.1-flash-lite', apiKey: 'test' },
+    null,
+    new AbortController().signal,
+  )
+  for await (const _event of result.stream) {
+    /* consume the stream */
+  }
+  expect(fetcher).toHaveBeenCalledOnce()
+  const counted = JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string)
+  expect(JSON.stringify(counted)).toContain('image/jpeg')
+  expect(JSON.stringify(counted)).toContain('audio/wav')
+  expect(String(fetcher.mock.calls[0]?.[0])).toContain(':countTokens')
+})

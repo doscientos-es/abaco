@@ -373,13 +373,19 @@ export function AiChatPanel({
                         className="ml-auto max-h-40 max-w-40 rounded-xl object-contain"
                       />
                     ) : part.mediaType === 'audio/wav' ? (
-                      <audio
-                        key={index}
-                        controls
-                        src={part.url}
-                        aria-label="Audio adjunto"
-                        className="ml-auto max-w-full"
-                      />
+                      <div key={index} className="ml-auto w-fit max-w-full space-y-1">
+                        {/* La grabación del usuario no dispone de transcripción. */}
+                        {/* oxlint-disable-next-line jsx-a11y/media-has-caption */}
+                        <audio
+                          controls
+                          src={part.url}
+                          aria-label="Audio adjunto"
+                          className="max-w-full"
+                        />
+                        <p className="text-muted-foreground text-xs">
+                          Audio adjunto · sin transcripción
+                        </p>
+                      </div>
                     ) : null
                   if (part.type === 'reasoning' && part.text)
                     return (

@@ -1,4 +1,4 @@
-import { AttachmentPrimitive, ComposerPrimitive, useAui } from '@assistant-ui/react'
+import { AttachmentPrimitive, ComposerPrimitive, useAui, useAuiState } from '@assistant-ui/react'
 import { Image, Microphone, Paperclip, Stop, X } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -15,7 +15,8 @@ export function ChatAttachments({
   onProcessingChange: (processing: boolean) => void
 }) {
   const aui = useAui()
-  const [audioAllowed, setAudioAllowed] = useState(false)
+  const hasAttachments = useAuiState((state) => state.composer.attachments.length > 0)
+  const [audioAllowed, setAudioAllowed] = useState<boolean | null>(null)
   const [processing, setProcessing] = useState(false)
   const [recording, setRecording] = useState(false)
   const [error, setError] = useState('')
@@ -32,14 +33,17 @@ export function ChatAttachments({
     void (async () => {
       try {
         const { data } = await createBrowserSupabaseClient().auth.getSession()
-        if (!data.session) return
+        if (!data.session) {
+          if (mounted.current) setAudioAllowed(false)
+          return
+        }
         const response = await fetch('/api/ai_chat', {
           headers: { Authorization: `Bearer ${data.session.access_token}` },
         })
         const result = response.ok ? ((await response.json()) as { audioAllowed?: boolean }) : null
         if (mounted.current) setAudioAllowed(result?.audioAllowed === true)
       } catch {
-        /* Audio remains disabled if capabilities cannot be checked. */
+        if (mounted.current) setAudioAllowed(false)
       }
     })()
     return () => {
@@ -165,6 +169,11 @@ export function ChatAttachments({
           )}
         </ComposerPrimitive.Attachments>
       </div>
+      {hasAttachments ? (
+        <p className="text-muted-foreground text-xs">
+          Los adjuntos no se incluyen en los mensajes posteriores.
+        </p>
+      ) : null}
       <div className="flex items-center gap-1">
         <input
           ref={imageInput}
@@ -234,6 +243,8 @@ export function ChatAttachments({
         <p role="alert" className="text-destructive text-xs">
           {error}
         </p>
+      ) : audioAllowed === false ? (
+        <p className="text-muted-foreground text-xs">Audio no disponible en este momento.</p>
       ) : null}
     </div>
   )

@@ -96,6 +96,18 @@ afterEach(async () => {
 })
 
 describe('chat HTTP boundary', () => {
+  it('reports audio capability only to authenticated requests without consuming a credit', async () => {
+    const server = createServer((req, res) => void handler(req, res))
+    servers.push(server)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    expect((await fetch(url)).status).toBe(401)
+    const response = await fetch(url, { headers: { authorization: 'Bearer test' } })
+    expect(await response.json()).toEqual({ audioAllowed: true })
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(reserve).not.toHaveBeenCalled()
+  })
+
   it('accepts at most five bounded images and one short audio in the latest user turn', async () => {
     const jpeg = await sharp({ create: { width: 32, height: 32, channels: 3, background: 'red' } })
       .jpeg()
