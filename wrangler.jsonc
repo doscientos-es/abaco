@@ -9,6 +9,16 @@
     "@react-pdf/pdfkit": "./node_modules/@react-pdf/pdfkit/lib/pdfkit.js",
     "buffer": "./cloudflare/buffer.js",
   },
+  "vars": {
+    "AI_MODEL": "gpt-6-luna",
+    "AI_PROVIDER": "openai",
+    "APP_URL": "https://app.menoslios.com",
+    "MENOSLIOS_CAL_BOOKING_URL": "https://cal.com/doscientos/puesta-en-marcha-abaco",
+    "REDSYS_ENVIRONMENT": "test",
+    "VITE_MENOSLIOS_ONBOARDING_BOOKING_URL": "https://cal.com/doscientos/puesta-en-marcha-abaco",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_ZdQk_x87ym6T-cpB-_eX0A_C_68clps",
+    "VITE_SUPABASE_URL": "https://vqyicgarlksirpzrngut.supabase.co",
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
