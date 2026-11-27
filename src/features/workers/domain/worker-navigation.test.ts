@@ -19,6 +19,22 @@ describe('worker navigation', () => {
     })
   })
 
+  it('keeps only valid local calendar dates in the calendar view', () => {
+    expect(
+      validateWorkersSearch({ vista: 'calendario', fecha: '2028-02-29', equipo: 'north' }),
+    ).toEqual({
+      vista: 'calendario',
+      fecha: '2028-02-29',
+      equipo: 'north',
+    })
+    for (const fecha of ['2026-02-29', '2026-11-31', '2026-11-27T00:00:00Z', ['2026-11-27']]) {
+      expect(validateWorkersSearch({ vista: 'calendario', fecha })).toEqual({ vista: 'calendario' })
+    }
+    expect(validateWorkersSearch({ vista: 'horarios', fecha: '2026-11-27' })).toEqual({
+      vista: 'horarios',
+    })
+  })
+
   it('gives person context precedence and ignores unsupported views', () => {
     expect(validateWorkersSearch({ vista: 'unknown', equipo: 'north', persona: 'ana' })).toEqual({
       persona: 'ana',

@@ -50,6 +50,15 @@ visitas a equipos y partes del circuito operativo. Consulta el
 [flujo operativo](docs/FLUJO_OPERATIVO.md) y comprueba su fecha y sus referencias
 a ramas antes de usarlo como estado actual.
 
+### Calendario del equipo
+
+En **Trabajadores → Calendario**, un administrador puede consultar la semana completa
+o filtrar por equipo o trabajador. En móvil se selecciona un día. La fecha y el filtro
+se conservan en el enlace. Las ausencias confirmadas y pendientes se distinguen del
+horario semanal habitual; no se solicitan sus motivos ni comentarios para esta vista.
+Los enlaces de gestión llevan a Horarios o Vacaciones respetando el filtro de persona
+o equipo. El calendario no modifica solicitudes, turnos ni citas y no es un registro de fichajes.
+
 ### Acceso y seguridad
 
 La interfaz distingue administrador y usuario: el primero gestiona la empresa;

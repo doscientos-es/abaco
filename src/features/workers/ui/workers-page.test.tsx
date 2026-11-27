@@ -12,11 +12,13 @@ const mocks = vi.hoisted(() => ({
   directory: vi.fn(),
   teams: vi.fn(),
   data: vi.fn(),
+  calendar: vi.fn(),
   role: 'admin' as 'admin' | 'user',
   documents: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({
   useSearch: () => mocks.search,
+  useNavigate: () => vi.fn(),
   Link: ({
     children,
     to,
@@ -36,9 +38,10 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
 vi.mock('@/features/auth', () => ({
-  useSession: () => ({ tenantId: 'company', role: mocks.role }),
+  useSession: () => ({ tenantId: 'company', role: mocks.role, userId: 'admin' }),
   can: (role: string) => role === 'admin',
 }))
+vi.mock('./team-calendar', () => ({ TeamCalendar: mocks.calendar }))
 vi.mock('./worker-documents', () => ({ WorkerDocuments: mocks.documents }))
 vi.mock('../application/use-workers-data', () => ({ useWorkersData: mocks.data }))
 vi.mock('@/features/settings/ui/team-section', () => ({ TeamSection: mocks.directory }))
@@ -71,6 +74,7 @@ describe('workers module navigation', () => {
     })
     for (const component of [
       mocks.directory,
+      mocks.calendar,
       mocks.schedule,
       mocks.vacations,
       mocks.teams,
@@ -88,7 +92,7 @@ describe('workers module navigation', () => {
     expect(html).not.toContain('Equipos activos')
     expect(html).not.toContain('Sin equipo')
     expect(html).not.toContain('<strong')
-    for (const view of ['equipos', 'horarios', 'vacaciones', 'funciones'])
+    for (const view of ['equipos', 'calendario', 'horarios', 'vacaciones', 'funciones'])
       expect(html).toContain(`vista=${view}`)
     expect(html).not.toContain('Organigrama')
     expect(html).not.toContain('vista=organigrama')
@@ -125,6 +129,33 @@ describe('workers module navigation', () => {
       expect(html).not.toContain('vista=organigrama')
     },
   )
+
+  it('opens the same calendar for general, team and worker scopes', () => {
+    for (const [scope, members] of [
+      [{}, undefined],
+      [{ equipo: 'north' }, ['ana']],
+      [{ persona: 'bea' }, ['bea']],
+    ] as const) {
+      mocks.calendar.mockClear()
+      mocks.search = { ...scope, vista: 'calendario', fecha: '2026-11-27' }
+      const html = renderToStaticMarkup(<WorkersPage />)
+      expect(html).toMatch(/aria-current="page"[^>]*>Calendario<\/a>/)
+      expect(mocks.calendar.mock.calls[0]?.[0]).toMatchObject({
+        tenantId: 'company',
+        memberIds: members,
+      })
+    }
+  })
+
+  it('does not query the calendar without management permission or for a stale scoped URL', () => {
+    mocks.search = { vista: 'calendario' }
+    mocks.role = 'user'
+    expect(renderToStaticMarkup(<WorkersPage />)).not.toContain('vista=calendario')
+    mocks.role = 'admin'
+    mocks.search = { vista: 'calendario', equipo: 'missing' }
+    expect(renderToStaticMarkup(<WorkersPage />)).toContain('No se encontró esta ficha')
+    expect(mocks.calendar).not.toHaveBeenCalled()
+  })
 
   it('opens individual schedules and links back to their real teams', () => {
     mocks.search = { vista: 'horarios', persona: 'ana' }

@@ -1,6 +1,6 @@
 import { Badge, Button } from '@doscientos/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
@@ -10,6 +10,7 @@ import { WorkTeamForm, WorkTeamsSection, workTeamsQuery } from '@/features/work-
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
 import { useWorkersData } from '../application/use-workers-data'
+import { TeamCalendar } from './team-calendar'
 import { WorkerDocuments } from './worker-documents'
 import { WorkerVacations } from './worker-vacations'
 import { WorkersNavigation } from './workers-navigation'
@@ -23,6 +24,7 @@ export function WorkersPage() {
 function WorkersContent({ tenantId }: { tenantId: string }) {
   const session = useSession()
   const search = useSearch({ from: '/trabajadores' })
+  const navigate = useNavigate({ from: '/trabajadores' })
   const data = useWorkersData(tenantId)
   const cache = useQueryClient()
   const [editingTeam, setEditingTeam] = useState(false)
@@ -32,10 +34,13 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
     : undefined
   const scoped = Boolean(search.equipo || search.persona)
   const requested = search.vista ?? 'personas'
+  const showCalendar = Boolean(can(session?.role, 'vacations:manage'))
   const showDocuments = Boolean(person && can(session?.role, 'team:manage'))
   const view =
     (requested === 'documentos' && !showDocuments) ||
-    (scoped && !['personas', 'horarios', 'vacaciones', 'documentos'].includes(requested))
+    (requested === 'calendario' && !showCalendar) ||
+    (scoped &&
+      !['personas', 'calendario', 'horarios', 'vacaciones', 'documentos'].includes(requested))
       ? 'personas'
       : requested
   const memberIds = person ? [person.userId] : team?.memberIds
@@ -108,6 +113,7 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
           view={view}
           scoped={scoped}
           showDocuments={showDocuments}
+          showCalendar={showCalendar}
         />
       </WorkspacePageTabs>
       {(person && view !== 'personas') || team?.description || team?.archived ? (
@@ -160,6 +166,19 @@ function WorkersContent({ tenantId }: { tenantId: string }) {
             id: item.userId,
             label: item.fullName || item.email,
           }))}
+        />
+      ) : null}
+      {view === 'calendario' && session?.userId ? (
+        <TeamCalendar
+          tenantId={tenantId}
+          userId={session.userId}
+          search={search}
+          people={data.people}
+          teams={data.teams}
+          memberIds={memberIds}
+          onSearchChange={(nextSearch) =>
+            void navigate({ to: '/trabajadores', search: nextSearch })
+          }
         />
       ) : null}
       {view === 'horarios' ? (
