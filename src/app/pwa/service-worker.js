@@ -1,5 +1,6 @@
 /* Build-time placeholders are replaced by the PWA Vite plugin. */
-const CACHE_PREFIX = 'abaco-shell-'
+const CACHE_PREFIX = 'menoslios-shell-'
+const LEGACY_CACHE_PREFIX = 'abaco-shell-'
 const CACHE_NAME = `${CACHE_PREFIX}__PWA_VERSION__`
 const ASSETS = __PWA_ASSETS__
 
@@ -12,7 +13,11 @@ self.addEventListener('activate', (event) => {
     caches.keys().then(async (keys) => {
       await Promise.all(
         keys
-          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .filter(
+            (key) =>
+              (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) ||
+              key.startsWith(LEGACY_CACHE_PREFIX),
+          )
           .map((key) => caches.delete(key)),
       )
       await self.clients.claim()

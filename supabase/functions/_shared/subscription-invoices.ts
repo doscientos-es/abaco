@@ -1,17 +1,18 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
+import { renamedEnv } from './renamed-env.ts'
+
 type BackofficeReply = { status?: string; invoiceNumber?: string; portalUrl?: string }
 
 export function hasInvoiceIntegration(): boolean {
   return Boolean(
-    Deno.env.get('ABACO_BACKOFFICE_BILLING_URL') &&
-    (Deno.env.get('ABACO_BILLING_SECRET')?.length ?? 0) >= 32,
+    renamedEnv('BACKOFFICE_BILLING_URL') && (renamedEnv('BILLING_SECRET')?.length ?? 0) >= 32,
   )
 }
 
 export async function requestBackoffice(body: Record<string, unknown>): Promise<BackofficeReply> {
-  const endpoint = Deno.env.get('ABACO_BACKOFFICE_BILLING_URL')
-  const secret = Deno.env.get('ABACO_BILLING_SECRET')
+  const endpoint = renamedEnv('BACKOFFICE_BILLING_URL')
+  const secret = renamedEnv('BILLING_SECRET')
   if (!endpoint || !secret || secret.length < 32) return {}
   try {
     const url = new URL(endpoint)

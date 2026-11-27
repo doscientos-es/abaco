@@ -33,11 +33,13 @@ directamente por Superadmin no reciben el nuevo requisito. No se cambia su plan 
    `abaco_reference`. Ábaco la prerrellena en la URL y muestra el código por si es necesario copiarlo.
 3. Configurar el webhook del tipo de evento para `BOOKING_CREATED` con el payload estándar,
    no una plantilla personalizada. Destino: `<SUPABASE_URL>/functions/v1/onboarding-cal-webhook`.
-   Guardar la misma clave de firma en Cal.com y como `ABACO_CAL_WEBHOOK_SECRET` (solo servidor).
-   Configurar `ABACO_CAL_EVENT_TYPE_ID` con el ID numérico.
-4. Establecer la misma URL HTTPS del evento en `ABACO_CAL_BOOKING_URL` (Edge Functions)
-   y `VITE_ABACO_ONBOARDING_BOOKING_URL` (build de frontend). La ausencia o discrepancia
-   impide empezar un cobro.
+   Guardar la misma clave de firma en Cal.com y como `MENOSLIOS_CAL_WEBHOOK_SECRET` (solo servidor).
+   Configurar `MENOSLIOS_CAL_EVENT_TYPE_ID` con el ID numérico.
+4. Establecer la misma URL HTTPS del evento en `MENOSLIOS_CAL_BOOKING_URL` (Edge Functions)
+   y `VITE_MENOSLIOS_ONBOARDING_BOOKING_URL` (build de frontend). El nombre anterior
+   `VITE_ABACO_ONBOARDING_BOOKING_URL` sigue siendo compatible durante la transición.
+   Las funciones aceptan el prefijo anterior `ABACO_` durante la transición. La ausencia o
+   discrepancia impide empezar un cobro.
 5. Coordinar la migración y el deploy de `billing`, `invite-member` y
    `onboarding-cal-webhook`; luego publicar el frontend. No poner el flujo a disposición
    de clientes hasta comprobar el callback autenticado de agenda y el cobro de prueba.
@@ -60,7 +62,7 @@ directamente por Superadmin no reciben el nuevo requisito. No se cambia su plan 
 - Prueba en Chromium (navegador real, datos ficticios, sin conexiones a proveedores):
   arranca Vite con `VITE_SUPABASE_URL=http://localhost:54399`,
   `VITE_SUPABASE_PUBLISHABLE_KEY=fixture-not-a-key` y
-  `VITE_ABACO_ONBOARDING_BOOKING_URL=https://cal.eu/doscientos/onboarding`
+  `VITE_MENOSLIOS_ONBOARDING_BOOKING_URL=https://cal.eu/doscientos/onboarding`
   en `127.0.0.1:4179`. Ejecuta `node scripts/check-onboarding-browser.cjs`
   con Playwright disponible, o con `PLAYWRIGHT_MODULE` apuntando a una instalación
   de herramientas separada. El guion abre Chromium, prueba el alta, declina y confirma

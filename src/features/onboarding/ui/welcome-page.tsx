@@ -22,7 +22,10 @@ import { offerModules, onboardingOffer, publicBookingUrl, type OfferModule } fro
 import { ModuleCards } from './module-cards'
 
 const steps = ['Módulos', 'Licencias', 'Suscripción', 'Puesta en marcha']
-const bookingUrl = publicBookingUrl(import.meta.env.VITE_ABACO_ONBOARDING_BOOKING_URL)
+const bookingUrl = publicBookingUrl(
+  import.meta.env.VITE_MENOSLIOS_ONBOARDING_BOOKING_URL,
+  import.meta.env.VITE_ABACO_ONBOARDING_BOOKING_URL,
+)
 
 export function WelcomePage() {
   const session = useSession()

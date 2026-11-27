@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import type { ReportProjection } from './projection'
-import { renderVisitReport } from './render'
+import type { renderVisitReport } from './render-node'
 import {
   MAX_PHOTO_BYTES,
   PDF_BUCKET,
@@ -21,7 +21,11 @@ async function liveShare(store: SupabaseReportStore, digest: string) {
   return share && !share.revoked_at && Number.isFinite(expiry) && expiry > Date.now() ? share : null
 }
 
-export async function createOrGetPdf(token: string, store: SupabaseReportStore) {
+export async function createOrGetPdf(
+  token: string,
+  store: SupabaseReportStore,
+  render: typeof renderVisitReport,
+) {
   const digest = createHash('sha256').update(token, 'ascii').digest('hex')
   const share = await liveShare(store, digest)
   if (!share) throw new UpstreamError(404)
@@ -68,7 +72,7 @@ export async function createOrGetPdf(token: string, store: SupabaseReportStore) 
       if (image.status !== 200) throw new UpstreamError()
       images.push(image.data)
     }
-    await store.upload(path, await renderVisitReport(projection as ReportProjection, images))
+    await store.upload(path, await render(projection as ReportProjection, images))
   }
   const signed = await store.json(`/storage/v1/object/sign/${PDF_BUCKET}/${path}`, {
     expiresIn: 60,

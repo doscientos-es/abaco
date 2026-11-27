@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { projectClosedReport } from './projection'
 import { createOrGetPdf } from './public'
+import { renderVisitReport } from './render-node'
 import { SupabaseReportStore, UpstreamError } from './upstream'
 
 const share = {
@@ -26,7 +27,7 @@ describe('public PDF download', () => {
       status: 200,
       data: { signedURL: '/object/sign/visit-report-pdfs/report.pdf?token=test' },
     })
-    const url = await createOrGetPdf(token, store)
+    const url = await createOrGetPdf(token, store, renderVisitReport)
     expect(url).toBe(
       'https://example.test/storage/v1/object/sign/visit-report-pdfs/report.pdf?token=test&download=parte-de-visita.pdf',
     )
@@ -41,14 +42,18 @@ describe('public PDF download', () => {
       status: 200,
       data: { signedURL: '/object/sign/visit-report-pdfs/report.pdf' },
     })
-    await expect(createOrGetPdf(token, store)).rejects.toMatchObject({ status: 404 })
+    await expect(createOrGetPdf(token, store, renderVisitReport)).rejects.toMatchObject({
+      status: 404,
+    })
   })
 
   it('rejects expired shares before accessing storage', async () => {
     const store = new SupabaseReportStore('https://example.test', 'test-key')
     vi.spyOn(store, 'one').mockResolvedValue({ ...share, expires_at: '2000-01-01T00:00:00Z' })
     const exists = vi.spyOn(store, 'exists')
-    await expect(createOrGetPdf(token, store)).rejects.toMatchObject({ status: 404 })
+    await expect(createOrGetPdf(token, store, renderVisitReport)).rejects.toMatchObject({
+      status: 404,
+    })
     expect(exists).not.toHaveBeenCalled()
   })
 
@@ -63,7 +68,9 @@ describe('public PDF download', () => {
       data: { photos: [{ url: 'https://evil.test/storage/v1/object/sign/visit-photos/a' }] },
     })
     const request = vi.spyOn(store, 'request')
-    await expect(createOrGetPdf(token, store)).rejects.toBeInstanceOf(UpstreamError)
+    await expect(createOrGetPdf(token, store, renderVisitReport)).rejects.toBeInstanceOf(
+      UpstreamError,
+    )
     expect(request).not.toHaveBeenCalled()
   })
 
@@ -75,7 +82,9 @@ describe('public PDF download', () => {
     vi.spyOn(store, 'exists').mockResolvedValue(false)
     vi.spyOn(store, 'json').mockResolvedValue({ status: 200, data: { photos: [] } })
     const upload = vi.spyOn(store, 'upload')
-    await expect(createOrGetPdf(token, store)).rejects.toBeInstanceOf(UpstreamError)
+    await expect(createOrGetPdf(token, store, renderVisitReport)).rejects.toBeInstanceOf(
+      UpstreamError,
+    )
     expect(upload).not.toHaveBeenCalled()
   })
 
@@ -104,7 +113,7 @@ describe('public PDF download', () => {
         data: { signedURL: '/object/sign/visit-report-pdfs/report.pdf' },
       })
     const upload = vi.spyOn(store, 'upload').mockResolvedValue(undefined)
-    expect(await createOrGetPdf(token, store)).toContain(
+    expect(await createOrGetPdf(token, store, renderVisitReport)).toContain(
       '/object/sign/visit-report-pdfs/report.pdf?download=',
     )
     expect(upload).toHaveBeenCalledOnce()

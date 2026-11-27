@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { readJson, reply } from '../server/visit-report-pdf/http'
 import { createOrGetPdf } from '../server/visit-report-pdf/public'
+import { renderVisitReport } from '../server/visit-report-pdf/render-node'
 import { record, SupabaseReportStore, UpstreamError } from '../server/visit-report-pdf/upstream'
 
 export const config = { api: { bodyParser: false } }
@@ -21,7 +22,7 @@ export default async function handler(request: IncomingMessage, response: Server
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!base || !key) return reply(response, 503, { error: 'not_configured' })
   try {
-    const url = await createOrGetPdf(token, new SupabaseReportStore(base, key))
+    const url = await createOrGetPdf(token, new SupabaseReportStore(base, key), renderVisitReport)
     return reply(response, 200, { url })
   } catch (error) {
     const status = error instanceof UpstreamError && error.status === 404 ? 404 : 502

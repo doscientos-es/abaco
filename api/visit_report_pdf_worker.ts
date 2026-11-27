@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import { reply } from '../server/visit-report-pdf/http'
+import { renderVisitReport } from '../server/visit-report-pdf/render-node'
 import { SupabaseReportStore } from '../server/visit-report-pdf/upstream'
 import { processOnePdfJob } from '../server/visit-report-pdf/worker'
 
@@ -18,7 +19,7 @@ export default async function handler(request: IncomingMessage, response: Server
   if (!base || !key) return reply(response, 503, { status: 'not_configured' })
   try {
     return reply(response, 200, {
-      status: await processOnePdfJob(new SupabaseReportStore(base, key)),
+      status: await processOnePdfJob(new SupabaseReportStore(base, key), renderVisitReport),
     })
   } catch {
     return reply(response, 502, { status: 'unavailable' })

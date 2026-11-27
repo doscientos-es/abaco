@@ -1,3 +1,5 @@
+import { readRenamedPreference } from '@/shared/lib/renamed-preference-storage'
+
 import {
   defaultNavigationPreferences,
   parseNavigationPreferences,
@@ -5,12 +7,12 @@ import {
 } from '../domain/navigation-layout'
 
 export function navigationStorageKey(tenantId: string, userId: string) {
-  return `abaco:interface:v1:${tenantId}:${userId}`
+  return `menoslios:interface:v1:${tenantId}:${userId}`
 }
 
 export function readNavigationPreferences(key: string) {
   try {
-    const raw = window.localStorage.getItem(key)
+    const raw = readRenamedPreference(window.localStorage, key)
     return raw ? parseNavigationPreferences(JSON.parse(raw)) : defaultNavigationPreferences
   } catch {
     return defaultNavigationPreferences

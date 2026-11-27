@@ -36,7 +36,8 @@ export function onboardingOffer(
   }
 }
 
-export function publicBookingUrl(value: unknown): string | null {
+export function publicBookingUrl(value: unknown, legacyValue?: unknown): string | null {
+  value = value || legacyValue
   if (typeof value !== 'string') return null
   try {
     const url = new URL(value)

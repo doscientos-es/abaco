@@ -43,4 +43,13 @@ describe('onboarding selection', () => {
     )
     expect(publicBookingUrl('https://cal.eu.example.test/doscientos/onboarding')).toBeNull()
   })
+
+  it('prefers the Menos Lios booking URL while supporting the existing configuration', () => {
+    const oldUrl = 'https://cal.com/doscientos/old'
+    const newUrl = 'https://cal.com/doscientos/new'
+    expect(publicBookingUrl(newUrl, oldUrl)).toBe(newUrl)
+    expect(publicBookingUrl(undefined, oldUrl)).toBe(oldUrl)
+    expect(publicBookingUrl('', oldUrl)).toBe(oldUrl)
+    expect(publicBookingUrl('https://invalid.example/new', oldUrl)).toBeNull()
+  })
 })

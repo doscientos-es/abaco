@@ -1,3 +1,5 @@
+import { readRenamedPreference } from '@/shared/lib/renamed-preference-storage'
+
 export type TableColumn = {
   id: string
   label: string
@@ -54,7 +56,8 @@ export function readColumnPreferences(
   columns: readonly TableColumn[],
 ): ColumnPreferences {
   try {
-    const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(key)
+    const raw =
+      typeof window === 'undefined' ? null : readRenamedPreference(window.localStorage, key)
     return resolveColumnPreferences(columns, raw ? JSON.parse(raw) : null)
   } catch {
     return resolveColumnPreferences(columns, null)

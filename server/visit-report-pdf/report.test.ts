@@ -4,7 +4,7 @@ import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 
 import { projectClosedReport } from './projection'
-import { renderVisitReport } from './render'
+import { renderVisitReport } from './render-node'
 
 const tenant = '5c000000-0000-4000-8000-000000000001'
 const visit = '5c000000-0000-4000-8000-000000000003'

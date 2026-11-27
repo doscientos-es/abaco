@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { renderVisitReport } from './render-node'
 import { SupabaseReportStore } from './upstream'
 import { processOnePdfJob, renderPdfJob } from './worker'
 
@@ -34,7 +35,7 @@ describe('durable PDF worker', () => {
     const rpc = vi.spyOn(store, 'rpc').mockResolvedValueOnce([job]).mockResolvedValueOnce(true)
     vi.spyOn(store, 'exists').mockResolvedValue(true)
     const lookup = vi.spyOn(store, 'one')
-    expect(await processOnePdfJob(store)).toBe('ready')
+    expect(await processOnePdfJob(store, renderVisitReport)).toBe('ready')
     expect(lookup).not.toHaveBeenCalled()
     expect(rpc).toHaveBeenLastCalledWith(
       'finish_service_visit_report_pdf_job',
@@ -47,7 +48,9 @@ describe('durable PDF worker', () => {
     vi.spyOn(store, 'exists').mockResolvedValue(false)
     vi.spyOn(store, 'one').mockResolvedValue(fixture(`${tenant}/other/photo.jpg`))
     const upload = vi.spyOn(store, 'upload')
-    await expect(renderPdfJob(store, job)).rejects.toThrow('Photo does not belong')
+    await expect(renderPdfJob(store, job, renderVisitReport)).rejects.toThrow(
+      'Photo does not belong',
+    )
     expect(upload).not.toHaveBeenCalled()
   })
 
@@ -58,7 +61,7 @@ describe('durable PDF worker', () => {
     vi.spyOn(store, 'one').mockResolvedValue(fixture())
     vi.spyOn(store, 'request').mockResolvedValue({ status: 404, data: Buffer.alloc(0) })
     const upload = vi.spyOn(store, 'upload')
-    expect(await processOnePdfJob(store)).toBe('retry')
+    expect(await processOnePdfJob(store, renderVisitReport)).toBe('retry')
     expect(upload).not.toHaveBeenCalled()
     expect(rpc).toHaveBeenLastCalledWith(
       'finish_service_visit_report_pdf_job',
@@ -73,7 +76,7 @@ describe('durable PDF worker', () => {
     data.snapshot.photos = []
     vi.spyOn(store, 'one').mockResolvedValue(data)
     const upload = vi.spyOn(store, 'upload').mockResolvedValue(undefined)
-    await renderPdfJob(store, job)
+    await renderPdfJob(store, job, renderVisitReport)
     expect(upload).toHaveBeenCalledOnce()
     expect(upload.mock.calls[0]?.[0]).toBe(`${tenant}/${version}.pdf`)
     expect(upload.mock.calls[0]?.[1].subarray(0, 5).toString()).toBe('%PDF-')

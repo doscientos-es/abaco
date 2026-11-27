@@ -12,7 +12,7 @@ import {
 } from './table-column-preferences'
 
 export function useTableColumns(key: string, definitions: readonly TableColumn[]) {
-  const storageKey = `abaco:table-columns:v1:${key}`
+  const storageKey = `menoslios:table-columns:v1:${key}`
   const [stored, setStored] = useState(() => readColumnPreferences(storageKey, definitions))
   const preferences = resolveColumnPreferences(definitions, stored)
   const ordered = preferences.order

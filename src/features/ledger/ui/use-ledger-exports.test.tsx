@@ -90,7 +90,7 @@ describe('accounting export modules', () => {
     expect(loadAccountingExport).toHaveBeenCalledExactlyOnceWith('empresa-test', 'clients')
     await vi.waitFor(() =>
       expect(downloadTextFile).toHaveBeenCalledWith(
-        expect.stringMatching(/^abaco-empresa-test-clients-/),
+        expect.stringMatching(/^menoslios-empresa-test-clients-/),
         expect.any(String),
       ),
     )

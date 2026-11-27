@@ -8,6 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 import { firstPaymentForm, newMerchantOrder, readRedsysConfig } from '../_shared/redsys.ts'
+import { renamedEnv } from '../_shared/renamed-env.ts'
 import { prepareCharge } from '../_shared/subscription-invoices.ts'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -57,9 +58,9 @@ Deno.serve(async (request) => {
   const isCharge = isOnboarding || action === 'checkout' || action === 'retry'
   const modules = input?.modules
   if (isOnboarding) {
-    const bookingUrl = Deno.env.get('ABACO_CAL_BOOKING_URL')
-    const eventType = Deno.env.get('ABACO_CAL_EVENT_TYPE_ID')
-    const secret = Deno.env.get('ABACO_CAL_WEBHOOK_SECRET')
+    const bookingUrl = renamedEnv('CAL_BOOKING_URL')
+    const eventType = renamedEnv('CAL_EVENT_TYPE_ID')
+    const secret = renamedEnv('CAL_WEBHOOK_SECRET')
     if (
       !bookingUrl ||
       bookingUrl !== input?.bookingUrl ||

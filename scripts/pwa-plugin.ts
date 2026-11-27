@@ -10,7 +10,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 /** Precache only build-owned static assets; API responses and private data never enter Cache Storage. */
 export function pwaPlugin(): Plugin {
   return {
-    name: 'abaco-pwa',
+    name: 'menoslios-pwa',
     apply: 'build',
     async buildStart() {
       const icon = await readFile(`${root}/public/abaco-mark.svg`)

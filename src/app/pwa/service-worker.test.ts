@@ -13,7 +13,12 @@ function worker() {
   }
   const caches = {
     open: vi.fn(async () => cache),
-    keys: vi.fn(async () => ['abaco-shell-old', 'abaco-shell-test', 'other-app']),
+    keys: vi.fn(async () => [
+      'abaco-shell-old',
+      'menoslios-shell-old',
+      'menoslios-shell-test',
+      'other-app',
+    ]),
     delete: vi.fn(async () => true),
   }
   const fetch = vi.fn(async () => 'network')
@@ -32,7 +37,7 @@ function worker() {
 }
 
 describe('PWA service worker', () => {
-  it('precaches the shell and only removes old Ábaco caches on activation', async () => {
+  it('precaches the shell and removes old and legacy caches on activation', async () => {
     const { handlers, cache, caches, claim } = worker()
     const install = vi.fn()
     handlers.get('install')?.({ waitUntil: install })
@@ -41,7 +46,9 @@ describe('PWA service worker', () => {
     const activate = vi.fn()
     handlers.get('activate')?.({ waitUntil: activate })
     await activate.mock.calls[0]?.[0]
-    expect(caches.delete).toHaveBeenCalledExactlyOnceWith('abaco-shell-old')
+    expect(caches.delete).toHaveBeenCalledTimes(2)
+    expect(caches.delete).toHaveBeenCalledWith('abaco-shell-old')
+    expect(caches.delete).toHaveBeenCalledWith('menoslios-shell-old')
     expect(claim).toHaveBeenCalledOnce()
   })
 

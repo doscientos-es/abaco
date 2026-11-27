@@ -21,6 +21,9 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal()),
   useQuery: () => ({ data: false }),
 }))
+vi.mock('@/features/ai', () => ({
+  AiChatProvider: ({ children }: { children: ReactNode }) => children,
+}))
 vi.mock('@/features/auth', () => ({
   can: (_role: string, permission: string) =>
     permission === 'vacations:manage'
@@ -33,6 +36,7 @@ vi.mock('@/features/auth', () => ({
             ? state.canReadWork
             : true,
   CompanyDialog: () => null,
+  UserAvatar: () => null,
   roleLabels: { admin: 'Administrador' },
   useCompanyActions: () => ({ switchTo: vi.fn() }),
   useSession: () => ({
@@ -146,7 +150,7 @@ describe('estado de guardado en la aplicación', () => {
 
   it('applies stored mobile shortcuts and desktop order without reviving restricted links', () => {
     const getItem = vi.fn((key: string) =>
-      key === 'abaco:interface:v1:company:user'
+      key === 'menoslios:interface:v1:company:user'
         ? JSON.stringify({
             mobile: ['/facturas', '/trabajos', '/clientes', '/personalizar'],
             desktopGroups: ['finance', 'sales'],
@@ -161,7 +165,7 @@ describe('estado de guardado en la aplicación', () => {
       const desktop = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
       const mobile = html.slice(html.indexOf('aria-label="Navegación móvil"'))
 
-      expect(getItem).toHaveBeenCalledWith('abaco:interface:v1:company:user')
+      expect(getItem).toHaveBeenCalledWith('menoslios:interface:v1:company:user')
       expect(desktop.indexOf('>Finanzas<')).toBeLessThan(desktop.indexOf('>Ventas<'))
       expect(desktop.indexOf('>Contabilidad</a>')).toBeLessThan(desktop.indexOf('>Facturas</a>'))
       expect([...mobile.matchAll(/href="([^"]+)"/g)].map((match) => match[1])).toEqual([

@@ -53,7 +53,7 @@ export function useLedgerExports({
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '')
       const date = new Date().toISOString().slice(0, 10)
-      downloadTextFile(`abaco-${slug || tenant.id}-${dataset}-${date}.csv`, buildCsv())
+      downloadTextFile(`menoslios-${slug || tenant.id}-${dataset}-${date}.csv`, buildCsv())
       toast.success('CSV preparado con todos los registros autorizados')
     } catch (error) {
       toast.error('No se pudo exportar el CSV', {
