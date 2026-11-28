@@ -1,4 +1,5 @@
 export {
+  configureGenericVisitMeasurement,
   readVisitMeasurementContext,
   recordVisitMeasurement,
   type MeasurementAttempt,

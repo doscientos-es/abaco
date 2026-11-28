@@ -5,6 +5,7 @@ export type VisitMeasurementParameter = {
   label: string
   unit: string
   version: string
+  method?: string
 }
 
 type ComparableReading = { value: number; unit: string; measured_at: string }
@@ -17,6 +18,10 @@ export type VisitMeasurement = ComparableReading & {
 
 type MeasurementContext = {
   supported: boolean
+  mode?: 'generic'
+  asset_name?: string
+  can_record?: boolean
+  can_configure?: boolean
   parameters: VisitMeasurementParameter[]
   readings: VisitMeasurement[]
 }
@@ -61,6 +66,22 @@ export async function recordVisitMeasurement(
     p_method: method,
     p_measured_at: measuredAt,
     p_operation_id: operationId,
+  })
+  if (error) throw asError(error)
+}
+
+export async function configureGenericVisitMeasurement(
+  tenantId: string,
+  visitId: string,
+  input: { id: string; label: string; unit: string; method: string },
+) {
+  const { error } = await createBrowserSupabaseClient().rpc('configure_generic_visit_measurement', {
+    p_tenant_id: tenantId,
+    p_visit_id: visitId,
+    p_id: input.id,
+    p_label: input.label,
+    p_unit: input.unit,
+    p_method: input.method,
   })
   if (error) throw asError(error)
 }
