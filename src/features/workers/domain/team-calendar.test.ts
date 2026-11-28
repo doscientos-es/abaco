@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import { calendarDate } from '@/shared/lib/date-range'
 
-import { plannedTime, teamCalendarCell, teamCalendarDays } from './team-calendar'
+import {
+  plannedTime,
+  projectTeamDay,
+  teamCalendarCell,
+  teamCalendarDays,
+  type TeamCalendarCell,
+} from './team-calendar'
 
 describe('weekly team calendar', () => {
   it('shows a Monday–Sunday week across month/year changes', () => {
@@ -48,5 +54,47 @@ describe('weekly team calendar', () => {
   it('keeps clock labels as wall time, including midnight at the end of a shift', () => {
     expect(plannedTime(495)).toBe('08:15')
     expect(plannedTime(1440)).toBe('24:00')
+  })
+})
+
+describe('daily team planning', () => {
+  const cell = (overrides: Partial<TeamCalendarCell> = {}): TeamCalendarCell => ({
+    plannedSlots: [{ weekday: 1, start: 540, end: 720 }],
+    approved: false,
+    pending: false,
+    ...overrides,
+  })
+  const row = (userId: string, ...cells: TeamCalendarCell[]) => ({ userId, name: userId, cells })
+  const ids = (entries: { userId: string }[]) => entries.map(({ userId }) => userId)
+
+  it('does not present an approved absence as coverage and retains the pending shift', () => {
+    const day = projectTeamDay(
+      [
+        row('approved', cell({ approved: true })),
+        row('pending', cell({ pending: true })),
+        row('normal', cell()),
+      ],
+      0,
+    )
+    expect(ids(day.shift)).toEqual(['pending', 'normal'])
+    expect(ids(day.absence)).toEqual(['approved', 'pending'])
+    expect(ids(day.all)).toEqual(['approved', 'pending', 'normal'])
+  })
+
+  it('separates the selected day with no shift from a worker with no schedule', () => {
+    const day = projectTeamDay(
+      [
+        row('no-shift', cell(), cell({ plannedSlots: [] })),
+        row('no-schedule', cell(), cell({ plannedSlots: null })),
+        row('absence-without-shift', cell(), cell({ plannedSlots: null, approved: true })),
+        row('not-in-day', cell()),
+      ],
+      1,
+    )
+    expect(ids(day['no-shift'])).toEqual(['no-shift'])
+    expect(ids(day['no-schedule'])).toEqual(['no-schedule'])
+    expect(ids(day.absence)).toEqual(['absence-without-shift'])
+    expect(day.shift).toEqual([])
+    expect(day.all).toHaveLength(3)
   })
 })

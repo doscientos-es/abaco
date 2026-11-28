@@ -53,7 +53,9 @@ a ramas antes de usarlo como estado actual.
 ### Calendario del equipo
 
 En **Trabajadores → Calendario**, un administrador puede consultar la semana completa
-o filtrar por equipo o trabajador. En móvil se selecciona un día. La fecha y el filtro
+o filtrar por equipo o trabajador. En móvil se puede elegir el día y filtrar por turno,
+ausencias y falta de horario. Una ausencia aprobada deja de contar como turno; una
+solicitud pendiente se señala, pero no retira el turno previsto. La fecha y el alcance
 se conservan en el enlace. Las ausencias confirmadas y pendientes se distinguen del
 horario semanal habitual; no se solicitan sus motivos ni comentarios para esta vista.
 Los enlaces de gestión llevan a Horarios o Vacaciones respetando el filtro de persona

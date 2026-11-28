@@ -48,3 +48,32 @@ export function teamCalendarCell(
 export function plannedTime(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
+
+export const teamDayFilters = ['all', 'shift', 'absence', 'no-shift', 'no-schedule'] as const
+export type TeamDayFilter = (typeof teamDayFilters)[number]
+export type TeamCalendarRow = { userId: string; name: string; cells: TeamCalendarCell[] }
+
+export function projectTeamDay(rows: TeamCalendarRow[], selectedIndex: number) {
+  const groups: Record<TeamDayFilter, { userId: string; name: string; cell: TeamCalendarCell }[]> =
+    {
+      all: [],
+      shift: [],
+      absence: [],
+      'no-shift': [],
+      'no-schedule': [],
+    }
+
+  for (const { userId, name, cells } of rows) {
+    const cell = cells[selectedIndex]
+    if (!cell) continue
+    const entry = { userId, name, cell }
+    groups.all.push(entry)
+    if (cell.approved || cell.pending) groups.absence.push(entry)
+    // Pending leave does not remove a shift. Approved leave never counts as active coverage.
+    if (cell.approved) continue
+    if (cell.plannedSlots === null) groups['no-schedule'].push(entry)
+    else if (cell.plannedSlots.length === 0) groups['no-shift'].push(entry)
+    else groups.shift.push(entry)
+  }
+  return groups
+}
