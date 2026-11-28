@@ -38,6 +38,12 @@ Si no ves una sección o una acción, puede deberse a tu rol o a que el plan de 
 
 Los clientes se **archivan** para conservar sus referencias en presupuestos, trabajos y facturas. Archivar no equivale a borrar sus documentos históricos.
 
+### Informe mensual de servicios por cliente
+
+En **Clientes → Servicios, partes e historial → Informe mensual de servicios**, la oficina puede elegir un mes y un centro o ver todos. La vista previa separa las visitas realizadas, pendientes o en curso, canceladas u omitidas y los extras propuestos para ese cliente. Se usa la hora de Madrid: las visitas entran por su fecha de inicio prevista y los extras por la fecha de propuesta y el centro de su trabajo. El estado es el registrado al preparar el informe.
+
+Puedes descargar un PDF operativo para revisar o compartir. No incluye notas internas, datos de contacto, importes o justificantes. No es una factura ni un export contable. Si el informe supera 300 visitas o 300 extras, acota a un centro o a otro mes: no se genera un documento incompleto.
+
 ## 3. Crear y aceptar un presupuesto
 
 1. En **Inventario**, prepara los conceptos que uses con frecuencia.
