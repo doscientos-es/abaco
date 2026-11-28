@@ -25,6 +25,7 @@ export type VisitSummary = {
   requires_acceptance?: boolean
   contract_id?: string
   contract_title?: string
+  contract_occurrence_on?: string | null
 }
 
 export type TechnicianOption = { id: string; label: string }
@@ -118,7 +119,7 @@ export async function listOfficeVisits(
   const [extra, labels] = await Promise.all([
     createBrowserSupabaseClient()
       .from('service_visits')
-      .select('id,work_team_id,route_order,work_teams(name)')
+      .select('id,work_team_id,route_order,contract_occurrence_on,work_teams(name)')
       .eq('tenant_id', tenantId)
       .in(
         'id',
@@ -136,6 +137,7 @@ export async function listOfficeVisits(
       ...(label ? { contract_id: label.contract_id, contract_title: label.contract_title } : {}),
       work_team_id: detail?.work_team_id,
       route_order: detail?.route_order,
+      ...(detail ? { contract_occurrence_on: detail.contract_occurrence_on } : {}),
       work_team_name: team?.name ?? '',
     }
   })

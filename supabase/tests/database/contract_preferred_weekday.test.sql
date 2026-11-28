@@ -5,7 +5,9 @@ do $$
 declare
   t uuid:=gen_random_uuid(); cl uuid:=gen_random_uuid(); loc uuid:=gen_random_uuid();
   admin uuid:=gen_random_uuid(); team uuid:=gen_random_uuid(); c uuid:=gen_random_uuid();
-  job uuid; v uuid; payload jsonb; version timestamptz; op uuid:=gen_random_uuid();
+  job uuid; v uuid; omitted uuid; omitted_version timestamptz;
+  skip_op uuid:=gen_random_uuid(); next_visit jsonb;
+  payload jsonb; version timestamptz; op uuid:=gen_random_uuid();
 begin
   insert into public.tenants(id,name,is_complimentary) values(t,'Preferred weekday test',true);
   insert into public.clients(id,tenant_id,name) values(cl,t,'Test client');
@@ -37,12 +39,26 @@ begin
     '2027-02-03 10:00',60,null,'Client request',gen_random_uuid());
   assert (select contract_occurrence_on='2027-02-01' and (scheduled_start_at at time zone 'Europe/Madrid')::date='2027-02-03'
     from public.service_visits where id=v), 'Replanning lost origin';
+  select id, updated_at into strict omitted, omitted_version from public.service_visits
+    where contract_rule_id=job and contract_occurrence_on='2027-01-04';
+  select to_jsonb(vs) into strict next_visit from public.service_visits vs
+    where contract_rule_id=job and contract_occurrence_on='2027-03-01';
+  assert public.transition_service_visit(t,omitted,omitted_version,'skipped','Client closed',skip_op,null,null)='skipped',
+    'Office could not omit just one occurrence';
+  assert public.transition_service_visit(t,omitted,omitted_version,'skipped','Client closed',skip_op,null,null)='skipped',
+    'Retry of occurrence omission did not return the original result';
+  assert (select count(*)=1 and min(ev.payload->>'reason')='Client closed' from public.service_visit_events ev
+    where visit_id=omitted and operation_id=skip_op and kind='status_changed'), 'Omission history duplicated or lost';
   perform app_private.generate_scheduled_contract_visits(t,'2027-01-01','2027-03-31',c);
   perform public.save_contract_job(t,c,null,version,payload,op);
-  assert (select count(*)=3 from public.service_visits where contract_rule_id=job), 'Regeneration duplicated a moved visit';
+  assert (select count(*)=3 from public.service_visits where contract_rule_id=job), 'Regeneration duplicated a moved or omitted visit';
+  assert (select status='skipped' and contract_occurrence_on='2027-01-04' and contract_rule_id=job
+    from public.service_visits where id=omitted), 'Omission lost its original series reference';
+  assert (select to_jsonb(vs)=next_visit from public.service_visits vs where contract_rule_id=job
+    and contract_occurrence_on='2027-03-01'), 'Other occurrences changed after an exception';
   assert app_private.cleaning_service_due('2027-02-28','2027-01-31','monthly','{}'::smallint[]), 'Legacy monthly rule changed';
   assert not app_private.cleaning_service_due('2027-02-08','2027-01-01','monthly',array[1]::smallint[]), 'Second Monday was included';
   assert not app_private.cleaning_service_due('2027-02-01','2027-02-02','monthly',array[1]::smallint[]), 'Occurrence predates the contract';
 end $$;
-select '1..1' as result union all select 'ok 1 - Preferred weekdays and replanning';
+select '1..1' as result union all select 'ok 1 - Preferred weekdays and single occurrence exceptions';
 rollback;
