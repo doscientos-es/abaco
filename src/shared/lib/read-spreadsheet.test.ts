@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import encodedWorkbook from './fixtures/import-workbook.json'
-import { readSpreadsheet } from './read-spreadsheet'
+import { readSpreadsheet, readSpreadsheetSheets } from './read-spreadsheet'
 
 describe('readSpreadsheet', () => {
   it('reads a UTF-8 CSV with BOM, quoted delimiters, escaped quotes and multiline cells', async () => {
@@ -44,6 +44,18 @@ describe('readSpreadsheet', () => {
       ['2026-03-15', 'Gasto', 'Compra', '12.5', 'Sí', '00123'],
       ['2026-03-15', '', '', '', 'No', ''],
     ])
+  })
+
+  it('exposes every named XLSX sheet in workbook order for an explicit local selection', async () => {
+    const workbook = Buffer.from(encodedWorkbook.join(''), 'base64')
+    const sheets = await readSpreadsheetSheets(new File([workbook], 'seleccion.xlsx'))
+    expect(sheets).toHaveLength(2)
+    expect(sheets[0]?.name).not.toEqual(sheets[1]?.name)
+    expect(sheets[0]?.rows[0]?.[0]).toBe('Fecha')
+    expect(sheets[1]?.rows).not.toEqual(sheets[0]?.rows)
+    expect(
+      await readSpreadsheetSheets(new File(['Correo\na@example.test'], 'personas.csv')),
+    ).toEqual([{ name: 'CSV', rows: [['Correo'], ['a@example.test']] }])
   })
 
   it.each([

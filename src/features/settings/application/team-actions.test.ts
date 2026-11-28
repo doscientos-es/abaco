@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   changeMemberRole,
   inviteMember,
+  loadTeamMembershipEmails,
   pendingTeamActivationsQuery,
   removeMember,
   teamQuery,
@@ -71,6 +72,29 @@ it('loads pending activations only for the selected company and reports errors',
   )
 })
 
+it('checks membership emails with tenant scope and fails closed on a missing profile', async () => {
+  const range = vi
+    .fn()
+    .mockResolvedValueOnce({
+      data: [{ profiles: [{ email: 'worker@example.test' }] }],
+      error: null,
+    })
+    .mockResolvedValueOnce({ data: [{ profiles: null }], error: null })
+  const order = vi.fn(() => ({ range }))
+  const forTenant = vi.fn(() => ({ order }))
+  const select = vi.fn(() => ({ eq: forTenant }))
+  from.mockReturnValue({ select })
+
+  await expect(loadTeamMembershipEmails('tenant')).resolves.toEqual(['worker@example.test'])
+  expect(select).toHaveBeenCalledWith('profiles(email)')
+  expect(forTenant).toHaveBeenCalledWith('tenant_id', 'tenant')
+  expect(order).toHaveBeenCalledWith('user_id')
+  expect(range).toHaveBeenCalledWith(0, 499)
+  await expect(loadTeamMembershipEmails('tenant')).rejects.toThrow(
+    'No se pudieron comprobar todos los correos del equipo.',
+  )
+})
+
 describe('inviteMember', () => {
   beforeEach(() => invoke.mockReset())
 
@@ -81,7 +105,7 @@ describe('inviteMember', () => {
   })
 
   it.each([
-    [400, 'Revisa el correo, DNI, teléfono y rol de la persona.'],
+    [400, 'Revisa el correo y el rol de la persona.'],
     [401, 'Tu sesión ha caducado. Inicia sesión de nuevo.'],
     [403, 'No tienes permiso para invitar a esta persona.'],
   ])('explains HTTP %i', async (status, message) => {

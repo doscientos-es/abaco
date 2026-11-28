@@ -146,6 +146,24 @@ Los CSV de clientes, facturas, cobros y gastos están disponibles para propietar
 
 En **Ajustes** se configuran los datos de la empresa que aparecen en documentos, la marca, valores por defecto, miembros e invitaciones. Solo propietario y administrador pueden gestionar las opciones autorizadas; el propietario puede nombrar administradores. Revisa especialmente la identificación fiscal, contacto, dirección, cuenta bancaria e IVA antes de emitir documentos.
 
+### Importar invitaciones de personal desde Excel o CSV
+
+En **Trabajadores → Personas**, abre **Importar personas**, selecciona el archivo y,
+si tiene varias hojas, elige una. Basta el correo; el nombre y el rol son opcionales.
+No incluyas DNI ni teléfono en el archivo y no lo subas a servicios externos. Si
+necesitas esos datos, añádelos después desde la ficha privada de la persona.
+
+Comprueba la asignación de columnas y revisa las filas. No se envía nada en la vista
+previa: se omiten los correos duplicados, las personas ya incluidas y las filas
+inválidas. El rol por defecto es Usuario; los accesos de administrador requieren
+una confirmación adicional. Se pueden confirmar hasta 50 invitaciones por envío,
+sujetas a las plazas del plan.
+
+El resultado diferencia correos enviados, accesos confirmados a cuentas existentes,
+omisiones, filas sin confirmar y filas no intentadas. Si se detiene el envío, revisa
+el equipo antes de preparar otro archivo: una respuesta fallida no garantiza que
+el correo de esa fila no haya salido.
+
 ### Equipos de trabajo
 
 1. En **Ajustes → Equipo**, **Personas y permisos** controla las cuentas que acceden a la empresa. En **Equipos de trabajo**, pulsa **Crear equipo** para agrupar esas personas.

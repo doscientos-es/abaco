@@ -1,64 +1,105 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { planImport } from '@/shared/domain/table-import'
-import { readSpreadsheet } from '@/shared/lib/read-spreadsheet'
+import { readSpreadsheetSheets } from '@/shared/lib/read-spreadsheet'
 
-import { sendTeamInvitations, teamImportSchema } from './team-import'
+import {
+  previewTeamImport,
+  sendTeamInvitations,
+  suggestTeamImportMapping,
+  teamImportHeaders,
+  type ReadyTeamImportRow,
+} from './team-import'
 
 describe('importación de personas', () => {
-  const readCsv = (text: string) => readSpreadsheet(new File([text], 'personas.csv'))
+  async function readCsv(text: string) {
+    const [sheet] = await readSpreadsheetSheets(new File([text], 'personas.csv'))
+    if (!sheet) throw new Error('Missing CSV sheet')
+    return sheet.rows
+  }
 
-  it('valida roles y correos y omite duplicados sin elevar permisos por defecto', async () => {
-    const csv =
-      'Correo;Nombre;Rol;DNI;Teléfono\nANA@example.com;Ana;;12345678Z;\nana@example.com;Ana;Administrador;12345678Z;\nbad;X;Usuario;1;\nluis@example.com;Luis;Administrador;2;\nother@example.com;Eva;owner;3;'
-    const plan = planImport(await readCsv(csv), teamImportSchema, new Set(['luis@example.com']))
-    expect(plan).toEqual({
-      valid: [
-        { email: 'ana@example.com', fullName: 'Ana', role: 'user', dni: '12345678Z', phone: '' },
+  it('maps positional custom headers and excludes identifiable DNI and phone columns', async () => {
+    const table = await readCsv(
+      '\nPersona;Identidad corporativa;Nivel;DNI;Teléfono\nAlicia;A@EXAMPLE.TEST;;009988;00111',
+    )
+    expect(teamImportHeaders(table)).toEqual({
+      headerRow: 1,
+      headers: [
+        { index: 0, label: 'Persona' },
+        { index: 1, label: 'Identidad corporativa' },
+        { index: 2, label: 'Nivel' },
       ],
-      duplicates: 2,
-      errors: [
-        { line: 4, message: 'Correo no válido.' },
-        { line: 6, message: 'El rol debe ser Usuario o Administrador.' },
+    })
+    expect(suggestTeamImportMapping(table)).toEqual({})
+    expect(previewTeamImport(table, { Correo: 1, Nombre: 0, Rol: 2 }, [])).toEqual({
+      rows: [
+        {
+          line: 3,
+          status: 'ready',
+          invitation: { email: 'a@example.test', fullName: 'Alicia', role: 'user' },
+        },
+      ],
+    })
+    expect(previewTeamImport(table, { Correo: 1, Nombre: 3 }, [])).toEqual({
+      fatal: 'Una columna elegida no es válida.',
+    })
+  })
+
+  it('does not silently choose a repeated alias or map one column twice', () => {
+    const table = [
+      ['Correo', 'Email', 'Nombre'],
+      ['a@example.test', 'b@example.test', 'Ana'],
+    ]
+    expect(suggestTeamImportMapping(table)).toEqual({ Nombre: 2 })
+    expect(previewTeamImport(table, { Nombre: 2 }, [])).toEqual({
+      fatal: 'Elige la columna del correo.',
+    })
+    expect(previewTeamImport(table, { Correo: 1, Nombre: 1 }, [])).toEqual({
+      fatal: 'Usa una columna distinta para cada campo.',
+    })
+  })
+
+  it('excludes all ambiguous duplicate rows and returns precise errors with source row numbers', async () => {
+    const table = await readCsv(
+      'Correo;Nombre;Rol\nANA@example.test;Ana;\nana@example.test;Ana;Administrador\n\nbad;X;Usuario\nluis@example.test;Luis;Administrador\nother@example.test;Eva;owner\nok@example.test;Eva;',
+    )
+    expect(
+      previewTeamImport(table, suggestTeamImportMapping(table), ['LUIS@example.test']),
+    ).toEqual({
+      rows: [
+        { line: 2, status: 'duplicate', message: 'El correo se repite en la hoja.' },
+        { line: 3, status: 'duplicate', message: 'El correo se repite en la hoja.' },
+        { line: 5, status: 'invalid', message: 'Correo no válido.' },
+        { line: 6, status: 'duplicate', message: 'La persona ya pertenece al equipo.' },
+        { line: 7, status: 'invalid', message: 'El rol debe ser Usuario o Administrador.' },
+        {
+          line: 8,
+          status: 'ready',
+          invitation: { email: 'ok@example.test', fullName: 'Eva', role: 'user' },
+        },
       ],
     })
   })
 
-  it('requires a DNI column and rejects rows without a DNI while accepting an empty phone', async () => {
-    expect(planImport(await readCsv('Correo\na@example.com'), teamImportSchema, new Set())).toEqual(
-      {
-        fatal: 'Faltan columnas obligatorias: DNI. La primera fila debe tener las cabeceras.',
-      },
-    )
-    const plan = planImport(
-      await readCsv('Correo;DNI;Teléfono\na@example.com; ;\nb@example.com; B123 ;'),
-      teamImportSchema,
-      new Set(),
-    )
-    expect(plan).toEqual({
-      valid: [{ email: 'b@example.com', fullName: '', role: 'user', dni: 'B123', phone: '' }],
-      duplicates: 0,
-      errors: [{ line: 2, message: 'El DNI es obligatorio (máximo 40 caracteres).' }],
-    })
-  })
-
-  it('detiene el envío tras un fallo sin volver a enviar los anteriores', async () => {
+  it('reports each actual invite/added/uncertain/skipped/not-attempted result without automatic retry', async () => {
     const send = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, status: 'invited' })
+      .mockResolvedValueOnce({ ok: true, status: 'added' })
       .mockRejectedValueOnce(new Error('network'))
-    const invitations = ['a', 'b', 'c'].map((email) => ({
-      email,
-      fullName: '',
-      role: 'user' as const,
-      dni: '12345678Z',
-      phone: '',
-    }))
-    const result = await sendTeamInvitations(invitations, send)
-    expect(send).toHaveBeenCalledTimes(2)
-    expect(result.completed).toBe(1)
-    expect(result.failed?.email).toBe('b')
-    expect(result.remaining).toBe(1)
-    expect(result.failed?.message).toContain('Revisa el equipo')
+    const rows: ReadyTeamImportRow[] = ['skip', 'email', 'added', 'unknown', 'unsent'].map(
+      (email, index) => ({
+        line: index + 2,
+        status: 'ready',
+        invitation: { email: `${email}@example.test`, fullName: '', role: 'user' },
+      }),
+    )
+    await expect(sendTeamInvitations(rows, ['SKIP@example.test'], send)).resolves.toEqual([
+      { line: 2, status: 'skipped', message: 'La persona ya pertenece al equipo.' },
+      { line: 3, status: 'invited' },
+      { line: 4, status: 'added' },
+      { line: 5, status: 'unconfirmed', message: 'Se perdió la respuesta del servidor.' },
+      { line: 6, status: 'not-attempted' },
+    ])
+    expect(send).toHaveBeenCalledTimes(3)
   })
 })
