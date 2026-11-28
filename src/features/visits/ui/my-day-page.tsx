@@ -44,6 +44,7 @@ import { visitCanPrepareDelay } from '../domain/visit-delay-notice'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
+import { VisitSwapsPanel } from './visit-swaps-panel'
 import { WorkerAgendaChangeNotices } from './worker-agenda-change-notices'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerClosedVisitHistory } from './worker-closed-visit-history'
@@ -505,6 +506,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             setView('day')
           }}
           onOpenVisit={openVisit}
+        />
+      ) : null}
+      {dayOpen && tenantId && userId && session?.role === 'user' ? (
+        <VisitSwapsPanel
+          key={`${tenantId}:${userId}`}
+          tenantId={tenantId}
+          userId={userId}
+          office={false}
         />
       ) : null}
       {tenantId && userId && view === 'history' ? (
