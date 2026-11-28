@@ -9,6 +9,7 @@ import {
   type VisitSummary,
 } from '../application/visit-actions'
 import { VisitOccurrenceScope } from './visit-occurrence-scope'
+import { VisitSubstitutionPanel } from './visit-substitution-panel'
 
 function localDateTime(instant: string, timezone: string) {
   return new Intl.DateTimeFormat('sv-SE', {
@@ -31,6 +32,7 @@ export function VisitReplanForm({
   onDone,
   onCancel,
   onPendingChange,
+  suggestSubstitute = false,
 }: {
   tenantId: string
   visit: VisitSummary
@@ -38,6 +40,7 @@ export function VisitReplanForm({
   onDone: () => Promise<void>
   onCancel: () => void
   onPendingChange?: (pending: boolean) => void
+  suggestSubstitute?: boolean
 }) {
   const [localStart, setLocalStart] = useState(() =>
     localDateTime(visit.scheduled_start_at, visit.timezone),
@@ -152,6 +155,21 @@ export function VisitReplanForm({
           placeholder="Ejemplo: petición del cliente"
         />
       </div>
+      {suggestSubstitute ? (
+        <VisitSubstitutionPanel
+          tenantId={tenantId}
+          visit={visit}
+          technicians={technicians}
+          selectedId={assignedUserId}
+          saving={busy}
+          unchanged={
+            localStart === localDateTime(visit.scheduled_start_at, visit.timezone) &&
+            durationMinutes * 60_000 ===
+              Date.parse(visit.scheduled_end_at) - Date.parse(visit.scheduled_start_at)
+          }
+          onChoose={setAssignedUserId}
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button isDisabled={busy || !valid} onPress={() => void save()}>
           {busy
