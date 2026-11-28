@@ -2,6 +2,8 @@ export {
   loadClosedVisitReport,
   loadClosedVisitReportVersion,
   loadVisitReport,
+  loadVisitReportReceipt,
+  requireVisitReportActor,
   saveVisitReport,
 } from '../infrastructure/visit-report-repository'
 export type {

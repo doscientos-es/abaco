@@ -7,6 +7,7 @@ export type LocalVisitReportDraft = {
   data: VisitReportData
   operationId: string
   visitDay?: string
+  delivery?: 'queued'
 }
 
 const prefix = 'abaco:visit-report-draft:v1:'
@@ -38,7 +39,7 @@ export function listenToVisitReportLocalDrafts(onChange: () => void) {
 
 export function listVisitReportLocalDrafts(userId: string, tenantId: string) {
   const scope = visitReportDraftKey(userId, tenantId, '')
-  const drafts: { visitId: string; day: string | undefined }[] = []
+  const drafts: { visitId: string; day: string | undefined; delivery?: 'queued' }[] = []
   try {
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index)
@@ -50,6 +51,7 @@ export function listVisitReportLocalDrafts(userId: string, tenantId: string) {
         drafts.push({
           visitId,
           day: validDraftVisitDay(draft.visitDay) ? draft.visitDay : undefined,
+          ...(draft.delivery === 'queued' ? { delivery: draft.delivery } : {}),
         })
     }
   } catch {
@@ -96,9 +98,11 @@ export function readVisitReportLocalDraft(key: string): LocalVisitReportDraft | 
     if (!parsed || typeof parsed !== 'object') return null
     const draft = parsed as Partial<LocalVisitReportDraft>
     if (
+      typeof draft.baseRevision !== 'number' ||
       !Number.isSafeInteger(draft.baseRevision) ||
       (draft.baseRevision ?? -1) < 0 ||
       typeof draft.operationId !== 'string' ||
+      (draft.delivery !== undefined && draft.delivery !== 'queued') ||
       !draft.data ||
       typeof draft.data.notes !== 'string' ||
       (draft.data.recommendations !== undefined &&
@@ -114,7 +118,20 @@ export function readVisitReportLocalDraft(key: string): LocalVisitReportDraft | 
       )
     )
       return null
-    return draft as LocalVisitReportDraft
+    return {
+      baseRevision: draft.baseRevision,
+      operationId: draft.operationId,
+      ...(validDraftVisitDay(draft.visitDay) ? { visitDay: draft.visitDay } : {}),
+      ...(draft.delivery === 'queued' ? { delivery: draft.delivery } : {}),
+      data: {
+        notes: draft.data.notes,
+        ...(draft.data.recommendations !== undefined
+          ? { recommendations: draft.data.recommendations }
+          : {}),
+        ...(draft.data.next_actions !== undefined ? { next_actions: draft.data.next_actions } : {}),
+        checklist: draft.data.checklist.map(({ id, label, done }) => ({ id, label, done })),
+      },
+    }
   } catch {
     return null
   }
@@ -122,9 +139,10 @@ export function readVisitReportLocalDraft(key: string): LocalVisitReportDraft | 
 
 export function writeVisitReportLocalDraft(key: string, draft: LocalVisitReportDraft) {
   try {
-    const existed = localStorage.getItem(key) !== null
+    const previous = readVisitReportLocalDraft(key)
     localStorage.setItem(key, JSON.stringify(draft))
-    if (!existed) notifyDraftChange()
+    if (!previous || previous.delivery !== draft.delivery || previous.visitDay !== draft.visitDay)
+      notifyDraftChange()
     return true
   } catch {
     return false
