@@ -174,7 +174,7 @@ describe('DEV-59 internal material review', () => {
         "select pg_get_functiondef('public.record_service_visit_field_entry(uuid,uuid,text,text,numeric,text,timestamptz,uuid,uuid)'::regprocedure) definition",
       )
     const before = (await oldDefinition()).rows
-    await apply('../supabase/migrations/20261128152804_service_visit_quick_materials.sql')
+    await apply('../supabase/migrations/20261128154538_service_visit_quick_materials.sql')
     expect((await oldDefinition()).rows).toEqual(before)
   }, 30_000)
 
