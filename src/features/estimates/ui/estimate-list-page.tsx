@@ -11,7 +11,7 @@ import {
   toast,
 } from '@doscientos/ui'
 import { Eye, Plus, Trash } from '@phosphor-icons/react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
@@ -23,6 +23,7 @@ import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { Estimate, EstimateStatus } from '@/shared/domain/types'
+import { calendarDate, todayInMadrid } from '@/shared/lib/date-range'
 import { useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
 import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
@@ -33,9 +34,16 @@ import { EmptyPanel } from '@/shared/ui/page-states'
 import { StatusBadge, statusLabels } from '@/shared/ui/status-badge'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorklistFilters } from '@/shared/ui/worklist-filters'
 import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { deleteEstimate } from '../application/estimate-actions'
+import {
+  compareEstimateValidity,
+  type EstimateFollowUp,
+  hasEstimateValidity,
+  matchesEstimateFollowUp,
+} from '../domain/estimate-follow-up'
 import type { EstimatePurpose } from '../domain/new-estimate'
 import { EstimateFormatPicker } from './estimate-format-picker'
 
@@ -47,6 +55,26 @@ const estimateColumns = [
   { id: 'status', label: 'Estado' },
   { id: 'total', label: 'Total', headClassName: 'text-right' },
 ] as const
+
+const validityDate = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+function EstimateValidity({ estimate, today }: { estimate: Estimate; today: string }) {
+  if (estimate.status !== 'sent') return null
+  const isPast = matchesEstimateFollowUp(estimate, 'fecha-pasada', today)
+  return (
+    <span
+      className={isPast ? 'text-destructive block text-xs' : 'text-muted-foreground block text-xs'}
+    >
+      {hasEstimateValidity(estimate.validUntil)
+        ? `${isPast ? 'Vigencia hasta el' : 'Válido hasta el'} ${validityDate.format(calendarDate(estimate.validUntil))}`
+        : 'Sin fecha de vigencia'}
+    </span>
+  )
+}
 
 function EstimateActions({
   estimate,
@@ -88,7 +116,10 @@ export function EstimateListPage() {
   const session = useSession()
   const activeClients = clients.filter((client) => !client.archivedAt)
   const navigate = useNavigate()
-  const [status, setStatus] = useState<'all' | EstimateStatus>('all')
+  const followUp = useSearch({ from: '/presupuestos/' }).seguimiento ?? 'todos'
+  const today = todayInMadrid()
+  const [selectedStatus, setStatus] = useState<'all' | EstimateStatus>('all')
+  const status = followUp === 'todos' ? selectedStatus : 'all'
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
   const [newClientId, setNewClientId] = useState('')
@@ -97,21 +128,33 @@ export function EstimateListPage() {
   const [toDelete, setToDelete] = useState<Estimate | null>(null)
   const [newFormat, setNewFormat] = useState<EstimateFormat>('sections')
   const [purpose, setPurpose] = useState<'all' | EstimatePurpose>('all')
+  const pending = estimates.filter((e) => matchesEstimateFollowUp(e, 'sin-respuesta', today))
+  const past = pending.filter((e) => matchesEstimateFollowUp(e, 'fecha-pasada', today))
   const visible = estimates.filter((e) => {
     const client = clients.find((c) => c.id === e.clientId)
     const statusLabel = statusLabels[e.status]
     return (
-      (status === 'all' || e.status === status) &&
+      matchesEstimateFollowUp(e, followUp, today) &&
+      (followUp !== 'todos' || status === 'all' || e.status === status) &&
       (purpose === 'all' || (e.conversionDestination ?? 'work') === purpose) &&
       fuzzySearch(query, e.number, e.title, statusLabel, client?.name ?? '')
     )
   })
+  if (followUp !== 'todos') visible.sort(compareEstimateValidity)
   const pager = usePagination(
     visible,
-    `${status}|${purpose}|${query.trim().toLocaleLowerCase('es')}`,
+    `${followUp}|${status}|${purpose}|${query.trim().toLocaleLowerCase('es')}`,
   )
 
   const columns = useTableColumns('presupuestos', estimateColumns)
+
+  function selectFollowUp(next: EstimateFollowUp) {
+    setStatus('all')
+    void navigate({
+      to: '/presupuestos',
+      search: next === 'todos' ? {} : { seguimiento: next },
+    })
+  }
 
   function canDeleteEstimate(estimate: Estimate) {
     return (
@@ -153,6 +196,19 @@ export function EstimateListPage() {
         }
       />
 
+      {estimates.length > 0 ? (
+        <WorklistFilters<EstimateFollowUp>
+          label="Seguimiento de presupuestos"
+          selected={followUp}
+          onSelect={selectFollowUp}
+          options={[
+            { value: 'todos', label: 'Todos', detail: String(estimates.length) },
+            { value: 'sin-respuesta', label: 'Sin respuesta', detail: String(pending.length) },
+            { value: 'fecha-pasada', label: 'Vigencia pasada', detail: String(past.length) },
+          ]}
+        />
+      ) : null}
+
       <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
         <Input
           type="search"
@@ -164,17 +220,19 @@ export function EstimateListPage() {
           onChange={(event) => setQuery(event.target.value)}
         />
         <div className="hidden items-center gap-2 md:flex">
-          <SelectField
-            label="Filtrar por estado"
-            hideLabel
-            className="min-w-0 md:w-52"
-            value={status}
-            options={[
-              { value: 'all', label: 'Todos los estados' },
-              ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-            ]}
-            onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
-          />
+          {followUp === 'todos' ? (
+            <SelectField
+              label="Filtrar por estado"
+              hideLabel
+              className="min-w-0 md:w-52"
+              value={status}
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+              ]}
+              onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
+            />
+          ) : null}
           <SelectField
             label="Filtrar por tipo"
             hideLabel
@@ -207,16 +265,18 @@ export function EstimateListPage() {
             context="presupuestos"
             activeCount={Number(status !== 'all') + Number(purpose !== 'all')}
           >
-            <SelectField
-              label="Filtrar por estado"
-              className="w-full"
-              value={status}
-              options={[
-                { value: 'all', label: 'Todos los estados' },
-                ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
-              ]}
-              onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
-            />
+            {followUp === 'todos' ? (
+              <SelectField
+                label="Filtrar por estado"
+                className="w-full"
+                value={status}
+                options={[
+                  { value: 'all', label: 'Todos los estados' },
+                  ...Object.entries(statusLabels).map(([value, label]) => ({ value, label })),
+                ]}
+                onChange={(v) => setStatus(v as 'all' | EstimateStatus)}
+              />
+            ) : null}
             <SelectField
               label="Filtrar por tipo"
               className="w-full"
@@ -265,6 +325,20 @@ export function EstimateListPage() {
           >
             <Button onPress={startNew}>+ Crear mi primer presupuesto</Button>
           </EmptyPanel>
+        ) : followUp !== 'todos' && !query && status === 'all' && purpose === 'all' ? (
+          <EmptyPanel
+            icon={fieldIcons.file}
+            title={
+              followUp === 'fecha-pasada'
+                ? 'Sin presupuestos con vigencia pasada'
+                : 'Ningún presupuesto espera respuesta'
+            }
+            description="Aquí solo aparecen presupuestos enviados y todavía sin una respuesta registrada."
+          >
+            <Button variant="outline" onPress={() => selectFollowUp('todos')}>
+              Ver todos
+            </Button>
+          </EmptyPanel>
         ) : (
           <EmptyPanel
             icon={fieldIcons.search}
@@ -310,9 +384,12 @@ export function EstimateListPage() {
                   </span>
                 </Link>
                 <div className="flex items-center justify-between gap-2 px-3 pb-2">
-                  <span className="font-semibold tabular-nums">
-                    {formatEuros(estimateTotalCents(estimate))}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="font-semibold tabular-nums">
+                      {formatEuros(estimateTotalCents(estimate))}
+                    </span>
+                    <EstimateValidity estimate={estimate} today={today} />
+                  </div>
                   <EstimateActions
                     estimate={estimate}
                     canDelete={canDeleteEstimate(estimate)}
@@ -377,6 +454,7 @@ export function EstimateListPage() {
                       status: (
                         <TableCell>
                           <StatusBadge status={estimate.status} />
+                          <EstimateValidity estimate={estimate} today={today} />
                         </TableCell>
                       ),
                       total: (
