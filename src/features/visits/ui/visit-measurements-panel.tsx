@@ -11,6 +11,7 @@ import {
   type VisitMeasurement,
 } from '../application/visit-measurement-actions'
 import { parseMeasurementValue } from '../domain/measurement-value'
+import { GenericMeasurementConfiguration } from './generic-measurement-configuration'
 
 const control = 'border-border bg-background min-h-11 w-full rounded-md border px-3 text-sm'
 const number = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 3 })
@@ -127,10 +128,12 @@ export function VisitMeasurementsPanel({
 
   const available = context.data.parameters
   const readings = context.data.readings
-  const methodValue = method.trim()
+  const generic = context.data.mode === 'generic'
+  const canRecord = !readOnly && context.data.can_record !== false
+  const methodValue = generic ? (parameter?.method ?? '') : method.trim()
   const valid =
     online &&
-    !readOnly &&
+    canRecord &&
     parameter &&
     !changedParameter &&
     value !== null &&
@@ -176,11 +179,22 @@ export function VisitMeasurementsPanel({
       <h3 id={title} className="font-semibold">
         Mediciones
       </h3>
+      {generic && context.data.asset_name ? (
+        <p className="text-sm">Activo: {context.data.asset_name}</p>
+      ) : null}
       <p className="text-muted-foreground text-sm">
-        Solo se compara con otra visita terminada de esta piscina, con el mismo parámetro, unidad y
-        método.
+        Solo se compara con otra visita terminada {generic ? 'del mismo activo' : 'de esta piscina'}
+        , con el mismo parámetro, unidad y método.
       </p>
-      {!readOnly && available.length ? (
+      {generic && !readOnly && context.data.can_configure ? (
+        <GenericMeasurementConfiguration
+          tenantId={tenantId}
+          visitId={visitId}
+          online={online}
+          onConfigured={() => cache.invalidateQueries({ queryKey: key })}
+        />
+      ) : null}
+      {canRecord && available.length ? (
         <form aria-label="Registrar medición" onSubmit={submit} className="space-y-3">
           <fieldset disabled={save.isPending} className="grid min-w-0 gap-3 sm:grid-cols-2">
             <label className="min-w-0 space-y-1 text-sm sm:col-span-2">
@@ -235,8 +249,9 @@ export function VisitMeasurementsPanel({
               <input
                 className={control}
                 maxLength={100}
-                value={method}
-                placeholder="Ej. pH-metro"
+                value={generic ? methodValue : method}
+                readOnly={generic}
+                placeholder={generic ? 'Selecciona primero un parámetro' : 'Ej. pH-metro'}
                 onChange={(event) => {
                   setMethod(event.target.value)
                   setConfirmed(false)
@@ -270,9 +285,15 @@ export function VisitMeasurementsPanel({
                 : 'Registrar medición'}
           </Button>
         </form>
-      ) : !readOnly ? (
+      ) : !readOnly && !available.length ? (
         <p className="text-muted-foreground text-sm">
-          Esta piscina no tiene parámetros de medición disponibles.
+          {generic
+            ? 'Coordinación aún no configuró qué medir en este activo.'
+            : 'Esta piscina no tiene parámetros de medición disponibles.'}
+        </p>
+      ) : !readOnly && !canRecord ? (
+        <p className="text-muted-foreground text-sm">
+          No se pueden registrar nuevas mediciones en esta visita.
         </p>
       ) : null}
       {readings.length ? (

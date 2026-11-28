@@ -9,6 +9,7 @@ function migration(name: string) {
 }
 
 const sql = migration('20261128154543_visit_measurement_comparison.sql')
+const genericSQL = migration('20261128154816_generic_asset_measurement_facade.sql')
 const existingMeasurements = migration('20261027143749_pool_measurements.sql')
 const roles = migration('20261109143327_admin_user_roles.sql')
 const rolePatch = roles.slice(
@@ -38,10 +39,18 @@ const visit = id(11),
   cancelledVisit = id(14),
   otherPoolVisit = id(15)
 const recordId = id(16)
+const genericVisit = id(17),
+  genericOldVisit = id(18),
+  otherGenericVisit = id(19),
+  otherGenericAsset = id(20)
+const genericParam = id(21)
 const sampleAt = '2026-11-26T13:00:00Z'
-type Parameter = { id: string; label: string; unit: string; version: string }
+type Parameter = { id: string; label: string; unit: string; version: string; method?: string }
 type Context = {
   supported: boolean
+  mode?: 'generic'
+  can_record?: boolean
+  can_configure?: boolean
   parameters: Parameter[]
   readings: Array<{
     id: string
@@ -78,12 +87,36 @@ async function record(
   value = 7.2,
   method = 'Sonda digital',
   target = visit,
+  measuredAt = sampleAt,
 ) {
   const { rows } = await db.query<{ id: string }>(
     'select public.record_visit_measurement_with_unit($1,$2,$3,$4,$5,$6,$7,$8,$9) as id',
-    [tenant, target, stated.id, stated.unit, stated.version, value, method, sampleAt, operationId],
+    [
+      tenant,
+      target,
+      stated.id,
+      stated.unit,
+      stated.version,
+      value,
+      method,
+      measuredAt,
+      operationId,
+    ],
   )
   return rows[0]?.id
+}
+
+async function configure(
+  target = genericVisit,
+  operation = genericParam,
+  label = 'Presión en carga',
+) {
+  return (
+    await db.query<{ id: string }>(
+      'select public.configure_generic_visit_measurement($1,$2,$3,$4,$5,$6) as id',
+      [tenant, target, operation, label, 'bar', 'Manómetro calibrado'],
+    )
+  ).rows[0]?.id
 }
 
 describe('pool measurement context and explicit unit', () => {
@@ -102,26 +135,36 @@ describe('pool measurement context and explicit unit', () => {
       create function public.tenant_can_write(t uuid) returns boolean language sql stable as $$select t is not null$$;
       create function public.touch_updated_at() returns trigger language plpgsql as $$begin new.updated_at := clock_timestamp(); return new; end$$;
       create function public.reject_work_history_change() returns trigger language plpgsql as $$begin raise exception 'immutable'; end$$;
-      create table public.service_assets (id uuid primary key, tenant_id uuid, name text, kind text);
+      create table public.service_assets (id uuid primary key, tenant_id uuid, name text, kind text,
+        status text not null default 'active', unique (id,tenant_id));
       create table public.pool_profiles (asset_id uuid, tenant_id uuid, primary key(asset_id,tenant_id));
       create table public.service_visits (id uuid primary key, tenant_id uuid, asset_id uuid, status text,
         assigned_user_id uuid, work_team_id uuid, actual_end_at timestamptz);
       create table public.work_team_members (tenant_id uuid, team_id uuid, user_id uuid);
+      create table public.service_visit_reports (tenant_id uuid, visit_id uuid, notes text);
+      create table public.service_visit_photos (tenant_id uuid, visit_id uuid, object_path text);
       ${existingMeasurements}
       ${rolePatch}
       ${scope}
       ${commandPatch}
       ${sql}
+      ${genericSQL}
       insert into public.memberships values
         ('${tenant}','${worker}','user'), ('${tenant}','${colleague}','user'),
         ('${tenant}','${admin}','admin'), ('${foreign}','${outsider}','admin');
       insert into public.work_team_members values ('${tenant}','${group}','${worker}');
-      insert into public.service_assets values ('${pool}','${tenant}','Piscina actual','pool'),
-        ('${anotherPool}','${tenant}','Piscina distinta','pool'), ('${lift}','${tenant}','Montacargas','equipment');
+      insert into public.service_visit_reports values ('${tenant}','${genericOldVisit}','Nota privada histórica');
+      insert into public.service_visit_photos values ('${tenant}','${genericOldVisit}','fotos/privada.jpg');
+      insert into public.service_assets (id,tenant_id,name,kind) values ('${pool}','${tenant}','Piscina actual','pool'),
+        ('${anotherPool}','${tenant}','Piscina distinta','pool'), ('${lift}','${tenant}','Montacargas','generic'),
+        ('${otherGenericAsset}','${tenant}','Activo separado','generic');
       insert into public.pool_profiles values ('${pool}','${tenant}'), ('${anotherPool}','${tenant}');
       insert into public.service_visits values
         ('${visit}','${tenant}','${pool}','in_progress',null,'${group}',null),
-        ('${noPoolVisit}','${tenant}','${lift}','scheduled','${worker}',null,null),
+        ('${noPoolVisit}','${tenant}',null,'scheduled','${worker}',null,null),
+        ('${genericVisit}','${tenant}','${lift}','in_progress','${worker}',null,null),
+        ('${genericOldVisit}','${tenant}','${lift}','in_progress','${colleague}',null,null),
+        ('${otherGenericVisit}','${tenant}','${otherGenericAsset}','scheduled','${worker}',null,null),
         ('${oldVisit}','${tenant}','${pool}','completed','${colleague}',null,'2026-11-25T18:00:00Z'),
         ('${cancelledVisit}','${tenant}','${pool}','canceled','${colleague}',null,'2026-11-25T18:00:00Z'),
         ('${otherPoolVisit}','${tenant}','${anotherPool}','completed','${colleague}',null,'2026-11-25T18:00:00Z');
@@ -205,6 +248,135 @@ describe('pool measurement context and explicit unit', () => {
       expect(
         (await read()).readings.find(({ method }) => method === 'Método no comparable')?.previous,
       ).toBeNull()
+    })
+  })
+
+  it('adds an admin-defined generic parameter and records typed values through the same facade without pool rows', async () => {
+    await authAs(worker, async () => {
+      expect(await read(tenant, genericVisit)).toMatchObject({
+        mode: 'generic',
+        can_record: true,
+        can_configure: false,
+        parameters: [],
+      })
+      await expect(configure()).rejects.toMatchObject({ code: '42501' })
+    })
+    const definition = await authAs(admin, async () => {
+      expect(await configure()).toBe(genericParam)
+      expect(await configure()).toBe(genericParam)
+      await expect(configure(genericVisit, genericParam, 'Otra lectura')).rejects.toMatchObject({
+        code: 'P0409',
+      })
+      await expect(configure(genericVisit, id(66), 'PRESIÓN EN CARGA')).rejects.toMatchObject({
+        code: 'P0409',
+      })
+      await expect(configure(visit, id(66))).rejects.toMatchObject({ code: 'P0409' })
+      const context = await read(tenant, genericVisit)
+      expect(context.can_configure).toBe(true)
+      expect(context.parameters).toHaveLength(1)
+      const selected = context.parameters[0]
+      assert.ok(selected)
+      expect(selected).toMatchObject({
+        label: 'Presión en carga',
+        unit: 'bar',
+        method: 'Manómetro calibrado',
+      })
+      return selected
+    })
+    await authAs(colleague, async () => {
+      await expect(read(tenant, genericVisit)).rejects.toMatchObject({ code: '42501' })
+      expect(
+        await record(
+          definition,
+          id(67),
+          3.2,
+          definition.method,
+          genericOldVisit,
+          '2026-11-22T10:00:00Z',
+        ),
+      ).toBeDefined()
+    })
+    await db.exec(
+      `update public.service_visits set status='completed', actual_end_at='2026-11-22T11:00:00Z' where id='${genericOldVisit}'`,
+    )
+    await db.exec(
+      `update public.service_visits set asset_id='${otherGenericAsset}' where id='${genericVisit}'`,
+    )
+    await authAs(worker, async () => {
+      await expect(
+        record(definition, id(68), 3.1, definition.method, genericVisit),
+      ).rejects.toMatchObject({ code: 'P0409' })
+    })
+    await db.exec(`update public.service_visits set asset_id='${lift}' where id='${genericVisit}'`)
+    let readingId: string | undefined
+    await authAs(worker, async () => {
+      await expect(
+        record(
+          { ...definition, version: '2026-10-01T01:00:00Z' },
+          id(68),
+          3.1,
+          definition.method,
+          genericVisit,
+        ),
+      ).rejects.toMatchObject({ code: 'P0409' })
+      await expect(
+        record(definition, id(68), 3.1, 'Otro método', genericVisit),
+      ).rejects.toMatchObject({ code: 'P0409' })
+      await expect(
+        record({ ...definition, unit: 'Pa' }, id(68), 3.1, definition.method, genericVisit),
+      ).rejects.toMatchObject({ code: 'P0409' })
+      await expect(
+        record(definition, id(68), 3.1, definition.method, otherGenericVisit),
+      ).rejects.toMatchObject({ code: 'P0409' })
+      readingId = await record(definition, id(68), 3.1, definition.method, genericVisit)
+      expect(readingId).toBeDefined()
+      expect(await record(definition, id(68), 3.1, definition.method, genericVisit)).toBe(readingId)
+      const { readings } = await read(tenant, genericVisit)
+      const observed = readings[0]
+      assert.ok(observed?.previous)
+      expect(Object.keys(observed).sort()).toEqual([
+        'id',
+        'label',
+        'measured_at',
+        'method',
+        'previous',
+        'unit',
+        'value',
+      ])
+      expect(Object.keys(observed.previous).sort()).toEqual(['measured_at', 'unit', 'value'])
+      const dto = JSON.stringify(observed)
+      expect(dto).not.toContain(genericOldVisit)
+      expect(dto).not.toContain(colleague)
+      expect(dto).not.toContain('Nota privada histórica')
+      expect(dto).not.toContain('fotos/privada.jpg')
+      expect(readings).toMatchObject([
+        {
+          id: readingId,
+          value: 3.1,
+          unit: 'bar',
+          previous: { value: 3.2, unit: 'bar', measured_at: '2026-11-22T10:00:00+00:00' },
+        },
+      ])
+      await expect(read(tenant, genericOldVisit)).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        db.exec('select * from app_private.generic_visit_measurements'),
+      ).rejects.toMatchObject({ code: '42501' })
+    })
+    await authAs(outsider, async () => {
+      await expect(configure()).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        record(definition, id(69), 3.0, definition.method, genericVisit),
+      ).rejects.toMatchObject({ code: '42501' })
+    })
+    expect(
+      (await db.query('select * from public.pool_profiles where asset_id=$1', [lift])).rows,
+    ).toHaveLength(0)
+    await db.exec(`update public.service_assets set status='retired' where id='${lift}'`)
+    await authAs(worker, async () => {
+      expect((await read(tenant, genericVisit)).can_record).toBe(false)
+      await expect(
+        record(definition, id(69), 3.0, definition.method, genericVisit),
+      ).rejects.toMatchObject({ code: 'P0409' })
     })
   })
 
