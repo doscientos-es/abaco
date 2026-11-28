@@ -69,7 +69,7 @@ describe('workbook directory migration', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../../../supabase/migrations/20261128150837_directory_workbook_identity.sql',
+          '../../../../supabase/migrations/20261128152917_directory_workbook_identity.sql',
           import.meta.url,
         ),
         'utf8',
