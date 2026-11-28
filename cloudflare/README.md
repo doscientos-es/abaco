@@ -39,3 +39,15 @@ verificar la migración de permisos, el Worker y la cabecera de no indexación/n
 en el dominio de la aplicación. El smoke local, tras compilar, se ejecuta con
 `node --test cloudflare/customer-portal-smoke.test.mjs` y usa exclusivamente datos de prueba.
 No enviar un enlace real para la verificación.
+
+La solicitud de intervención usa `APP_URL`, `SUPABASE_URL` y el mismo secreto de
+**runtime** `SUPABASE_SERVICE_ROLE_KEY`. Poner el secreto solo en Build no lo hace
+visible al Worker. Verificar también que la versión publicada tiene el binding
+`INTERVENTION_IP_LIMITER` del Wrangler raíz (namespace 8301). El Worker usa el
+`CF-Connecting-IP` que añade Cloudflare, nunca cabeceras alternativas aportadas
+por el visitante. Si falta el binding, falla o Cloudflare quita la cabecera, aplica
+por seguridad un límite agregado de diez peticiones por minuto por aislamiento.
+Este límite de emergencia no se comparte entre aislamientos y no guarda IPs; los
+límites por invitación y el presupuesto del proyecto siguen aplicándose en SQL.
+Los avisos internos de esta ruta identifican el tipo de fallo sin grabar la IP,
+la invitación, las credenciales ni el contenido del formulario.
