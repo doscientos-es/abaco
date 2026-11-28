@@ -1,13 +1,33 @@
 {
   "releases": [
     {
-      "version": null,
-      "date": "2026-11-27",
-      "title": "Sin publicar",
+      "version": "0.0.21",
+      "date": "2026-11-28",
+      "title": "v0.0.21",
       "sections": [
         {
           "title": "Nuevas funciones",
           "items": [
+            "Siguiente visita y reanudación segura de partes (DEV-50, DEV-51)",
+            "Seguimiento de presupuestos y cobros en móvil (DEV-46, DEV-47)",
+            "Resumen diario de turnos y ausencias (DEV-49)",
+            "Redesign pricing and company onboarding for mobile",
+            "Unify staff shifts and absences in a team calendar",
+            "Rebrand the installed app as Menos Líos",
+            "Add secure activity history to Menos Líos superadmin",
+            "Detect billing territory during Menos Líos onboarding",
+            "Improve superadmin company tables, renewal controls and invoice filters",
+            "Modernize the field worker agenda and visit reports",
+            "Add audio and image validation for chat attachments",
+            "Add chat attachments feature with audio and image support",
+            "Add audio attachment validation and limits for chat messages",
+            "Improve Menoslios superadmin and centralize subscription pricing",
+            "Enhance chat panel with improved message handling and UI elements",
+            "Implement action lock to prevent duplicate submissions",
+            "Implement new login layout and styles for improved UX",
+            "Add logging and tracing configuration options",
+            "Add new environment variables for application configuration",
+            "Run application APIs on Cloudflare Workers",
             "Add explicit consent handling and visit queuing",
             "Add consent handling for calendar connections",
             "Add calendar visit link parsing and integration",
@@ -198,6 +218,12 @@
         {
           "title": "Correcciones",
           "items": [
+            "Restablecer CI y publicación de Menos Líos (DEV-52)",
+            "Isolate test files without leaking module mocks (DEV-52)",
+            "Restore validation and release helper (DEV-52)",
+            "Restore scrolling on the Menos Líos login page",
+            "Validate merchant and reference encryption before onboarding charges",
+            "Prepare Redsys recurring billing while keeping onboarding closed",
             "Clarify synchronization impact on Ábaco",
             "Prevent connection when status cannot be checked",
             "Show dashboard metrics in two mobile columns",
@@ -211,6 +237,188 @@
         }
       ],
       "changes": [
+        {
+          "sha": "d2c1333135dabfaa48fe76880f7eb5541b11d44e",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Siguiente visita y reanudación segura de partes (DEV-50, DEV-51)"
+        },
+        {
+          "sha": "83097d491202a5151fca6d444a3b7b2690162159",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Seguimiento de presupuestos y cobros en móvil (DEV-46, DEV-47)"
+        },
+        {
+          "sha": "76b914a65073290e4c17062370aa7594163d6eb4",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Resumen diario de turnos y ausencias (DEV-49)"
+        },
+        {
+          "sha": "4455454be05402146863268cd883f3601aaa0de7",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Restablecer CI y publicación de Menos Líos (DEV-52)"
+        },
+        {
+          "sha": "9621ee889ebb05be44c0beb773f6f6fae15fb087",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Isolate test files without leaking module mocks (DEV-52)"
+        },
+        {
+          "sha": "b477e196bb4a6c88cec0a5bbcb8f1f487aa7a9ac",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Restore validation and release helper (DEV-52)"
+        },
+        {
+          "sha": "90a549146d386f37a223cbbbf32d2b71fb6f6cf6",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Redesign pricing and company onboarding for mobile"
+        },
+        {
+          "sha": "e04d144a151e6442c8d214f7d40505f110cb4a03",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Restore scrolling on the Menos Líos login page"
+        },
+        {
+          "sha": "ff0f97237416b5ad11b0f9e54bef303758a51341",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Unify staff shifts and absences in a team calendar"
+        },
+        {
+          "sha": "c9de02e41a1d9586f6ba44b110aebdb4e7c7342a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Rebrand the installed app as Menos Líos"
+        },
+        {
+          "sha": "ddfe737f0bd91bf994a73cf718e81c7b7592f747",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Add secure activity history to Menos Líos superadmin"
+        },
+        {
+          "sha": "bbe5618961b073a2c127ea20723d2b9f00d77b2a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Detect billing territory during Menos Líos onboarding"
+        },
+        {
+          "sha": "dfc2b1f22a0194c17d0ed2f6d604658d469b98f8",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve superadmin company tables, renewal controls and invoice filters"
+        },
+        {
+          "sha": "5cde6a1bab947745211c736dc34982eff815648a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Modernize the field worker agenda and visit reports"
+        },
+        {
+          "sha": "6b462bb6f6cef2105aed30a345d7be9dd450542b",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Validate merchant and reference encryption before onboarding charges"
+        },
+        {
+          "sha": "5dc95dbb8b11f57b5dbc1146beafcf0f112de613",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add audio and image validation for chat attachments"
+        },
+        {
+          "sha": "db215f052fe4f97103cdca5b20960c3133719d83",
+          "type": "fix",
+          "scope": null,
+          "breaking": false,
+          "description": "Prepare Redsys recurring billing while keeping onboarding closed"
+        },
+        {
+          "sha": "83ab5d0a4512e3a0f5493b5e93890d0952f3942c",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add chat attachments feature with audio and image support"
+        },
+        {
+          "sha": "083c497d65de39b3d7b4695e4b7e1c6e40d6cd95",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Add audio attachment validation and limits for chat messages"
+        },
+        {
+          "sha": "93ec26365f6a4e3e76acbaf2fce37c436f821894",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Improve Menoslios superadmin and centralize subscription pricing"
+        },
+        {
+          "sha": "07f484ef16c3b20aa79a5a004df9a2375e9e4878",
+          "type": "feat",
+          "scope": "ai",
+          "breaking": false,
+          "description": "Enhance chat panel with improved message handling and UI elements"
+        },
+        {
+          "sha": "430a328c058428564e8fcad0233034e3ef8fa8c0",
+          "type": "feat",
+          "scope": "billing",
+          "breaking": false,
+          "description": "Implement action lock to prevent duplicate submissions"
+        },
+        {
+          "sha": "99f4bdc07a283bff3ba1e0df0f015fc4a257fba9",
+          "type": "feat",
+          "scope": "auth",
+          "breaking": false,
+          "description": "Implement new login layout and styles for improved UX"
+        },
+        {
+          "sha": "09adf05ed4e4a328f1d55486a7cca4889b1b0242",
+          "type": "feat",
+          "scope": "observability",
+          "breaking": false,
+          "description": "Add logging and tracing configuration options"
+        },
+        {
+          "sha": "746aae2296aa59cd6fa13ddbf8cf7eb1ed70e312",
+          "type": "feat",
+          "scope": "vars",
+          "breaking": false,
+          "description": "Add new environment variables for application configuration"
+        },
+        {
+          "sha": "58180c8a1a8c77d4546a1be65e68704a2d13107a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Run application APIs on Cloudflare Workers"
+        },
         {
           "sha": "432923710e7eb7eaa941a7db59b944806764d87b",
           "type": "feat",

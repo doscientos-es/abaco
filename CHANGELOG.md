@@ -2,10 +2,30 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
-## 2026-11-27 — Sin publicar
+## 2026-11-28 — v0.0.21
 
 ### Nuevas funciones
 
+- Siguiente visita y reanudación segura de partes (DEV-50, DEV-51)
+- Seguimiento de presupuestos y cobros en móvil (DEV-46, DEV-47)
+- Resumen diario de turnos y ausencias (DEV-49)
+- Redesign pricing and company onboarding for mobile
+- Unify staff shifts and absences in a team calendar
+- Rebrand the installed app as Menos Líos
+- Add secure activity history to Menos Líos superadmin
+- Detect billing territory during Menos Líos onboarding
+- Improve superadmin company tables, renewal controls and invoice filters
+- Modernize the field worker agenda and visit reports
+- Add audio and image validation for chat attachments
+- Add chat attachments feature with audio and image support
+- Add audio attachment validation and limits for chat messages
+- Improve Menoslios superadmin and centralize subscription pricing
+- Enhance chat panel with improved message handling and UI elements
+- Implement action lock to prevent duplicate submissions
+- Implement new login layout and styles for improved UX
+- Add logging and tracing configuration options
+- Add new environment variables for application configuration
+- Run application APIs on Cloudflare Workers
 - Add explicit consent handling and visit queuing
 - Add consent handling for calendar connections
 - Add calendar visit link parsing and integration
@@ -194,6 +214,12 @@
 
 ### Correcciones
 
+- Restablecer CI y publicación de Menos Líos (DEV-52)
+- Isolate test files without leaking module mocks (DEV-52)
+- Restore validation and release helper (DEV-52)
+- Restore scrolling on the Menos Líos login page
+- Validate merchant and reference encryption before onboarding charges
+- Prepare Redsys recurring billing while keeping onboarding closed
 - Clarify synchronization impact on Ábaco
 - Prevent connection when status cannot be checked
 - Show dashboard metrics in two mobile columns
