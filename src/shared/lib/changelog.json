@@ -1,6 +1,52 @@
 {
   "releases": [
     {
+      "version": "0.0.24",
+      "date": "2026-11-28",
+      "title": "v0.0.24",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Comparar carga y capacidad semanal de los equipos (DEV-82)",
+            "Reprogramar varias visitas con vista previa y reintento (DEV-65)",
+            "Informe mensual de servicios por cliente y centro (DEV-81)",
+            "Ficha de llegada compartida solo con el técnico asignado (DEV-58)"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "c4357af3b8af82bf14f5d40c966cae5c1eeaff47",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Comparar carga y capacidad semanal de los equipos (DEV-82)"
+        },
+        {
+          "sha": "382e102314a9ad36ae795359cdf99f002b50d74c",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Reprogramar varias visitas con vista previa y reintento (DEV-65)"
+        },
+        {
+          "sha": "ae080de62a853099985007912ef60a19f5a4411a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Informe mensual de servicios por cliente y centro (DEV-81)"
+        },
+        {
+          "sha": "fa08245f6a2d727e65aa8cce18c3245cf8f5d7ae",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Ficha de llegada compartida solo con el técnico asignado (DEV-58)"
+        }
+      ]
+    },
+    {
       "version": "0.0.23",
       "date": "2026-11-28",
       "title": "v0.0.23",

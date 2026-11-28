@@ -2,6 +2,15 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.24
+
+### Nuevas funciones
+
+- Comparar carga y capacidad semanal de los equipos (DEV-82)
+- Reprogramar varias visitas con vista previa y reintento (DEV-65)
+- Informe mensual de servicios por cliente y centro (DEV-81)
+- Ficha de llegada compartida solo con el técnico asignado (DEV-58)
+
 ## 2026-11-28 — v0.0.23
 
 ### Nuevas funciones
