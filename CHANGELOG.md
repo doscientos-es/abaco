@@ -2,6 +2,14 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.35
+
+### Nuevas funciones
+
+- DEV-80: portal temporal con vistas expresamente compartidas
+- DEV-74: añadir mediciones comparables para activos genéricos
+- DEV-73: registrar y etiquetar equipos con QR protegido
+
 ## 2026-11-28 — v0.0.34
 
 ### Nuevas funciones

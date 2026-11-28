@@ -1,6 +1,44 @@
 {
   "releases": [
     {
+      "version": "0.0.35",
+      "date": "2026-11-28",
+      "title": "v0.0.35",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-80: portal temporal con vistas expresamente compartidas",
+            "DEV-74: añadir mediciones comparables para activos genéricos",
+            "DEV-73: registrar y etiquetar equipos con QR protegido"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "367cd02fee95bbed6cac03f0cdb3dcbb90197467",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-80: portal temporal con vistas expresamente compartidas"
+        },
+        {
+          "sha": "aceead95f4576299a28621d690d14b46ce8e83a3",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-74: añadir mediciones comparables para activos genéricos"
+        },
+        {
+          "sha": "43846f78770bf920e2912a7a76bc1b1df71c71e2",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-73: registrar y etiquetar equipos con QR protegido"
+        }
+      ]
+    },
+    {
       "version": "0.0.34",
       "date": "2026-11-28",
       "title": "v0.0.34",
