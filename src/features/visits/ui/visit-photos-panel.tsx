@@ -17,12 +17,8 @@ import {
   visitPhotoQueueKey,
   type PendingVisitPhoto,
 } from '../application/visit-photo-queue'
-
-const phaseLabels: Record<VisitPhotoPhase, string> = {
-  before: 'Antes',
-  after: 'Después',
-  other: 'Otra evidencia',
-}
+import { visitPhotoPhaseLabels } from '../domain/visit-photo-layout'
+import { VisitPhotoGallery } from './visit-photo-gallery'
 
 export function VisitPhotosPanel({
   tenantId,
@@ -36,7 +32,7 @@ export function VisitPhotosPanel({
   closed: boolean
 }) {
   const queryClient = useQueryClient()
-  const queryKey = ['visit-photos', tenantId, visitId]
+  const queryKey = ['visit-photos', tenantId, visitId, userId]
   const photos = useQuery({
     queryKey,
     queryFn: () => listVisitPhotos(tenantId, visitId),
@@ -54,6 +50,7 @@ export function VisitPhotosPanel({
   const scope = `${userId}:${tenantId}:${visitId}`
   const queueReady = loadedScope === scope
   const fileInput = useRef<HTMLInputElement>(null)
+  const cameraInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let active = true
@@ -154,6 +151,7 @@ export function VisitPhotosPanel({
       setFile(null)
       setCaption('')
       if (fileInput.current) fileInput.current.value = ''
+      if (cameraInput.current) cameraInput.current.value = ''
       toast.success('Fotografía guardada en este dispositivo')
     } catch (error) {
       toast.error('No se pudo conservar la fotografía', {
@@ -203,7 +201,7 @@ export function VisitPhotosPanel({
                 className="border-border flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm"
               >
                 <span className="min-w-0 flex-1 truncate">
-                  {phaseLabels[item.phase]} · {item.name}
+                  {visitPhotoPhaseLabels[item.phase]} · {item.name}
                 </span>
                 {!closed ? (
                   <Button
@@ -241,55 +239,80 @@ export function VisitPhotosPanel({
         <p className="text-muted-foreground text-sm">Cargando fotografías…</p>
       ) : null}
       {photos.isError ? (
-        <p role="alert" className="text-destructive text-sm">
-          No se pudieron cargar las fotografías. Reintenta antes de añadir otra.
-        </p>
+        <div className="border-border flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
+          <p role="alert" className="text-destructive">
+            No se pudieron cargar las fotografías. Reintenta antes de añadir otra.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-11"
+            onPress={() => void photos.refetch()}
+          >
+            Reintentar fotografías
+          </Button>
+        </div>
       ) : null}
       {photos.data?.length ? (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.data.map((photo) => (
-            <li key={photo.id} className="border-border overflow-hidden rounded-lg border">
-              <a href={photo.url} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={photo.url}
-                  alt={photo.caption || `Fotografía ${phaseLabels[photo.phase].toLowerCase()}`}
-                  className="aspect-video w-full object-cover"
-                  loading="lazy"
-                />
-              </a>
-              <div className="p-2 text-sm">
-                <p className="font-medium">{phaseLabels[photo.phase]}</p>
-                {photo.caption ? <p>{photo.caption}</p> : null}
-                <time className="text-muted-foreground text-xs" dateTime={photo.created_at}>
-                  {new Date(photo.created_at).toLocaleString('es-ES')}
-                </time>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <VisitPhotoGallery
+          photos={photos.data}
+          tenantId={tenantId}
+          visitId={visitId}
+          userId={userId}
+          closed={closed}
+        />
+      ) : photos.isSuccess ? (
+        <p className="text-muted-foreground text-sm">Todavía no hay fotografías enviadas.</p>
       ) : null}
       {!closed ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            Hacer foto o elegir imagen
+          <label className="min-w-0 text-sm">
+            Hacer foto
+            <input
+              ref={cameraInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              disabled={uploading}
+              className="border-input bg-background mt-1 block min-h-11 w-full min-w-0 rounded-lg border p-2"
+              onChange={(event) => {
+                const selected = event.target.files?.[0]
+                if (!selected) return
+                if (fileInput.current) fileInput.current.value = ''
+                setFile(selected)
+              }}
+            />
+          </label>
+          <label className="min-w-0 text-sm">
+            Elegir una imagen
             <input
               ref={fileInput}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={uploading}
               className="border-input bg-background mt-1 block min-h-11 w-full min-w-0 rounded-lg border p-2"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                const selected = event.target.files?.[0]
+                if (!selected) return
+                if (cameraInput.current) cameraInput.current.value = ''
+                setFile(selected)
+              }}
             />
           </label>
+          {file ? (
+            <output className="text-muted-foreground text-xs wrap-break-word sm:col-span-2">
+              Imagen seleccionada: {file.name}
+            </output>
+          ) : null}
           <label className="text-sm">
             Momento
             <select
               value={phase}
               disabled={uploading}
-              className="border-input bg-background mt-1 block w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 block min-h-11 w-full min-w-0 rounded-lg border p-2"
               onChange={(event) => setPhase(event.target.value as VisitPhotoPhase)}
             >
-              {Object.entries(phaseLabels).map(([value, label]) => (
+              {Object.entries(visitPhotoPhaseLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -302,13 +325,14 @@ export function VisitPhotosPanel({
               value={caption}
               maxLength={300}
               disabled={uploading}
-              className="border-input bg-background mt-1 block w-full rounded-lg border p-2"
+              className="border-input bg-background mt-1 block min-h-11 w-full min-w-0 rounded-lg border p-2"
               onChange={(event) => setCaption(event.target.value)}
             />
           </label>
           <div className="sm:col-span-2">
             <Button
               size="sm"
+              className="min-h-11"
               isDisabled={
                 !file ||
                 uploading ||
@@ -322,7 +346,8 @@ export function VisitPhotosPanel({
               {uploading ? 'Guardando fotografía…' : 'Preparar fotografía'}
             </Button>
             <p className="text-muted-foreground mt-1 text-xs">
-              JPEG, PNG o WebP · hasta 10 MB · máximo 20 fotografías por visita.
+              JPEG, PNG o WebP · hasta 10 MB · máximo 20 fotografías por visita. Preparar no envía
+              la foto.
             </p>
           </div>
         </div>

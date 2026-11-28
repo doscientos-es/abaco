@@ -26,12 +26,14 @@ describe('VisitPhotosPanel', () => {
       <VisitPhotosPanel tenantId="tenant" visitId="visit" userId="user" closed={closed} />,
     )
 
-  it('lets the phone offer its camera or existing images without forcing capture', () => {
+  it('offers direct camera capture and a separate picker for existing images', () => {
     const html = render(false)
-    expect(html).toContain('Hacer foto o elegir imagen')
+    expect(html).toContain('Hacer foto')
+    expect(html).toContain('Elegir una imagen')
     expect(html).toContain('type="file"')
     expect(html).toContain('accept="image/jpeg,image/png,image/webp"')
-    expect(html).not.toContain('capture=')
+    expect(html.match(/capture="environment"/g)).toHaveLength(1)
+    expect(html.match(/type="file"/g)).toHaveLength(2)
     expect(html).toContain('Preparar fotografía')
   })
 
