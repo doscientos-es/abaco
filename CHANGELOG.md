@@ -2,6 +2,14 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.22
+
+### Nuevas funciones
+
+- Resolver asignaciones de agenda desde el móvil (DEV-53)
+- Historial y bandeja de envíos del técnico (DEV-55, DEV-57)
+- Ficha comercial y CSV operativo de cobros (DEV-54, DEV-56)
+
 ## 2026-11-28 — v0.0.21
 
 ### Nuevas funciones

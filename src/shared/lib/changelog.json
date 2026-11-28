@@ -1,6 +1,44 @@
 {
   "releases": [
     {
+      "version": "0.0.22",
+      "date": "2026-11-28",
+      "title": "v0.0.22",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Resolver asignaciones de agenda desde el móvil (DEV-53)",
+            "Historial y bandeja de envíos del técnico (DEV-55, DEV-57)",
+            "Ficha comercial y CSV operativo de cobros (DEV-54, DEV-56)"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "8ba9a9e657f533744a20ff4d2150c695c529986f",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Resolver asignaciones de agenda desde el móvil (DEV-53)"
+        },
+        {
+          "sha": "9f3b037d0c89020aaf91870b5be398501ce56a82",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Historial y bandeja de envíos del técnico (DEV-55, DEV-57)"
+        },
+        {
+          "sha": "50457421d3ec2eb1ee7c06ea7f17062aca781ef3",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Ficha comercial y CSV operativo de cobros (DEV-54, DEV-56)"
+        }
+      ]
+    },
+    {
       "version": "0.0.21",
       "date": "2026-11-28",
       "title": "v0.0.21",
