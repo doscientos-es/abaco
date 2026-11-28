@@ -5,7 +5,7 @@ import { useRef, useState } from 'react'
 
 import {
   decideVisitBillingReview,
-  listOpenVisitBillingReviews,
+  listVisitBillingReviews,
   type VisitBillingReview,
 } from '../application/visit-billing-review-actions'
 import {
@@ -13,6 +13,7 @@ import {
   type BillingQueueCategory,
   visitBillingQueueCategory,
 } from '../domain/visit-billing-queue'
+import { VisitInvoiceCoverage } from './visit-invoice-coverage'
 
 const queueLabels: Record<BillingQueueCategory, { title: string; hint: string }> = {
   evidence: {
@@ -116,7 +117,7 @@ function ReviewItem({
           Ir a partes por revisar
         </Link>
       ) : null}
-      {review.status === 'bill_separately' ? (
+      {review.status === 'bill_separately' && !review.coverageInvoiceId ? (
         <Link
           className="text-primary inline-flex min-h-11 items-center text-sm font-medium underline"
           to="/clientes/$clientId"
@@ -124,6 +125,10 @@ function ReviewItem({
         >
           Abrir ficha del cliente
         </Link>
+      ) : null}
+      {review.status === 'bill_separately' &&
+      (review.coverageInvoiceId || review.reportGate === 'reviewed') ? (
+        <VisitInvoiceCoverage review={review} tenantId={tenantId} refresh={refresh} />
       ) : null}
       {review.status === 'pending' ? (
         <>
@@ -165,8 +170,17 @@ function ReviewItem({
 export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
-  const queryKey = ['visit-billing-reviews', tenantId, page]
-  const reviews = useQuery({ queryKey, queryFn: () => listOpenVisitBillingReviews(tenantId, page) })
+  const [mode, setMode] = useState<'open' | 'linked'>('open')
+  const queryKey = ['visit-billing-reviews', tenantId, mode, page]
+  const reviews = useQuery({
+    queryKey,
+    queryFn: () => listVisitBillingReviews(tenantId, page, mode),
+  })
+
+  function changeMode(nextMode: typeof mode) {
+    setPage(0)
+    setMode(nextMode)
+  }
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ['visit-billing-reviews', tenantId] })
@@ -178,9 +192,32 @@ export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
         <h2 className="text-base font-semibold">Visitas hechas por revisar</h2>
         <p className="text-muted-foreground text-xs sm:text-sm">
           Revisa el parte, decide si la visita va aparte y comprueba sus facturas antes de emitir.
-          Esta bandeja no confirma que una visita esté sin facturar ni emite documentos.
+          Las visitas sin vínculo siguen por confirmar, incluidas las históricas y las facturadas
+          fuera de Menos Líos. Confirmar un vínculo no emite ni cobra nada.
         </p>
       </div>
+      <fieldset className="flex min-w-0 flex-wrap gap-2" aria-label="Filtrar las visitas">
+        <Button
+          type="button"
+          variant={mode === 'open' ? 'default' : 'outline'}
+          aria-pressed={mode === 'open'}
+          size="sm"
+          className="max-md:min-h-11"
+          onPress={() => changeMode('open')}
+        >
+          Por confirmar
+        </Button>
+        <Button
+          type="button"
+          variant={mode === 'linked' ? 'default' : 'outline'}
+          aria-pressed={mode === 'linked'}
+          size="sm"
+          className="max-md:min-h-11"
+          onPress={() => changeMode('linked')}
+        >
+          Con factura vinculada
+        </Button>
+      </fieldset>
       {reviews.isPending ? <p className="text-sm">Cargando visitas…</p> : null}
       {reviews.isError ? (
         <div role="alert" className="border-destructive rounded-xl border p-3">
@@ -195,13 +232,31 @@ export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
           </Button>
         </div>
       ) : null}
-      {reviews.isSuccess && !reviews.data.length ? (
-        <p className="text-muted-foreground text-sm">No hay visitas pendientes.</p>
+      {reviews.isSuccess && !reviews.data.reviews.length ? (
+        <p className="text-muted-foreground text-sm">
+          {page > 0
+            ? 'No quedan visitas en esta página.'
+            : mode === 'linked'
+              ? 'No hay visitas con factura vinculada.'
+              : 'No hay visitas por confirmar.'}
+        </p>
       ) : null}
-      {reviews.isSuccess && reviews.data.length ? (
+      {reviews.isSuccess && mode === 'linked' && reviews.data.reviews.length ? (
+        <ul className="space-y-2">
+          {reviews.data.reviews.map((review) => (
+            <ReviewItem
+              key={review.visitId}
+              review={review}
+              tenantId={tenantId}
+              refresh={refresh}
+            />
+          ))}
+        </ul>
+      ) : null}
+      {reviews.isSuccess && mode === 'open' && reviews.data.reviews.length ? (
         <div className="space-y-5">
           {billingQueueCategories.map((category) => {
-            const items = reviews.data.filter(
+            const items = reviews.data.reviews.filter(
               (review) => visitBillingQueueCategory(review) === category,
             )
             if (!items.length) return null
@@ -229,7 +284,7 @@ export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
           })}
         </div>
       ) : null}
-      {reviews.isSuccess && (page > 0 || reviews.data.length === 50) ? (
+      {reviews.isSuccess && (page > 0 || reviews.data.hasNext) ? (
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -243,7 +298,7 @@ export function VisitBillingReviews({ tenantId }: { tenantId: string }) {
           <Button
             size="sm"
             variant="outline"
-            isDisabled={reviews.data.length < 50}
+            isDisabled={!reviews.data.hasNext}
             onPress={() => setPage((current) => current + 1)}
           >
             Siguiente
