@@ -109,7 +109,7 @@ describe('DEV-77 approved draft-only finding conversion', () => {
       language plpgsql as $$begin raise exception 'Historial inmutable'; end$$;
     `)
     await db.exec(await migration('20261027143931_incident_conversions'))
-    await db.exec(await migration('20261128160000_incident_quote_drafts'))
+    await db.exec(await migration('20261128154604_incident_quote_drafts'))
   }, 30000)
 
   beforeEach(async () => {
