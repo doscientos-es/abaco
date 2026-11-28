@@ -95,8 +95,16 @@ sus hipótesis; las cifras previstas no son resultados medidos.
 3. Desde **Contratos** configura los trabajos contratados; desde **Planificación**
    organiza conjuntamente visitas recurrentes e independientes y revisa los partes.
 4. El usuario asignado realiza la visita desde **Mi jornada** y completa el parte.
-   Los borradores y envíos pendientes se conservan en el dispositivo para reintentar;
+   La vista de hoy muestra la siguiente visita con acceso al destino y a su ficha.
+   Cuando no queda ninguna hoy, se consultan los próximos 7 días.
+
+   **Partes pendientes en este dispositivo** permite retomar borradores de visitas
+   todavía asignadas. No se sincronizan entre dispositivos y se eliminan al cerrar
+   sesión. Guarda el parte para enviarlo a la empresa.
+
+   Los envíos pendientes se conservan en el dispositivo para reintentar;
    la visita no se completa mientras haya mediciones o fotos pendientes allí.
+
 5. El cierre conserva una instantánea del parte, pone en cola su PDF y crea un pendiente
    de revisión de facturación. La oficina revisa los borradores antes de emitir facturas
    y registra los cobros por separado.

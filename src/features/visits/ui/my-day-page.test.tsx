@@ -20,7 +20,7 @@ vi.mock('react', async (importOriginal) => {
   return {
     ...actual,
     useState: (initial: unknown) => {
-      if (typeof initial === 'function' && mocks.date !== null) {
+      if (typeof initial === 'function' && initial !== Date.now && mocks.date !== null) {
         return [
           mocks.date,
           (update: string | ((current: string) => string)) => {
@@ -57,10 +57,20 @@ vi.mock('@doscientos/ui', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
   useQuery: (options: { queryKey: string[]; queryFn: () => unknown }) => {
-    if (options.queryKey[0] === 'my-visits') mocks.visitsQuery = options
+    if (
+      options.queryKey[0] === 'my-visits' &&
+      options.queryKey[2] !== 'next' &&
+      options.queryKey[2] !== 'drafts'
+    )
+      mocks.visitsQuery = options
     return {
       isSuccess: true,
-      data: options.queryKey[0] === 'my-visits' ? mocks.visits : [],
+      data:
+        options.queryKey[0] === 'my-visits' &&
+        options.queryKey[2] !== 'next' &&
+        options.queryKey[2] !== 'drafts'
+          ? mocks.visits
+          : [],
     }
   },
 }))
@@ -109,7 +119,7 @@ describe('navegación por días', () => {
     const html = renderToStaticMarkup(
       <MyDayPage calendarVisit={{ empresa: 'tenant', visita: visit.id, fecha: '2026-11-12' }} />,
     )
-    expect(mocks.visitsQuery?.queryKey).toEqual(['my-visits', 'tenant', '2026-11-12'])
+    expect(mocks.visitsQuery?.queryKey).toEqual(['my-visits', 'tenant', '2026-11-12', 'worker'])
     expect(html).toContain('Visita abierta desde tu calendario')
     expect(html).toMatch(/<details[^>]*open/)
   })
@@ -143,7 +153,7 @@ describe('navegación por días', () => {
     expect(mocks.date).toBe('2027-01-02')
 
     renderToStaticMarkup(<MyDayPage />)
-    expect(mocks.visitsQuery?.queryKey).toEqual(['my-visits', 'tenant', '2027-01-02'])
+    expect(mocks.visitsQuery?.queryKey).toEqual(['my-visits', 'tenant', '2027-01-02', 'worker'])
     mocks.visitsQuery?.queryFn()
     expect(mocks.listVisits).toHaveBeenCalledWith('tenant', '2027-01-02', '2027-01-02')
 
