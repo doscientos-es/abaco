@@ -30,6 +30,7 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import {
   changeMemberRole,
   inviteMember,
+  loadTeamMembershipEmails,
   pendingTeamActivationsQuery,
   removeMember,
   setMemberCalendarColor,
@@ -503,9 +504,11 @@ export function TeamSection({
         ) : null}
       </FormDialog>
       <TeamImportDialog
+        key={tenantId}
         open={importOpen}
         tenantId={tenantId}
         existingEmails={(team.data ?? []).map((member) => member.email)}
+        verifyExistingEmails={() => loadTeamMembershipEmails(tenantId)}
         onClose={() => setImportOpen(false)}
         onResult={async (result) => {
           setMessage(result)

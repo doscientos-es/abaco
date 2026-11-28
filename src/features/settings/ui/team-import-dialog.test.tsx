@@ -1,13 +1,14 @@
+import { Children, isValidElement, type ReactNode } from 'react'
 import type * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TeamImportDialog } from './team-import-dialog'
 
-const { state, dialog, readSpreadsheet, invite } = vi.hoisted(() => ({
+const { state, dialog, readWorkbook, invite } = vi.hoisted(() => ({
   state: vi.fn(),
   dialog: vi.fn(),
-  readSpreadsheet: vi.fn(),
+  readWorkbook: vi.fn(),
   invite: vi.fn(),
 }))
 
@@ -16,16 +17,34 @@ vi.mock('react', async (importOriginal) => ({
   useState: state,
 }))
 vi.mock('@doscientos/ui', () => ({
-  Button: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
-  toast: { success: vi.fn(), error: vi.fn() },
+  Button: ({ children }: { children: ReactNode }) => <button>{children}</button>,
 }))
+vi.mock('@/features/auth', () => ({ roleLabels: { admin: 'Administrador', user: 'Usuario' } }))
 vi.mock('@/shared/ui/form-dialog', () => ({ FormDialog: dialog }))
-vi.mock('@/shared/lib/read-spreadsheet', () => ({ readSpreadsheet }))
+vi.mock('@/shared/lib/read-spreadsheet', () => ({ readSpreadsheetSheets: readWorkbook }))
 vi.mock('../application/team-actions', () => ({ inviteMember: invite }))
+
+type Control = {
+  children?: ReactNode
+  type?: string
+  onChange?: (event: { target: Record<string, unknown> }) => void
+}
+
+function controls(node: ReactNode, type: string): Control[] {
+  return Children.toArray(node).flatMap((part) => {
+    if (!isValidElement<Control>(part)) return []
+    return [
+      ...(part.type === 'input' && part.props.type === type ? [part.props] : []),
+      ...controls(part.props.children, type),
+    ]
+  })
+}
 
 describe('team import dialog', () => {
   let values: unknown[]
   let cursor: number
+  let emails: string[]
+  const verify = vi.fn<() => Promise<string[]>>()
   const onClose = vi.fn()
   const onResult = vi.fn()
 
@@ -36,7 +55,8 @@ describe('team import dialog', () => {
       <TeamImportDialog
         open
         tenantId="company"
-        existingEmails={['existing@example.com']}
+        existingEmails={emails}
+        verifyExistingEmails={verify}
         onClose={onClose}
         onResult={onResult}
       />,
@@ -49,63 +69,98 @@ describe('team import dialog', () => {
     return result
   }
 
+  async function selectWorkbook() {
+    render()
+    expect(props().submitDisabled).toBe(true)
+    controls(props().children, 'file')[0]?.onChange?.({ target: { files: [{}], value: 'file' } })
+    expect(render()).toContain('Cargando archivo')
+    await vi.waitFor(() => expect(render()).toContain('Asignar columnas'))
+    expect(invite).not.toHaveBeenCalled()
+  }
+
   beforeEach(() => {
     vi.resetAllMocks()
     values = []
     cursor = 0
+    emails = ['existing@example.test']
     state.mockImplementation((initial: unknown) => {
       const index = cursor++
       if (!(index in values)) values[index] = initial
       return [
         values[index],
         (value: unknown) => {
-          values[index] = value
+          values[index] = typeof value === 'function' ? value(values[index]) : value
         },
       ]
     })
-    dialog.mockImplementation(({ children }: { children: React.ReactNode }) => (
-      <div>{children}</div>
-    ))
+    dialog.mockImplementation(({ children }: { children: ReactNode }) => <div>{children}</div>)
+    verify.mockResolvedValue([])
     onResult.mockResolvedValue(undefined)
+    readWorkbook.mockResolvedValue([
+      {
+        name: 'Hoja ficticia',
+        rows: [
+          ['Correo', 'Nombre', 'Rol', 'DNI'],
+          ['existing@example.test', 'Existing', 'Usuario', 'secret-dni-1'],
+          ['ana@example.test', 'Ana', 'Administrador', 'secret-dni-2'],
+          ['bad', '', '', 'secret-dni-3'],
+          ['luis@example.test', 'Luis', 'Usuario', 'secret-dni-4'],
+          ['nora@example.test', 'Nora', 'Usuario', 'secret-dni-5'],
+        ],
+      },
+    ])
   })
 
-  it('previews valid rows and stops when an invitation fails', async () => {
-    readSpreadsheet.mockResolvedValue([
-      ['Correo', 'Nombre', 'Rol', 'DNI'],
-      ['existing@example.com', 'Existing', 'Usuario', '1'],
-      ['ana@example.com', 'Ana', 'Administrador', '2'],
-      ['bad', '', '', '3'],
-      ['luis@example.com', 'Luis', 'Usuario', '4'],
-      ['missing@example.com', 'Eva', 'Usuario', ''],
-    ])
+  it('requires review and explicit admin confirmation; reports actual partial outcomes and drops private data', async () => {
     invite
-      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, status: 'invited' })
       .mockResolvedValueOnce({ ok: false, message: 'Límite alcanzado.' })
-
-    render()
-    expect(props().submitDisabled).toBe(true)
-    props().children.props.children[0].props.onChange({ target: { files: [{}], value: 'file' } })
-    expect(render()).toContain('Cargando archivo')
-    expect(props().isSubmitting).toBe(true)
-    await vi.waitFor(() => expect(render()).toContain('ana@example.com'))
+    await selectWorkbook()
+    props().onSubmit()
+    expect(render()).toContain('ana@example.test')
     expect(render()).toContain('1 duplicadas')
-    expect(render()).toContain('Fila 4: Correo no válido.')
-    expect(render()).toContain('Fila 6: El DNI es obligatorio')
-    expect(props().submitLabel).toBe('Enviar 2 invitaciones')
+    expect(render()).toContain('Correo no válido.')
+    expect(render()).not.toContain('secret-dni')
+    expect(verify).not.toHaveBeenCalled()
+    props().onSubmit()
+    expect(invite).not.toHaveBeenCalled()
+
+    controls(props().children, 'checkbox')[0]?.onChange?.({ target: { checked: true } })
+    render()
+    props().onSubmit()
+    expect(invite).not.toHaveBeenCalled()
+    controls(props().children, 'checkbox')[1]?.onChange?.({ target: { checked: true } })
+    // A background team change cannot turn an earlier duplicate into an approved invitation.
+    emails = []
+    render()
     props().onSubmit()
     await vi.waitFor(() => expect(onResult).toHaveBeenCalledOnce())
     expect(invite).toHaveBeenCalledTimes(2)
     expect(invite).toHaveBeenNthCalledWith(1, {
       tenantId: 'company',
-      email: 'ana@example.com',
+      email: 'ana@example.test',
       fullName: 'Ana',
       role: 'admin',
-      dni: '2',
-      phone: '',
     })
-    expect(onResult.mock.calls[0]?.[0]).toContain(
-      'Se detuvo en luis@example.com: Límite alcanzado.',
-    )
+    expect(render()).toContain('Invitaciones enviadas: 1.')
+    expect(render()).toContain('Resultado no confirmado')
+    expect(render()).toContain('Sin intentar')
+    expect(render()).not.toContain('ana@example.test')
+    expect(onClose).not.toHaveBeenCalled()
+    props().onSubmit()
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('does not send anything if the fresh team check fails', async () => {
+    verify.mockRejectedValue(new Error('network'))
+    await selectWorkbook()
+    props().onSubmit()
+    render()
+    for (const input of controls(props().children, 'checkbox'))
+      input.onChange?.({ target: { checked: true } })
+    render()
+    props().onSubmit()
+    await vi.waitFor(() => expect(render()).toContain('No se ha iniciado ningún envío.'))
+    expect(invite).not.toHaveBeenCalled()
   })
 })
