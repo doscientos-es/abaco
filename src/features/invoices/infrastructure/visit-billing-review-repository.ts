@@ -1,5 +1,7 @@
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 
+import { indexVisitReportGates, type VisitReportGate } from '../domain/visit-billing-queue'
+
 export type VisitBillingReview = {
   visitId: string
   sourceKind: 'contract' | 'work_order' | 'standalone'
@@ -7,6 +9,8 @@ export type VisitBillingReview = {
   createdAt: string
   visitTitle: string
   clientName: string
+  clientId: string
+  reportGate: VisitReportGate
 }
 
 export async function listOpenVisitBillingReviews(
@@ -24,15 +28,9 @@ export async function listOpenVisitBillingReviews(
   if (error) throw new Error(error.message)
   const rows = data ?? []
   if (!rows.length) return []
-  const [visits, clients] = await Promise.all([
-    db
-      .from('service_visits')
-      .select('id,title')
-      .eq('tenant_id', tenantId)
-      .in(
-        'id',
-        rows.map((row) => row.visit_id),
-      ),
+  const visitIds = rows.map((row) => row.visit_id)
+  const [visits, clients, versions] = await Promise.all([
+    db.from('service_visits').select('id,title').eq('tenant_id', tenantId).in('id', visitIds),
     db
       .from('clients')
       .select('id,name')
@@ -41,9 +39,35 @@ export async function listOpenVisitBillingReviews(
         'id',
         rows.map((row) => row.client_id),
       ),
+    db
+      .from('service_visit_report_versions')
+      .select('id,visit_id,version')
+      .eq('tenant_id', tenantId)
+      .in('visit_id', visitIds)
+      .order('version', { ascending: false })
+      .limit(1001),
   ])
   if (visits.error) throw new Error(visits.error.message)
   if (clients.error) throw new Error(clients.error.message)
+  if (versions.error) throw new Error(versions.error.message)
+  const allVersions = versions.data ?? []
+  // The response must cover every requested visit; never label a truncated result as missing.
+  if (allVersions.length >= 1000)
+    throw new Error('No se pudo confirmar el estado de todos los partes.')
+  const latestByVisit = new Map<string, string>()
+  for (const version of allVersions)
+    if (!latestByVisit.has(version.visit_id)) latestByVisit.set(version.visit_id, version.id)
+  const reportIds = [...latestByVisit.values()]
+  const checked = reportIds.length
+    ? await db
+        .from('service_visit_report_reviews')
+        .select('report_version_id')
+        .eq('tenant_id', tenantId)
+        .in('report_version_id', reportIds)
+    : { data: [], error: null }
+  if (checked.error) throw new Error(checked.error.message)
+  const reviewed = new Set((checked.data ?? []).map((row) => row.report_version_id))
+  const gates = indexVisitReportGates(allVersions, reviewed)
   const visitNames = new Map((visits.data ?? []).map((visit) => [visit.id, visit.title]))
   const clientNames = new Map((clients.data ?? []).map((client) => [client.id, client.name]))
   return rows.map((row) => ({
@@ -53,6 +77,8 @@ export async function listOpenVisitBillingReviews(
     createdAt: row.created_at,
     visitTitle: visitNames.get(row.visit_id) ?? 'Visita',
     clientName: clientNames.get(row.client_id) ?? 'Cliente',
+    clientId: row.client_id,
+    reportGate: gates.get(row.visit_id) ?? 'missing',
   }))
 }
 
