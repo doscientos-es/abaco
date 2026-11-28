@@ -106,8 +106,11 @@ sus hipótesis; las cifras previstas no son resultados medidos.
    La vista de hoy muestra la siguiente visita con acceso al destino y a su ficha.
    Cuando no queda ninguna hoy, se consultan los próximos 7 días. La **Ficha de
    llegada** reúne el cliente, el centro y la dirección de la visita con acceso a
-   Maps y copia de la dirección. No consulta contactos privados ni notas de acceso
-   del centro.
+   Maps y copia de la dirección. En **Clientes → ficha del cliente → Centros de
+   trabajo → Llegada para técnicos**, la oficina puede compartir indicaciones de
+   entrada/aparcamiento y un teléfono de trabajo por separado. Ambas opciones están
+   desactivadas al crear la ficha. Solo se muestran en visitas abiertas asignadas;
+   no se copian ni consultan contactos internos ni notas privadas del centro.
 
    **Partes pendientes en este dispositivo** permite retomar borradores de visitas
    todavía asignadas. No se sincronizan entre dispositivos y se eliminan al cerrar

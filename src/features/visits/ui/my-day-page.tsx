@@ -25,6 +25,7 @@ import { useActionLock } from '@/shared/lib/use-action-lock'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import { visitEvidenceAnchor, type EvidenceKind } from '../application/pending-visit-evidence'
+import { listAssignedVisitArrivals } from '../application/staff-arrival-actions'
 import {
   listMyVisits,
   transitionServiceVisit,
@@ -119,6 +120,23 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     },
   })
   const dayVisits = visits.data ?? []
+  const openVisitIds = dayVisits
+    .filter(({ status }) => status === 'scheduled' || status === 'in_progress')
+    .map(({ id }) => id)
+    .sort()
+  const arrival = useQuery({
+    queryKey: ['assigned-visit-arrivals', tenantId, userId, openVisitIds],
+    enabled: Boolean(tenantId && userId && dayOpen && visits.isSuccess && openVisitIds.length),
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: 'always',
+    queryFn: () => (tenantId ? listAssignedVisitArrivals(tenantId, openVisitIds) : []),
+  })
+  const arrivalByVisit = new Map(
+    arrival.isSuccess && arrival.isFetchedAfterMount && !arrival.isFetching
+      ? arrival.data.map((details) => [details.visit_id, details])
+      : [],
+  )
   const previewNext = date === today && dayOpen && visits.isSuccess
   const nextToday = previewNext ? nextAssignedVisit(dayVisits, now) : undefined
   const futureVisits = useQuery({
@@ -545,6 +563,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </span>
           ) : null}
         </div>
+        {arrival.isError && openVisitIds.length > 0 && dayOpen ? (
+          <div className="border-border flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
+            <p role="alert">No se pudieron consultar las indicaciones compartidas de llegada.</p>
+            <Button variant="outline" size="sm" onPress={() => void arrival.refetch()}>
+              Reintentar indicaciones
+            </Button>
+          </div>
+        ) : null}
         {visits.isPending ? <WorkerLoading label="Cargando visitas…" /> : null}
         {visits.isError ? (
           <WorkerState
@@ -608,6 +634,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     locationName={visit.location_name}
                     clientName={visit.client_name}
                     address={visit.address}
+                    shared={arrivalByVisit.get(visit.id)}
                   />
                   {visit.notes ? (
                     <section aria-label="Notas de la visita" className="space-y-1">

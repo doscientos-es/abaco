@@ -1,20 +1,31 @@
 import { Button } from '@doscientos/ui'
-import { CopyIcon, SignpostIcon } from '@phosphor-icons/react'
+import { CopyIcon, PhoneIcon, SignpostIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { VisitMapsAction } from '@/shared/ui/contact-actions'
+
+import type { AssignedVisitArrival } from '../application/staff-arrival-actions'
 
 type ArrivalPlace = {
   title: string
   locationName: string | null | undefined
   clientName: string | null | undefined
   address: string | null | undefined
+  shared?: AssignedVisitArrival | undefined
 }
 
-export function WorkerVisitArrival({ title, locationName, clientName, address }: ArrivalPlace) {
+export function WorkerVisitArrival({
+  title,
+  locationName,
+  clientName,
+  address,
+  shared,
+}: ArrivalPlace) {
   const place = locationName?.trim()
   const customer = clientName?.trim()
   const destination = address?.trim()
+  const phone = shared?.contact_phone
+  const contactHref = phone && /^\+[1-9][0-9]{6,14}$/.test(phone) ? `tel:${phone}` : null
   const [copy, setCopy] = useState<'idle' | 'copying' | 'copied' | 'failed'>('idle')
 
   async function copyAddress() {
@@ -84,6 +95,38 @@ export function WorkerVisitArrival({ title, locationName, clientName, address }:
           Sin dirección de visita. Confirma el lugar con tu equipo antes de salir.
         </p>
       )}
+      {shared?.instructions || shared?.parking || contactHref ? (
+        <dl className="border-border space-y-2 border-t pt-2">
+          {shared?.instructions ? (
+            <div>
+              <dt className="text-muted-foreground text-xs font-semibold">Entrada</dt>
+              <dd className="wrap-break-word whitespace-pre-line">{shared.instructions}</dd>
+            </div>
+          ) : null}
+          {shared?.parking ? (
+            <div>
+              <dt className="text-muted-foreground text-xs font-semibold">Aparcamiento</dt>
+              <dd className="wrap-break-word whitespace-pre-line">{shared.parking}</dd>
+            </div>
+          ) : null}
+          {contactHref ? (
+            <div>
+              <dt className="text-muted-foreground text-xs font-semibold">Contacto operativo</dt>
+              <dd>
+                <a
+                  href={contactHref}
+                  className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded underline focus-visible:ring-2"
+                >
+                  <PhoneIcon aria-hidden="true" className="shrink-0" />
+                  <span className="wrap-break-word">
+                    Llamar a {shared?.contact_label || 'contacto de llegada'}
+                  </span>
+                </a>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </section>
   )
 }

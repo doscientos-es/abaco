@@ -26,6 +26,7 @@ import { PageNotFound } from '@/shared/ui/page-states'
 import { loadClientPassport } from '../application/client-passport-actions'
 import { ClientCommercialOverview } from './client-commercial-overview'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
+import { StaffArrivalDialog } from './staff-arrival-dialog'
 
 export function ClientPassportPage({ clientId }: { clientId: string }) {
   const { tenant, clients, estimates, invoices } = useTenantData()
@@ -39,6 +40,7 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
     enabled: Boolean(client),
   })
   const [creating, setCreating] = useState<NewItem | null>(null)
+  const [arrivalLocation, setArrivalLocation] = useState<{ id: string; name: string } | null>(null)
   const canWrite = can(session?.role, 'clients:write')
 
   if (!client) {
@@ -234,6 +236,17 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                   <p className="text-sm whitespace-pre-wrap">{location.operational_contact}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.access_notes}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.notes}</p>
+                  {canWrite && location.active && location.kind !== 'billing' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      aria-label={`Llegada para técnicos en ${location.name}`}
+                      onPress={() => setArrivalLocation({ id: location.id, name: location.name })}
+                    >
+                      Llegada para técnicos
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
             ))}
@@ -260,6 +273,16 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
         </>
       ) : null}
 
+      {canWrite && arrivalLocation && session?.userId ? (
+        <StaffArrivalDialog
+          key={`${tenant.id}:${session.userId}:${arrivalLocation.id}`}
+          tenantId={tenant.id}
+          userId={session.userId}
+          locationId={arrivalLocation.id}
+          locationName={arrivalLocation.name}
+          onClose={() => setArrivalLocation(null)}
+        />
+      ) : null}
       {creating ? (
         <CreatePassportItem
           key={dialogKey(creating)}
