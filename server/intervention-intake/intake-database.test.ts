@@ -89,7 +89,7 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../supabase/migrations/20261128163000_intervention_intake.sql',
+          '../../supabase/migrations/20261128161941_intervention_intake.sql',
           import.meta.url,
         ),
         'utf8',
