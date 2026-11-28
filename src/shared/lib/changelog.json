@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.37",
+      "date": "2026-11-28",
+      "title": "v0.0.37",
+      "sections": [
+        {
+          "title": "Correcciones",
+          "items": [
+            "Recuperar la configuración del Worker (#70)"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "d86b51b8ee614879b229f2c6164fd73fb22dadd6",
+          "type": "fix",
+          "scope": "DEV-83",
+          "breaking": false,
+          "description": "Recuperar la configuración del Worker (#70)"
+        }
+      ]
+    },
+    {
       "version": "0.0.36",
       "date": "2026-11-28",
       "title": "v0.0.36",

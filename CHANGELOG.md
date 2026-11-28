@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.37
+
+### Correcciones
+
+- Recuperar la configuración del Worker (#70)
+
 ## 2026-11-28 — v0.0.36
 
 ### Nuevas funciones
