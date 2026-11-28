@@ -116,6 +116,24 @@ En una visita asignada para hoy y todavía sin iniciar, **Preparar aviso de retr
 
 **Revisar traslados** (solo administración) toma la fecha seleccionada en **Planificación**. Elige la ruta de un técnico o de un equipo cuando no haya técnico asignado y marca al menos dos visitas planificadas. Añade tu estimación entre cada par de visitas. El cálculo compara el final previsto de una visita con el inicio de la siguiente y avisa si se solapan o no queda margen. Si dejas una visita intermedia fuera, el resultado no sirve para comprobar toda la ruta. No se consulta el tráfico, no se comparten direcciones y no se guardan los minutos ni se cambia la agenda.
 
+#### Confirmación o cambio de cita por enlace
+
+En la Agenda, abre la visita programada y pulsa **Enlace de cita**. Elige la
+duración, copia el enlace y compártelo solo con quien deba responder; la app no lo
+envía. Un enlace nuevo invalida el anterior. También puedes revocarlo. Caduca como
+máximo al empezar la cita, y deja de servir si la planificación cambia.
+
+Quien reciba el enlace solo ve el horario y la zona horaria. Puede confirmar
+asistencia o sugerir otro inicio; la sugerencia no cambia la Agenda. Si cierra o
+recarga la página, debe volver a abrir el enlace original.
+
+En **Solicitudes de cambio de cita**, la oficina revisa la fecha propuesta y
+confirma el cambio expresamente o descarta la propuesta. Al confirmar se conserva
+la misma visita, duración y asignación; se aplican las comprobaciones de
+reprogramación de siempre. No se manda un mensaje adicional al cliente. La
+sincronización de la agenda del personal, si está configurada, sigue su flujo
+habitual.
+
 ### Técnico: Mi jornada y parte
 
 1. En **Mi jornada**, selecciona el día. Solo aparecen tus visitas asignadas.

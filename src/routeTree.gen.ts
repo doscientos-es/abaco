@@ -15,6 +15,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as AjustesRouteImport } from './routes/ajustes'
 import { Route as BienvenidaRouteImport } from './routes/bienvenida'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
+import { Route as CitaRouteImport } from './routes/cita'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
 import { Route as ContabilidadRouteImport } from './routes/contabilidad'
@@ -78,6 +79,11 @@ const BienvenidaRoute = BienvenidaRouteImport.update({
 const CatalogoRoute = CatalogoRouteImport.update({
   id: '/catalogo',
   path: '/catalogo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CitaRoute = CitaRouteImport.update({
+  id: '/cita',
+  path: '/cita',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesRoute = ClientesRouteImport.update({
@@ -258,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
+  '/cita': typeof CitaRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
+  '/cita': typeof CitaRoute
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/entrar': typeof EntrarRoute
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/ajustes': typeof AjustesRoute
   '/bienvenida': typeof BienvenidaRoute
   '/catalogo': typeof CatalogoRoute
+  '/cita': typeof CitaRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
+    | '/cita'
     | '/clientes'
     | '/confirmar'
     | '/contabilidad'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
+    | '/cita'
     | '/confirmar'
     | '/contabilidad'
     | '/entrar'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/ajustes'
     | '/bienvenida'
     | '/catalogo'
+    | '/cita'
     | '/clientes'
     | '/confirmar'
     | '/contabilidad'
@@ -506,6 +518,7 @@ export interface RootRouteChildren {
   AjustesRoute: typeof AjustesRoute
   BienvenidaRoute: typeof BienvenidaRoute
   CatalogoRoute: typeof CatalogoRoute
+  CitaRoute: typeof CitaRoute
   ClientesRoute: typeof ClientesRouteWithChildren
   ConfirmarRoute: typeof ConfirmarRoute
   ContabilidadRoute: typeof ContabilidadRoute
@@ -574,6 +587,13 @@ declare module '@tanstack/react-router' {
       path: '/catalogo'
       fullPath: '/catalogo'
       preLoaderRoute: typeof CatalogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cita': {
+      id: '/cita'
+      path: '/cita'
+      fullPath: '/cita'
+      preLoaderRoute: typeof CitaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes': {
@@ -884,6 +904,7 @@ const rootRouteChildren: RootRouteChildren = {
   AjustesRoute: AjustesRoute,
   BienvenidaRoute: BienvenidaRoute,
   CatalogoRoute: CatalogoRoute,
+  CitaRoute: CitaRoute,
   ClientesRoute: ClientesRouteWithChildren,
   ConfirmarRoute: ConfirmarRoute,
   ContabilidadRoute: ContabilidadRoute,

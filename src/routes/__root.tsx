@@ -24,6 +24,7 @@ const publicPaths = [
   '/confirmar',
   '/precios',
   '/acceso-google',
+  '/cita',
 ]
 /** Signed-in users have no reason to see these. */
 const guestOnlyPaths = ['/entrar', '/registro', '/recuperar']
@@ -42,8 +43,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     const session = offline
       ? (cached?.data ?? null)
       : await context.queryClient.fetchQuery(sessionQuery)
-    if (!session && typeof window !== 'undefined') rememberReferral(location.searchStr)
     const path = location.pathname
+    if (!session && typeof window !== 'undefined' && path !== '/cita')
+      rememberReferral(location.searchStr)
     const isPlatformPage = path === '/superadmin'
     if (!session && !isPublicPath(path)) {
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })

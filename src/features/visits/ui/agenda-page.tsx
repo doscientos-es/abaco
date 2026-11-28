@@ -50,6 +50,8 @@ import { toCalendarWallTime } from './agenda-calendar'
 import { AgendaResolutionPanel } from './agenda-resolution-panel'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { AgendaTravelReview } from './agenda-travel-review'
+import { AppointmentChangeInbox } from './appointment-change-inbox'
+import { AppointmentLinkManager } from './appointment-link-manager'
 import { BatchVisitReplan } from './batch-visit-replan'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
@@ -119,6 +121,7 @@ export function AgendaPage() {
   const [savingOccurrence, setSavingOccurrence] = useState(false)
   const skipTrigger = useRef<HTMLElement | null>(null)
   const moving = useRef(new Set<string>())
+  const [appointmentVisitId, setAppointmentVisitId] = useState<string | null>(null)
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
     clientId,
@@ -297,6 +300,7 @@ export function AgendaPage() {
     setSelectedCalendarVisitId(null)
     setReplanning(null)
     setOpenReportId(null)
+    setAppointmentVisitId(null)
     void navigate({
       to: '/trabajos',
       search: (previous) => ({ ...previous, date, period, ...update }),
@@ -452,6 +456,14 @@ export function AgendaPage() {
             >
               {visit.contract_occurrence_on ? 'Mover esta visita' : 'Reprogramar'}
             </Button>
+            <Button
+              variant="outline"
+              onPress={() =>
+                setAppointmentVisitId(appointmentVisitId === visit.id ? null : visit.id)
+              }
+            >
+              Enlace de cita
+            </Button>
             {visit.contract_occurrence_on ? (
               <Button
                 variant="outline"
@@ -485,6 +497,16 @@ export function AgendaPage() {
           address={visit.address}
           label={`Cómo llegar a ${visit.title} en Google Maps`}
         />
+        {appointmentVisitId === visit.id && canReplan && visit.status === 'scheduled' ? (
+          <AppointmentLinkManager
+            key={visit.id}
+            tenantId={tenant.id}
+            visitId={visit.id}
+            revision={visit.updated_at}
+            timezone={visit.timezone}
+            onClose={() => setAppointmentVisitId(null)}
+          />
+        ) : null}
         {replanning?.id === visit.id ? (
           <VisitReplanForm
             key={`${visit.id}:${visit.updated_at}`}
@@ -660,6 +682,13 @@ export function AgendaPage() {
           tenantId={tenant.id}
           userId={session.userId}
           office
+          onSaved={refreshReplannedVisits}
+        />
+      ) : null}
+      {canReplan ? (
+        <AppointmentChangeInbox
+          key={tenant.id}
+          tenantId={tenant.id}
           onSaved={refreshReplannedVisits}
         />
       ) : null}
