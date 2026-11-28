@@ -2,6 +2,8 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
+import { useActionLock } from '@/shared/lib/use-action-lock'
+
 import {
   listVisitPhotos,
   photoExtension,
@@ -44,6 +46,8 @@ export function VisitPhotosPanel({
   const [phase, setPhase] = useState<VisitPhotoPhase>('before')
   const [caption, setCaption] = useState('')
   const [uploading, setUploading] = useState(false)
+  const uploadLock = useActionLock()
+  const [sendError, setSendError] = useState<string | null>(null)
   const [pending, setPending] = useState<PendingVisitPhoto[]>([])
   const [queueError, setQueueError] = useState<string | null>(null)
   const [loadedScope, setLoadedScope] = useState<string | null>(null)
@@ -75,7 +79,8 @@ export function VisitPhotosPanel({
   }, [userId, tenantId, visitId, scope])
 
   async function send(item: PendingVisitPhoto) {
-    if (uploading || closed) return
+    if (uploading || closed || !uploadLock.acquire()) return
+    setSendError(null)
     setUploading(true)
     try {
       await uploadVisitPhoto({
@@ -95,10 +100,12 @@ export function VisitPhotosPanel({
       await queryClient.invalidateQueries({ queryKey })
       toast.success('Fotografía guardada en el parte')
     } catch (error) {
+      setSendError(item.key)
       toast.error('No se pudo guardar la fotografía', {
         description: error instanceof Error ? error.message : 'Conserva el archivo y reintenta.',
       })
     } finally {
+      uploadLock.release()
       setUploading(false)
     }
   }
@@ -139,6 +146,7 @@ export function VisitPhotosPanel({
       lastModified: file.lastModified,
       blob: file,
     }
+    if (!uploadLock.acquire()) return
     setUploading(true)
     try {
       await savePendingVisitPhoto(item)
@@ -152,12 +160,13 @@ export function VisitPhotosPanel({
         description: error instanceof Error ? error.message : 'Conserva el archivo original.',
       })
     } finally {
+      uploadLock.release()
       setUploading(false)
     }
   }
 
   async function discard(item: PendingVisitPhoto) {
-    if (uploading) return
+    if (uploading || !uploadLock.acquire()) return
     setUploading(true)
     try {
       await removePendingVisitPhoto(item.key)
@@ -165,6 +174,7 @@ export function VisitPhotosPanel({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo descartar la fotografía.')
     } finally {
+      uploadLock.release()
       setUploading(false)
     }
   }
@@ -196,18 +206,32 @@ export function VisitPhotosPanel({
                   {phaseLabels[item.phase]} · {item.name}
                 </span>
                 {!closed ? (
-                  <Button size="sm" isDisabled={uploading} onPress={() => void send(item)}>
+                  <Button
+                    size="sm"
+                    className="min-h-11"
+                    aria-label={`Enviar ${item.name}`}
+                    isDisabled={uploading}
+                    onPress={() => void send(item)}
+                  >
                     Enviar
                   </Button>
                 ) : null}
                 <Button
                   size="sm"
                   variant="outline"
+                  className="min-h-11"
+                  aria-label={`Descartar ${item.name}`}
                   isDisabled={uploading}
                   onPress={() => void discard(item)}
                 >
                   Descartar
                 </Button>
+                {sendError === item.key ? (
+                  <p role="alert" className="text-destructive w-full text-xs">
+                    No se pudo confirmar el envío. La foto sigue en este dispositivo; puedes
+                    reintentar.
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

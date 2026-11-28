@@ -102,8 +102,13 @@ sus hipótesis; las cifras previstas no son resultados medidos.
    todavía asignadas. No se sincronizan entre dispositivos y se eliminan al cerrar
    sesión. Guarda el parte para enviarlo a la empresa.
 
-   Los envíos pendientes se conservan en el dispositivo para reintentar;
-   la visita no se completa mientras haya mediciones o fotos pendientes allí.
+   **Envíos** reúne las fotos, incidencias y registros de actividad locales de las
+   visitas asignadas en el periodo consultado. Cada acceso abre la sección exacta
+   para reintentar manualmente. Los envíos no se inician automáticamente.
+   La visita no se completa mientras haya elementos pendientes en el dispositivo.
+
+   **Historial** permite buscar y consultar los partes cerrados de las visitas todavía
+   asignadas, en periodos de 30 días. La consulta es de solo lectura.
 
 5. El cierre conserva una instantánea del parte, pone en cola su PDF y crea un pendiente
    de revisión de facturación. La oficina revisa los borradores antes de emitir facturas

@@ -11,6 +11,7 @@ import { useActionLock } from '@/shared/lib/use-action-lock'
 import { TextareaField } from '@/shared/ui/form'
 import { WorkerLoading } from '@/shared/ui/worker-state'
 
+import { visitEvidenceAnchor } from '../application/pending-visit-evidence'
 import type { VisitSummary } from '../application/visit-actions'
 import {
   loadVisitReport,
@@ -479,17 +480,40 @@ export function VisitReportEditor({
             ) : null}
           </div>
         )}
-        <VisitPhotosPanel tenantId={tenantId} visitId={visit.id} userId={userId} closed={closed} />
+        <div
+          id={visitEvidenceAnchor(visit.id, 'photos')}
+          tabIndex={-1}
+          className="focus-visible:outline-ring scroll-m-3 outline-offset-2"
+        >
+          <VisitPhotosPanel
+            tenantId={tenantId}
+            visitId={visit.id}
+            userId={userId}
+            closed={closed}
+          />
+        </div>
         {visit.status === 'completed' && session?.role === 'admin' ? (
           <VisitReportShares tenantId={tenantId} visitId={visit.id} />
         ) : null}
-        <VisitFieldEntriesPanel
-          tenantId={tenantId}
-          visitId={visit.id}
-          userId={userId}
-          closed={closed}
-        />
-        <IncidentPanel tenantId={tenantId} visitId={visit.id} userId={userId} />
+        <div
+          id={visitEvidenceAnchor(visit.id, 'activity')}
+          tabIndex={-1}
+          className="focus-visible:outline-ring scroll-m-3 outline-offset-2"
+        >
+          <VisitFieldEntriesPanel
+            tenantId={tenantId}
+            visitId={visit.id}
+            userId={userId}
+            closed={closed}
+          />
+        </div>
+        <div
+          id={visitEvidenceAnchor(visit.id, 'incidents')}
+          tabIndex={-1}
+          className="focus-visible:outline-ring scroll-m-3 outline-offset-2"
+        >
+          <IncidentPanel tenantId={tenantId} visitId={visit.id} userId={userId} />
+        </div>
       </CardContent>
     </Card>
   )

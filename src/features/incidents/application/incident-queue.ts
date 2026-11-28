@@ -1,3 +1,5 @@
+import { localVisitQueueCounts } from '@/shared/lib/local-visit-queue-counts'
+
 import type { IncidentPriority } from './incident-actions'
 
 export type PendingVisitIncident = {
@@ -49,4 +51,8 @@ export function clearVisitIncidentQueues() {
   } catch {
     // Storage can be unavailable in private browsing.
   }
+}
+
+export function countPendingVisitIncidents(userId: string, tenantId: string) {
+  return localVisitQueueCounts(visitIncidentQueueKey(userId, tenantId, ''), readVisitIncidentQueue)
 }

@@ -35,6 +35,9 @@ const completedId = '00000000-0000-4000-8000-000000000401'
 const tomorrowId = '00000000-0000-4000-8000-000000000402'
 const yesterdayId = '00000000-0000-4000-8000-000000000403'
 const unassignedId = '00000000-0000-4000-8000-000000000404'
+const photoId = '00000000-0000-4000-8000-000000000650'
+const photoOperationId = '00000000-0000-4000-8000-000000000651'
+const anotherTenant = '00000000-0000-4000-8000-000000001000'
 const visit = {
   id: visitId,
   title: 'Visita al local de pruebas',
@@ -106,6 +109,10 @@ async function run() {
     let saveAttempts = 0
     let visitStarts = 0
     let calendarFails = false
+    let historyFails = false
+    let photoUploads = 0
+    const photoRegistrations = []
+    const closedReads = []
     await context.route('**/*', async (route) => {
       const request = route.request()
       const url = new URL(request.url())
@@ -127,14 +134,56 @@ async function run() {
         officeRequests.push(name)
       if (name === 'my_company_memberships')
         return json([{ tenant_id: tenant, company_name: 'Empresa de pruebas', role: 'user' }])
-      if (name === 'company_onboarding_status' || name === 'service_visit_report_versions')
-        return json(null)
+      if (name === 'company_onboarding_status') return json(null)
+      if (name === 'service_visit_report_versions') {
+        const id = url.searchParams.get('visit_id')
+        closedReads.push(id)
+        assert.equal(url.searchParams.get('tenant_id'), `eq.${tenant}`)
+        if (id !== `eq.${completedId}`) return json(null)
+        return json({
+          id: 'snapshot-fixture',
+          version: 1,
+          closed_at: `${today}T11:00:00Z`,
+          snapshot: {
+            company: { name: 'Empresa de pruebas' },
+            client: { name: 'Cliente ficticio' },
+            location: { name: 'Sede Ávila', address: 'Calle ficticia 15' },
+            asset: null,
+            tasks: [],
+            measurements: [],
+            activities: [],
+            incidents: [],
+            report: { revision: 1, data: { notes: 'Resumen cerrado ficticio.', checklist: [] } },
+          },
+        })
+      }
+      if (
+        name === `${photoId}.jpg` &&
+        url.pathname.startsWith('/storage/v1/object/visit-photos/')
+      ) {
+        assert.ok(url.pathname.endsWith(`/${tenant}/${visitId}/${photoId}.jpg`))
+        if (++photoUploads === 2)
+          return json({ statusCode: '409', message: 'The resource already exists' }, 409)
+        return json({ Key: `visit-photos/${tenant}/${visitId}/${photoId}.jpg` })
+      }
+      if (name === 'register_service_visit_photo') {
+        const args = request.postDataJSON()
+        photoRegistrations.push(args)
+        assert.equal(args.p_tenant_id, tenant)
+        assert.equal(args.p_visit_id, visitId)
+        assert.equal(args.p_photo_id, photoId)
+        assert.equal(args.p_operation_id, photoOperationId)
+        if (photoRegistrations.length === 1)
+          return json({ message: 'Respuesta perdida (simulación)' }, 500)
+        return json(photoId)
+      }
       if (name === 'tenant_can_write') return json(true)
       if (name === 'is_platform_superadmin') return json(false)
       if (name === 'my_assigned_visits') {
         const { p_tenant_id, p_from, p_to } = request.postDataJSON()
         assert.equal(p_tenant_id, tenant)
-        if (calendarFails && p_from !== p_to)
+        assert.ok((Date.parse(p_to) - Date.parse(p_from)) / 86_400_000 <= 31)
+        if ((calendarFails || historyFails) && p_from !== p_to)
           return json({ message: 'Conexión interrumpida (simulación)' }, 500)
         const result = []
         if (p_from <= yesterday && yesterday <= p_to)
@@ -153,6 +202,7 @@ async function run() {
               ...visit,
               id: completedId,
               title: 'Visita ya completada',
+              location_name: 'Sede Ávila',
               status: 'completed',
               scheduled_start_at: `${today}T10:00:00Z`,
               scheduled_end_at: `${today}T11:00:00Z`,
@@ -395,9 +445,152 @@ async function run() {
     await page.getByText('No tienes trabajos en los días de este calendario.').waitFor()
     await page.setViewportSize({ width: 1280, height: 900 })
     await assertNoHorizontalOverflow(page)
+    await page.setViewportSize({ width: 320, height: 740 })
+    await page.getByRole('button', { name: 'Historial', exact: true }).click()
+    const history = page.getByRole('region', { name: 'Historial de visitas cerradas' })
+    const historySearch = history.getByRole('searchbox')
+    await historySearch.fill('avila ficticio')
+    const openClosed = history.getByRole('button', {
+      name: 'Ver parte cerrado de Visita ya completada',
+    })
+    await openClosed.waitFor()
+    assert.equal(await history.getByText(visit.title, { exact: true }).count(), 0)
+    await assertNoHorizontalOverflow(page)
+    await historySearch.fill('no existe')
+    await history.getByText('No coinciden visitas con tu búsqueda', { exact: true }).waitFor()
+    await history.getByRole('button', { name: 'Borrar búsqueda' }).click()
+    await openClosed.click()
+    const reportDialog = page.getByRole('dialog', { name: 'Visita ya completada' })
+    await reportDialog.getByText('Resumen cerrado ficticio.', { exact: true }).waitFor()
+    assert.equal(await reportDialog.getByRole('button', { name: /guardar|compartir/i }).count(), 0)
+    await page.keyboard.press('Escape')
+    await reportDialog.waitFor({ state: 'hidden' })
+    assert.equal(await openClosed.evaluate((button) => document.activeElement === button), true)
+    assert.deepEqual(closedReads, [`eq.${completedId}`])
+    historyFails = true
+    await history.getByRole('button', { name: 'Anteriores' }).click()
+    await history.getByText('No se pudo cargar el historial', { exact: true }).waitFor()
+    historyFails = false
+    await history.getByRole('button', { name: 'Volver a intentarlo' }).click()
+    await history.getByText('No hay visitas completadas en este periodo', { exact: true }).waitFor()
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await assertNoHorizontalOverflow(page)
+
+    await page.evaluate(
+      async ({
+        userId,
+        tenant,
+        anotherTenant,
+        visitId,
+        unassignedId,
+        photoId,
+        photoOperationId,
+      }) => {
+        const write = await new Promise((resolve, reject) => {
+          const open = indexedDB.open('abaco-visit-evidence', 1)
+          open.onupgradeneeded = () =>
+            open.result.createObjectStore('pending-photos', { keyPath: 'key' })
+          open.onsuccess = () => resolve(open.result)
+          open.onerror = () => reject(open.error)
+        })
+        await new Promise((resolve, reject) => {
+          const tx = write.transaction('pending-photos', 'readwrite')
+          for (const [company, assigned, author] of [
+            [tenant, visitId, userId],
+            [anotherTenant, visitId, userId],
+            [tenant, visitId, 'another-author'],
+            [tenant, unassignedId, userId],
+          ]) {
+            tx.objectStore('pending-photos').put({
+              key: `${author}:${company}:${assigned}:${photoId}`,
+              userId: author,
+              tenantId: company,
+              visitId: assigned,
+              photoId,
+              operationId: photoOperationId,
+              phase: 'before',
+              caption: 'Fixture',
+              name: 'obra-ficticia.jpg',
+              mimeType: 'image/jpeg',
+              lastModified: 0,
+              blob: new Blob([new Uint8Array([255, 216, 255, 217])], { type: 'image/jpeg' }),
+            })
+          }
+          tx.oncomplete = resolve
+          tx.onabort = () => reject(tx.error)
+        })
+        write.close()
+        localStorage.setItem(
+          `abaco:visit-incident-queue:v1:${userId}:${tenant}:${visitId}`,
+          JSON.stringify([
+            {
+              operationId: 'incident-fixture',
+              title: 'Incidencia en espera',
+              description: 'Fixture privada',
+              priority: 'normal',
+            },
+          ]),
+        )
+        localStorage.setItem(
+          `abaco:field-entry-queue:v1:${userId}:${tenant}:${visitId}`,
+          JSON.stringify([
+            {
+              operationId: 'field-fixture',
+              kind: 'labor',
+              description: 'Actividad en espera',
+              quantity: 1,
+              unit: 'h',
+              occurredAt: new Date().toISOString(),
+              supersedesId: null,
+            },
+          ]),
+        )
+      },
+      { userId: user.id, tenant, anotherTenant, visitId, unassignedId, photoId, photoOperationId },
+    )
+    await page.setViewportSize({ width: 320, height: 740 })
+    const evidenceTab = page.getByRole('button', { name: 'Envíos', exact: true })
+    await evidenceTab.click()
+    const evidence = page.getByRole('region', { name: 'Envíos pendientes' })
+    await evidence.getByText('1 foto', { exact: true }).waitFor()
+    await evidence.getByText('1 incidencia', { exact: true }).waitFor()
+    await evidence.getByText('1 registro de actividad', { exact: true }).waitFor()
+    await evidence.getByText(/Hay envíos de visitas que ya no están asignadas/).waitFor()
+    assert.equal(await evidence.getByText('obra-ficticia.jpg').count(), 0)
+    assert.deepEqual(photoRegistrations, [])
+    await assertNoHorizontalOverflow(page)
+    await evidence.getByRole('button', { name: /Gestionar fotos de Visita al local/ }).click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-evidence-photos-${id}`,
+      visitId,
+    )
+    const photo = visitCard.getByRole('button', { name: 'Enviar obra-ficticia.jpg', exact: true })
+    await photo.click()
+    await visitCard.getByText(/No se pudo confirmar el envío/).waitFor()
+    await photo.click()
+    await photo.waitFor({ state: 'hidden' })
+    assert.equal(photoUploads, 2)
+    assert.equal(photoRegistrations.length, 2)
+    assert.deepEqual(photoRegistrations[0], photoRegistrations[1])
+    await evidenceTab.click()
+    await evidence.getByText('1 incidencia', { exact: true }).waitFor()
+    await evidence.getByText('1 foto', { exact: true }).waitFor({ state: 'hidden' })
+    await evidence.getByRole('button', { name: /Gestionar incidencias de Visita al local/ }).click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-evidence-incidents-${id}`,
+      visitId,
+    )
+    await evidenceTab.click()
+    await evidence.getByRole('button', { name: /Gestionar actividad de Visita al local/ }).click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-evidence-activity-${id}`,
+      visitId,
+    )
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await assertNoHorizontalOverflow(page)
     assert.deepEqual(officeRequests, [])
     process.stdout.write(
-      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry, reload and delayed report refresh.\n',
+      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry, history search/read-only, and scoped evidence with safe photo retry.\n',
     )
   } finally {
     await browser.close()
