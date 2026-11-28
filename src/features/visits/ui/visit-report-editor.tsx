@@ -33,6 +33,7 @@ import { VisitHandoffsPanel } from './visit-handoffs-panel'
 import { VisitPhotosPanel } from './visit-photos-panel'
 import { VisitReportDictation } from './visit-report-dictation'
 import { VisitReportShares } from './visit-report-shares'
+import { VisitReportTemplatePicker } from './visit-report-template-picker'
 
 const noteLimit = 4000
 
@@ -71,6 +72,7 @@ export function VisitReportEditor({
   const saveLock = useActionLock()
   const [localStorageFailed, setLocalStorageFailed] = useState(false)
   const [newLabel, setNewLabel] = useState('')
+  const [templateApplied, setTemplateApplied] = useState(false)
   const closed = !['scheduled', 'in_progress'].includes(visit.status)
   const [confirmedOperation, setConfirmedOperation] = useState<string | null>(null)
   const data =
@@ -302,6 +304,23 @@ export function VisitReportEditor({
         ) : null}
         {closed && !report.data && !draft && !report.isSuccess ? null : (
           <fieldset disabled={!closed && !canEdit} className="min-w-0 space-y-4">
+            {session?.role === 'admin' &&
+            visit.status === 'scheduled' &&
+            report.isSuccess &&
+            report.isFetchedAfterMount &&
+            !report.data &&
+            !draft ? (
+              <VisitReportTemplatePicker
+                tenantId={tenantId}
+                userId={userId}
+                visitId={visit.id}
+                onRefresh={() => report.refetch()}
+                onApplied={() => setTemplateApplied(true)}
+              />
+            ) : null}
+            <output className="text-muted-foreground block text-sm empty:sr-only">
+              {templateApplied ? 'Plantilla copiada al parte de esta visita.' : ''}
+            </output>
             <div className="space-y-2">
               <div className="flex flex-wrap items-baseline justify-between gap-1">
                 <h3 className="text-sm font-semibold">Lista de comprobación</h3>
