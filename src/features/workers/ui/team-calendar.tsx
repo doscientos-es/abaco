@@ -1,6 +1,8 @@
 import { Badge, Button } from '@doscientos/ui'
+import { CaretDownIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import type { TeamMember } from '@/features/settings/application/team-actions'
 import { staffSchedulesQuery } from '@/features/staff-schedules'
@@ -13,9 +15,10 @@ import {
   teamCalendarCell,
   teamCalendarDays,
   type TeamCalendarAbsence,
+  type TeamDayFilter,
 } from '../domain/team-calendar'
 import type { WorkersSearch } from '../domain/worker-navigation'
-import { TeamWeekGrid } from './team-week-grid'
+import { TeamCalendarDayNav, TeamWeekGrid } from './team-week-grid'
 
 const dateLabel = new Intl.DateTimeFormat('es-ES', {
   day: 'numeric',
@@ -42,6 +45,7 @@ export function TeamCalendar({
   memberIds: string[] | undefined
   onSearchChange: (search: WorkersSearch) => void
 }) {
+  const [dayFilter, setDayFilter] = useState<TeamDayFilter>('all')
   const today = todayInMadrid()
   const selectedDate = search.fecha ?? today
   const days = teamCalendarDays(calendarDate(selectedDate))
@@ -67,96 +71,113 @@ export function TeamCalendar({
   const calendarSearch = { vista: 'calendario', fecha: selectedDate } as const
   const managementLink =
     'text-primary rounded-sm font-medium underline decoration-from-font underline-offset-4'
+  const changeDay = (fecha: string) => onSearchChange({ ...scope, ...calendarSearch, fecha })
   const activeScope = search.persona ? 'Por trabajador' : search.equipo ? 'Por equipo' : 'General'
-  const moveWeek = (by: number) =>
-    onSearchChange({ ...scope, ...calendarSearch, fecha: moveDays(selectedDate, by * 7) })
+  const moveWeek = (by: number) => changeDay(moveDays(selectedDate, by * 7))
 
   return (
-    <section aria-label="Calendario del equipo" className="min-w-0 space-y-5">
+    <section aria-label="Calendario del equipo" className="min-w-0 space-y-4">
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">Calendario del equipo</h2>
           <Badge variant="neutral">{activeScope}</Badge>
         </div>
         <p className="text-muted-foreground max-w-2xl text-sm">
-          Consulta en un lugar los horarios previstos y las vacaciones u otras ausencias. Los
-          horarios no son fichajes ni un histórico de turnos.
+          Horarios previstos y ausencias. No son fichajes ni un histórico de turnos.
         </p>
       </header>
 
-      <div className="border-border bg-card space-y-4 rounded-xl border p-3 sm:p-4">
-        <fieldset className="flex flex-wrap items-end gap-3">
-          <legend className="mb-2 text-sm font-semibold">Mostrar</legend>
+      <div className="border-border bg-card space-y-2 rounded-xl border p-2.5 sm:p-4">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <Button
-            variant={activeScope === 'General' ? 'default' : 'outline'}
-            aria-pressed={activeScope === 'General'}
-            onPress={() => onSearchChange(calendarSearch)}
+            size="sm"
+            variant="outline"
+            aria-label="Semana anterior"
+            className="min-h-11 min-w-11 shrink-0"
+            onPress={() => moveWeek(-1)}
           >
-            General
+            <CaretLeftIcon aria-hidden="true" />
           </Button>
-          <label className="grid w-full min-w-0 gap-1 text-sm font-medium sm:w-auto sm:max-w-64">
-            Por equipo
-            <select
-              className={controlClass}
-              value={search.equipo ?? ''}
-              onChange={(event) =>
-                onSearchChange({
-                  ...calendarSearch,
-                  ...(event.target.value ? { equipo: event.target.value } : {}),
-                })
-              }
-            >
-              <option value="">Elegir equipo</option>
-              {availableTeams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {workTeamLabel(team)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid w-full min-w-0 gap-1 text-sm font-medium sm:w-auto sm:max-w-64">
-            Por trabajador
-            <select
-              className={controlClass}
-              value={search.persona ?? ''}
-              onChange={(event) =>
-                onSearchChange({
-                  ...calendarSearch,
-                  ...(event.target.value ? { persona: event.target.value } : {}),
-                })
-              }
-            >
-              <option value="">Elegir trabajador</option>
-              {sortedPeople.map((person) => (
-                <option key={person.userId} value={person.userId}>
-                  {person.fullName || person.email}
-                </option>
-              ))}
-            </select>
-          </label>
-        </fieldset>
+          <h3 className="min-w-0 flex-1 text-center text-sm font-semibold" aria-live="polite">
+            {dateLabel.formatRange(first.day, last.day)}
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            aria-label="Semana siguiente"
+            className="min-h-11 min-w-11 shrink-0"
+            onPress={() => moveWeek(1)}
+          >
+            <CaretRightIcon aria-hidden="true" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-h-11 shrink-0"
+            onPress={() => changeDay(today)}
+          >
+            Hoy
+          </Button>
+        </div>
+        <TeamCalendarDayNav days={days} selectedDate={selectedDate} onDayChange={changeDay} />
+      </div>
 
-        <div className="border-border flex flex-wrap items-end gap-x-4 gap-y-3 border-t pt-3">
-          <div className="mr-auto min-w-0 space-y-1">
-            <h3 className="font-semibold" aria-live="polite">
-              {dateLabel.formatRange(first.day, last.day)}
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              <Button size="sm" variant="outline" onPress={() => moveWeek(-1)}>
-                Semana anterior
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onPress={() => onSearchChange({ ...scope, ...calendarSearch, fecha: today })}
+      <details className="group border-border bg-card rounded-xl border">
+        <summary className="focus-visible:ring-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 text-sm font-semibold focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
+          Equipo, trabajador o fecha
+          <CaretDownIcon aria-hidden="true" className="size-4 group-open:rotate-180" />
+        </summary>
+        <div className="border-border flex flex-wrap items-end gap-x-5 gap-y-3 border-t p-3">
+          <fieldset className="flex max-w-full min-w-0 flex-wrap items-end gap-3">
+            <legend className="mb-2 text-sm font-semibold">Mostrar</legend>
+            <Button
+              variant={activeScope === 'General' ? 'default' : 'outline'}
+              aria-pressed={activeScope === 'General'}
+              onPress={() => onSearchChange(calendarSearch)}
+            >
+              General
+            </Button>
+            <label className="grid w-full min-w-0 gap-1 text-sm font-medium sm:w-auto sm:max-w-64">
+              Por equipo
+              <select
+                className={controlClass}
+                value={search.equipo ?? ''}
+                onChange={(event) =>
+                  onSearchChange({
+                    ...calendarSearch,
+                    ...(event.target.value ? { equipo: event.target.value } : {}),
+                  })
+                }
               >
-                Hoy
-              </Button>
-              <Button size="sm" variant="outline" onPress={() => moveWeek(1)}>
-                Semana siguiente
-              </Button>
-            </div>
-          </div>
+                <option value="">Elegir equipo</option>
+                {availableTeams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {workTeamLabel(team)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid w-full min-w-0 gap-1 text-sm font-medium sm:w-auto sm:max-w-64">
+              Por trabajador
+              <select
+                className={controlClass}
+                value={search.persona ?? ''}
+                onChange={(event) =>
+                  onSearchChange({
+                    ...calendarSearch,
+                    ...(event.target.value ? { persona: event.target.value } : {}),
+                  })
+                }
+              >
+                <option value="">Elegir trabajador</option>
+                {sortedPeople.map((person) => (
+                  <option key={person.userId} value={person.userId}>
+                    {person.fullName || person.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
           <label className="grid gap-1 text-sm font-medium">
             Ir a fecha
             <input
@@ -166,13 +187,12 @@ export function TeamCalendar({
               max="9999-12-31"
               value={selectedDate}
               onChange={(event) => {
-                if (event.target.value && event.target.validity.valid)
-                  onSearchChange({ ...scope, ...calendarSearch, fecha: event.target.value })
+                if (event.target.value && event.target.validity.valid) changeDay(event.target.value)
               }}
             />
           </label>
         </div>
-      </div>
+      </details>
 
       {visiblePeople.length ? (
         <TeamCalendarResults
@@ -183,7 +203,8 @@ export function TeamCalendar({
           to={last.value}
           selectedDate={selectedDate}
           people={visiblePeople}
-          onDayChange={(date) => onSearchChange({ ...scope, ...calendarSearch, fecha: date })}
+          dayFilter={dayFilter}
+          onDayFilterChange={setDayFilter}
         />
       ) : (
         <WorkerState
@@ -220,7 +241,8 @@ function TeamCalendarResults({
   to,
   selectedDate,
   people,
-  onDayChange,
+  dayFilter,
+  onDayFilterChange,
 }: {
   tenantId: string
   userId: string
@@ -229,7 +251,8 @@ function TeamCalendarResults({
   to: string
   selectedDate: string
   people: TeamMember[]
-  onDayChange: (date: string) => void
+  dayFilter: TeamDayFilter
+  onDayFilterChange: (filter: TeamDayFilter) => void
 }) {
   const scheduleOptions = staffSchedulesQuery(tenantId)
   const schedules = useQuery({
@@ -275,6 +298,12 @@ function TeamCalendarResults({
     ),
   }))
   return (
-    <TeamWeekGrid days={days} rows={rows} selectedDate={selectedDate} onDayChange={onDayChange} />
+    <TeamWeekGrid
+      days={days}
+      rows={rows}
+      selectedDate={selectedDate}
+      dayFilter={dayFilter}
+      onDayFilterChange={onDayFilterChange}
+    />
   )
 }

@@ -104,6 +104,11 @@ async function run() {
                 { weekday: 2, start: 840, end: 1020 },
               ],
             },
+            {
+              user_id: bruno,
+              updated_at: starts,
+              slots: [{ weekday: 1, start: 540, end: 780 }],
+            },
           ])
         case 'absence_requests':
           assert.equal(request.method(), 'GET')
@@ -150,14 +155,34 @@ async function run() {
       .filter({ visible: true })
       .waitFor()
     await assertFits()
+    const dayFilters = calendar.getByRole('group', { name: 'Filtrar personas del día' })
+    const panel = calendar.getByText('Equipo, trabajador o fecha', { exact: true })
+    assert.equal(await calendar.getByRole('combobox', { name: 'Por equipo' }).isVisible(), false)
+    await dayFilters.getByRole('button', { name: 'Con turno 1' }).click()
+    await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor({ state: 'hidden' })
+    await calendar.getByRole('link', { name: 'Bruno Sin Equipo' }).waitFor()
+    await calendar.getByText('Las solicitudes pendientes no quitan el turno previsto.').waitFor()
+    await dayFilters.getByRole('button', { name: 'Ausencias 2' }).click()
+    await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
+    await calendar.getByRole('link', { name: 'Bruno Sin Equipo' }).waitFor()
+    await dayFilters.getByRole('button', { name: 'Sin turno 0' }).click()
+    await calendar.getByText('No hay personas con este filtro para el día.').waitFor()
+    await calendar.getByRole('button', { name: 'Ver todas' }).click()
+    await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
     await calendar.getByRole('button', { name: 'martes, 24 de noviembre' }).click()
     await calendar.getByText('14:00–17:00', { exact: true }).filter({ visible: true }).waitFor()
+    await dayFilters.getByRole('button', { name: 'Sin turno 1' }).click()
+    await calendar.getByRole('link', { name: 'Bruno Sin Equipo' }).waitFor()
+    await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor({ state: 'hidden' })
+    await dayFilters.getByRole('button', { name: 'Todas 3' }).click()
+    await panel.click()
     await calendar.getByRole('combobox', { name: 'Por equipo' }).selectOption(north)
     await page.waitForURL((url) => url.searchParams.get('equipo') === north)
     await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
     await calendar.getByRole('link', { name: 'Bruno Sin Equipo' }).waitFor({ state: 'hidden' })
     await page.reload()
     await calendar.getByRole('link', { name: 'Ana Ficticia' }).waitFor()
+    await panel.click()
     assert.equal(await calendar.getByRole('combobox', { name: 'Por equipo' }).inputValue(), north)
     await calendar.getByRole('combobox', { name: 'Por trabajador' }).selectOption(bruno)
     await page.waitForURL((url) => url.searchParams.get('persona') === bruno)
@@ -192,7 +217,9 @@ async function run() {
     await page.goto(`${origin}/trabajadores?vista=calendario&equipo=does-not-exist`)
     await page.getByRole('heading', { name: 'No se encontró esta ficha' }).waitFor()
     assert.equal(await calendar.count(), 0)
-    process.stdout.write('Calendario browser OK: mobile, desktop, time and scopes.\n')
+    process.stdout.write(
+      'Calendario browser OK: mobile, desktop, date, daily filters and scopes.\n',
+    )
   } finally {
     await browser.close()
   }
