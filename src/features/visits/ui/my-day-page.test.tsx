@@ -56,6 +56,7 @@ vi.mock('@doscientos/ui', () => ({
   toast: { success: vi.fn(), error: mocks.error },
 }))
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQueryClient: () => ({ invalidateQueries: mocks.invalidate }),
   useQuery: (options: { queryKey: string[]; queryFn: () => unknown }) => {
     if (

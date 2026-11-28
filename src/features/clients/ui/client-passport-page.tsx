@@ -16,6 +16,7 @@ import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
+import { CentreProtocolDialog } from '@/features/centre-protocols'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
 import { ClientVisitHistory } from '@/features/visits/ui/client-visit-history'
 import { contactWhatsappNumber } from '@/shared/lib/contact-links'
@@ -42,6 +43,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
     enabled: Boolean(client),
   })
   const [creating, setCreating] = useState<NewItem | null>(null)
+  const [protocolLocation, setProtocolLocation] = useState<{ id: string; name: string } | null>(
+    null,
+  )
   const [arrivalLocation, setArrivalLocation] = useState<{ id: string; name: string } | null>(null)
   const handoffKey = `${tenant.id}:${clientId}:${session?.userId ?? ''}`
   const [handoff, setHandoff] = useState<{ key: string; location: string | null } | null>(null)
@@ -286,6 +290,17 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                       Llegada para técnicos
                     </Button>
                   ) : null}
+                  {canWrite && location.active && location.kind !== 'billing' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      aria-label={`Protocolo operativo de ${location.name}`}
+                      onPress={() => setProtocolLocation({ id: location.id, name: location.name })}
+                    >
+                      Protocolo operativo
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
             ))}
@@ -320,6 +335,16 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           locationId={arrivalLocation.id}
           locationName={arrivalLocation.name}
           onClose={() => setArrivalLocation(null)}
+        />
+      ) : null}
+      {canWrite && protocolLocation && session?.userId ? (
+        <CentreProtocolDialog
+          key={`${tenant.id}:${session.userId}:${protocolLocation.id}`}
+          tenantId={tenant.id}
+          userId={session.userId}
+          locationId={protocolLocation.id}
+          locationName={protocolLocation.name}
+          onClose={() => setProtocolLocation(null)}
         />
       ) : null}
       {creating ? (
