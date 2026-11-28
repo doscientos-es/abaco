@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
+import { assignedCentreProtocolsQuery, WorkerCentreProtocol } from '@/features/centre-protocols'
 import {
   fieldEntryQueueKey,
   readFieldEntryQueue,
@@ -149,6 +150,21 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   const arrivalByVisit = new Map(
     arrival.isSuccess && arrival.isFetchedAfterMount && !arrival.isFetching
       ? arrival.data.map((details) => [details.visit_id, details])
+      : [],
+  )
+  const protocols = useQuery({
+    ...assignedCentreProtocolsQuery(tenantId, userId, openVisitIds),
+    enabled: Boolean(
+      online && tenantId && userId && dayOpen && visits.isSuccess && openVisitIds.length,
+    ),
+  })
+  const protocolByVisit = new Map(
+    online &&
+      protocols.isSuccess &&
+      protocols.isFetchedAfterMount &&
+      !protocols.isFetching &&
+      !protocols.isPaused
+      ? protocols.data.map((details) => [details.visit_id, details])
       : [],
   )
   const previewNext = date === today && dayOpen && visits.isSuccess
@@ -672,6 +688,19 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </Button>
           </div>
         ) : null}
+        {protocols.isError && online && openVisitIds.length > 0 && dayOpen ? (
+          <div className="border-border flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
+            <p role="alert">No se pudieron consultar los protocolos de centro.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-11"
+              onPress={() => void protocols.refetch()}
+            >
+              Reintentar protocolos
+            </Button>
+          </div>
+        ) : null}
         {visits.isPending && online && !offlineDay ? (
           <WorkerLoading label="Cargando visitas…" />
         ) : null}
@@ -744,6 +773,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     address={visit.address}
                     shared={arrivalByVisit.get(visit.id)}
                   />
+                  <WorkerCentreProtocol protocol={protocolByVisit.get(visit.id)} />
                   {visit.notes ? (
                     <section aria-label="Notas de la visita" className="space-y-1">
                       <h4 className="font-medium">Notas de la visita</h4>

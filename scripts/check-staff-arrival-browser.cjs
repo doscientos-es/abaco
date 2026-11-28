@@ -21,6 +21,9 @@ async function run() {
   })
   let row = null
   let version = 0
+  let protocol = null
+  let protocolError = false
+  const protocolWrites = []
   const workerLookups = []
   const writes = []
 
@@ -49,9 +52,10 @@ async function run() {
       const url = new URL(request.url())
       if (url.origin === origin) return route.continue()
       if (url.origin !== fakeSupabase) return route.abort()
-      const send = (json) =>
+      const send = (json, status = 200) =>
         route.fulfill({
           json,
+          status,
           headers: {
             'access-control-allow-origin': '*',
             'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS',
@@ -67,6 +71,7 @@ async function run() {
           'client_contacts',
           'service_locations',
           'service_location_staff_arrival',
+          'service_location_protocol_versions',
         ].includes(name)
       ) {
         workerLookups.push(name)
@@ -104,6 +109,44 @@ async function run() {
         writes.push(next)
         row = { ...row, ...next, updated_at: `2026-11-28T14:00:0${++version}Z` }
         return send({ updated_at: row.updated_at })
+      }
+      if (name === 'service_location_protocol_versions') {
+        assert.equal(role, 'admin')
+        assert.equal(url.searchParams.get('tenant_id'), `eq.${tenant}`)
+        assert.equal(url.searchParams.get('location_id'), `eq.${location}`)
+        assert.equal(url.searchParams.get('select'), 'revision,items,shared')
+        return send(protocol)
+      }
+      if (name === 'save_service_location_protocol') {
+        assert.equal(role, 'admin')
+        const next = request.postDataJSON()
+        protocolWrites.push(next)
+        assert.equal(next.p_tenant, tenant)
+        assert.equal(next.p_location, location)
+        assert.equal(next.p_expected, protocol?.revision ?? 0)
+        assert.match(next.p_operation, /^[0-9a-f-]{36}$/)
+        if (next.p_shared) assert.equal(next.p_reviewed, true)
+        protocol = { revision: next.p_expected + 1, items: next.p_items, shared: next.p_shared }
+        return send(protocol.revision)
+      }
+      if (name === 'list_assigned_visit_protocols') {
+        assert.equal(role, 'user')
+        assert.deepEqual(request.postDataJSON(), { p_tenant: tenant, p_visit_ids: [visit] })
+        if (protocolError) return send({ message: 'Fixture unavailable' }, 400)
+        return send(
+          protocol?.shared
+            ? [
+                {
+                  visit_id: visit,
+                  revision: protocol.revision,
+                  items: protocol.items,
+                  state: 'changed',
+                  changed_items: protocol.items.slice(-1),
+                  removed_count: 1,
+                },
+              ]
+            : [],
+        )
       }
       if (name === 'my_assigned_visits') {
         const { p_from, p_to, p_tenant_id } = request.postDataJSON()
@@ -226,7 +269,68 @@ async function run() {
     )
     assert.equal(await workerCard.getByText(/Contacto privado|Datos internos/).count(), 0)
 
+    const openProtocol = office.getByRole('button', {
+      name: 'Protocolo operativo de Recepción de pruebas',
+    })
+    const protocolDialog = office.getByRole('dialog', { name: /Protocolo · Recepción/ })
+    const workerProtocol = worker.getByRole('region', { name: 'Protocolo del centro' })
+    const reloadProtocol = async (ok = true) => {
+      await Promise.all([
+        worker.waitForResponse(
+          (response) =>
+            response.url().endsWith('/rpc/list_assigned_visit_protocols') && response.ok() === ok,
+        ),
+        worker.reload(),
+      ])
+    }
+    await openProtocol.press('Enter')
+    await protocolDialog
+      .getByRole('textbox', { name: 'Indicación 1' })
+      .fill('Prepara el equipo antes de empezar.')
+    await protocolDialog
+      .getByRole('textbox', { name: 'Indicación 2' })
+      .fill('Comprueba el cuadro al terminar.')
+    const share = protocolDialog.getByRole('checkbox', { name: 'Compartir con personal asignado' })
+    await fits(protocolDialog)
+    assert.equal(await share.isChecked(), false)
+    const saveDraft = protocolDialog.getByRole('button', { name: 'Guardar borrador' })
+    assert.equal(await saveDraft.isDisabled(), true)
+    await protocolDialog.getByRole('checkbox', { name: /Confirmo/ }).press('Space')
+    await saveDraft.press('Enter')
+    await protocolDialog.waitFor({ state: 'hidden' })
+    await reloadProtocol()
+    assert.equal(await workerProtocol.count(), 0)
+    assert.equal(protocolWrites.length, 1)
+    await openProtocol.press('Enter')
+    await share.press('Space')
+    const publish = protocolDialog.getByRole('button', { name: 'Compartir protocolo' })
+    assert.equal(await publish.isDisabled(), true)
+    await protocolDialog.getByRole('checkbox', { name: /Confirmo/ }).press('Space')
+    await publish.press('Enter')
+    await protocolDialog.waitFor({ state: 'hidden' })
+    await reloadProtocol()
+    await workerProtocol.getByText('Cambió desde tu última visita registrada.').waitFor()
+    await workerProtocol.getByText('Nueva indicación').waitFor()
+    await workerProtocol.getByText('Se retiró una indicación anterior.').waitFor()
+    assert.equal(await workerProtocol.getByText(/Datos internos|Contacto privado/).count(), 0)
+    await fits(worker.locator('#main-content'))
+    protocolError = true
+    await reloadProtocol(false)
+    await worker.getByText('No se pudieron consultar los protocolos de centro.').waitFor()
+    assert.equal(await workerProtocol.count(), 0)
+    protocolError = false
+    await worker.getByRole('button', { name: 'Reintentar protocolos' }).press('Enter')
+    await workerProtocol.getByText('Nueva indicación').waitFor()
     await office.setViewportSize({ width: 1280, height: 900 })
+    await openProtocol.press('Enter')
+    await fits(protocolDialog)
+    await share.press('Space')
+    await protocolDialog.getByRole('button', { name: 'Retirar protocolo' }).press('Enter')
+    await protocolDialog.waitFor({ state: 'hidden' })
+    await reloadProtocol()
+    await workerProtocol.waitFor({ state: 'hidden' })
+    assert.equal(protocolWrites.length, 3)
+
     await open.click()
     await contact.uncheck()
     await save.click()
@@ -237,7 +341,7 @@ async function run() {
     assert.equal(await phone.count(), 0)
     assert.deepEqual(workerLookups, [])
     process.stdout.write(
-      'Staff arrival smoke: default off, office consent gates, assigned preview, opt-out and no tenant-wide contact reads.\n',
+      'Staff arrival smoke: default off, office consent gates, assigned preview, opt-out, centre protocol draft/share/retry/withdrawal and no tenant-wide contact or protocol reads.\n',
     )
   } finally {
     await browser.close()
