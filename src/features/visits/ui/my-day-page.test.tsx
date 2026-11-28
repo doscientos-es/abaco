@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   visitsQuery: null as null | { queryKey: string[]; queryFn: () => unknown },
   listVisits: vi.fn(),
   visits: [] as Array<Record<string, unknown>>,
+  arrivals: [] as Array<Record<string, unknown>>,
 }))
 
 vi.mock('react', async (importOriginal) => {
@@ -65,12 +66,15 @@ vi.mock('@tanstack/react-query', () => ({
       mocks.visitsQuery = options
     return {
       isSuccess: true,
+      isFetchedAfterMount: true,
       data:
         options.queryKey[0] === 'my-visits' &&
         options.queryKey[2] !== 'next' &&
         options.queryKey[2] !== 'drafts'
           ? mocks.visits
-          : [],
+          : options.queryKey[0] === 'assigned-visit-arrivals'
+            ? mocks.arrivals
+            : [],
     }
   },
 }))
@@ -85,6 +89,19 @@ vi.mock('@/features/auth', () => ({
 vi.mock('../application/visit-actions', () => ({
   listMyVisits: mocks.listVisits,
   transitionServiceVisit: mocks.transition,
+}))
+vi.mock('./worker-visit-delay-notice', () => ({
+  WorkerVisitDelayNotice: ({
+    hasSharedContact,
+    visit,
+  }: {
+    hasSharedContact: boolean
+    visit: Record<string, unknown>
+  }) => (
+    <button data-contact={hasSharedContact} data-visit-fields={Object.keys(visit).sort().join(',')}>
+      Preparar aviso de retraso
+    </button>
+  ),
 }))
 vi.mock('./visit-report-editor', () => ({ VisitReportEditor: () => null }))
 vi.mock('./worker-agenda-change-notices', () => ({ WorkerAgendaChangeNotices: () => null }))
@@ -109,10 +126,14 @@ beforeEach(() => {
   mocks.actions.clear()
   mocks.visitsQuery = null
   mocks.visits = [visit]
+  mocks.arrivals = []
   mocks.transition.mockResolvedValue(undefined)
   mocks.invalidate.mockResolvedValue(undefined)
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('navegación por días', () => {
   it('opens the linked assigned visit on its day, including a collapsed contract group', () => {
@@ -266,5 +287,29 @@ describe('starting an assigned visit', () => {
     mocks.start?.()
     await vi.waitFor(() => expect(mocks.error).toHaveBeenCalledOnce())
     expect(mocks.transition).not.toHaveBeenCalled()
+  })
+})
+
+describe('aviso de retraso desde mi jornada', () => {
+  it('ofrece el borrador solo en visitas asignadas de hoy sin iniciar', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-12T07:00:00Z'))
+    mocks.visits = [
+      visit,
+      { ...visit, id: 'closed', status: 'completed' },
+      { ...visit, id: 'active', status: 'in_progress' },
+      { ...visit, id: 'tomorrow', scheduled_start_at: '2026-11-13T08:00:00Z' },
+    ]
+    const html = renderToStaticMarkup(<MyDayPage />)
+    expect(html.match(/Preparar aviso de retraso/g)).toHaveLength(1)
+    expect(html).toContain('data-visit-fields="scheduled_start_at,status,timezone"')
+    expect(html).toContain('data-contact="false"')
+  })
+
+  it('solo indica contacto si la misma visita lo ha recibido en la ficha de llegada', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-12T07:00:00Z'))
+    mocks.arrivals = [{ visit_id: 'otra-visita', contact_phone: '+34612345678' }]
+    expect(renderToStaticMarkup(<MyDayPage />)).toContain('data-contact="false"')
+    mocks.arrivals = [{ visit_id: visit.id, contact_phone: '+34612345678' }]
+    expect(renderToStaticMarkup(<MyDayPage />)).toContain('data-contact="true"')
   })
 })

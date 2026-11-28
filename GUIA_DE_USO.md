@@ -86,6 +86,8 @@ La ficha permite activar, pausar o cancelar el contrato, consultar sus visitas y
 
 ## 6. Planificar y realizar visitas
 
+En una visita asignada para hoy y todavía sin iniciar, **Preparar aviso de retraso** deja indicar una nueva hora de llegada, revisar el texto y copiarlo. Si el centro comparte un contacto, está en la ficha de llegada; si no, pasa el aviso a la oficina. Menos Líos no envía el mensaje ni cambia el horario de la visita.
+
 ### Oficina: Agenda
 
 1. En **Agenda**, crea una visita indicando cliente, ubicación o activo cuando proceda, técnico, inicio local, duración, prioridad e indicaciones.
