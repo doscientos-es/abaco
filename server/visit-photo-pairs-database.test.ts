@@ -81,7 +81,7 @@ describe('visit photo pairing boundary', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../supabase/migrations/20261128143507_service_visit_photo_pairs.sql',
+          '../supabase/migrations/20261128150814_service_visit_photo_pairs.sql',
           import.meta.url,
         ),
         'utf8',
