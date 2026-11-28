@@ -38,6 +38,7 @@ vi.mock('@/features/auth', () => ({
   useCompanyActions: () => ({ switchTo }),
 }))
 vi.mock('@/features/ai', () => ({ AiTestSettings: () => <p>Pruebas de IA</p> }))
+vi.mock('./technician-practice', () => ({ TechnicianPractice: () => <p>Práctica guiada</p> }))
 vi.mock('./worker-photo-settings', () => ({ WorkerPhotoSettings: () => <p>Foto de perfil</p> }))
 vi.mock('@/features/interface-preferences', () => ({
   InterfaceSettings: () => <p>Preferencias de navegación</p>,
@@ -103,6 +104,7 @@ describe('worker settings', () => {
     expect(html).toContain('Cuenta de Google Calendar')
     expect(html).toContain('Pruebas de IA')
     expect(html).not.toContain('Foto de perfil')
+    expect(html).not.toContain('Práctica guiada')
     expect(html).not.toContain('Cuenta y seguridad')
   })
 
@@ -111,6 +113,7 @@ describe('worker settings', () => {
     expect(html).toContain('Empresa Uno')
     expect(html).toContain('user@example.test')
     expect(html).toContain('Foto de perfil')
+    expect(html).toContain('Práctica guiada')
     expect(html).toContain('href="/nueva-contrasena"')
     expect(html).toContain('Empresa actual')
     expect(html).toContain('Cambiar a Empresa Dos')

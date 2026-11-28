@@ -16,6 +16,7 @@ import { useCompanyActions, useSession } from '@/features/auth'
 import { InterfaceSettings } from '@/features/interface-preferences'
 
 import { GoogleCalendarSettings } from './google-calendar-settings'
+import { TechnicianPractice } from './technician-practice'
 import { WorkerPhotoSettings } from './worker-photo-settings'
 
 export function UserSettingsPage() {
@@ -129,6 +130,7 @@ export function AccountSettings() {
           ) : null}
         </CardContent>
       </Card>
+      <TechnicianPractice />
     </div>
   )
 }
