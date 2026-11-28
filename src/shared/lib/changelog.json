@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.25",
+      "date": "2026-11-28",
+      "title": "v0.0.25",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-87: ficha de relevo por cliente y centro"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "44b5dcc9dff581420deb2455ae9776b7740bc218",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-87: ficha de relevo por cliente y centro"
+        }
+      ]
+    },
+    {
       "version": "0.0.24",
       "date": "2026-11-28",
       "title": "v0.0.24",

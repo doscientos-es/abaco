@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.25
+
+### Nuevas funciones
+
+- DEV-87: ficha de relevo por cliente y centro
+
 ## 2026-11-28 — v0.0.24
 
 ### Nuevas funciones
