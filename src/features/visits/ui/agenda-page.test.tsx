@@ -7,6 +7,7 @@ import type { WorkPlanningSearch } from '@/shared/domain/work-planning-search'
 import type { CalendarEvent, CalendarEventChange } from '@/shared/lib/event-calendar'
 
 import type { VisitSummary } from '../application/visit-actions'
+import type { TravelRoute } from '../domain/agenda-travel-review'
 import { AgendaPage } from './agenda-page'
 
 const mocks = vi.hoisted(() => ({
@@ -25,6 +26,9 @@ const mocks = vi.hoisted(() => ({
   visits: [] as VisitSummary[],
   selectedVisitId: null as string | null,
   role: 'admin',
+  activeTenantId: 'tenant-1',
+  visitsLoaded: false,
+  visitsFetching: false,
   setSelected: vi.fn(),
   setReplanning: vi.fn(),
   setPending: vi.fn(),
@@ -133,6 +137,8 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
     mocks.queryKeys.push(queryKey)
     return {
+      isSuccess: queryKey[0] === 'office-visits' && mocks.visitsLoaded,
+      isFetching: queryKey[0] === 'office-visits' && mocks.visitsFetching,
       data:
         queryKey[0] === 'work-target-options'
           ? { locations: [] }
@@ -147,7 +153,7 @@ vi.mock('@tanstack/react-router', () => ({
   useSearch: () => mocks.search,
 }))
 vi.mock('@/features/auth', () => ({
-  useSession: () => ({ tenantId: 'tenant-1', role: mocks.role }),
+  useSession: () => ({ tenantId: mocks.activeTenantId, userId: 'user-1', role: mocks.role }),
 }))
 vi.mock('./report-review-inbox', () => ({ ReportReviewInbox: () => null }))
 vi.mock('@/features/clients/ui/related-record-creation', () => ({
@@ -196,6 +202,21 @@ vi.mock('@/shared/ui/form-dialog', () => ({
 vi.mock('./visit-replan-form', () => ({ VisitReplanForm: () => null }))
 vi.mock('./visit-report-editor', () => ({ VisitReportEditor: () => null }))
 vi.mock('./batch-work-sheets', () => ({ BatchWorkSheets: () => null }))
+vi.mock('./agenda-travel-review', () => ({
+  AgendaTravelReview: ({
+    date,
+    routes,
+    disabled,
+  }: {
+    date: string
+    routes: TravelRoute[]
+    disabled: boolean
+  }) => (
+    <button disabled={disabled} data-date={date}>
+      Revisar traslados: {routes.flatMap(({ stops }) => stops.map(({ id }) => id)).join(', ')}
+    </button>
+  ),
+}))
 
 function render() {
   mocks.stateIndex = 0
@@ -213,6 +234,9 @@ describe('AgendaPage: nueva visita', () => {
     mocks.visits = []
     mocks.selectedVisitId = null
     mocks.role = 'admin'
+    mocks.activeTenantId = 'tenant-1'
+    mocks.visitsLoaded = false
+    mocks.visitsFetching = false
     mocks.change = undefined
     mocks.click = undefined
     mocks.events = []
@@ -242,6 +266,45 @@ describe('AgendaPage: nueva visita', () => {
     expect(
       mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
     ).toBe(false)
+  })
+
+  it('uses already-scoped visits for the chosen day regardless of filters, only for the active admin', () => {
+    const origin: VisitSummary = {
+      id: 'first',
+      title: 'Revisión uno',
+      client_name: 'Cliente',
+      location_name: '',
+      address: 'Dirección privada',
+      timezone: 'Europe/Madrid',
+      scheduled_start_at: '2026-11-13T08:00:00Z',
+      scheduled_end_at: '2026-11-13T09:00:00Z',
+      status: 'scheduled',
+      assigned_user_id: 'tech-1',
+      assigned_user_name: 'Responsable',
+      priority: 'normal',
+      notes: '',
+      updated_at: 'initial',
+    }
+    mocks.search = { date: '2026-11-13', q: 'No coincide con ninguna visita' }
+    mocks.visits = [
+      origin,
+      { ...origin, id: 'second' },
+      {
+        ...origin,
+        id: 'different-day',
+        scheduled_start_at: '2026-11-12T08:00:00Z',
+        scheduled_end_at: '2026-11-12T09:00:00Z',
+      },
+    ]
+    mocks.visitsLoaded = true
+    expect(render()).toContain('<button data-date="2026-11-13">Revisar traslados: first, second')
+    mocks.visitsFetching = true
+    expect(render()).toContain('<button disabled="" data-date="2026-11-13">Revisar traslados:')
+    mocks.activeTenantId = 'different-company'
+    expect(render()).not.toContain('Revisar traslados')
+    mocks.activeTenantId = 'tenant-1'
+    mocks.role = 'user'
+    expect(render()).not.toContain('Revisar traslados')
   })
 
   it('offers single-occurrence changes only to an admin and only on scheduled series visits', () => {

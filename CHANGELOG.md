@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.30
+
+### Nuevas funciones
+
+- DEV-61: preparar y enviar partes de visitas sin cobertura
+- DEV-86: mapear campos del Excel para altas de personal
+
 ## 2026-11-28 — v0.0.29
 
 ### Nuevas funciones

@@ -8,10 +8,12 @@ import { useSession } from '@/features/auth'
 import { VisitFieldEntriesPanel } from '@/features/field-entries/ui/visit-field-entries-panel'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
 import { useActionLock } from '@/shared/lib/use-action-lock'
+import { browserOnline, useBrowserOnline } from '@/shared/lib/use-browser-online'
 import { TextareaField } from '@/shared/ui/form'
 import { WorkerLoading } from '@/shared/ui/worker-state'
 
 import { visitEvidenceAnchor } from '../application/pending-visit-evidence'
+import { sendQueuedVisitReport } from '../application/send-queued-visit-report'
 import type { VisitSummary } from '../application/visit-actions'
 import {
   loadVisitReport,
@@ -27,12 +29,14 @@ import {
   writeVisitReportLocalDraft,
   type LocalVisitReportDraft,
 } from '../application/visit-report-local-draft'
+import type { OfflineReportBase } from '../application/worker-offline-day'
 import { localVisitDay } from '../domain/next-assigned-visit'
 import { ClosedVisitReport } from './closed-visit-report'
 import { VisitHandoffsPanel } from './visit-handoffs-panel'
 import { VisitPhotosPanel } from './visit-photos-panel'
 import { VisitReportDictation } from './visit-report-dictation'
 import { VisitReportShares } from './visit-report-shares'
+import { VisitReportTemplatePicker } from './visit-report-template-picker'
 
 const noteLimit = 4000
 
@@ -48,42 +52,64 @@ export function VisitReportEditor({
   tenantId,
   userId,
   guardRef,
+  offlineBase,
 }: {
   visit: VisitSummary
   tenantId: string
   userId: string
   guardRef?: RefObject<'saving' | 'unpersisted' | null>
+  offlineBase?: OfflineReportBase | undefined
 }) {
   const queryClient = useQueryClient()
   const session = useSession()
+  const online = useBrowserOnline()
+  const editorScope = `${tenantId}:${userId}:${visit.id}`
+  const scopeActive = useRef<string | null>(null)
+  useEffect(() => {
+    scopeActive.current = editorScope
+    return () => {
+      scopeActive.current = null
+    }
+  }, [editorScope])
+  const scopeIsCurrent = () => scopeActive.current === editorScope
   const key = visitReportDraftKey(userId, tenantId, visit.id)
   const queryKey = ['visit-report', tenantId, visit.id, userId]
   const report = useQuery({
     queryKey,
     queryFn: () => loadVisitReport(tenantId, visit.id),
     refetchOnMount: 'always',
+    enabled: online,
   })
   const [draft, setDraft] = useState<LocalVisitReportDraft | null>(() =>
     readVisitReportLocalDraft(key),
   )
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [reviewConflictId, setReviewConflictId] = useState<string | null>(null)
+  const [received, setReceived] = useState<number | null>(null)
   const saveLock = useActionLock()
   const [localStorageFailed, setLocalStorageFailed] = useState(false)
   const [newLabel, setNewLabel] = useState('')
+  const [templateApplied, setTemplateApplied] = useState(false)
   const closed = !['scheduled', 'in_progress'].includes(visit.status)
   const [confirmedOperation, setConfirmedOperation] = useState<string | null>(null)
+  const localBase =
+    !online && offlineBase && offlineBase.revision >= (report.data?.revision ?? 0)
+      ? offlineBase
+      : null
   const data =
     (draft?.operationId !== confirmedOperation ? draft?.data : undefined) ??
-    report.data?.data ??
+    (localBase ? localBase.data : report.data?.data) ??
     emptyData()
-  const serverRevision = report.data?.revision ?? 0
+  const serverRevision = localBase?.revision ?? report.data?.revision ?? 0
+  const queued = draft?.delivery === 'queued'
   // A cached revision can match a draft even though someone changed the report on the
   // server. Only a settled fetch in this editor can confirm the draft is redundant.
   const serverReportConfirmed =
     report.isSuccess && report.isFetchedAfterMount && report.fetchStatus === 'idle'
   const matchesServer = Boolean(
     draft &&
+    !queued &&
     serverReportConfirmed &&
     equalVisitReportData(draft.data, report.data?.data ?? emptyData()),
   )
@@ -93,7 +119,8 @@ export function VisitReportEditor({
     report.isSuccess &&
     changed &&
     draft !== null &&
-    draft.baseRevision !== serverRevision
+    draft.baseRevision !== serverRevision &&
+    (!queued || reviewConflictId === draft.operationId)
   const localGuard = useRef<'saving' | 'unpersisted' | null>(null)
   const guard = guardRef ?? localGuard
   const guarded = busy ? 'saving' : localStorageFailed && changed ? 'unpersisted' : null
@@ -119,13 +146,17 @@ export function VisitReportEditor({
   if (matchesServer && draft && !busy && confirmedOperation !== draft.operationId) {
     setConfirmedOperation(draft.operationId)
   }
-  const canEdit = !closed && !busy && (report.isSuccess || report.isError || draft !== null)
+  const canEdit =
+    !closed &&
+    !busy &&
+    (report.isSuccess || report.isError || draft !== null || offlineBase !== undefined)
   const invalidChecklist = data.checklist.some((item) => !item.label.trim())
   const completedChecks = data.checklist.filter(({ done }) => done).length
 
   function change(next: VisitReportData) {
     if (!canEdit) return
     setSaveError(null)
+    setReceived(null)
     if (serverReportConfirmed && equalVisitReportData(next, report.data?.data ?? emptyData())) {
       resetToServerVersion()
       return
@@ -161,36 +192,88 @@ export function VisitReportEditor({
     setSaveError(null)
   }
 
-  async function save() {
-    if (busy || !draft || conflict || closed || !changed || invalidChecklist || !saveLock.acquire())
+  function saveAsPending(current: LocalVisitReportDraft) {
+    const pending = { ...current, delivery: 'queued' } as const
+    if (!writeVisitReportLocalDraft(key, pending)) {
+      setLocalStorageFailed(true)
       return
+    }
+    setLocalStorageFailed(false)
+    setSaveError(null)
+    setDraft(pending)
+  }
+
+  function acknowledge(
+    current: LocalVisitReportDraft,
+    revision: number,
+    serverReport?: VisitReport | null,
+  ) {
+    removeVisitReportLocalDraft(key, current.operationId)
+    queryClient.setQueryData<VisitReport>(
+      queryKey,
+      serverReport ?? {
+        tenant_id: tenantId,
+        visit_id: visit.id,
+        data: current.data,
+        revision,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      },
+    )
+    setDraft(null)
+    setLocalStorageFailed(false)
+    if (current.delivery === 'queued') setReceived(revision)
+  }
+
+  async function save() {
+    if (busy || !draft || conflict || closed || !changed || invalidChecklist) return
+    if (!online || !browserOnline()) {
+      if (!queued) saveAsPending(draft)
+      return
+    }
+    if (!saveLock.acquire()) return
     guard.current = 'saving'
     setBusy(true)
     setSaveError(null)
     try {
-      const revision = await saveVisitReport({
-        tenantId,
-        visitId: visit.id,
-        expectedRevision: draft.baseRevision,
-        data: draft.data,
-        operationId: draft.operationId,
-      })
-      removeVisitReportLocalDraft(key, draft.operationId)
-      queryClient.setQueryData<VisitReport>(queryKey, {
-        tenant_id: tenantId,
-        visit_id: visit.id,
-        data: draft.data,
-        revision,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
-      })
-      setDraft(null)
-      setLocalStorageFailed(false)
-      await queryClient.invalidateQueries({ queryKey })
+      if (queued) {
+        const result = await sendQueuedVisitReport({
+          tenantId,
+          userId,
+          visitId: visit.id,
+          day: localVisitDay(visit),
+          draft,
+          stillActive: scopeIsCurrent,
+        })
+        if (!scopeIsCurrent()) return
+        if (result.state === 'conflict') {
+          queryClient.setQueryData<VisitReport | null>(queryKey, result.serverReport)
+          setReviewConflictId(draft.operationId)
+          return
+        }
+        acknowledge(draft, result.revision, result.serverReport)
+      } else {
+        const revision = await saveVisitReport({
+          tenantId,
+          visitId: visit.id,
+          expectedRevision: draft.baseRevision,
+          data: draft.data,
+          operationId: draft.operationId,
+        })
+        if (!scopeIsCurrent()) return
+        acknowledge(draft, revision)
+      }
+      if (browserOnline()) await queryClient.invalidateQueries({ queryKey })
       toast.success('Parte guardado en la empresa')
     } catch (error) {
-      const fresh = await report.refetch()
-      if (fresh.isSuccess && fresh.data && equalVisitReportData(fresh.data.data, draft.data)) {
+      if (!scopeIsCurrent()) return
+      if (!browserOnline()) {
+        if (!queued) saveAsPending(draft)
+        return
+      }
+      const fresh = queued ? null : await report.refetch()
+      if (!scopeIsCurrent()) return
+      if (fresh?.isSuccess && fresh.data && equalVisitReportData(fresh.data.data, draft.data)) {
         removeVisitReportLocalDraft(key, draft.operationId)
         setDraft(null)
         setLocalStorageFailed(false)
@@ -234,7 +317,16 @@ export function VisitReportEditor({
         {visit.status === 'completed' ? (
           <ClosedVisitReport tenantId={tenantId} visitId={visit.id} />
         ) : null}
-        {report.isPending && !draft ? <WorkerLoading label="Cargando parte…" /> : null}
+        {report.isPending && online && !offlineBase && !draft ? (
+          <WorkerLoading label="Cargando parte…" />
+        ) : null}
+        {!online && !closed ? (
+          <p className="text-muted-foreground text-sm">
+            {offlineBase || draft || report.data
+              ? 'Sin conexión. Los cambios se quedan en este dispositivo. Que un parte esté pendiente no significa que la empresa lo haya recibido.'
+              : 'Sin conexión y sin una copia preparada de este parte. Conéctate para abrirlo.'}
+          </p>
+        ) : null}
         {report.isError ? (
           <div className="border-border flex flex-wrap items-center gap-3 rounded-md border p-3 text-sm">
             <p role="alert" className="min-w-0 flex-1">
@@ -302,6 +394,23 @@ export function VisitReportEditor({
         ) : null}
         {closed && !report.data && !draft && !report.isSuccess ? null : (
           <fieldset disabled={!closed && !canEdit} className="min-w-0 space-y-4">
+            {session?.role === 'admin' &&
+            visit.status === 'scheduled' &&
+            report.isSuccess &&
+            report.isFetchedAfterMount &&
+            !report.data &&
+            !draft ? (
+              <VisitReportTemplatePicker
+                tenantId={tenantId}
+                userId={userId}
+                visitId={visit.id}
+                onRefresh={() => report.refetch()}
+                onApplied={() => setTemplateApplied(true)}
+              />
+            ) : null}
+            <output className="text-muted-foreground block text-sm empty:sr-only">
+              {templateApplied ? 'Plantilla copiada al parte de esta visita.' : ''}
+            </output>
             <div className="space-y-2">
               <div className="flex flex-wrap items-baseline justify-between gap-1">
                 <h3 className="text-sm font-semibold">Lista de comprobación</h3>
@@ -452,10 +561,18 @@ export function VisitReportEditor({
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 className="min-h-11 max-sm:flex-1"
-                isDisabled={busy || conflict || !changed || invalidChecklist}
+                isDisabled={busy || conflict || !changed || invalidChecklist || (!online && queued)}
                 onPress={() => void save()}
               >
-                {busy ? 'Guardando…' : 'Guardar parte'}
+                {busy
+                  ? 'Guardando…'
+                  : online
+                    ? queued
+                      ? 'Enviar parte pendiente'
+                      : 'Guardar parte'
+                    : queued
+                      ? 'Pendiente de enviar'
+                      : 'Guardar para enviar'}
               </Button>
               {changed && !conflict ? (
                 <Button
@@ -480,10 +597,14 @@ export function VisitReportEditor({
                   : changed
                     ? localStorageFailed
                       ? 'Cambios sin guardar; el dispositivo no pudo conservar una copia.'
-                      : 'Borrador en este dispositivo. Guarda el parte para enviarlo a la empresa.'
-                    : report.data
-                      ? `Guardado en la empresa · revisión ${serverRevision}`
-                      : 'Aún no hay un parte guardado.'}
+                      : queued
+                        ? 'Pendiente de enviar · todavía no recibido por la empresa.'
+                        : 'Borrador en este dispositivo. Guarda el parte para enviarlo a la empresa.'
+                    : received !== null
+                      ? `Recibido por la empresa · revisión ${received}`
+                      : report.data
+                        ? `Guardado en la empresa · revisión ${serverRevision}`
+                        : 'Aún no hay un parte guardado.'}
             </output>
             {saveError ? (
               <p role="alert" className="text-destructive text-sm sm:col-span-2">

@@ -23,6 +23,7 @@ import {
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
 import { calendarDate, moveDays, todayInMadrid } from '@/shared/lib/date-range'
 import { useActionLock } from '@/shared/lib/use-action-lock'
+import { browserOnline, useBrowserOnline } from '@/shared/lib/use-browser-online'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import { visitEvidenceAnchor, type EvidenceKind } from '../application/pending-visit-evidence'
@@ -37,12 +38,14 @@ import {
   readVisitReportLocalDraft,
   visitReportDraftKey,
 } from '../application/visit-report-local-draft'
+import { prepareWorkerDay, type PreparedWorkerDay } from '../application/worker-offline-day'
 import type { CalendarVisitLink } from '../domain/calendar-visit-link'
 import { nextAssignedVisit } from '../domain/next-assigned-visit'
 import { visitCanPrepareDelay } from '../domain/visit-delay-notice'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
+import { VisitSwapsPanel } from './visit-swaps-panel'
 import { WorkerAgendaChangeNotices } from './worker-agenda-change-notices'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerClosedVisitHistory } from './worker-closed-visit-history'
@@ -90,6 +93,12 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   const tenantId = session?.tenantId
   const userId = session?.userId
   const queryClient = useQueryClient()
+  const online = useBrowserOnline()
+  const preparationLock = useActionLock()
+  const [prepared, setPrepared] = useState<PreparedWorkerDay | null>(null)
+  const [preparing, setPreparing] = useState(false)
+  const [prepareError, setPrepareError] = useState('')
+  const scopedPrepared = prepared?.scope === `${tenantId}:${userId}` ? prepared : null
   const [date, setDate] = useState(() => calendarVisit?.fecha ?? todayInMadrid())
   const [busyId, setBusyId] = useState<string | null>(null)
   const [visitError, setVisitError] = useState<{ id: string; message: string } | null>(null)
@@ -123,7 +132,9 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       return listMyVisits(tenantId, date, date)
     },
   })
-  const dayVisits = visits.data ?? []
+  const readyDay = scopedPrepared?.date === date ? scopedPrepared : null
+  const offlineDay = online ? null : readyDay
+  const dayVisits = visits.data ?? offlineDay?.visits ?? []
   const openVisitIds = dayVisits
     .filter(({ status }) => status === 'scheduled' || status === 'in_progress')
     .map(({ id }) => id)
@@ -143,10 +154,13 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   )
   const protocols = useQuery({
     ...assignedCentreProtocolsQuery(tenantId, userId, openVisitIds),
-    enabled: Boolean(tenantId && userId && dayOpen && visits.isSuccess && openVisitIds.length),
+    enabled: Boolean(
+      online && tenantId && userId && dayOpen && visits.isSuccess && openVisitIds.length,
+    ),
   })
   const protocolByVisit = new Map(
-    protocols.isSuccess &&
+    online &&
+      protocols.isSuccess &&
       protocols.isFetchedAfterMount &&
       !protocols.isFetching &&
       !protocols.isPaused
@@ -189,11 +203,26 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       : undefined
 
   useEffect(() => {
-    if (dayOpen && visits.isSuccess) {
+    if (dayOpen && (visits.isSuccess || offlineDay)) {
       const target = focusTarget ?? (linkedVisit ? visitAnchor(linkedVisit.id) : null)
       if (target) focusSection(target)
     }
-  }, [dayOpen, focusTarget, linkedVisit, visits.isSuccess])
+  }, [dayOpen, focusTarget, linkedVisit, offlineDay, visits.isSuccess])
+
+  async function prepareOfflineCopy() {
+    if (!tenantId || !userId || !browserOnline() || preparing || !preparationLock.acquire()) return
+    setPreparing(true)
+    setPrepareError('')
+    try {
+      const copy = await prepareWorkerDay(tenantId, userId, date)
+      setPrepared(copy)
+    } catch (error) {
+      setPrepareError(error instanceof Error ? error.message : 'No se pudo preparar esta jornada.')
+    } finally {
+      setPreparing(false)
+      preparationLock.release()
+    }
+  }
 
   function allowLeaveReport() {
     if (reportGuard.current === 'saving') return false
@@ -267,7 +296,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   }
 
   async function changeStatus(visit: VisitSummary, nextStatus: 'in_progress' | 'completed') {
-    if (!tenantId || !statusLock.acquire()) return
+    if (!tenantId || !browserOnline() || !statusLock.acquire()) return
     setBusyId(visit.id)
     setVisitError(null)
     try {
@@ -495,6 +524,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           onOpenVisit={openVisit}
         />
       ) : null}
+      {dayOpen && tenantId && userId && session?.role === 'user' ? (
+        <VisitSwapsPanel
+          key={`${tenantId}:${userId}`}
+          tenantId={tenantId}
+          userId={userId}
+          office={false}
+        />
+      ) : null}
       {tenantId && userId && view === 'history' ? (
         <WorkerClosedVisitHistory tenantId={tenantId} userId={userId} today={today} />
       ) : null}
@@ -507,6 +544,63 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
         />
       ) : null}
       <div hidden={!dayOpen} className="space-y-6">
+        <section
+          aria-label="Jornada sin conexión"
+          className="border-border bg-card space-y-2 rounded-xl border p-4"
+        >
+          <h2 className="font-semibold">Jornada sin conexión</h2>
+          <p className="text-muted-foreground text-sm">
+            Prepara hasta 20 visitas abiertas de este día y sus partes. Mantén Mi jornada abierta:
+            la copia no se conserva al recargar, cerrar, cambiar de empresa o salir. Los borradores
+            sí se guardan en este dispositivo.
+          </p>
+          {readyDay ? (
+            <output className="text-sm">
+              Copia preparada · {readyDay.visits.length}{' '}
+              {readyDay.visits.length === 1 ? 'visita abierta' : 'visitas abiertas'}
+            </output>
+          ) : null}
+          {!online ? (
+            <p className="text-muted-foreground text-sm">
+              Sin conexión. No se inician ni completan visitas. Los partes pendientes se envían
+              manualmente cuando vuelva la conexión.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-h-11"
+              isDisabled={!online || preparing}
+              onPress={() => void prepareOfflineCopy()}
+            >
+              {preparing
+                ? 'Preparando jornada…'
+                : readyDay
+                  ? 'Actualizar copia sin conexión'
+                  : 'Preparar jornada sin conexión'}
+            </Button>
+            {scopedPrepared ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="min-h-11"
+                isDisabled={preparing}
+                onPress={() => {
+                  setPrepared(null)
+                  setPrepareError('')
+                }}
+              >
+                Quitar copia preparada
+              </Button>
+            ) : null}
+          </div>
+          {prepareError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {prepareError}
+            </p>
+          ) : null}
+        </section>
         <section
           className="border-border bg-card grid gap-4 rounded-xl border p-4 sm:px-5"
           aria-label="Resumen de la jornada"
@@ -594,7 +688,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </Button>
           </div>
         ) : null}
-        {protocols.isError && openVisitIds.length > 0 && dayOpen ? (
+        {protocols.isError && online && openVisitIds.length > 0 && dayOpen ? (
           <div className="border-border flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
             <p role="alert">No se pudieron consultar los protocolos de centro.</p>
             <Button
@@ -607,7 +701,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </Button>
           </div>
         ) : null}
-        {visits.isPending ? <WorkerLoading label="Cargando visitas…" /> : null}
+        {visits.isPending && online && !offlineDay ? (
+          <WorkerLoading label="Cargando visitas…" />
+        ) : null}
+        {!online && !visits.data && !offlineDay ? (
+          <p className="text-muted-foreground text-sm">
+            No se ha preparado este día. Conéctate para cargar sus visitas.
+          </p>
+        ) : null}
         {visits.isError ? (
           <WorkerState
             error
@@ -624,7 +725,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             onAction={() => changeView('calendar')}
           />
         ) : null}
-        {groupVisitsByContractDay(visits.data ?? []).map((group) => {
+        {groupVisitsByContractDay(dayVisits).map((group) => {
           const cards = group.visits.map((visit) => (
             <article
               key={visit.id}
@@ -744,7 +845,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     {visit.status === 'scheduled' ? (
                       <Button
                         className="min-h-11"
-                        isDisabled={Boolean(busyId)}
+                        isDisabled={!online || Boolean(busyId)}
                         onPress={() => void changeStatus(visit, 'in_progress')}
                       >
                         {busyId === visit.id ? 'Iniciando…' : 'Iniciar visita'}
@@ -771,7 +872,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     {visit.status === 'in_progress' ? (
                       <Button
                         className="min-h-11"
-                        isDisabled={Boolean(busyId)}
+                        isDisabled={!online || Boolean(busyId)}
                         onPress={() => void changeStatus(visit, 'completed')}
                       >
                         {busyId === visit.id ? 'Completando…' : 'Completar visita'}
@@ -816,6 +917,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                         tenantId={tenantId}
                         userId={session.userId}
                         guardRef={reportGuard}
+                        offlineBase={readyDay?.reports.get(visit.id)}
                       />
                     </section>
                   ) : null}

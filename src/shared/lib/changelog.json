@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.30",
+      "date": "2026-11-28",
+      "title": "v0.0.30",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-61: preparar y enviar partes de visitas sin cobertura",
+            "DEV-86: mapear campos del Excel para altas de personal"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "6f9b6f2764512213b6159fe911973cdd98e0c067",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-61: preparar y enviar partes de visitas sin cobertura"
+        },
+        {
+          "sha": "dd2dba055022e81806f237e5cb9b10e86f9563fe",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-86: mapear campos del Excel para altas de personal"
+        }
+      ]
+    },
+    {
       "version": "0.0.29",
       "date": "2026-11-28",
       "title": "v0.0.29",

@@ -69,6 +69,26 @@ Una aceptación manual queda identificada como tal. No debe presentarse como una
 
 Tras aceptar, la oficina convierte la propuesta una sola vez al destino que se publicó: trabajo o contrato. La conversión no emite una factura automáticamente.
 
+### Importar clientes y centros con identificadores de origen
+
+En **Clientes → Importar clientes y centros**, elige un Excel con una hoja por
+tabla, o un CSV con una sola tabla. Indica un origen estable como `crm-antiguo`,
+asigna las columnas y revisa la vista previa antes de confirmar. Trabaja en
+grupos de hasta 100 filas por hoja. Los datos no seleccionados y el archivo
+completo no se envían.
+
+Cada cliente nuevo usa un ID de ese origen; cada centro, un ID dentro del cliente.
+Para centros de un cliente existente, elígelo explícitamente. También puedes
+mapear el ID cliente de los centros a un cliente **nuevo** de otra hoja en este
+lote. No se crea ningún centro si ese cliente no quedó confirmado.
+
+Un ID ya usado se omite: la importación no edita, restaura ni combina registros.
+Coincidencias de nombre, correo, NIF o dirección se muestran como posibles
+duplicados, no sirven para identificar ni elegir un cliente. El resultado
+separa las filas confirmadas, omitidas y no intentadas. Si alguna respuesta
+no se confirma, consulta el directorio y conserva el mismo origen e ID antes
+de reintentar.
+
 ## 4. Gestionar trabajos y extras
 
 - **Trabajos** permite crear un trabajo manual o consultar uno convertido desde un presupuesto o una incidencia.
@@ -93,6 +113,8 @@ En una visita asignada para hoy y todavía sin iniciar, **Preparar aviso de retr
 1. En **Agenda**, crea una visita indicando cliente, ubicación o activo cuando proceda, técnico, inicio local, duración, prioridad e indicaciones.
 2. Revisa las visitas por día, semana o técnico. Si cambias una cita, registra el motivo de la reprogramación.
 3. Comprueba los posibles solapamientos y las visitas recurrentes generadas antes de confirmar el plan del día.
+
+**Revisar traslados** (solo administración) toma la fecha seleccionada en **Planificación**. Elige la ruta de un técnico o de un equipo cuando no haya técnico asignado y marca al menos dos visitas planificadas. Añade tu estimación entre cada par de visitas. El cálculo compara el final previsto de una visita con el inicio de la siguiente y avisa si se solapan o no queda margen. Si dejas una visita intermedia fuera, el resultado no sirve para comprobar toda la ruta. No se consulta el tráfico, no se comparten direcciones y no se guardan los minutos ni se cambia la agenda.
 
 ### Técnico: Mi jornada y parte
 
@@ -145,6 +167,24 @@ Los CSV de clientes, facturas, cobros y gastos están disponibles para propietar
 ## 10. Ajustes y equipo
 
 En **Ajustes** se configuran los datos de la empresa que aparecen en documentos, la marca, valores por defecto, miembros e invitaciones. Solo propietario y administrador pueden gestionar las opciones autorizadas; el propietario puede nombrar administradores. Revisa especialmente la identificación fiscal, contacto, dirección, cuenta bancaria e IVA antes de emitir documentos.
+
+### Importar invitaciones de personal desde Excel o CSV
+
+En **Trabajadores → Personas**, abre **Importar personas**, selecciona el archivo y,
+si tiene varias hojas, elige una. Basta el correo; el nombre y el rol son opcionales.
+No incluyas DNI ni teléfono en el archivo y no lo subas a servicios externos. Si
+necesitas esos datos, añádelos después desde la ficha privada de la persona.
+
+Comprueba la asignación de columnas y revisa las filas. No se envía nada en la vista
+previa: se omiten los correos duplicados, las personas ya incluidas y las filas
+inválidas. El rol por defecto es Usuario; los accesos de administrador requieren
+una confirmación adicional. Se pueden confirmar hasta 50 invitaciones por envío,
+sujetas a las plazas del plan.
+
+El resultado diferencia correos enviados, accesos confirmados a cuentas existentes,
+omisiones, filas sin confirmar y filas no intentadas. Si se detiene el envío, revisa
+el equipo antes de preparar otro archivo: una respuesta fallida no garantiza que
+el correo de esa fila no haya salido.
 
 ### Equipos de trabajo
 
