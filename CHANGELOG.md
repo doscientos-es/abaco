@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.34
+
+### Nuevas funciones
+
+- DEV-85: confirmar citas y proponer cambios sin mover la agenda
+
 ## 2026-11-28 — v0.0.33
 
 ### Nuevas funciones

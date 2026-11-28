@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.34",
+      "date": "2026-11-28",
+      "title": "v0.0.34",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-85: confirmar citas y proponer cambios sin mover la agenda"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "513bf5635bf864c374fceabe74169a8fe69f7b94",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-85: confirmar citas y proponer cambios sin mover la agenda"
+        }
+      ]
+    },
+    {
       "version": "0.0.33",
       "date": "2026-11-28",
       "title": "v0.0.33",
