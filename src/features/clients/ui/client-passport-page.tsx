@@ -29,6 +29,7 @@ import { loadClientPassport } from '../application/client-passport-actions'
 import { ClientCommercialOverview } from './client-commercial-overview'
 import { ClientHandoffPanel } from './client-handoff-panel'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
+import { CustomerPortalManager } from './customer-portal-manager'
 import { StaffArrivalDialog } from './staff-arrival-dialog'
 
 const CentreEquipmentLabelsDialog = lazy(
@@ -99,6 +100,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
               </Link>
               <Button onPress={() => setCreating({ kind: 'location' })}>Añadir centro</Button>
             </>
+          ) : null}
+          {session?.role === 'admin' && session.tenantId === tenant.id ? (
+            <CustomerPortalManager key={handoffKey} tenantId={tenant.id} clientId={clientId} />
           ) : null}
           <Link to="/clientes" className="text-primary text-sm font-medium hover:underline">
             Volver a clientes

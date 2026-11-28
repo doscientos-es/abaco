@@ -29,3 +29,13 @@ Para ejecutar las pruebas locales de Workers y su simulación de Images, ejecuta
 `node --test cloudflare/worker-smoke.test.mjs`. No usan Supabase real ni consumen la
 cuota de Images. El proyecto `wrangler.probe.jsonc` es solo para pruebas locales y nunca
 debe desplegarse. La simulación no sustituye la validación con imágenes reales en Cloudflare.
+
+El portal de cliente utiliza la entrada Vite independiente `/portal-cliente`, sin el
+arranque de sesión de la app, y `POST /api/customer_portal` en el Worker. El secreto de
+lectura existe solo como fragmento al abrir el enlace y como hash en base de datos; la
+API recibe el valor en el cuerpo, calcula el hash y no registra el cuerpo. Reusa los
+secretos de servidor `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`. Antes de habilitarlo
+verificar la migración de permisos, el Worker y la cabecera de no indexación/no caché
+en el dominio de la aplicación. El smoke local, tras compilar, se ejecuta con
+`node --test cloudflare/customer-portal-smoke.test.mjs` y usa exclusivamente datos de prueba.
+No enviar un enlace real para la verificación.

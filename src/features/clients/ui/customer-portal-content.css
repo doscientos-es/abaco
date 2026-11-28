@@ -1,0 +1,60 @@
+.ml-portal-content {
+  display: grid;
+  gap: 1.25rem;
+  color: var(--foreground, #172317);
+}
+
+.ml-portal-content h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.ml-portal-content ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ml-portal-visit,
+.ml-portal-document {
+  padding: 0.75rem;
+  overflow-wrap: anywhere;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #cfd9cd);
+  border-radius: 0.625rem;
+}
+
+.ml-portal-visit > span,
+.ml-portal-document summary > span {
+  display: block;
+  margin-block-start: 0.25rem;
+  color: var(--muted-foreground, #455744);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.ml-portal-muted {
+  margin: 0;
+  color: var(--muted-foreground, #455744);
+}
+
+.ml-portal-document summary {
+  display: list-item;
+  align-content: center;
+  min-block-size: 2.75rem;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.ml-portal-document summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 0.25rem;
+}
+
+.ml-portal-document p {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+}

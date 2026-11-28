@@ -8,6 +8,7 @@ import { ClientPassportPage } from './client-passport-page'
 const mocks = vi.hoisted(() => ({
   allowed: true,
   sessionTenant: 'tenant',
+  sessionRole: 'admin',
   clientPhone: '612 345 678',
   contactIsActive: true,
   contactPhone: '+44 20 7946 0958',
@@ -80,7 +81,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/clientes">{children}</a>,
 }))
 vi.mock('@/features/auth', () => ({
-  useSession: () => ({ role: 'admin', userId: 'user', tenantId: mocks.sessionTenant }),
+  useSession: () => ({ role: mocks.sessionRole, userId: 'user', tenantId: mocks.sessionTenant }),
   can: () => mocks.allowed,
 }))
 vi.mock('@/shared/store/store', () => ({
@@ -105,6 +106,9 @@ vi.mock('@/features/visits/ui/client-visit-history', () => ({
   ClientVisitHistory: () => <div>Historial de visitas</div>,
 }))
 vi.mock('../application/client-passport-actions', () => ({ loadClientPassport: vi.fn() }))
+vi.mock('./customer-portal-manager', () => ({
+  CustomerPortalManager: () => <div>Portal de cliente</div>,
+}))
 vi.mock('./client-passport-dialog', () => ({ CreatePassportItem: () => null, contactRoles: [] }))
 
 beforeEach(() => {
@@ -112,6 +116,7 @@ beforeEach(() => {
   mocks.actions.clear()
   mocks.allowed = true
   mocks.sessionTenant = 'tenant'
+  mocks.sessionRole = 'admin'
   mocks.contactIsActive = true
   mocks.clientPhone = '612 345 678'
   mocks.contactPhone = '+44 20 7946 0958'
@@ -121,6 +126,16 @@ beforeEach(() => {
 })
 
 describe('client service centres', () => {
+  it('only mounts sharing for the administrator of the active company', () => {
+    const html = () => renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html()).toContain('Portal de cliente')
+    mocks.sessionTenant = 'other'
+    expect(html()).not.toContain('Portal de cliente')
+    mocks.sessionTenant = 'tenant'
+    mocks.sessionRole = 'user'
+    expect(html()).not.toContain('Portal de cliente')
+  })
+
   it('shows centre details and history without reviving legacy assets', () => {
     const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
     expect(html).toContain('Centros de trabajo')
