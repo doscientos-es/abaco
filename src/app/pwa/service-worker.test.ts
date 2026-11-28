@@ -96,6 +96,9 @@ describe('PWA service worker', () => {
     const respondWith = vi.fn()
     for (const request of [
       { method: 'GET', mode: 'navigate', url: 'https://abaco.test/api/report' },
+      { method: 'GET', mode: 'navigate', url: 'https://abaco.test/portal-cliente' },
+      { method: 'GET', mode: 'navigate', url: 'https://abaco.test/portal-cliente/' },
+      { method: 'GET', mode: 'navigate', url: 'https://abaco.test/portal-cliente.html' },
       { method: 'GET', mode: 'cors', url: 'https://supabase.test/rest/v1/clients' },
       { method: 'POST', mode: 'cors', url: 'https://abaco.test/assets/app.js' },
       { method: 'GET', mode: 'cors', url: 'https://abaco.test/private/document.pdf' },

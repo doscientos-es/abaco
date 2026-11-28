@@ -4,6 +4,7 @@ import { handleAsNodeRequest } from 'cloudflare:node'
 
 import aiChat from '../api/ai_chat'
 import aiSuggestion from '../api/ai_suggestion'
+import customerPortal from '../api/customer_portal'
 import stripeAuthorize from '../api/stripe_connect_authorize'
 import stripeCallback from '../api/stripe_connect_callback'
 import stripeWebhook from '../api/stripe_connect_webhook'
@@ -14,6 +15,7 @@ import { publicPricing } from './public-pricing.js'
 const handlers = {
   '/api/ai_chat': aiChat,
   '/api/ai_suggestion': aiSuggestion,
+  '/api/customer_portal': customerPortal,
   '/api/stripe_connect_authorize': stripeAuthorize,
   '/api/stripe_connect_callback': stripeCallback,
   '/api/stripe_connect_webhook': stripeWebhook,

@@ -14,6 +14,14 @@ export default defineConfig({
     tailwindcss(),
     pwaPlugin(),
   ],
+  build: {
+    rolldownOptions: {
+      input: {
+        app: fileURLToPath(new URL('./index.html', import.meta.url)),
+        customerPortal: fileURLToPath(new URL('./portal-cliente.html', import.meta.url)),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -98,6 +98,12 @@ de reintentar.
 - **Extras del trabajo** permite proponer un alcance adicional. Registra la decisión y su evidencia; solo un extra aprobado puede prepararse como borrador de factura.
 - **Rentabilidad del trabajo** separa venta aprobada, facturación sin IVA, efectivo cobrado con IVA y costes registrados. El margen es provisional si faltan costes o gastos por imputar.
 
+### Portal de cliente
+
+En **Clientes → ficha del cliente → Portal de cliente**, administración puede elegir visitas próximas y resúmenes de servicio de versiones cerradas. Pulsa **Revisar vista previa** antes de **Crear enlace de 24 horas**. Los resúmenes solo muestran fecha, versión y recuento de comprobaciones: no incluyen el parte original, fotos, notas o archivos de trabajo. En las visitas elegidas se actualiza el horario y el estado mientras estén próximas o en curso; nunca se añade una visita nueva por defecto.
+
+Copia el enlace al crearlo y envíalo por el canal que tú elijas. Menos Líos no hace el envío. Quien lo reciba puede verlo sin cuenta y también podría reenviarlo. Si se compartió con la persona equivocada, usa **Revocar enlace** en la misma ficha. Caduca tras 24 horas y el enlace no se puede recuperar desde el listado de enlaces compartidos. Al archivar al cliente, sus enlaces se bloquean y ya no muestran contenido, aunque después restaures al cliente. Puedes revocarlos desde su ficha archivada y crear un enlace nuevo tras restaurarlo.
+
 ## 5. Contratos y visitas recurrentes
 
 En **Contratos** puedes crear un contrato manual o consultar uno nacido de un presupuesto aceptado. Registra cliente, ubicación, vigencia, precio y periodicidad de cobro. Añade reglas de frecuencia por temporada y revisa la generación de visitas. Los conflictos de calendario aparecen en la ficha para que la oficina los resuelva.

@@ -1,0 +1,73 @@
+:root {
+  color: #172317;
+  background: #f1f5ef;
+  font:
+    100%/1.55 system-ui,
+    sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.ml-portal-main {
+  display: grid;
+  gap: 1rem;
+  width: min(42rem, calc(100% - 2rem));
+  margin: clamp(1.5rem, 5vw, 4rem) auto;
+  overflow-wrap: anywhere;
+}
+
+.ml-portal-main header {
+  border-bottom: 1px solid #cfd9cd;
+  padding-bottom: 1rem;
+}
+
+.ml-portal-main header img {
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.ml-portal-main h1 {
+  margin: 0.75rem 0 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.ml-portal-main p {
+  margin-block: 0;
+}
+
+.ml-portal-main button {
+  justify-self: start;
+  min-block-size: 2.75rem;
+  border: 1px solid #2a4227;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #223721;
+  padding-inline: 0.875rem;
+  font:
+    600 1rem system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+.ml-portal-main button:focus-visible {
+  outline: 2px solid #223721;
+  outline-offset: 0.25rem;
+}
+
+.ml-portal-main button[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
+.ml-portal-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
