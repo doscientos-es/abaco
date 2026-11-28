@@ -20,6 +20,7 @@ import { Route as ConfirmarRouteImport } from './routes/confirmar'
 import { Route as ContabilidadRouteImport } from './routes/contabilidad'
 import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as EquipoQrRouteImport } from './routes/equipo-qr'
 import { Route as FacturasRouteImport } from './routes/facturas'
 import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as MiJornadaRouteImport } from './routes/mi-jornada'
@@ -103,6 +104,11 @@ const ContratosRoute = ContratosRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipoQrRoute = EquipoQrRouteImport.update({
+  id: '/equipo-qr',
+  path: '/equipo-qr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FacturasRoute = FacturasRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/contabilidad': typeof ContabilidadRoute
   '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/equipo-qr': typeof EquipoQrRoute
   '/facturas': typeof FacturasRouteWithChildren
   '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/confirmar': typeof ConfirmarRoute
   '/contabilidad': typeof ContabilidadRoute
   '/entrar': typeof EntrarRoute
+  '/equipo-qr': typeof EquipoQrRoute
   '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
   '/mis-vacaciones': typeof MisVacacionesRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/contabilidad': typeof ContabilidadRoute
   '/contratos': typeof ContratosRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/equipo-qr': typeof EquipoQrRoute
   '/facturas': typeof FacturasRouteWithChildren
   '/horarios': typeof HorariosRoute
   '/mi-jornada': typeof MiJornadaRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/contabilidad'
     | '/contratos'
     | '/entrar'
+    | '/equipo-qr'
     | '/facturas'
     | '/horarios'
     | '/mi-jornada'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/confirmar'
     | '/contabilidad'
     | '/entrar'
+    | '/equipo-qr'
     | '/horarios'
     | '/mi-jornada'
     | '/mis-vacaciones'
@@ -468,6 +479,7 @@ export interface FileRouteTypes {
     | '/contabilidad'
     | '/contratos'
     | '/entrar'
+    | '/equipo-qr'
     | '/facturas'
     | '/horarios'
     | '/mi-jornada'
@@ -511,6 +523,7 @@ export interface RootRouteChildren {
   ContabilidadRoute: typeof ContabilidadRoute
   ContratosRoute: typeof ContratosRouteWithChildren
   EntrarRoute: typeof EntrarRoute
+  EquipoQrRoute: typeof EquipoQrRoute
   FacturasRoute: typeof FacturasRouteWithChildren
   HorariosRoute: typeof HorariosRoute
   MiJornadaRoute: typeof MiJornadaRoute
@@ -609,6 +622,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipo-qr': {
+      id: '/equipo-qr'
+      path: '/equipo-qr'
+      fullPath: '/equipo-qr'
+      preLoaderRoute: typeof EquipoQrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/facturas': {
@@ -889,6 +909,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContabilidadRoute: ContabilidadRoute,
   ContratosRoute: ContratosRouteWithChildren,
   EntrarRoute: EntrarRoute,
+  EquipoQrRoute: EquipoQrRoute,
   FacturasRoute: FacturasRouteWithChildren,
   HorariosRoute: HorariosRoute,
   MiJornadaRoute: MiJornadaRoute,

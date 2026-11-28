@@ -59,6 +59,42 @@ describe('root session guard', () => {
     queryClient.clear()
   })
 
+  it('keeps the QR tag in the login fragment and allows the worker only after session and plan gates', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Root session guard is missing')
+    const hash = '12345678-1234-4234-8234-123456789abc'
+    const visit = (token: string) =>
+      beforeLoad({
+        context: { queryClient },
+        location: { pathname: '/equipo-qr', href: `/equipo-qr#${token}`, hash: token },
+      } as Parameters<typeof beforeLoad>[0])
+    loadSession.mockResolvedValue(null)
+    await expect(visit(hash)).rejects.toMatchObject({
+      options: { to: '/entrar', search: { redirect: '/equipo-qr' }, hash },
+    })
+    await expect(visit('invalid')).rejects.toMatchObject({
+      options: { to: '/entrar', search: { redirect: '/equipo-qr' } },
+    })
+    const session = {
+      userId: 'worker',
+      email: '',
+      fullName: '',
+      tenantId: 'company',
+      role: 'user',
+      companies: [],
+      needsWelcome: false,
+    }
+    loadSession.mockResolvedValue(session)
+    await queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey })
+    await expect(visit(hash)).resolves.toEqual({ session, hasTenantAccess: true })
+    expect(hydrateStore).not.toHaveBeenCalled()
+    tenantAccess.mockResolvedValue(false)
+    await queryClient.invalidateQueries({ queryKey: ['tenant-access', 'company'] })
+    await expect(visit(hash)).rejects.toMatchObject({ options: { to: '/ajustes' } })
+    queryClient.clear()
+  })
+
   it('uses an already verified in-memory session offline, but never an invalidated one', async () => {
     vi.stubGlobal('navigator', { onLine: false })
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

@@ -13,7 +13,7 @@ import {
 import { PencilSimple } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { CentreProtocolDialog } from '@/features/centre-protocols'
@@ -31,6 +31,10 @@ import { ClientHandoffPanel } from './client-handoff-panel'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
 import { StaffArrivalDialog } from './staff-arrival-dialog'
 
+const CentreEquipmentLabelsDialog = lazy(
+  () => import('@/features/equipment-labels/ui/centre-equipment-labels-dialog'),
+)
+
 export function ClientPassportPage({ clientId }: { clientId: string }) {
   const { tenant, clients, estimates, invoices } = useTenantData()
   const session = useSession()
@@ -44,6 +48,9 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
   })
   const [creating, setCreating] = useState<NewItem | null>(null)
   const [protocolLocation, setProtocolLocation] = useState<{ id: string; name: string } | null>(
+    null,
+  )
+  const [equipmentLocation, setEquipmentLocation] = useState<{ id: string; name: string } | null>(
     null,
   )
   const [arrivalLocation, setArrivalLocation] = useState<{ id: string; name: string } | null>(null)
@@ -301,6 +308,17 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                       Protocolo operativo
                     </Button>
                   ) : null}
+                  {canWrite && location.active && location.kind !== 'billing' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      aria-label={`Etiquetas de equipos en ${location.name}`}
+                      onPress={() => setEquipmentLocation({ id: location.id, name: location.name })}
+                    >
+                      Etiquetas QR
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
             ))}
@@ -346,6 +364,18 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           locationName={protocolLocation.name}
           onClose={() => setProtocolLocation(null)}
         />
+      ) : null}
+      {canWrite && equipmentLocation && session?.userId ? (
+        <Suspense fallback={<output>Cargando etiquetas QR…</output>}>
+          <CentreEquipmentLabelsDialog
+            key={`${tenant.id}:${session.userId}:${equipmentLocation.id}`}
+            tenantId={tenant.id}
+            userId={session.userId}
+            locationId={equipmentLocation.id}
+            name={equipmentLocation.name}
+            onClose={() => setEquipmentLocation(null)}
+          />
+        </Suspense>
       ) : null}
       {creating ? (
         <CreatePassportItem

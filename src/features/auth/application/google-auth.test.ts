@@ -53,6 +53,16 @@ describe('Google authentication', () => {
     expect(mocks.updateUser).not.toHaveBeenCalled()
   })
 
+  it('resumes the protected QR scan without putting its fragment in the Google callback URL', async () => {
+    const target = '/equipo-qr#12345678-1234-4234-8234-123456789abc'
+    await startGoogleAuth(target)
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://app.example.test/acceso-google' },
+    })
+    await expect(finishGoogleAuth('code')).resolves.toBe(target)
+  })
+
   it('records the signup company and referral only after Google authentication', async () => {
     await startGoogleAuth('/', {
       fullName: 'Ana López',
