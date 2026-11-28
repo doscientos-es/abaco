@@ -103,6 +103,19 @@ describe('legacy settings links', () => {
     },
   )
 
+  it('requires personal settings permission before displaying account practice', async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(sessionQuery.queryKey, null)
+    const beforeLoad = Route.options.beforeLoad
+    if (!beforeLoad) throw new Error('Missing settings route guard')
+    await expect(
+      beforeLoad({ context: { queryClient }, search: { tab: 'cuenta' } } as Parameters<
+        typeof beforeLoad
+      >[0]),
+    ).rejects.toMatchObject({ options: { to: '/', replace: true } })
+    queryClient.clear()
+  })
+
   it('keeps a worker on their personal settings instead of redirecting to an admin page', async () => {
     const queryClient = new QueryClient()
     queryClient.setQueryData(sessionQuery.queryKey, session('user'))
