@@ -1,3 +1,4 @@
+import { Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -33,13 +34,19 @@ export function ClosedVisitReport({
         : loadClosedVisitReport(tenantId, visitId),
   })
   if (closed.isPending) return <p>Cargando versión cerrada del parte…</p>
-  if (closed.isError || !closed.data) {
+  if (closed.isError) {
     return (
-      <p role="alert" className="text-destructive">
-        No se pudo consultar la versión cerrada del parte.
-      </p>
+      <div className="space-y-2">
+        <p role="alert" className="text-destructive">
+          No se pudo consultar la versión cerrada del parte.
+        </p>
+        <Button variant="outline" className="min-h-11" onPress={() => void closed.refetch()}>
+          Reintentar consulta
+        </Button>
+      </div>
     )
   }
+  if (!closed.data) return <p>No hay una versión cerrada disponible para esta visita.</p>
   const { snapshot, version, closed_at: closedAt } = closed.data
   return (
     <section className="border-primary/30 bg-primary/5 space-y-3 rounded-lg border p-4 text-sm">

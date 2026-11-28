@@ -25,6 +25,7 @@ import { useActionLock } from '@/shared/lib/use-action-lock'
 import { VisitMapsAction } from '@/shared/ui/contact-actions'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
+import { visitEvidenceAnchor, type EvidenceKind } from '../application/pending-visit-evidence'
 import {
   listMyVisits,
   transitionServiceVisit,
@@ -41,8 +42,10 @@ import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
+import { WorkerClosedVisitHistory } from './worker-closed-visit-history'
 import { WorkerNextVisit } from './worker-next-visit'
 import { WorkerPaperReport } from './worker-paper-report'
+import { WorkerPendingEvidence } from './worker-pending-evidence'
 import { WorkerPendingReports } from './worker-pending-reports'
 import { WorkerVisitStatus } from './worker-visit-status'
 
@@ -61,6 +64,14 @@ function focusSection(anchor: string) {
   target?.focus({ preventScroll: true })
   target?.scrollIntoView({ block: 'start' })
 }
+
+const dayViews = [
+  ['day', 'Día'],
+  ['calendar', 'Calendario'],
+  ['history', 'Historial'],
+  ['evidence', 'Envíos'],
+] as const
+type DayView = (typeof dayViews)[number][0]
 
 const taskStatusLabels = {
   pending: 'Pendiente',
@@ -81,7 +92,9 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   const statusLock = useActionLock()
   const reportGuard = useRef<'saving' | 'unpersisted' | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
-  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [view, setView] = useState<DayView>('day')
+  const dayOpen = view === 'day'
+  const calendarOpen = view === 'calendar'
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
   const [linkedGroupDismissed, setLinkedGroupDismissed] = useState(false)
   const operations = useRef(new Map<string, string>())
@@ -99,14 +112,14 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   const queryKey = ['my-visits', tenantId, date, userId]
   const visits = useQuery({
     queryKey,
-    enabled: Boolean(tenantId),
+    enabled: Boolean(tenantId && dayOpen),
     queryFn: () => {
       if (!tenantId) throw new Error('Selecciona una empresa.')
       return listMyVisits(tenantId, date, date)
     },
   })
   const dayVisits = visits.data ?? []
-  const previewNext = date === today && !calendarOpen && visits.isSuccess
+  const previewNext = date === today && dayOpen && visits.isSuccess
   const nextToday = previewNext ? nextAssignedVisit(dayVisits, now) : undefined
   const futureVisits = useQuery({
     queryKey: ['my-visits', tenantId, 'next', today, userId],
@@ -142,11 +155,11 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       : undefined
 
   useEffect(() => {
-    if (!calendarOpen && visits.isSuccess) {
+    if (dayOpen && visits.isSuccess) {
       const target = focusTarget ?? (linkedVisit ? visitAnchor(linkedVisit.id) : null)
       if (target) focusSection(target)
     }
-  }, [calendarOpen, focusTarget, linkedVisit, visits.isSuccess])
+  }, [dayOpen, focusTarget, linkedVisit, visits.isSuccess])
 
   function allowLeaveReport() {
     if (reportGuard.current === 'saving') return false
@@ -169,34 +182,48 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     if (allowLeaveReport()) selectDay(nextDate)
   }
 
+  function changeView(nextView: DayView) {
+    if (view === nextView || !allowLeaveReport()) return
+    setOpenReportId(null)
+    setFocusTarget(null)
+    setView(nextView)
+  }
+
   function openVisit(nextDate: string, contractId: string | null, visitId: string) {
     if (!allowLeaveReport()) return
     setDate(nextDate)
     setSelectedContractId(contractId)
     setOpenReportId(null)
     setFocusTarget(visitAnchor(visitId))
-    setCalendarOpen(false)
-    if (nextDate === date && !calendarOpen && selectedContractId === contractId) {
+    setView('day')
+    if (nextDate === date && dayOpen && selectedContractId === contractId) {
       focusSection(visitAnchor(visitId))
     }
   }
 
-  function openReport(id: string) {
+  function openReport(id: string, section?: EvidenceKind) {
     if (openReportId !== id && !allowLeaveReport()) return
+    const anchor = section ? visitEvidenceAnchor(id, section) : reportAnchor(id)
     setOpenReportId(id)
-    setFocusTarget(reportAnchor(id))
-    if (openReportId === id) focusSection(reportAnchor(id))
+    setFocusTarget(anchor)
+    if (openReportId === id) focusSection(anchor)
   }
 
-  function resumeReport(nextDate: string, contractId: string | null, visitId: string) {
+  function resumeReport(
+    nextDate: string,
+    contractId: string | null,
+    visitId: string,
+    section?: EvidenceKind,
+  ) {
     if (openReportId !== visitId && !allowLeaveReport()) return
     setDate(nextDate)
     setSelectedContractId(contractId)
     setOpenReportId(visitId)
-    setFocusTarget(reportAnchor(visitId))
-    setCalendarOpen(false)
-    if (nextDate === date && !calendarOpen && openReportId === visitId) {
-      focusSection(reportAnchor(visitId))
+    const anchor = section ? visitEvidenceAnchor(visitId, section) : reportAnchor(visitId)
+    setFocusTarget(anchor)
+    setView('day')
+    if (nextDate === date && dayOpen && openReportId === visitId) {
+      focusSection(anchor)
     }
   }
 
@@ -258,7 +285,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     if (nextStatus === 'completed' && session?.userId) {
       try {
         if ((await listPendingVisitPhotos(session.userId, tenantId, visit.id)).length > 0) {
-          openReport(visit.id)
+          openReport(visit.id, 'photos')
           statusProblem(
             visit.id,
             'Envía o descarta las fotografías pendientes antes de completar la visita.',
@@ -266,7 +293,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           return
         }
       } catch {
-        openReport(visit.id)
+        openReport(visit.id, 'photos')
         statusProblem(
           visit.id,
           'No se pudo comprobar si hay fotografías pendientes en este dispositivo.',
@@ -279,7 +306,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       session?.userId &&
       readVisitIncidentQueue(visitIncidentQueueKey(session.userId, tenantId, visit.id)).length > 0
     ) {
-      openReport(visit.id)
+      openReport(visit.id, 'incidents')
       statusProblem(
         visit.id,
         'Envía o descarta las incidencias pendientes antes de completar la visita.',
@@ -291,7 +318,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
       session?.userId &&
       readFieldEntryQueue(fieldEntryQueueKey(session.userId, tenantId, visit.id)).length > 0
     ) {
-      openReport(visit.id)
+      openReport(visit.id, 'activity')
       statusProblem(
         visit.id,
         'Envía o descarta la actividad pendiente antes de completar la visita.',
@@ -357,33 +384,22 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           </p>
         </div>
         <div className="worker-day-controls">
-          <fieldset className="border-border bg-card flex rounded-lg border p-1">
+          <fieldset className="border-border bg-card grid grid-cols-2 rounded-lg border p-1 sm:flex">
             <legend className="sr-only">Vista de mi jornada</legend>
-            <Button
-              size="sm"
-              className="min-h-10"
-              variant={!calendarOpen ? 'default' : 'ghost'}
-              aria-pressed={!calendarOpen}
-              onPress={() => setCalendarOpen(false)}
-            >
-              Día
-            </Button>
-            <Button
-              size="sm"
-              className="min-h-10"
-              variant={calendarOpen ? 'default' : 'ghost'}
-              aria-pressed={calendarOpen}
-              onPress={() => {
-                if (!allowLeaveReport()) return
-                setOpenReportId(null)
-                setFocusTarget(null)
-                setCalendarOpen(true)
-              }}
-            >
-              Calendario
-            </Button>
+            {dayViews.map(([key, label]) => (
+              <Button
+                key={key}
+                size="sm"
+                className="min-h-11"
+                variant={view === key ? 'default' : 'ghost'}
+                aria-pressed={view === key}
+                onPress={() => changeView(key)}
+              >
+                {label}
+              </Button>
+            ))}
           </fieldset>
-          {!calendarOpen ? (
+          {dayOpen ? (
             <>
               <Button
                 variant="outline"
@@ -433,12 +449,23 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           onSelectDay={(nextDate) => {
             if (!allowLeaveReport()) return
             selectDay(nextDate)
-            setCalendarOpen(false)
+            setView('day')
           }}
           onOpenVisit={openVisit}
         />
       ) : null}
-      <div hidden={calendarOpen} className="space-y-6">
+      {tenantId && userId && view === 'history' ? (
+        <WorkerClosedVisitHistory tenantId={tenantId} userId={userId} today={today} />
+      ) : null}
+      {tenantId && userId && view === 'evidence' ? (
+        <WorkerPendingEvidence
+          tenantId={tenantId}
+          userId={userId}
+          today={today}
+          onOpen={resumeReport}
+        />
+      ) : null}
+      <div hidden={!dayOpen} className="space-y-6">
         <section
           className="border-border bg-card grid gap-4 rounded-xl border p-4 sm:px-5"
           aria-label="Resumen de la jornada"
@@ -501,7 +528,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </dl>
           ) : null}
         </section>
-        {tenantId && userId && !calendarOpen ? (
+        {tenantId && userId && dayOpen ? (
           <WorkerPendingReports
             dayVisits={dayVisits}
             tenantId={tenantId}
@@ -532,10 +559,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             title="Tu agenda está despejada"
             description="No tienes visitas asignadas para este día."
             actionLabel="Ver calendario"
-            onAction={() => {
-              setFocusTarget(null)
-              setCalendarOpen(true)
-            }}
+            onAction={() => changeView('calendar')}
           />
         ) : null}
         {groupVisitsByContractDay(visits.data ?? []).map((group) => {

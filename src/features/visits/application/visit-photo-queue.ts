@@ -96,3 +96,21 @@ export async function clearPendingVisitPhotos() {
   if (typeof indexedDB === 'undefined') return
   await withStore<undefined>('readwrite', (store) => store.clear())
 }
+
+export async function countPendingVisitPhotos(userId: string, tenantId: string) {
+  if (typeof indexedDB === 'undefined' || typeof IDBKeyRange === 'undefined') {
+    throw new Error('Este navegador no permite consultar las fotografías pendientes.')
+  }
+  const prefix = `${userId}:${tenantId}:`
+  const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`)
+  // Fetch only keys, not the locally stored photographs.
+  const keys = await withStore<IDBValidKey[]>('readonly', (store) => store.getAllKeys(range))
+  const counts = new Map<string, number>()
+  for (const key of keys) {
+    if (typeof key !== 'string' || !key.startsWith(prefix)) continue
+    const [visitId, photoId, extra] = key.slice(prefix.length).split(':')
+    if (!visitId || !photoId || extra !== undefined) continue
+    counts.set(visitId, (counts.get(visitId) ?? 0) + 1)
+  }
+  return counts
+}

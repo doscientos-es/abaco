@@ -1,3 +1,5 @@
+import { localVisitQueueCounts } from '@/shared/lib/local-visit-queue-counts'
+
 import type { FieldEntryKind } from './field-entry-actions'
 
 export type PendingFieldEntry = {
@@ -64,4 +66,8 @@ export function clearFieldEntryQueues() {
   } catch {
     // Storage can be unavailable in private browsing.
   }
+}
+
+export function countPendingFieldEntries(userId: string, tenantId: string) {
+  return localVisitQueueCounts(fieldEntryQueueKey(userId, tenantId, ''), readFieldEntryQueue)
 }
