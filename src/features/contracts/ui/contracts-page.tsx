@@ -56,7 +56,10 @@ export function ContractsPage() {
       <WorkspacePageHeading
         title="Contratos"
         actions={
-          <Link to="/trabajos" className="text-primary inline-flex max-md:min-h-11 items-center text-sm underline">
+          <Link
+            to="/trabajos"
+            className="text-primary inline-flex items-center text-sm underline max-md:min-h-11"
+          >
             Ir a planificación
           </Link>
         }
@@ -128,7 +131,10 @@ function ContractsList() {
             className="max-w-xs min-w-0"
           />
         </div>
-        <Link to="/presupuestos" className="text-primary inline-flex max-md:min-h-11 items-center text-sm underline">
+        <Link
+          to="/presupuestos"
+          className="text-primary inline-flex items-center text-sm underline max-md:min-h-11"
+        >
           Ver presupuestos
         </Link>
       </div>

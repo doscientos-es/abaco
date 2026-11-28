@@ -52,7 +52,14 @@ vi.mock('@doscientos/ui', () => {
     IconButton: ({ label }: { label: string }) => <button aria-label={label} />,
     Card: Container,
     CardContent: Container,
-    Table: (props: ComponentProps<'table'>) => <table {...props} />,
+    Table: ({
+      containerClassName,
+      ...props
+    }: ComponentProps<'table'> & { containerClassName?: string }) => (
+      <div className={containerClassName}>
+        <table {...props} />
+      </div>
+    ),
     TableHeader: ({ children }: { children: ReactNode }) => <thead>{children}</thead>,
     TableBody: ({ children }: { children: ReactNode }) => <tbody>{children}</tbody>,
     TableRow: ({ children }: { children: ReactNode }) => <tr>{children}</tr>,
@@ -146,7 +153,9 @@ vi.mock('./contract-template-library', () => ({
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({ tenant: { id: 'tenant' }, clients: [{ id: 'client-1', name: 'Ana' }] }),
 }))
-vi.mock('@/shared/ui/page-states', () => ({ EmptyPanel: () => null }))
+vi.mock('@/shared/ui/page-states', () => ({
+  EmptyPanel: ({ title }: { title: string }) => <h2>{title}</h2>,
+}))
 vi.mock('@/shared/ui/navigable-table-row', () => ({
   NavigableTableRow: ({ children, onOpen }: { children: ReactNode; onOpen: () => void }) => {
     state.rows.push(onOpen)
@@ -194,7 +203,8 @@ describe('contracts navigation', () => {
 
   it('opens the contract list first and switches to contracted jobs', () => {
     const html = renderToStaticMarkup(<ContractsPage />)
-    expect(html).toContain('Contratos de servicio')
+    expect(html).toMatch(/<h1[^>]*>Contratos<\/h1>/)
+    expect(html).toContain('Aún no hay contratos')
     expect(html).toContain('href="/trabajos"')
     expect(state.queries.map((key) => key[0])).toEqual(['service-contracts'])
     state.selectTab?.('trabajos')
@@ -231,8 +241,14 @@ describe('contracts navigation', () => {
   it('shows only active/inactive labels for every persisted lifecycle state', () => {
     state.statuses = ['draft', 'active', 'paused', 'expired', 'canceled']
     const html = renderToStaticMarkup(<ContractsPage />)
-    expect(html.match(/>Activo</g)).toHaveLength(1)
-    expect(html.match(/>Inactivo</g)).toHaveLength(4)
+    const mobile =
+      html.match(/<ul aria-label="Contratos de servicio"[^>]*>[\s\S]*?<\/ul>/)?.[0] ?? ''
+    const desktop =
+      html.match(/<table aria-label="Contratos de servicio">[\s\S]*?<\/table>/)?.[0] ?? ''
+    for (const projection of [mobile, desktop]) {
+      expect(projection.match(/>Activo</g)).toHaveLength(1)
+      expect(projection.match(/>Inactivo</g)).toHaveLength(4)
+    }
     for (const label of ['Borrador', 'Pausado', 'Vencido', 'Cancelado']) {
       expect(html).not.toContain(label)
     }
@@ -247,7 +263,8 @@ describe('contracts navigation', () => {
     }
     expect(html).toContain('aria-label="Personalizar columnas de contratos"')
     expect(html).toContain('>Acciones</span>')
-    expect(html.match(/Pendiente de firma/g)).toHaveLength(2)
+    const table = html.match(/<table aria-label="Contratos de servicio">[\s\S]*?<\/table>/)?.[0]
+    expect(table?.match(/Pendiente de firma/g)).toHaveLength(2)
     expect(html).toContain('href="/contratos/contract-0"')
     expect(html).toContain('aria-label="Acciones de Contrato 0"')
     expect(html).toContain('aria-label="Acciones de Contrato 1"')
@@ -277,7 +294,7 @@ describe('contracts navigation', () => {
     }
   })
 
-  it('renders contract rows with their next collection date and an honest empty state', () => {
+  it('renders contract rows with their next collection date and handles unscheduled collections', () => {
     state.statuses = ['active', 'paused']
     state.collections = [{ due_on: '2026-12-15', source: 'invoice', is_overdue: false }, null]
     const html = renderToStaticMarkup(<ContractsPage />)
