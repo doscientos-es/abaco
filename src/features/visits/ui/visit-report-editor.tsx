@@ -33,6 +33,7 @@ import type { OfflineReportBase } from '../application/worker-offline-day'
 import { localVisitDay } from '../domain/next-assigned-visit'
 import { ClosedVisitReport } from './closed-visit-report'
 import { VisitHandoffsPanel } from './visit-handoffs-panel'
+import { VisitMeasurementsPanel } from './visit-measurements-panel'
 import { VisitPhotosPanel } from './visit-photos-panel'
 import { VisitReportDictation } from './visit-report-dictation'
 import { VisitReportShares } from './visit-report-shares'
@@ -621,6 +622,14 @@ export function VisitReportEditor({
             closed={closed}
           />
         </div>
+        <VisitMeasurementsPanel
+          key={`${tenantId}:${userId}:${visit.id}`}
+          tenantId={tenantId}
+          visitId={visit.id}
+          userId={userId}
+          timezone={visit.timezone}
+          readOnly={closed || session?.tenantId !== tenantId}
+        />
         <div
           id={visitEvidenceAnchor(visit.id, 'incidents')}
           tabIndex={-1}
