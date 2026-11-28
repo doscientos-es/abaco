@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.28
+
+### Nuevas funciones
+
+- DEV-63: dictado local revisable en notas del parte
+- DEV-60: preparar avisos de retraso sin envío automático
+
 ## 2026-11-28 — v0.0.27
 
 ### Nuevas funciones

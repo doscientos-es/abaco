@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.28",
+      "date": "2026-11-28",
+      "title": "v0.0.28",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-63: dictado local revisable en notas del parte",
+            "DEV-60: preparar avisos de retraso sin envío automático"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "4f0614c66b44b569cfb1c53851c6ff0b2ff5f149",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-63: dictado local revisable en notas del parte"
+        },
+        {
+          "sha": "5213a2c3acf2cd86acb810d73e5182e3ea0c0258",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-60: preparar avisos de retraso sin envío automático"
+        }
+      ]
+    },
+    {
       "version": "0.0.27",
       "date": "2026-11-28",
       "title": "v0.0.27",
