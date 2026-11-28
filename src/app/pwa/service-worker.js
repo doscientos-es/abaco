@@ -28,6 +28,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request
   const url = new URL(request.url)
+  if (['/solicitud', '/solicitud/', '/solicitud.html'].includes(url.pathname)) return
   if (
     request.method !== 'GET' ||
     url.origin !== self.location.origin ||
