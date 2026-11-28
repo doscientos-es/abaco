@@ -21,7 +21,7 @@ describe('appointment bearer migration', () => {
   const db = new PGlite({ extensions: { pgcrypto } })
   const migrations = [
     '20261027143444_service_visit_replanning.sql',
-    '20261128152856_visit_appointment_response_links.sql',
+    '20261128155339_visit_appointment_response_links.sql',
   ]
   async function role(value: 'admin' | 'owner' | 'user' | 'anon') {
     await db.exec('reset role')
