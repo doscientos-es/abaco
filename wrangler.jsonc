@@ -38,6 +38,7 @@
     "APP_URL": "https://app.menoslios.com",
     "MENOSLIOS_CAL_BOOKING_URL": "https://cal.com/doscientos/puesta-en-marcha-abaco",
     "REDSYS_ENVIRONMENT": "test",
+    "SUPABASE_URL": "https://vqyicgarlksirpzrngut.supabase.co",
     "VITE_MENOSLIOS_ONBOARDING_BOOKING_URL": "https://cal.com/doscientos/puesta-en-marcha-abaco",
     "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_ZdQk_x87ym6T-cpB-_eX0A_C_68clps",
     "VITE_SUPABASE_URL": "https://vqyicgarlksirpzrngut.supabase.co",
