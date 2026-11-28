@@ -23,4 +23,4 @@ Pruebas locales:
 - `pnpm exec vitest run server/visit-handoff-database.test.ts`: migración y función de asignación real en PGlite con datos ficticios, permisos, dos empresas, ámbito, reasignación, replanificación y repetición de operaciones. PGlite prueba el contrato y reintentos solapados desde el cliente, no sesiones separadas del servidor.
 - `scripts/check-visit-handoffs-browser.cjs`: navegador a 320 px, acciones con Enter, respuesta perdida y clave estable en el reintento. Usa solo respuestas locales interceptadas. Los pasos de arranque están en el encabezado.
 
-Despliegue coordinado: aplicar primero la migración aditiva en el entorno aprobado y después publicar la interfaz. Para retirar el flujo, revertir la interfaz sin borrar el historial almacenado. No se necesita reescribir ningún parte previo.
+Despliegue coordinado: aplicar primero la migración aditiva (`20261128144833_visit_handoffs.sql`) en el entorno aprobado y después publicar la interfaz. Para retirar el flujo, revertir la interfaz sin borrar el historial almacenado. No se necesita reescribir ningún parte previo.

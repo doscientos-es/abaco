@@ -128,7 +128,7 @@ describe('DEV-78 private handoffs between assigned visits', () => {
     await db.exec(assignment.slice(0, boundary))
     await db.exec(
       await readFile(
-        new URL('../supabase/migrations/20261128142800_visit_handoffs.sql', import.meta.url),
+        new URL('../supabase/migrations/20261128144833_visit_handoffs.sql', import.meta.url),
         'utf8',
       ),
     )
