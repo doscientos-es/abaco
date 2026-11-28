@@ -26,11 +26,11 @@ revoke all on public.service_visit_quality_events from public, anon, authenticat
 grant select on public.service_visit_quality_events to authenticated;
 create policy service_visit_quality_events_admin_read
   on public.service_visit_quality_events for select to authenticated
-  using (public.has_role(tenant_id, array['admin']::public.app_role[]));
+  using (public.has_role(tenant_id, array['owner', 'admin']::public.app_role[]));
 
 -- Sample each visit at most once: cohort is its first closure and the displayed
 -- immutable version is the latest available when that ISO week ended in Madrid.
-create function public.list_visit_quality_reviews(
+create function app_private.list_visit_quality_reviews(
   p_tenant uuid, p_week date, p_mode text, p_offset integer default 0
 )
 returns table (
@@ -45,7 +45,7 @@ declare
   end_at timestamptz;
 begin
   if (select auth.uid()) is null
-    or not coalesce(public.has_role(p_tenant, array['admin']::public.app_role[]), false) then
+    or not coalesce(public.has_role(p_tenant, array['owner', 'admin']::public.app_role[]), false) then
     raise exception 'No autorizado para supervisar servicios' using errcode = '42501';
   end if;
   if p_mode is null or p_mode not in ('sample', 'open') or p_offset is null or p_offset < 0
@@ -101,7 +101,7 @@ begin
 end;
 $$;
 
-create function public.record_visit_quality_review(
+create function app_private.record_visit_quality_review(
   p_tenant uuid, p_report uuid, p_expected_revision integer, p_status text,
   p_category text, p_owner uuid, p_operation uuid
 )
@@ -115,7 +115,7 @@ declare
   next_revision integer;
 begin
   if actor is null
-    or not coalesce(public.has_role(p_tenant, array['admin']::public.app_role[]), false)
+    or not coalesce(public.has_role(p_tenant, array['owner', 'admin']::public.app_role[]), false)
     or not coalesce(public.tenant_can_write(p_tenant), false) then
     raise exception 'No autorizado para registrar una revisión' using errcode = '42501';
   end if;
@@ -144,7 +144,7 @@ begin
   end if;
   if p_owner is not null and not exists (
     select 1 from public.memberships m
-    where m.tenant_id = p_tenant and m.user_id = p_owner and m.role = 'admin'
+    where m.tenant_id = p_tenant and m.user_id = p_owner and m.role in ('owner', 'admin')
   ) then raise exception 'Elige un responsable de la administración' using errcode = '22023';
   end if;
   select * into current_event from public.service_visit_quality_events e
@@ -169,9 +169,39 @@ begin
 end;
 $$;
 
-revoke all on function public.list_visit_quality_reviews(uuid,date,text,integer) from public, anon, authenticated;
-revoke all on function public.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid) from public, anon, authenticated;
-grant execute on function public.list_visit_quality_reviews(uuid,date,text,integer) to authenticated;
-grant execute on function public.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid) to authenticated;
+-- Parsed SQL wrappers retain the schema-qualified dependency without granting
+-- callers USAGE on app_private. Only the sealed implementations elevate privileges.
+create function public.list_visit_quality_reviews(
+  p_tenant uuid, p_week date, p_mode text, p_offset integer default 0
+)
+returns table (
+  report_version_id uuid, visit_id uuid, version integer, closed_at timestamptz,
+  visit_title text, client_name text, revision integer, status text, category text, owner_id uuid
+)
+language sql stable security invoker set search_path = ''
+begin atomic
+  select * from app_private.list_visit_quality_reviews(p_tenant, p_week, p_mode, p_offset);
+end;
+
+create function public.record_visit_quality_review(
+  p_tenant uuid, p_report uuid, p_expected_revision integer, p_status text,
+  p_category text, p_owner uuid, p_operation uuid
+)
+returns integer
+language sql security invoker set search_path = ''
+begin atomic
+  select app_private.record_visit_quality_review(
+    p_tenant, p_report, p_expected_revision, p_status, p_category, p_owner, p_operation
+  );
+end;
+
+revoke all on function app_private.list_visit_quality_reviews(uuid,date,text,integer),
+  app_private.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid),
+  public.list_visit_quality_reviews(uuid,date,text,integer),
+  public.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid) from public, anon, authenticated;
+grant execute on function app_private.list_visit_quality_reviews(uuid,date,text,integer),
+  app_private.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid),
+  public.list_visit_quality_reviews(uuid,date,text,integer),
+  public.record_visit_quality_review(uuid,uuid,integer,text,text,uuid,uuid) to authenticated;
 
 notify pgrst, 'reload schema';

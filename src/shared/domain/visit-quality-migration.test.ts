@@ -11,6 +11,8 @@ describe('office-only visit quality persistence', () => {
   const second = '00000000-0000-4000-8000-000000000004'
   const worker = '00000000-0000-4000-8000-000000000005'
   const foreign = '00000000-0000-4000-8000-000000000006'
+  const editor = '00000000-0000-4000-8000-000000000007'
+  const technician = '00000000-0000-4000-8000-000000000008'
   const ids = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
   let week = ''
   let foreignReport = ''
@@ -34,8 +36,8 @@ describe('office-only visit quality persistence', () => {
     )
     await db.query('insert into public.test_tenants values ($1,true),($2,false)', [a, b])
     await db.query(
-      "insert into public.memberships values ($1,$3,'admin'),($1,$4,'admin'),($1,$5,'user'),($2,$6,'admin')",
-      [a, b, admin, second, worker, foreign],
+      "insert into public.memberships values ($1,$3,'admin'),($1,$4,'owner'),($1,$5,'user'),($2,$6,'admin'),($1,$7,'editor'),($1,$8,'technician')",
+      [a, b, admin, second, worker, foreign, editor, technician],
     )
     week =
       (
@@ -165,12 +167,14 @@ describe('office-only visit quality persistence', () => {
   })
 
   it('keeps both QA and its history unavailable to other roles and blocks writes for read-only companies', async () => {
-    await actor(worker)
-    await expect(list(a)).rejects.toMatchObject({ code: '42501' })
-    expect((await history()).rows).toEqual([])
-    await expect(save(a, ids(200), 0, 'reviewed', null, null, 510)).rejects.toMatchObject({
-      code: '42501',
-    })
+    for (const denied of [worker, editor, technician]) {
+      await actor(denied)
+      await expect(list(a)).rejects.toMatchObject({ code: '42501' })
+      expect((await history()).rows).toEqual([])
+      await expect(save(a, ids(200), 0, 'reviewed', null, null, 510)).rejects.toMatchObject({
+        code: '42501',
+      })
+    }
     await actor(foreign)
     expect((await history()).rows).toEqual([])
     expect((await list(b)).rows).toHaveLength(1)
@@ -179,5 +183,39 @@ describe('office-only visit quality persistence', () => {
     })
     await actor('', 'anon')
     await expect(list(a)).rejects.toMatchObject({ code: '42501' })
+  })
+
+  it('keeps implementation inaccessible even to authenticated QA members through the schema', async () => {
+    await db.exec('reset role')
+    const privileges = await db.query(
+      "select has_schema_privilege('authenticated','app_private','USAGE') authenticated, has_schema_privilege('anon','app_private','USAGE') anon",
+    )
+    expect(privileges.rows).toEqual([{ authenticated: false, anon: false }])
+    const wrappers = await db.query(
+      "select n.nspname, p.proname, p.prosecdef from pg_proc p join pg_namespace n on n.oid = p.pronamespace where p.proname in ('list_visit_quality_reviews','record_visit_quality_review') order by n.nspname, p.proname",
+    )
+    expect(wrappers.rows).toEqual([
+      { nspname: 'app_private', proname: 'list_visit_quality_reviews', prosecdef: true },
+      { nspname: 'app_private', proname: 'record_visit_quality_review', prosecdef: true },
+      { nspname: 'public', proname: 'list_visit_quality_reviews', prosecdef: false },
+      { nspname: 'public', proname: 'record_visit_quality_review', prosecdef: false },
+    ])
+    await actor(second)
+    expect((await list(a)).rows).toHaveLength(2)
+    await expect(
+      db.query('select * from app_private.list_visit_quality_reviews($1,$2,$3)', [
+        a,
+        week,
+        'sample',
+      ]),
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      db.query('select app_private.record_visit_quality_review($1,$2,0,$3,null,null,$4)', [
+        a,
+        ids(200),
+        'reviewed',
+        ids(520),
+      ]),
+    ).rejects.toMatchObject({ code: '42501' })
   })
 })

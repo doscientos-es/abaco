@@ -21,8 +21,10 @@ describe('role permissions', () => {
     expect(assignableRoles('user')).toEqual([])
   })
 
-  it('recognizes only the supported legacy worker role', () => {
+  it('recognizes supported legacy owner and worker roles', () => {
     expect(roleFromMembership('technician')).toBe('user')
+    expect(roleFromMembership('owner')).toBe('admin')
+    expect(roleFromMembership('editor')).toBeNull()
     expect(roleFromMembership('admin')).toBe('admin')
     expect(roleFromMembership('unknown')).toBeNull()
   })

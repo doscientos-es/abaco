@@ -49,7 +49,7 @@ async function run() {
         refresh_token: 'fixture',
       },
     )
-    let role = 'admin'
+    let role = 'owner'
     let failRead = true
     let failSave = true
     let listCalls = 0
@@ -85,9 +85,13 @@ async function run() {
         case 'tenants':
           return json([{ id: tenant, name: 'Empresa de pruebas' }])
         case 'memberships':
+          if (url.searchParams.get('select') === 'user_id,profiles(full_name)') {
+            assert.equal(url.searchParams.get('tenant_id'), `eq.${tenant}`)
+            assert.equal(url.searchParams.get('role'), 'in.(owner,admin)')
+          }
           return json([
-            { user_id: admin, role: 'admin', profiles: { full_name: 'Administración de prueba' } },
-            { user_id: owner, role: 'admin', profiles: { full_name: 'Coordinación ficticia' } },
+            { user_id: admin, role, profiles: { full_name: 'Administración de prueba' } },
+            { user_id: owner, role: 'owner', profiles: { full_name: 'Coordinación ficticia' } },
           ])
         case 'list_pending_visit_report_reviews':
           return json([])

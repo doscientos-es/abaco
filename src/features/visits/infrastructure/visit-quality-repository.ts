@@ -44,7 +44,7 @@ export async function listQualityOwners(tenantId: string) {
         .from('memberships')
         .select('user_id,profiles(full_name)')
         .eq('tenant_id', tenantId)
-        .eq('role', 'admin')
+        .in('role', ['owner', 'admin'])
         .order('user_id')
         .range(from, to),
     'No se pudieron comprobar los responsables.',

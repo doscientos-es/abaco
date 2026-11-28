@@ -2,7 +2,9 @@
 create role anon;
 create role authenticated;
 create schema auth;
-create type public.app_role as enum ('admin','user');
+create schema app_private;
+revoke all on schema app_private from public, anon, authenticated;
+create type public.app_role as enum ('owner','admin','editor','technician','user');
 create table public.memberships (
   tenant_id uuid not null, user_id uuid not null, role public.app_role not null,
   primary key (tenant_id,user_id)
