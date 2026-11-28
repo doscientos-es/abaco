@@ -38,6 +38,7 @@ import {
 } from '../application/visit-report-local-draft'
 import type { CalendarVisitLink } from '../domain/calendar-visit-link'
 import { nextAssignedVisit } from '../domain/next-assigned-visit'
+import { visitCanPrepareDelay } from '../domain/visit-delay-notice'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
@@ -48,6 +49,7 @@ import { WorkerPaperReport } from './worker-paper-report'
 import { WorkerPendingEvidence } from './worker-pending-evidence'
 import { WorkerPendingReports } from './worker-pending-reports'
 import { WorkerVisitArrival } from './worker-visit-arrival'
+import { WorkerVisitDelayNotice } from './worker-visit-delay-notice'
 import { WorkerVisitStatus } from './worker-visit-status'
 
 const longDay = new Intl.DateTimeFormat('es-ES', {
@@ -712,6 +714,24 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                       >
                         {busyId === visit.id ? 'Iniciando…' : 'Iniciar visita'}
                       </Button>
+                    ) : null}
+                    {visits.isSuccess &&
+                    dayOpen &&
+                    tenantId &&
+                    userId &&
+                    !busyId &&
+                    visitCanPrepareDelay(visit, now) ? (
+                      <WorkerVisitDelayNotice
+                        key={`${tenantId}:${userId}:${visit.id}:${visit.scheduled_start_at}`}
+                        visit={{
+                          status: visit.status,
+                          scheduled_start_at: visit.scheduled_start_at,
+                          timezone: visit.timezone,
+                        }}
+                        hasSharedContact={/^\+[1-9][0-9]{6,14}$/.test(
+                          arrivalByVisit.get(visit.id)?.contact_phone ?? '',
+                        )}
+                      />
                     ) : null}
                     {visit.status === 'in_progress' ? (
                       <Button
