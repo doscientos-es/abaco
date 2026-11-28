@@ -33,8 +33,8 @@ describe('equipment QR labels, exact assignment and revocation', () => {
   beforeAll(async () => {
     for (const file of [
       'tests/fixtures/equipment-qr.sql',
-      'migrations/20261128164000_equipment_qr_labels.sql',
-      'migrations/20261128164100_register_equipment_for_qr.sql',
+      'migrations/20261128160153_equipment_qr_labels.sql',
+      'migrations/20261128160157_register_equipment_for_qr.sql',
     ]) {
       await db.exec(await readFile(new URL(`../../../supabase/${file}`, import.meta.url), 'utf8'))
     }
