@@ -20,7 +20,10 @@ vi.mock('@/shared/ui/navigable-table-row', () => ({
     return <tr>{children}</tr>
   },
 }))
-vi.mock('@/features/auth', () => ({ useSession: () => ({ role: 'admin', tenantId: 'tenant' }) }))
+vi.mock('@/features/auth', () => ({
+  can: () => true,
+  useSession: () => ({ role: 'admin', tenantId: 'tenant' }),
+}))
 vi.mock('@/shared/store/store', () => ({
   refreshStore: vi.fn(),
   useTenantData: () => ({

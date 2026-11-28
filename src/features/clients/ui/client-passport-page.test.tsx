@@ -8,6 +8,7 @@ import { ClientPassportPage } from './client-passport-page'
 const mocks = vi.hoisted(() => ({
   allowed: true,
   clientPhone: '612 345 678',
+  contactIsActive: true,
   contactPhone: '+44 20 7946 0958',
   address: 'Calle Ávila 4',
   latitude: null as number | null,
@@ -46,7 +47,13 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: {
       contacts: [
-        { id: 'contact', name: 'Ana', active: true, role: 'other', phone: mocks.contactPhone },
+        {
+          id: 'contact',
+          name: 'Ana',
+          active: mocks.contactIsActive,
+          role: 'other',
+          phone: mocks.contactPhone,
+        },
       ],
       locations: [
         {
@@ -78,7 +85,16 @@ vi.mock('@/features/auth', () => ({
 vi.mock('@/shared/store/store', () => ({
   useTenantData: () => ({
     tenant: { id: 'tenant' },
-    clients: [{ id: 'client', name: 'Client TEST', phone: mocks.clientPhone }],
+    estimates: [],
+    invoices: [],
+    clients: [
+      {
+        id: 'client',
+        name: 'Client TEST',
+        email: 'cliente@example.test',
+        phone: mocks.clientPhone,
+      },
+    ],
   }),
 }))
 vi.mock('@/features/incidents/ui/incident-panel', () => ({
@@ -94,6 +110,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.actions.clear()
   mocks.allowed = true
+  mocks.contactIsActive = true
   mocks.clientPhone = '612 345 678'
   mocks.contactPhone = '+44 20 7946 0958'
   mocks.address = 'Calle Ávila 4'
@@ -123,6 +140,8 @@ describe('client service centres', () => {
 
   it('offers secure contact and centre links without including private notes', () => {
     const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('tel:+34612345678')
+    expect(html).toContain('mailto:cliente@example.test')
     expect(html).toContain('https://wa.me/34612345678?text=')
     expect(html).toContain('https://wa.me/442079460958?text=')
     expect(html).toContain('Podrás revisar y editar el mensaje en WhatsApp antes de enviarlo.')
@@ -169,6 +188,13 @@ describe('client service centres', () => {
     expect(html).toContain(' · Ávila')
     expect(html).not.toContain('https://wa.me/')
     expect(html).not.toContain('https://www.google.com/maps/')
+  })
+
+  it('shows a real empty state when existing contacts are inactive', () => {
+    mocks.contactIsActive = false
+    const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('Aún no hay contactos adicionales.')
+    expect(html).not.toContain('Abrir WhatsApp de Ana')
   })
 
   it('does not offer centre creation or editing to a read-only user', () => {
