@@ -72,7 +72,7 @@ describe('visit invoice coverage migration', () => {
     `)
     const migrations = [
       '20261027144101_visit_billing_reviews.sql',
-      '20261128143700_visit_invoice_coverage.sql',
+      '20261128145200_visit_invoice_coverage.sql',
     ]
     for (const migration of migrations)
       await db.exec(
