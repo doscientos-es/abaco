@@ -69,6 +69,26 @@ Una aceptación manual queda identificada como tal. No debe presentarse como una
 
 Tras aceptar, la oficina convierte la propuesta una sola vez al destino que se publicó: trabajo o contrato. La conversión no emite una factura automáticamente.
 
+### Importar clientes y centros con identificadores de origen
+
+En **Clientes → Importar clientes y centros**, elige un Excel con una hoja por
+tabla, o un CSV con una sola tabla. Indica un origen estable como `crm-antiguo`,
+asigna las columnas y revisa la vista previa antes de confirmar. Trabaja en
+grupos de hasta 100 filas por hoja. Los datos no seleccionados y el archivo
+completo no se envían.
+
+Cada cliente nuevo usa un ID de ese origen; cada centro, un ID dentro del cliente.
+Para centros de un cliente existente, elígelo explícitamente. También puedes
+mapear el ID cliente de los centros a un cliente **nuevo** de otra hoja en este
+lote. No se crea ningún centro si ese cliente no quedó confirmado.
+
+Un ID ya usado se omite: la importación no edita, restaura ni combina registros.
+Coincidencias de nombre, correo, NIF o dirección se muestran como posibles
+duplicados, no sirven para identificar ni elegir un cliente. El resultado
+separa las filas confirmadas, omitidas y no intentadas. Si alguna respuesta
+no se confirma, consulta el directorio y conserva el mismo origen e ID antes
+de reintentar.
+
 ## 4. Gestionar trabajos y extras
 
 - **Trabajos** permite crear un trabajo manual o consultar uno convertido desde un presupuesto o una incidencia.

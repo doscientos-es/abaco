@@ -28,6 +28,7 @@ import { WorkspacePageHeading } from '@/shared/ui/workspace-page-chrome'
 
 import { clientImportSchema, clientKeys } from '../application/client-import'
 import { clientTypesQuery } from '../application/client-types'
+import { DirectoryWorkbookDialog } from './directory-workbook-dialog'
 
 const clientColumns = [
   { id: 'name', label: 'Cliente', required: true },
@@ -72,6 +73,7 @@ export function ClientsPage() {
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
   const [toArchive, setToArchive] = useState<Client | null>(null)
+  const [workbookOpen, setWorkbookOpen] = useState(false)
 
   const visible = clients.filter(
     (client) =>
@@ -113,6 +115,9 @@ export function ClientsPage() {
             >
               <UploadSimple aria-hidden="true" className="size-4" />
             </IconButton>
+            <Button variant="outline" onPress={() => setWorkbookOpen(true)}>
+              Importar clientes y centros
+            </Button>
             <Button onPress={create}>Nuevo cliente</Button>
           </>
         }
@@ -142,6 +147,16 @@ export function ClientsPage() {
         </p>
       ) : null}
 
+      {workbookOpen ? (
+        <DirectoryWorkbookDialog
+          key={tenant.id}
+          open
+          tenantId={tenant.id}
+          clients={clients}
+          types={types.data ?? []}
+          onClose={() => setWorkbookOpen(false)}
+        />
+      ) : null}
       <ImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
