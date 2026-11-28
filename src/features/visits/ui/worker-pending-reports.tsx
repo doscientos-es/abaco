@@ -89,6 +89,10 @@ export function WorkerPendingReports({
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium wrap-break-word">{visit.title}</p>
+                  {localDrafts.find(({ visitId }) => visitId === visit.id)?.delivery ===
+                  'queued' ? (
+                    <p className="text-warning text-xs">Pendiente de enviar</p>
+                  ) : null}
                   <time className="text-muted-foreground text-xs" dateTime={day}>
                     {dateLabel.format(calendarDate(day))}
                   </time>

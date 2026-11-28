@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { requirePermission } from '@/features/auth'
+import { requirePermission, useSession } from '@/features/auth'
 import { MyDayPage, parseCalendarVisitLink } from '@/features/visits'
 
 export const Route = createFileRoute('/mi-jornada')({
@@ -11,5 +11,11 @@ export const Route = createFileRoute('/mi-jornada')({
 
 function MyDayRoute() {
   const calendarVisit = parseCalendarVisitLink(Route.useSearch())
-  return <MyDayPage key={JSON.stringify(calendarVisit)} calendarVisit={calendarVisit} />
+  const session = useSession()
+  return (
+    <MyDayPage
+      key={JSON.stringify([session?.userId, session?.tenantId, calendarVisit])}
+      calendarVisit={calendarVisit}
+    />
+  )
 }

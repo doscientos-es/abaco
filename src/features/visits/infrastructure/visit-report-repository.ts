@@ -94,6 +94,33 @@ export async function loadVisitReport(tenantId: string, visitId: string) {
   return (data as VisitReport | null) ?? null
 }
 
+export async function requireVisitReportActor(userId: string) {
+  const { data, error } = await createBrowserSupabaseClient().auth.getSession()
+  if (error || data.session?.user.id !== userId) {
+    throw new Error('Ha cambiado la sesión. Vuelve a abrir la jornada antes de enviar.')
+  }
+}
+
+export async function loadVisitReportReceipt(input: {
+  tenantId: string
+  visitId: string
+  userId: string
+  operationId: string
+}) {
+  const { data, error } = await createBrowserSupabaseClient()
+    .from('service_visit_report_writes')
+    .select('revision,expected_revision,data')
+    .eq('tenant_id', input.tenantId)
+    .eq('visit_id', input.visitId)
+    .eq('actor_id', input.userId)
+    .eq('operation_id', input.operationId)
+    .maybeSingle()
+  if (error) throw new Error('No se pudo comprobar el acuse de recibo del parte.')
+  return (
+    (data as { revision: number; expected_revision: number; data: VisitReportData } | null) ?? null
+  )
+}
+
 export async function saveVisitReport(input: {
   tenantId: string
   visitId: string
@@ -109,5 +136,8 @@ export async function saveVisitReport(input: {
     p_operation_id: input.operationId,
   })
   if (error) throw new Error(error.message)
-  return Number(data)
+  const revision = Number(data)
+  if (!Number.isSafeInteger(revision) || revision < 1)
+    throw new Error('La respuesta no confirma que se haya recibido el parte.')
+  return revision
 }

@@ -191,6 +191,15 @@ async function run() {
         return json(photoId)
       }
       if (name === 'tenant_can_write') return json(true)
+      if (name === 'list_service_visit_handoffs')
+        return json({
+          can_create: false,
+          can_resolve: false,
+          has_scope: false,
+          incoming: [],
+          incoming_has_more: false,
+          outgoing: [],
+        })
       if (name === 'is_platform_superadmin') return json(false)
       if (name === 'my_assigned_visits') {
         const { p_tenant_id, p_from, p_to } = request.postDataJSON()

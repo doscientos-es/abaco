@@ -116,6 +116,15 @@ sus hipótesis; las cifras previstas no son resultados medidos.
    todavía asignadas. No se sincronizan entre dispositivos y se eliminan al cerrar
    sesión. Guarda el parte para enviarlo a la empresa.
 
+   Usa **Preparar jornada sin conexión** antes de salir: carga hasta 20 visitas
+   abiertas asignadas de un solo día y las versiones de sus partes en memoria.
+   Mantén Mi jornada abierta. Al perder conexión no se inician ni cierran visitas
+   ni se envían partes, fotos o avisos automáticamente. **Guardar para enviar**
+   distingue el borrador pendiente; de vuelta en línea, el envío manual verifica
+   asignación y versión. El estado **Recibido** exige la respuesta o el acuse de
+   esa operación exacta. Quitar la copia no borra los borradores; cerrar sesión sí.
+   No se ofrece arranque en frío sin red y falta probar en Android físico.
+
    **Envíos** reúne las fotos, incidencias y registros de actividad locales de las
    visitas asignadas en el periodo consultado. Cada acceso abre la sección exacta
    para reintentar manualmente. Los envíos no se inician automáticamente.
