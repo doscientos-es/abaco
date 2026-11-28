@@ -20,8 +20,8 @@ export default defineConfig({
       ],
       coverage: { include: ['src/features/**/application/**/*.ts'] },
     }),
-    // Reuse workers while keeping each test file in its own VM context.
-    pool: 'vmForks',
+    // Process isolation keeps module mocks and React hook instances scoped to each test file.
+    pool: 'forks',
     maxWorkers: Math.min(4, availableParallelism()),
   },
 })

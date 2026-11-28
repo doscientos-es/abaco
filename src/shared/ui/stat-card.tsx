@@ -46,7 +46,7 @@ export function StatCard({
         <div className="border-border/70 bg-background/40 flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border px-3 py-3 max-md:gap-2 max-md:px-2.5 max-md:py-2.5">
           {icon ? (
             <span
-              className={`flex size-8 shrink-0 items-center justify-center rounded-md [&>svg]:size-4 max-md:size-7 ${iconTone[tone]}`}
+              className={`flex size-8 shrink-0 items-center justify-center rounded-md max-md:size-7 [&>svg]:size-4 ${iconTone[tone]}`}
             >
               {icon}
             </span>

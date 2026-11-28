@@ -159,7 +159,7 @@ describe('acceso a la aprobación del presupuesto', () => {
     state.purpose = 'work'
     const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
     expect(html).toContain('Instalación · obra puntual')
-    expect(html).toContain('Crear trabajo')
+    expect(html).toContain('Planear trabajo')
     expect(html).not.toContain('Crear contrato')
   })
 
