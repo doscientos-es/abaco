@@ -9,6 +9,7 @@ import stripeCallback from '../api/stripe_connect_callback'
 import stripeWebhook from '../api/stripe_connect_webhook'
 import reportPdf from '../api/visit_report_pdf'
 import reportPdfWorker from '../api/visit_report_pdf_worker'
+import { interventionIntake } from './intervention-intake.js'
 import { publicPricing } from './public-pricing.js'
 
 const handlers = {
@@ -37,6 +38,7 @@ server.listen(8080)
 export default {
   fetch(request, env) {
     const { pathname } = new URL(request.url)
+    if (pathname.startsWith('/api/intervention-request/')) return interventionIntake(request, env)
     if (pathname === '/api/public-pricing') return publicPricing(request, env)
     if (pathname.startsWith('/api/')) return handleAsNodeRequest(8080, request)
     return env.ASSETS.fetch(request)

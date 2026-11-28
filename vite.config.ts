@@ -5,10 +5,12 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+import { interventionIntakeEntry } from './scripts/intervention-intake-entry'
 import { pwaPlugin } from './scripts/pwa-plugin'
 
 export default defineConfig({
   plugins: [
+    interventionIntakeEntry(),
     TanStackRouterVite({ autoCodeSplitting: true, routeFileIgnorePattern: '\\.test\\.[jt]sx?$' }),
     react(),
     tailwindcss(),

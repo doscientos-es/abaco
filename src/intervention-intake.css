@@ -1,0 +1,26 @@
+@import 'tailwindcss' source(none);
+@source './intervention-intake.tsx';
+
+@theme {
+  --color-primary: #2a4227;
+  --color-primary-foreground: #fff;
+  --color-background: #f8f9f7;
+  --color-card: #fff;
+  --color-muted: #eaf0e7;
+  --color-muted-foreground: #465442;
+  --color-border: #ced8ca;
+  --color-input: #84957f;
+  --color-destructive: #932216;
+}
+
+:root {
+  color: #20281e;
+  background: #f8f9f7;
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid #446b3f;
+  outline-offset: 2px;
+}

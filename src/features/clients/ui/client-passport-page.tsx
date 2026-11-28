@@ -26,6 +26,7 @@ import { PageNotFound } from '@/shared/ui/page-states'
 
 import { loadHandoffIncidents, loadHandoffTiming } from '../application/client-handoff-actions'
 import { loadClientPassport } from '../application/client-passport-actions'
+import { InterventionIntakePanel } from './add-intervention-request'
 import { ClientCommercialOverview } from './client-commercial-overview'
 import { ClientHandoffPanel } from './client-handoff-panel'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
@@ -312,6 +313,17 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
             clientName={client.name}
             locations={data.locations}
           />
+          {canWrite && session?.tenantId === tenant.id && session.userId ? (
+            <InterventionIntakePanel
+              key={`${tenant.id}:${session.userId}:${clientId}`}
+              tenantId={tenant.id}
+              clientId={clientId}
+              userId={session.userId}
+              centres={data.locations.filter(
+                (centre) => centre.active && centre.kind !== 'billing',
+              )}
+            />
+          ) : null}
           {canWrite && session?.userId ? (
             <Card>
               <CardContent>

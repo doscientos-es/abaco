@@ -1,0 +1,18 @@
+# DEV-83 · Solicitud de intervención con fotos
+
+**Oficina:** en la ficha del cliente, abre **Solicitudes de intervención**. Genera un enlace para el cliente y, si corresponde, para un centro activo. Copia el enlace únicamente para la persona destinataria. La aplicación no lo envía. Dura 72 horas, admite una solicitud y puede revocarse antes de que se use.
+
+**Persona destinataria:** la página aislada solicita solo dirección y disponibilidad, con hasta tres fotografías opcionales. Las vistas previas permanecen en el dispositivo. Nada se sube hasta que el usuario confirma qué datos se enviarán y pulsa **Enviar una solicitud**. Se puede enviar sin fotos. La confirmación no reserva ni modifica una cita.
+
+Una solicitud recibida queda pendiente para la oficina. Se puede marcar como revisada o descartada; esto no elimina datos ni provoca otra acción. No se da acceso a fotos o direcciones de otras solicitudes. No hay borrado programado ni compromiso de retención nuevo: acordar ese ciclo con la empresa antes del uso real. Si se elimina de forma expresa y autorizada el cliente o la empresa en sus propios flujos, sus invitaciones, solicitudes y fotos se eliminan con ellos, nunca las de otra empresa.
+
+## Límites y validación
+
+- La prueba opaca de una sola finalidad se transmite en el fragmento, se quita del navegador al cargar, no se guarda fuera de memoria y solo llega al endpoint del mismo origen. No se comparte el token con el portal de cliente, los partes ni el cambio de citas. La base de datos conserva un hash, no el enlace. Las respuestas llevan `no-store` y no se usan cookies o terceros en la página.
+- El Worker aplica un límite de entrada de 30 peticiones por minuto por IP y ubicación en Cloudflare antes de consultar la invitación. No se guarda la IP en la aplicación o la base de datos. Autoriza el enlace antes de leer el cuerpo, corta flujos que superan el límite e impone 45 segundos máximos de lectura. El estado de una invitación limita los intentos y el SQL comprueba consumo, bloqueo, revocación y caducidad en la misma transacción que registra la solicitud. Mismo envío y UUID, mismo recibo tras pérdida de respuesta. Modificar los datos no reutiliza un recibo.
+- Solo se decodifican JPEG, PNG o WebP reales de hasta 2 MiB y 24 megapíxeles. Se producen JPEG estáticos, sin segmentos de metadatos, de hasta 256 KB. No se conservan originales, rutas, URLs ni un bucket para público. El JPEG y la solicitud se guardan juntos, en tablas privadas; la lectura requiere permiso de oficina y el tenant correcto.
+- Tests locales de invitación, revocación, consumo único/ACL y reversión en PGlite; cuerpo acotado, origen y saneado real de imagen con EXIF ficticio en Node; navegador a 320 px con teclado y API simulada. No se han utilizado imágenes ni datos de clientes.
+
+## Antes de publicar
+
+Aplicar la migración revisada antes del código y comprobar el sitio real sobre el Worker de la app, no sobre un preview compartido. Confirmar la variante de `APP_URL`, el secreto existente de rol de servicio de Supabase, el enlace de Images y la entrega de `/solicitud` fuera del app shell. Verificar el binding `INTERVENTION_IP_LIMITER` y que su espacio de nombres no colisione en la cuenta. Valorar el WAF para abuso distribuido y validar el decodificador real con datos sintéticos antes de habilitar fotos. La protección en código no reemplaza ese límite frente a ataques distribuidos. Si falta Images, conservar la opción sin fotos; nunca guardar los archivos originales por defecto.
