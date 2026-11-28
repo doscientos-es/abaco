@@ -19,6 +19,7 @@ import {
 } from '../domain/team-calendar'
 import type { WorkersSearch } from '../domain/worker-navigation'
 import { TeamCalendarDayNav, TeamWeekGrid } from './team-week-grid'
+import { WeeklyCapacity } from './weekly-capacity'
 
 const dateLabel = new Intl.DateTimeFormat('es-ES', {
   day: 'numeric',
@@ -46,6 +47,7 @@ export function TeamCalendar({
   onSearchChange: (search: WorkersSearch) => void
 }) {
   const [dayFilter, setDayFilter] = useState<TeamDayFilter>('all')
+  const [capacityExpanded, setCapacityExpanded] = useState(false)
   const today = todayInMadrid()
   const selectedDate = search.fecha ?? today
   const days = teamCalendarDays(calendarDate(selectedDate))
@@ -203,6 +205,11 @@ export function TeamCalendar({
           to={last.value}
           selectedDate={selectedDate}
           people={visiblePeople}
+          companyPersonIds={people.map(({ userId }) => userId)}
+          teams={teams}
+          general={activeScope === 'General'}
+          capacityExpanded={capacityExpanded}
+          onCapacityExpand={setCapacityExpanded}
           dayFilter={dayFilter}
           onDayFilterChange={setDayFilter}
         />
@@ -241,6 +248,11 @@ function TeamCalendarResults({
   to,
   selectedDate,
   people,
+  companyPersonIds,
+  teams,
+  general,
+  capacityExpanded,
+  onCapacityExpand,
   dayFilter,
   onDayFilterChange,
 }: {
@@ -251,6 +263,11 @@ function TeamCalendarResults({
   to: string
   selectedDate: string
   people: TeamMember[]
+  companyPersonIds: string[]
+  teams: WorkTeam[]
+  general: boolean
+  capacityExpanded: boolean
+  onCapacityExpand: (open: boolean) => void
   dayFilter: TeamDayFilter
   onDayFilterChange: (filter: TeamDayFilter) => void
 }) {
@@ -298,12 +315,26 @@ function TeamCalendarResults({
     ),
   }))
   return (
-    <TeamWeekGrid
-      days={days}
-      rows={rows}
-      selectedDate={selectedDate}
-      dayFilter={dayFilter}
-      onDayFilterChange={onDayFilterChange}
-    />
+    <>
+      <WeeklyCapacity
+        tenantId={tenantId}
+        userId={userId}
+        from={from}
+        to={to}
+        rows={rows}
+        companyPersonIds={companyPersonIds}
+        teams={teams}
+        general={general}
+        expanded={capacityExpanded}
+        onExpand={onCapacityExpand}
+      />
+      <TeamWeekGrid
+        days={days}
+        rows={rows}
+        selectedDate={selectedDate}
+        dayFilter={dayFilter}
+        onDayFilterChange={onDayFilterChange}
+      />
+    </>
   )
 }
