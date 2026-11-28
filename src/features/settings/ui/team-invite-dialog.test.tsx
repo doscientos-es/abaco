@@ -54,6 +54,7 @@ vi.mock('@phosphor-icons/react', () => ({
 vi.mock('@/features/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof Auth>()),
   useSession: () => ({ userId: 'me', role: 'admin' }),
+  UserAvatar: () => null,
 }))
 vi.mock('@/features/work-teams', () => ({ WorkTeamsSection: () => null }))
 vi.mock('@/features/staff-schedules', async (importOriginal) => ({
@@ -173,7 +174,7 @@ describe('team invitation dialog', () => {
     })
   })
 
-  it('closes the removal confirmation and shows the error when removal fails', async () => {
+  it('keeps the removal confirmation open after failure and allows a retry', async () => {
     query.mockReturnValue({
       isSuccess: true,
       data: [{ userId: 'ana', email: 'ana@example.com', fullName: 'Ana', role: 'user' }],
@@ -192,11 +193,17 @@ describe('team invitation dialog', () => {
     await vi.waitFor(() =>
       expect(render('manage', 'ana')).toContain('No se pudo quitar a la persona.'),
     )
+    expect(confirm.mock.calls[0]?.[0].open).toBe(true)
+    expect(remove).toHaveBeenCalledOnce()
+    expect(remove).toHaveBeenCalledWith('company', 'ana')
+
+    remove.mockResolvedValueOnce({ ok: true })
+    confirm.mock.calls[0]?.[0].onConfirm()
     await vi.waitFor(() => {
-      render('manage', 'ana')
+      expect(render('manage', 'ana')).toContain('Persona quitada del equipo.')
       expect(confirm.mock.calls[0]?.[0].open).toBe(false)
     })
-    expect(remove).toHaveBeenCalledWith('company', 'ana')
+    expect(remove).toHaveBeenCalledTimes(2)
   })
 
   it('updates the selected person role from their profile', async () => {
