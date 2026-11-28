@@ -124,6 +124,12 @@ sus hipótesis; las cifras previstas no son resultados medidos.
    **Historial** permite buscar y consultar los partes cerrados de las visitas todavía
    asignadas, en periodos de 30 días. La consulta es de solo lectura.
 
+   En **Fotografías antes y después** se puede usar la cámara o elegir una imagen,
+   indicar su momento y una descripción, y prepararla antes de enviarla de forma
+   manual. La galería agrupa por momento, permite ordenar por fecha y enlazar
+   una foto de antes con una de después cuando ambas ya están enviadas.
+   Separar una pareja no elimina fotografías ni modifica el informe cerrado.
+
 5. El cierre conserva una instantánea del parte, pone en cola su PDF y crea un pendiente
    de revisión de facturación. La oficina revisa los borradores antes de emitir facturas
    y registra los cobros por separado.
