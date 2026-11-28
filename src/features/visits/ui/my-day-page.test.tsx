@@ -87,6 +87,7 @@ vi.mock('../application/visit-actions', () => ({
   transitionServiceVisit: mocks.transition,
 }))
 vi.mock('./visit-report-editor', () => ({ VisitReportEditor: () => null }))
+vi.mock('./worker-agenda-change-notices', () => ({ WorkerAgendaChangeNotices: () => null }))
 
 import { MyDayPage } from './my-day-page'
 

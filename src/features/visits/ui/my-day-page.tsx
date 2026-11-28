@@ -41,6 +41,7 @@ import { nextAssignedVisit } from '../domain/next-assigned-visit'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
+import { WorkerAgendaChangeNotices } from './worker-agenda-change-notices'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
 import { WorkerClosedVisitHistory } from './worker-closed-visit-history'
 import { WorkerNextVisit } from './worker-next-visit'
@@ -459,6 +460,13 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           ) : null}
         </div>
       </header>
+      {session?.role === 'user' && tenantId && userId ? (
+        <WorkerAgendaChangeNotices
+          key={`${tenantId}:${userId}`}
+          tenantId={tenantId}
+          userId={userId}
+        />
+      ) : null}
       {calendarOpen && tenantId ? (
         <MyVisitsCalendar
           tenantId={tenantId}
