@@ -160,7 +160,10 @@ export function PlanningToolbar({
           </Button>
         ) : null}
         {count !== undefined ? (
-          <output aria-live="polite" className="text-muted-foreground ml-auto text-xs tabular-nums max-md:text-[0.8125rem]">
+          <output
+            aria-live="polite"
+            className="text-muted-foreground ml-auto text-xs tabular-nums max-md:text-[0.8125rem]"
+          >
             {count} {count === 1 ? 'trabajo' : 'trabajos'}
           </output>
         ) : null}
