@@ -2,6 +2,16 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.23
+
+### Nuevas funciones
+
+- Sugerir sustitutos verificables para visitas (DEV-64)
+- Práctica guiada sin datos reales para técnicos (DEV-84)
+- Priorizar las visitas hechas por revisar (DEV-79)
+- Preparar recordatorios de presupuestos sin envío automático (DEV-75)
+- Mover u omitir una única visita recurrente (DEV-69)
+
 ## 2026-11-28 — v0.0.22
 
 ### Nuevas funciones

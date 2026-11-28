@@ -1,6 +1,60 @@
 {
   "releases": [
     {
+      "version": "0.0.23",
+      "date": "2026-11-28",
+      "title": "v0.0.23",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "Sugerir sustitutos verificables para visitas (DEV-64)",
+            "Práctica guiada sin datos reales para técnicos (DEV-84)",
+            "Priorizar las visitas hechas por revisar (DEV-79)",
+            "Preparar recordatorios de presupuestos sin envío automático (DEV-75)",
+            "Mover u omitir una única visita recurrente (DEV-69)"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "4464a10bc6f5112f2c23f5f83abcaca196002ab6",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Sugerir sustitutos verificables para visitas (DEV-64)"
+        },
+        {
+          "sha": "d79708699b54621a566a6b1c861792aa84ace372",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Práctica guiada sin datos reales para técnicos (DEV-84)"
+        },
+        {
+          "sha": "90dc904e654045d0f73745a4da86b4a556d22d5a",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Priorizar las visitas hechas por revisar (DEV-79)"
+        },
+        {
+          "sha": "79b0f8e2dd909088a7e25e210dd4c0f6b2770ecf",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Preparar recordatorios de presupuestos sin envío automático (DEV-75)"
+        },
+        {
+          "sha": "b22e62bd5816cd5358987fdfe5b4a6152241de3b",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "Mover u omitir una única visita recurrente (DEV-69)"
+        }
+      ]
+    },
+    {
       "version": "0.0.22",
       "date": "2026-11-28",
       "title": "v0.0.22",
