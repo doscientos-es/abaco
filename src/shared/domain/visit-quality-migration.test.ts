@@ -28,7 +28,7 @@ describe('office-only visit quality persistence', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../../../supabase/migrations/20261128145000_visit_quality_review.sql',
+          '../../../supabase/migrations/20261128150854_visit_quality_review.sql',
           import.meta.url,
         ),
         'utf8',
