@@ -50,6 +50,14 @@ visitas a equipos y partes del circuito operativo. Consulta el
 [flujo operativo](docs/FLUJO_OPERATIVO.md) y comprueba su fecha y sus referencias
 a ramas antes de usarlo como estado actual.
 
+### Incidencias de asignación
+
+En **Trabajos → Planificación → Por resolver**, la oficina puede revisar las visitas
+planificadas de hoy y mañana que no tienen persona ni equipo, o que coinciden con
+una ausencia aprobada de la persona asignada. Desde ahí se abre el formulario de
+reprogramación existente. La bandeja no confirma cobertura de equipos ni presenta
+una asignación o ausencia como comprobada si sus datos no están disponibles.
+
 ### Calendario del equipo
 
 En **Trabajadores → Calendario**, un administrador puede consultar la semana completa
