@@ -53,7 +53,11 @@ export function VisitReportEditor({
   const session = useSession()
   const key = visitReportDraftKey(userId, tenantId, visit.id)
   const queryKey = ['visit-report', tenantId, visit.id, userId]
-  const report = useQuery({ queryKey, queryFn: () => loadVisitReport(tenantId, visit.id) })
+  const report = useQuery({
+    queryKey,
+    queryFn: () => loadVisitReport(tenantId, visit.id),
+    refetchOnMount: 'always',
+  })
   const [draft, setDraft] = useState<LocalVisitReportDraft | null>(() =>
     readVisitReportLocalDraft(key),
   )
@@ -69,8 +73,14 @@ export function VisitReportEditor({
     report.data?.data ??
     emptyData()
   const serverRevision = report.data?.revision ?? 0
+  // A cached revision can match a draft even though someone changed the report on the
+  // server. Only a settled fetch in this editor can confirm the draft is redundant.
+  const serverReportConfirmed =
+    report.isSuccess && report.isFetchedAfterMount && report.fetchStatus === 'idle'
   const matchesServer = Boolean(
-    draft && report.isSuccess && equalVisitReportData(draft.data, report.data?.data ?? emptyData()),
+    draft &&
+    serverReportConfirmed &&
+    equalVisitReportData(draft.data, report.data?.data ?? emptyData()),
   )
   const changed = Boolean(draft && !matchesServer && confirmedOperation !== draft.operationId)
   const conflict =
@@ -111,7 +121,7 @@ export function VisitReportEditor({
   function change(next: VisitReportData) {
     if (!canEdit) return
     setSaveError(null)
-    if (report.isSuccess && equalVisitReportData(next, report.data?.data ?? emptyData())) {
+    if (serverReportConfirmed && equalVisitReportData(next, report.data?.data ?? emptyData())) {
       resetToServerVersion()
       return
     }

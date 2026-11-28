@@ -101,6 +101,7 @@ async function run() {
     )
     const officeRequests = []
     let createdReport = null
+    let reportReadGate = null
     let visitStatus = 'scheduled'
     let saveAttempts = 0
     let visitStarts = 0
@@ -171,7 +172,10 @@ async function run() {
         return json([
           { visit_id: visitId, contract_id: contractId, contract_title: 'Local ficticio' },
         ])
-      if (name === 'service_visit_reports') return json(createdReport)
+      if (name === 'service_visit_reports') {
+        if (reportReadGate) await reportReadGate
+        return json(createdReport)
+      }
       if (name === 'save_service_visit_report') {
         const args = request.postDataJSON()
         assert.equal(args.p_tenant_id, tenant)
@@ -265,7 +269,12 @@ async function run() {
     const save = visitCard.getByRole('button', { name: 'Guardar parte' })
     await save.click()
     await visitCard.getByText(/No se pudo guardar el parte. Sin conexión/).waitFor()
-    await save.click()
+    const reportRead = (request) =>
+      request.method() === 'GET' && request.url().includes('/rest/v1/service_visit_reports?')
+    await Promise.all([
+      page.waitForResponse((response) => reportRead(response.request()) && response.ok()),
+      save.click(),
+    ])
     await visitCard.getByText('Guardado en la empresa · revisión 1', { exact: true }).waitFor()
     assert.equal(saveAttempts, 2)
     assert.equal(
@@ -274,6 +283,68 @@ async function run() {
         .count(),
       0,
     )
+    // The cached revision matches this device's unsent draft, but another actor
+    // has already committed different content. Reject a cache-only acknowledgement.
+    await visitCard.getByRole('button', { name: 'Ocultar parte' }).click()
+    const draftKey = `abaco:visit-report-draft:v1:${user.id}:${tenant}:${visitId}`
+    const localDraft = {
+      baseRevision: 1,
+      data: createdReport.data,
+      operationId: 'held-read-fixture',
+      visitDay: today,
+    }
+    await page.evaluate(({ key, draft }) => localStorage.setItem(key, JSON.stringify(draft)), {
+      key: draftKey,
+      draft: localDraft,
+    })
+    const newerReportNotes = 'Versión nueva de la empresa (ficticia).'
+    createdReport = {
+      ...createdReport,
+      revision: 2,
+      data: { ...createdReport.data, notes: newerReportNotes },
+    }
+    let resolveReportRead
+    reportReadGate = new Promise((resolve) => {
+      resolveReportRead = resolve
+    })
+    await page.clock.setFixedTime(new Date(`${today}T07:46:00Z`))
+    try {
+      await Promise.all([
+        page.waitForRequest(reportRead),
+        visitCard.getByRole('button', { name: 'Abrir parte' }).click(),
+      ])
+      await visitCard
+        .getByText('Borrador en este dispositivo. Guarda el parte para enviarlo a la empresa.')
+        .waitFor({ timeout: 4_000 })
+      assert.equal(
+        await page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.operationId, draftKey),
+        localDraft.operationId,
+      )
+    } finally {
+      reportReadGate = null
+      resolveReportRead()
+    }
+    await visitCard.getByText('Hay dos versiones del parte', { exact: true }).waitFor()
+    assert.equal(
+      await visitCard.getByLabel('Notas del técnico').inputValue(),
+      localDraft.data.notes,
+    )
+    assert.ok(await page.evaluate((key) => localStorage.getItem(key) !== null, draftKey))
+    await visitCard.getByRole('button', { name: 'Usar versión de la empresa' }).click()
+    assert.equal(await visitCard.getByLabel('Notas del técnico').inputValue(), newerReportNotes)
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), draftKey), null)
+    // A fresh matching response should still clear a genuinely redundant draft.
+    await visitCard.getByRole('button', { name: 'Ocultar parte' }).click()
+    await page.evaluate(({ key, draft }) => localStorage.setItem(key, JSON.stringify(draft)), {
+      key: draftKey,
+      draft: { ...localDraft, baseRevision: 2, data: createdReport.data },
+    })
+    await Promise.all([
+      page.waitForResponse((response) => reportRead(response.request()) && response.ok()),
+      visitCard.getByRole('button', { name: 'Abrir parte' }).click(),
+    ])
+    await visitCard.getByText('Guardado en la empresa · revisión 2', { exact: true }).waitFor()
+    await page.waitForFunction((key) => localStorage.getItem(key) === null, draftKey)
     await page.evaluate(() => {
       const { value: write } = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')
       Storage.prototype.setItem = function (key, value) {
@@ -299,10 +370,7 @@ async function run() {
       'Cambio todavía sin guardar',
     )
     await visitCard.getByRole('button', { name: 'Descartar cambios locales' }).click()
-    assert.equal(
-      await visitCard.getByLabel('Notas del técnico').inputValue(),
-      'Revisión ficticia terminada.',
-    )
+    assert.equal(await visitCard.getByLabel('Notas del técnico').inputValue(), newerReportNotes)
     await nextVisit.getByText('Visita del día siguiente', { exact: true }).waitFor()
     await nextVisit.getByRole('button', { name: 'Ver visita' }).click()
     await page.waitForFunction(
@@ -329,7 +397,7 @@ async function run() {
     await assertNoHorizontalOverflow(page)
     assert.deepEqual(officeRequests, [])
     process.stdout.write(
-      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry and reload.\n',
+      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry, reload and delayed report refresh.\n',
     )
   } finally {
     await browser.close()
