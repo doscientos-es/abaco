@@ -173,6 +173,7 @@ vi.mock('../application/visit-actions', () => ({
   replanContractDay: mocks.replanContract,
   listPlanningVisits: vi.fn(),
   listTechnicians: vi.fn(),
+  transitionServiceVisit: vi.fn(),
 }))
 vi.mock('@/shared/ui/form', () => {
   const Field = ({ label, onChange }: { label: string; onChange: (value: string) => void }) => {
@@ -238,6 +239,34 @@ describe('AgendaPage: nueva visita', () => {
     expect(
       mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
     ).toBe(false)
+  })
+
+  it('offers single-occurrence changes only to an admin and only on scheduled series visits', () => {
+    const rows = [
+      { id: 'series', status: 'scheduled', contract_occurrence_on: '2026-11-13' },
+      { id: 'omitted', status: 'skipped', contract_occurrence_on: '2026-11-13' },
+      { id: 'single', status: 'scheduled' },
+    ] as const
+    mocks.search = { view: 'list', period: 'day', date: '2026-11-13' }
+    mocks.visits = rows.map((row) => ({
+      title: row.id,
+      client_name: 'Cliente',
+      location_name: '',
+      address: '',
+      timezone: 'Europe/Madrid',
+      scheduled_start_at: '2026-11-13T08:00:00Z',
+      scheduled_end_at: '2026-11-13T09:00:00Z',
+      priority: 'normal',
+      notes: '',
+      updated_at: 'initial',
+      ...row,
+    }))
+    const html = render()
+    expect(html.match(/>Mover esta visita</g)).toHaveLength(1)
+    expect(html.match(/>Omitir esta visita</g)).toHaveLength(1)
+    expect(html).toContain('Omitida')
+    mocks.role = 'user'
+    expect(render()).not.toMatch(/Mover esta visita|Omitir esta visita/)
   })
 
   it('muestra la agenda sin el formulario y lo abre mediante el botón', () => {

@@ -52,6 +52,8 @@ import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
 import { PlanningToolbar } from './planning-toolbar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
+import { VisitOccurrenceReference } from './visit-occurrence-scope'
+import { VisitOccurrenceSkipForm } from './visit-occurrence-skip-form'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
 
@@ -109,6 +111,9 @@ export function AgendaPage() {
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const operations = useRef(new Map<string, string>())
   const [pendingChanges, setPendingChanges] = useState<Record<string, CalendarEventChange>>({})
+  const [skipVisitId, setSkipVisitId] = useState<string | null>(null)
+  const [savingOccurrence, setSavingOccurrence] = useState(false)
+  const skipTrigger = useRef<HTMLElement | null>(null)
   const moving = useRef(new Set<string>())
   const related = useRelatedRecordCreation({
     tenantId: tenant.id,
@@ -292,13 +297,14 @@ export function AgendaPage() {
 
   async function refreshReplannedVisits() {
     await Promise.all(
-      ['office-visits', 'my-visits', 'vacation-coverage', 'visit-report'].map((key) =>
-        queryClient.invalidateQueries({ queryKey: [key, tenant.id] }),
+      ['office-visits', 'my-visits', 'vacation-coverage', 'visit-report', 'service-contract'].map(
+        (key) => queryClient.invalidateQueries({ queryKey: [key, tenant.id] }),
       ),
     )
   }
 
   async function saveCalendarChange(change: CalendarEventChange) {
+    if (savingOccurrence) return
     const group = calendarGroupById.get(change.item.id)
     if (!group) return
     const visit = group.visits[0]
@@ -426,13 +432,31 @@ export function AgendaPage() {
     return (
       <div className="flex flex-wrap gap-2">
         {visit.status === 'scheduled' && canReplan ? (
-          <Button
-            variant="outline"
-            isDisabled={Boolean(pendingChanges[visit.id])}
-            onPress={() => setReplanning(visit)}
-          >
-            Reprogramar
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              isDisabled={savingOccurrence || Boolean(pendingChanges[visit.id])}
+              onPress={() => {
+                setSkipVisitId(null)
+                setReplanning(visit)
+              }}
+            >
+              {visit.contract_occurrence_on ? 'Mover esta visita' : 'Reprogramar'}
+            </Button>
+            {visit.contract_occurrence_on ? (
+              <Button
+                variant="outline"
+                isDisabled={savingOccurrence || Boolean(pendingChanges[visit.id])}
+                onPress={({ target }) => {
+                  skipTrigger.current = target instanceof HTMLElement ? target : null
+                  setReplanning(null)
+                  setSkipVisitId(visit.id)
+                }}
+              >
+                Omitir esta visita
+              </Button>
+            ) : null}
+          </>
         ) : null}
         <Button
           variant="outline"
@@ -463,6 +487,23 @@ export function AgendaPage() {
               await refreshReplannedVisits()
             }}
             onCancel={() => setReplanning(null)}
+            onPendingChange={setSavingOccurrence}
+          />
+        ) : null}
+        {skipVisitId === visit.id && canReplan && visit.status === 'scheduled' ? (
+          <VisitOccurrenceSkipForm
+            key={`${visit.id}:${visit.updated_at}`}
+            tenantId={tenant.id}
+            visit={visit}
+            onPendingChange={setSavingOccurrence}
+            onDone={async () => {
+              setSkipVisitId(null)
+              await refreshReplannedVisits()
+            }}
+            onCancel={() => {
+              skipTrigger.current?.focus()
+              setSkipVisitId(null)
+            }}
           />
         ) : null}
         {openReportId === visit.id && session?.userId ? (
@@ -663,6 +704,7 @@ export function AgendaPage() {
                 onItemClick={(item) => {
                   const group = calendarGroupById.get(item.id)
                   if (!group) return
+                  setSkipVisitId(null)
                   setSelectedCalendarVisitId(item.id)
                   setOpenReportId(null)
                   setReplanning(item.editable && group.visits.length === 1 ? group.visits[0] : null)
@@ -711,7 +753,9 @@ export function AgendaPage() {
                     ? `${selectedCalendarGroup.visits.length} trabajos del contrato`
                     : 'Detalle del trabajo'
                 }
+                preventDismissal={savingOccurrence}
                 onClose={() => {
+                  setSkipVisitId(null)
                   setSelectedCalendarVisitId(null)
                   setReplanning(null)
                   setOpenReportId(null)
@@ -747,6 +791,9 @@ export function AgendaPage() {
                             · {statusLabels[selectedCalendarVisit.status]}
                             {selectedCalendarVisit.priority === 'urgent' ? ' · Urgente' : ''}
                           </p>
+                          <VisitOccurrenceReference
+                            date={selectedCalendarVisit.contract_occurrence_on}
+                          />
                           {hasApprovedVacationConflict(selectedCalendarVisit) ? (
                             <p className="text-destructive text-sm font-medium">
                               Ausencia confirmada · revisar cobertura en{' '}
@@ -813,6 +860,7 @@ export function AgendaPage() {
                         · Orden {visit.route_order ?? 0} · {statusLabels[visit.status]}
                         {visit.priority === 'urgent' ? ' · Urgente' : ''}
                       </p>
+                      <VisitOccurrenceReference date={visit.contract_occurrence_on} />
                     </div>
                     {renderVisitActions(visit)}
                   </div>

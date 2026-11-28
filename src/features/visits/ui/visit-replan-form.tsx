@@ -8,6 +8,7 @@ import {
   type TechnicianOption,
   type VisitSummary,
 } from '../application/visit-actions'
+import { VisitOccurrenceScope } from './visit-occurrence-scope'
 
 function localDateTime(instant: string, timezone: string) {
   return new Intl.DateTimeFormat('sv-SE', {
@@ -52,17 +53,20 @@ export function VisitReplanForm({
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const operationIds = useRef(new Map<string, string>())
+  const inFlight = useRef(false)
   const durationMinutes = Number(duration)
-  const valid =
+  const proposedDate = new Date(`${localStart}:00Z`)
+  const validSchedule =
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localStart) &&
+    Number.isFinite(proposedDate.valueOf()) &&
+    proposedDate.toISOString().slice(0, 16) === localStart &&
     Number.isInteger(durationMinutes) &&
     durationMinutes >= 15 &&
-    durationMinutes <= 720 &&
-    reason.trim().length > 0 &&
-    reason.trim().length <= 500
+    durationMinutes <= 720
+  const valid = validSchedule && reason.trim().length > 0 && reason.trim().length <= 500
 
   async function save() {
-    if (busy || !valid) return
+    if (inFlight.current || !valid) return
     const payload = {
       tenantId,
       visitId: visit.id,
@@ -78,6 +82,7 @@ export function VisitReplanForm({
       operationId = crypto.randomUUID()
       operationIds.current.set(key, operationId)
     }
+    inFlight.current = true
     setBusy(true)
     onPendingChange?.(true)
     try {
@@ -90,6 +95,7 @@ export function VisitReplanForm({
         description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
       })
     } finally {
+      inFlight.current = false
       onPendingChange?.(false)
       setBusy(false)
     }
@@ -98,6 +104,11 @@ export function VisitReplanForm({
   return (
     <div className="bg-muted/40 mt-3 w-full space-y-3 rounded-lg border p-4">
       <p className="font-medium">Reprogramar «{visit.title}»</p>
+      <VisitOccurrenceScope
+        visit={visit}
+        action="move"
+        next={validSchedule ? { localStart, durationMinutes } : undefined}
+      />
       <div className="grid gap-3 sm:grid-cols-2">
         <TextField
           label="Nuevo inicio local"
@@ -143,7 +154,11 @@ export function VisitReplanForm({
       </div>
       <div className="flex flex-wrap gap-2">
         <Button isDisabled={busy || !valid} onPress={() => void save()}>
-          {busy ? 'Guardando…' : 'Guardar cambio'}
+          {busy
+            ? 'Guardando…'
+            : visit.contract_occurrence_on
+              ? 'Mover solo esta visita'
+              : 'Guardar cambio'}
         </Button>
         <Button variant="ghost" isDisabled={busy} onPress={onCancel}>
           Cerrar
