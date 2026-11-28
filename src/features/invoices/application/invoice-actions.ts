@@ -1,14 +1,8 @@
-import type { Invoice } from '@/shared/domain/types'
+import { todayInMadrid } from '@/shared/lib/date-range'
 import { createBrowserSupabaseClient } from '@/shared/lib/supabase/client'
 import { currentTenantData, newId, refreshStore } from '@/shared/store/store'
 
-const today = () => new Date().toISOString().slice(0, 10)
-
-export function invoiceOutstandingCents(
-  invoice: Pick<Invoice, 'totalCents' | 'paidCents'>,
-): number {
-  return Math.max(0, invoice.totalCents - invoice.paidCents)
-}
+export { invoiceOutstandingCents } from '../domain/invoice-collection'
 
 export type PaymentResult = { ok: true } | { ok: false; error: string }
 export type PaymentMethod = 'transfer' | 'cash' | 'card' | 'other'
@@ -36,7 +30,7 @@ export async function registerInvoicePayment(
   id: string,
   amountCents: number,
   method: PaymentMethod,
-  date = today(),
+  date = todayInMadrid(),
 ): Promise<PaymentResult> {
   const tenantId = currentTenantData()?.tenant.id
   if (

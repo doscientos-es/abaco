@@ -14,6 +14,7 @@ import { useRef, useState } from 'react'
 
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
+import { todayInMadrid } from '@/shared/lib/date-range'
 import { printDocument } from '@/shared/lib/print-document'
 import { sendDocument } from '@/shared/lib/send-document'
 import { openWhatsapp } from '@/shared/lib/whatsapp'
@@ -28,6 +29,7 @@ import {
   registerInvoicePayment,
   type PaymentMethod,
 } from '../application/invoice-actions'
+import { isCollectionOverdue } from '../domain/invoice-collection'
 import { InvoiceDocument } from './invoice-document'
 import { InvoicePaymentHistory } from './invoice-payment-history'
 
@@ -62,8 +64,7 @@ export function InvoiceDetailPage({ invoiceId }: { invoiceId: string }) {
     ? estimates.find((e) => e.id === invoice.estimateId)
     : undefined
   const { label, variant } = statusConfig[invoice.status]
-  const today = new Date().toISOString().slice(0, 10)
-  const overdue = invoice.status !== 'paid' && invoice.dueDate < today
+  const overdue = isCollectionOverdue(invoice, todayInMadrid())
 
   async function send(inv: Invoice) {
     if (!client?.email) {
@@ -208,7 +209,7 @@ function PaymentForm({ invoice }: { invoice: Invoice }) {
   const queryClient = useQueryClient()
   const owed = invoiceOutstandingCents(invoice)
   const [amount, setAmount] = useState((owed / 100).toFixed(2))
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayInMadrid)
   const [method, setMethod] = useState<PaymentMethod>('transfer')
   const [busy, setBusy] = useState(false)
   if (invoice.status === 'paid') return null

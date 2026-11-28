@@ -24,6 +24,7 @@ import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
 import type { Invoice, InvoiceStatus } from '@/shared/domain/types'
+import { todayInMadrid } from '@/shared/lib/date-range'
 import { sendDocument } from '@/shared/lib/send-document'
 import { refreshStore, useTenantData } from '@/shared/store/store'
 import { fieldIcons } from '@/shared/ui/field-icons'
@@ -31,12 +32,19 @@ import { FilterDisclosure } from '@/shared/ui/filter-disclosure'
 import { SelectField } from '@/shared/ui/form'
 import { NavigableTableRow } from '@/shared/ui/navigable-table-row'
 import { EmptyPanel } from '@/shared/ui/page-states'
-import { StatCard } from '@/shared/ui/stat-card'
 import { TableColumnsCells, TableColumnsHeader, useTableColumns } from '@/shared/ui/table-columns'
 import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
+import { WorklistFilters } from '@/shared/ui/worklist-filters'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
-import { invoiceOutstandingCents } from '../application/invoice-actions'
+import {
+  compareInvoiceDueDate,
+  type InvoiceCollection,
+  invoiceOutstandingCents,
+  isCollectionOverdue,
+  isCollectionPending,
+  matchesInvoiceCollection,
+} from '../domain/invoice-collection'
 import { InvoiceDrafts } from './invoice-drafts'
 import { invoiceTabs, type InvoiceTab } from './invoices-tabs'
 import { VisitBillingReviews } from './visit-billing-reviews'
@@ -65,20 +73,24 @@ export function InvoicesPage() {
   const columns = useTableColumns('facturas', invoiceColumns)
   const { invoices, clients, estimates } = useTenantData()
   const navigate = useNavigate()
-  const requestedTab = useSearch({ from: '/facturas/' }).tab
-  const query = useSearch({ from: '/facturas/' }).q ?? ''
+  const search = useSearch({ from: '/facturas/' })
+  const requestedTab = search.tab
+  const query = search.q ?? ''
+  const collection = search.cobro ?? 'todas'
   const tenantId = session?.role === 'admin' ? session.tenantId : undefined
   const canReviewBilling = Boolean(tenantId)
   const tab = canReviewBilling ? (requestedTab ?? 'emitidas') : 'emitidas'
-  const [status, setStatus] = useState<'all' | InvoiceStatus>('all')
+  const [selectedStatus, setStatus] = useState<'all' | InvoiceStatus>('all')
+  const status = collection === 'todas' ? selectedStatus : 'all'
   const [clientId, setClientId] = useState('all')
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayInMadrid()
   const clientName = (id: string) => clients.find((c) => c.id === id)?.name ?? 'Sin cliente'
   const estimateOf = (id: string | null) => (id ? estimates.find((e) => e.id === id) : undefined)
   const q = query.trim()
   const visible = invoices.filter(
     (i) =>
-      (status === 'all' || i.status === status) &&
+      matchesInvoiceCollection(i, collection, today) &&
+      (collection !== 'todas' || status === 'all' || i.status === status) &&
       (clientId === 'all' || i.clientId === clientId) &&
       fuzzySearch(
         q,
@@ -90,14 +102,23 @@ export function InvoicesPage() {
         i.snapshot?.contractTitle ?? '',
       ),
   )
-  const pager = usePagination(visible, `${status}|${clientId}|${q}`)
+  if (collection !== 'todas') visible.sort(compareInvoiceDueDate)
+  const pager = usePagination(visible, `${collection}|${status}|${clientId}|${q}`)
   const pendingCents = invoices
-    .filter((i) => i.status !== 'paid')
+    .filter(isCollectionPending)
     .reduce((sum, i) => sum + invoiceOutstandingCents(i), 0)
   const overdueCents = invoices
-    .filter((i) => i.status !== 'paid' && i.dueDate < today)
+    .filter((i) => isCollectionOverdue(i, today))
     .reduce((sum, i) => sum + invoiceOutstandingCents(i), 0)
   const filtered = status !== 'all' || clientId !== 'all' || q !== ''
+
+  function selectCollection(next: InvoiceCollection) {
+    setStatus('all')
+    void navigate({
+      to: '/facturas',
+      search: { ...(query ? { q: query } : {}), ...(next === 'todas' ? {} : { cobro: next }) },
+    })
+  }
 
   function clearFilters() {
     setStatus('all')
@@ -111,6 +132,7 @@ export function InvoicesPage() {
       search: {
         ...(tab === 'emitidas' ? {} : { tab }),
         ...(value ? { q: value } : {}),
+        ...(search.cobro ? { cobro: search.cobro } : {}),
       },
       replace: true,
     })
@@ -122,6 +144,7 @@ export function InvoicesPage() {
       search: {
         ...(nextTab === 'emitidas' ? {} : { tab: nextTab }),
         ...(query ? { q: query } : {}),
+        ...(search.cobro ? { cobro: search.cobro } : {}),
       },
     })
   }
@@ -142,13 +165,23 @@ export function InvoicesPage() {
       <div className="flex items-center justify-end gap-1.5">
         <Button
           size="sm"
-          isDisabled={invoiceOutstandingCents(invoice) === 0}
+          className="max-md:min-h-11"
+          isDisabled={!isCollectionPending(invoice)}
           onPress={() => openInvoice(invoice.id)}
         >
-          {invoiceOutstandingCents(invoice) === 0 ? 'Cobrada' : 'Registrar cobro'}
+          {isCollectionPending(invoice)
+            ? 'Registrar cobro'
+            : invoice.status === 'paid'
+              ? 'Cobrada'
+              : 'Sin saldo'}
         </Button>
         <DropdownMenuTrigger>
-          <Button size="sm" variant="outline" aria-label={`Más acciones de ${invoice.number}`}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="max-md:min-h-11 max-md:min-w-11"
+            aria-label={`Más acciones de ${invoice.number}`}
+          >
             <DotsThree weight="bold" className="size-4" />
           </Button>
           <DropdownMenuContent placement="bottom end">
@@ -168,7 +201,7 @@ export function InvoicesPage() {
   }
 
   function dueLabel(invoice: Invoice) {
-    const overdue = invoice.status !== 'paid' && invoice.dueDate < today
+    const overdue = isCollectionOverdue(invoice, today)
     return (
       <span className={overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}>
         {invoice.dueDate}
@@ -190,7 +223,7 @@ export function InvoicesPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <WorkspacePageHeading title="Facturas" />
 
       <WorkspacePageTabs>
@@ -211,43 +244,40 @@ export function InvoicesPage() {
 
       {tab === 'emitidas' ? (
         <section className="space-y-4" aria-label="Facturas emitidas">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard
-              label="Pendiente de cobro"
-              value={formatEuros(pendingCents)}
-              tone="warning"
-              icon={fieldIcons.euro}
-            />
-            <StatCard
-              label="Vencido"
-              value={formatEuros(overdueCents)}
-              tone={overdueCents > 0 ? 'danger' : 'default'}
-              icon={fieldIcons.bank}
-            />
-            <StatCard label="Facturas" value={String(invoices.length)} icon={fieldIcons.file} />
-          </div>
+          <WorklistFilters<InvoiceCollection>
+            label="Seguimiento de cobros"
+            selected={collection}
+            onSelect={selectCollection}
+            options={[
+              { value: 'todas', label: 'Todas', detail: String(invoices.length) },
+              { value: 'pendientes', label: 'Por cobrar', detail: formatEuros(pendingCents) },
+              { value: 'vencidas', label: 'Vencidas', detail: formatEuros(overdueCents) },
+            ]}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <Input
               type="search"
               maxLength={formLimits.searchQuery}
               aria-label="Buscar facturas"
-              className="sm:w-72"
+              className="w-full min-w-0 sm:w-72"
               placeholder="Buscar por nº, concepto, cliente…"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            <SelectField
-              label="Filtrar por estado"
-              hideLabel
-              className="sm:w-44"
-              value={status}
-              options={[
-                { value: 'all', label: 'Todos los estados' },
-                ...Object.entries(statusConfig).map(([value, c]) => ({ value, label: c.label })),
-              ]}
-              onChange={(v) => setStatus(v as 'all' | InvoiceStatus)}
-            />
+            {collection === 'todas' ? (
+              <SelectField
+                label="Filtrar por estado"
+                hideLabel
+                className="min-w-0 sm:w-44"
+                value={status}
+                options={[
+                  { value: 'all', label: 'Todos los estados' },
+                  ...Object.entries(statusConfig).map(([value, c]) => ({ value, label: c.label })),
+                ]}
+                onChange={(v) => setStatus(v as 'all' | InvoiceStatus)}
+              />
+            ) : null}
             <FilterDisclosure activeCount={Number(clientId !== 'all')}>
               <SelectField
                 label="Filtrar por cliente"
@@ -276,12 +306,18 @@ export function InvoicesPage() {
               title={
                 invoices.length === 0
                   ? 'Aún no has hecho ninguna factura'
-                  : 'Ninguna factura coincide'
+                  : !filtered && collection === 'vencidas'
+                    ? 'No hay facturas vencidas'
+                    : !filtered && collection === 'pendientes'
+                      ? 'No hay facturas por cobrar'
+                      : 'Ninguna factura coincide'
               }
               description={
                 invoices.length === 0
                   ? 'Las facturas se preparan como borradores desde un presupuesto aceptado y se emiten tras revisarlas.'
-                  : 'Prueba con otra búsqueda o quita los filtros.'
+                  : !filtered && collection !== 'todas'
+                    ? 'Este seguimiento solo muestra facturas con saldo pendiente.'
+                    : 'Prueba con otra búsqueda o quita los filtros.'
               }
             >
               {invoices.length === 0 ? (
@@ -291,6 +327,10 @@ export function InvoicesPage() {
                 >
                   Ir a mis presupuestos
                 </Link>
+              ) : !filtered && collection !== 'todas' ? (
+                <Button variant="outline" onPress={() => selectCollection('todas')}>
+                  Ver todas
+                </Button>
               ) : (
                 <Button variant="outline" onPress={clearFilters}>
                   Limpiar filtros
@@ -313,16 +353,25 @@ export function InvoicesPage() {
                           <Link
                             to="/facturas/$invoiceId"
                             params={{ invoiceId: invoice.id }}
-                            className="block text-sm leading-snug font-medium underline-offset-4 hover:underline"
+                            className="block text-sm leading-snug font-medium break-words underline-offset-4 hover:underline"
                           >
                             {invoice.concept}
                           </Link>
                         </div>
                         <Badge variant={variant}>{label}</Badge>
                       </div>
-                      <p className="text-sm font-medium whitespace-nowrap tabular-nums md:shrink-0">
-                        {formatEuros(invoice.totalCents)}
-                      </p>
+                      <div className="md:shrink-0">
+                        <p className="text-sm font-medium whitespace-nowrap tabular-nums">
+                          {formatEuros(
+                            collection === 'todas'
+                              ? invoice.totalCents
+                              : invoiceOutstandingCents(invoice),
+                          )}
+                        </p>
+                        {collection !== 'todas' ? (
+                          <p className="text-muted-foreground text-xs">Pendiente</p>
+                        ) : null}
+                      </div>
                       <p className="text-xs md:w-48 md:shrink-0">
                         <Link to="/clientes" className="underline-offset-4 hover:underline">
                           {clientName(invoice.clientId)}
@@ -423,7 +472,16 @@ export function InvoicesPage() {
                             ),
                             total: (
                               <TableCell className="text-right font-medium tabular-nums">
-                                {formatEuros(invoice.totalCents)}
+                                {formatEuros(
+                                  collection === 'todas'
+                                    ? invoice.totalCents
+                                    : invoiceOutstandingCents(invoice),
+                                )}
+                                {collection !== 'todas' ? (
+                                  <span className="text-muted-foreground block text-xs font-normal">
+                                    Pendiente
+                                  </span>
+                                ) : null}
                               </TableCell>
                             ),
                           }}

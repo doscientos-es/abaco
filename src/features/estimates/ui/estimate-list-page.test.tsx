@@ -91,6 +91,7 @@ vi.mock('@doscientos/ui', () => {
 })
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/presupuestos">{children}</a>,
+  useSearch: () => ({}),
   useNavigate: () => mocks.navigate,
 }))
 vi.mock('@/features/auth', () => ({ can, useSession: () => ({ role: mocks.role }) }))
