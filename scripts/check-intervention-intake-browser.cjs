@@ -41,8 +41,14 @@ async function run() {
         assert.deepEqual(req.postDataJSON(), {})
         return json({ available: true })
       }
-      writes.push({ body: req.postDataJSON(), operationId: req.headers()['x-request-operation'] })
-      if (writes.length === 1) return json({ error: 'try_again' }, 503)
+      writes.push({
+        body: req.postDataJSON(),
+        operationId: req.headers()['x-request-operation'],
+        mode: req.headers()['x-request-photo-mode'],
+      })
+      if (writes.length === 1) return json({ error: 'photo_quota' }, 503)
+      if (writes.length === 2) return json({ error: 'photo_unavailable' }, 503)
+      if (writes.length === 3) return json({ error: 'try_again' }, 503)
       return json({ receipt: 'fixture-confirmation' })
     })
     const page = await context.newPage()
@@ -65,10 +71,25 @@ async function run() {
     assert.equal(await submit.isDisabled(), true)
     await consent.press('Space')
     assert.equal(await consent.isChecked(), true)
+    await submit.press('Enter')
+    await page
+      .getByRole('alert')
+      .filter({ hasText: /límite de uso/ })
+      .waitFor()
+    await page.getByRole('img', { name: /Vista previa local/ }).waitFor()
+    assert.equal(await address.inputValue(), 'Calle Ficticia 19')
+    await submit.press('Enter')
+    await page
+      .getByRole('alert')
+      .filter({ hasText: /no está disponible ahora/ })
+      .waitFor()
+    assert.deepEqual(writes[0], writes[1])
+    assert.equal(writes[0].mode, 'photos')
+    assert.equal(writes[0].body.photos.length, 1)
     await page.getByRole('button', { name: 'Quitar foto 1' }).press('Enter')
     assert.equal(await consent.isChecked(), false)
     assert.equal(await submit.isDisabled(), true)
-    assert.equal(writes.length, 0)
+    assert.equal(writes.length, 2)
     await consent.press('Space')
     await page.keyboard.press('Tab')
     assert.equal(await submit.evaluate((e) => e === document.activeElement), true)
@@ -83,9 +104,11 @@ async function run() {
     await submit.press('Enter')
     await page.getByRole('region', { name: 'Solicitud recibida' }).waitFor()
     assert.equal(await page.getByRole('textbox').count(), 0)
-    assert.equal(writes.length, 2)
-    assert.deepEqual(writes[0], writes[1])
-    assert.deepEqual(writes[0].body, {
+    assert.equal(writes.length, 4)
+    assert.deepEqual(writes[2], writes[3])
+    assert.equal(writes[2].mode, 'text')
+    assert.notEqual(writes[2].operationId, writes[0].operationId)
+    assert.deepEqual(writes[2].body, {
       address: 'Calle Ficticia 19',
       availability: 'Jueves por la tarde',
       confirm: true,
@@ -93,8 +116,7 @@ async function run() {
     })
     assert.deepEqual(secureURLs, [
       '/api/intervention-request/check',
-      '/api/intervention-request/submit',
-      '/api/intervention-request/submit',
+      ...Array.from({ length: 4 }, () => '/api/intervention-request/submit'),
     ])
     assert.deepEqual(otherOrigin, [])
     assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0)

@@ -19,6 +19,7 @@ const headers = {
   'sec-fetch-site': 'same-origin',
   'x-request-invitation': token,
   'x-request-operation': operation,
+  'x-request-photo-mode': 'text',
 }
 
 function request(
@@ -129,7 +130,7 @@ describe('DEV-83 same-origin bounded request', () => {
     })
     const streaming = new Request(`${origin}/api/intervention-request/submit`, {
       method: 'POST',
-      headers,
+      headers: { ...headers, 'x-request-photo-mode': 'photos' },
       body: stream,
       duplex: 'half',
     } as RequestInit)
@@ -214,10 +215,14 @@ describe('DEV-83 same-origin bounded request', () => {
     ).rejects.toMatchObject({ status: 422 })
     const rpc = vi.fn().mockResolvedValue({ state: 'pending' })
     const unsupported = await handleInterventionRequest(
-      request('submit', {
-        ...purpose,
-        photos: [original.toString('base64')],
-      }),
+      request(
+        'submit',
+        {
+          ...purpose,
+          photos: [original.toString('base64')],
+        },
+        { 'x-request-photo-mode': 'photos' },
+      ),
       { ...options, rpc },
     )
     expect(unsupported.status).toBe(503)
@@ -226,5 +231,91 @@ describe('DEV-83 same-origin bounded request', () => {
     await expect(sanitizeIntakePhoto(original.toString('base64'), undefined)).rejects.toMatchObject(
       { status: 503 },
     )
+  })
+  it('distinguishes quota, decoder outage and file errors without writing any partial request', async () => {
+    const image = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#fff' } })
+      .jpeg()
+      .toBuffer()
+    const photos = [image.toString('base64')]
+    const post = () =>
+      request('submit', { ...purpose, photos }, { 'x-request-photo-mode': 'photos' })
+    const rpc = vi.fn(async (name) =>
+      name === 'guard_intervention_intake' ? { state: 'pending', photo_attempt: 1 } : true,
+    )
+    const abort = async (code: number) => {
+      throw Object.assign(new Error('Internal fixture'), { code })
+    }
+    const noNetwork = () => {
+      throw new Error('Unexpected transform')
+    }
+    for (const [code, status, error] of [
+      [9422, 503, 'photo_quota'],
+      [9516, 503, 'photo_unavailable'],
+      [9520, 422, 'invalid_photo'],
+    ] as const) {
+      const response = await handleInterventionRequest(post(), {
+        ...options,
+        rpc,
+        images: { info: () => abort(code), input: noNetwork },
+      })
+      expect(response.status).toBe(status)
+      expect(await response.json()).toEqual({ error })
+    }
+    const response = await handleInterventionRequest(post(), {
+      ...options,
+      rpc,
+      images: {
+        info: async () => ({ width: 2, height: 2 }),
+        input: () => ({
+          transform: () => ({
+            output: async () => ({
+              response: () =>
+                new Response(null, { status: 422, headers: { 'cf-resized': 'err=9422' } }),
+            }),
+          }),
+        }),
+      },
+    })
+    expect(await response.json()).toEqual({ error: 'photo_quota' })
+    const wrongHeader = await handleInterventionRequest(request('submit', { ...purpose, photos }), {
+      ...options,
+      rpc,
+    })
+    expect(wrongHeader.status).toBe(400)
+    expect(rpc.mock.calls.every(([name]) => name !== 'submit_intervention_intake')).toBe(true)
+  })
+  it('enforces the project photo ceiling before any IMAGES call and leaves text available', async () => {
+    const image = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#fff' } })
+      .jpeg()
+      .toBuffer()
+    const rpc = vi.fn(async (name) =>
+      name === 'guard_intervention_intake'
+        ? { state: 'pending', photo_attempt: 1 }
+        : name === 'claim_intervention_image_budget'
+          ? false
+          : receipt,
+    )
+    const info = vi.fn()
+    const input = vi.fn()
+    const out = await handleInterventionRequest(
+      request(
+        'submit',
+        { ...purpose, photos: [image.toString('base64')] },
+        { 'x-request-photo-mode': 'photos' },
+      ),
+      { ...options, rpc, images: { info, input } },
+    )
+    expect(await out.json()).toEqual({ error: 'photo_quota' })
+    expect(info).not.toHaveBeenCalled()
+    expect(input).not.toHaveBeenCalled()
+    expect(
+      await (await handleInterventionRequest(request('submit'), { ...options, rpc })).json(),
+    ).toEqual({ receipt })
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      'guard_intervention_intake',
+      'claim_intervention_image_budget',
+      'guard_intervention_intake',
+      'submit_intervention_intake',
+    ])
   })
 })

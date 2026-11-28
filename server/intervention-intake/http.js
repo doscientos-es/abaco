@@ -187,8 +187,13 @@ export function stripJpegMetadata(bytes) {
   return result
 }
 
-export async function sanitizeIntakePhoto(encoded, images) {
-  if (!images) throw failure(503, 'photo_unavailable')
+function photoServiceFailure(code, status) {
+  if (Number(code) === 9422 || status === 429) return failure(503, 'photo_quota')
+  if ([9412, 9413, 9520].includes(Number(code))) return failure(422, 'invalid_photo')
+  return failure(503, 'photo_unavailable')
+}
+
+function decodeIntakePhoto(encoded) {
   let bytes
   try {
     bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0))
@@ -196,12 +201,23 @@ export async function sanitizeIntakePhoto(encoded, images) {
     throw failure(422, 'invalid_photo')
   }
   if (bytes.byteLength > maxPhotoBytes || !isSupported(bytes)) throw failure(422, 'invalid_photo')
+  return bytes
+}
+
+export function sanitizeIntakePhoto(encoded, images) {
+  if (!images) return Promise.reject(failure(503, 'photo_unavailable'))
+  return Promise.resolve().then(() =>
+    sanitizeDecodedIntakePhoto(decodeIntakePhoto(encoded), images),
+  )
+}
+
+async function sanitizeDecodedIntakePhoto(bytes, images) {
   try {
     const input = () => new Blob([bytes]).stream()
     const info = await images.info(input())
     if (
-      !info.width ||
-      !info.height ||
+      !info?.width ||
+      !info?.height ||
       info.width * info.height > maxPixels ||
       Math.max(info.width, info.height) > 8000
     )
@@ -212,16 +228,26 @@ export async function sanitizeIntakePhoto(encoded, images) {
       .output({ format: 'image/jpeg', quality: 76, anim: false })
     const response = result.response()
     if (!response.ok || response.headers.get('content-type') !== 'image/jpeg')
-      throw failure(422, 'invalid_photo')
-    const transformed = await readBounded(response, 600_000)
-    const stripped = stripJpegMetadata(transformed)
+      throw photoServiceFailure(
+        /\berr=(\d{4})\b/.exec(response.headers.get('cf-resized') ?? '')?.[1],
+        response.status,
+      )
+    let stripped
+    try {
+      stripped = stripJpegMetadata(await readBounded(response, 600_000))
+    } catch (err) {
+      if (err instanceof RequestFailure && err.status === 413) throw failure(422, 'invalid_photo')
+      // At this point the processor, not the visitor, produced invalid or truncated JPEG output.
+      throw failure(503, 'photo_unavailable')
+    }
     if (stripped.byteLength > maxOutputBytes) throw failure(422, 'invalid_photo')
     const chunks = []
     for (let offset = 0; offset < stripped.length; offset += 8192)
       chunks.push(String.fromCharCode(...stripped.subarray(offset, offset + 8192)))
     return btoa(chunks.join(''))
-  } catch {
-    throw failure(422, 'invalid_photo')
+  } catch (err) {
+    if (err instanceof RequestFailure) throw err
+    throw photoServiceFailure(err?.code, err?.status)
   }
 }
 
@@ -243,16 +269,25 @@ export async function handleInterventionRequest(request, { appOrigin, rpc, image
   if (!tokenPattern.test(token)) return result(404, { error: 'unavailable_link' })
   const submitting = path.endsWith('/submit')
   const op = submitting ? request.headers.get('x-request-operation') : null
-  if (submitting && (!op || !uuidPattern.test(op))) return result(400, { error: 'invalid_input' })
+  const mode = submitting ? request.headers.get('x-request-photo-mode') : null
+  if (submitting && (!op || !uuidPattern.test(op) || !['photos', 'text'].includes(mode)))
+    return result(400, { error: 'invalid_input' })
   try {
     if (!allowRequest) return result(503, { error: 'try_again' })
     if (!(await allowRequest(request))) return result(429, { error: 'try_later' })
     const lookup = await hash(token)
-    const gate = await rpc('guard_intervention_intake', { p_token_hash: lookup, p_op: op })
+    const gate = await rpc('guard_intervention_intake', {
+      p_token_hash: lookup,
+      p_op: op,
+      p_with_photos: mode === null ? null : mode === 'photos',
+    })
     if (!gate) return result(404, { error: 'unavailable_link' })
+    if (gate.state === 'photo_limited') return result(429, { error: 'photo_attempt_limit' })
     if (gate.state === 'limited') return result(429, { error: 'try_later' })
     if (!submitting) return result(200, { available: true })
-    const body = parsePayload(await readBounded(request))
+    const body = parsePayload(await readBounded(request, mode === 'text' ? 4096 : maxBodyBytes))
+    if (body.photos.length > 0 !== (mode === 'photos'))
+      return result(400, { error: 'invalid_input' })
     const digest = await hash(JSON.stringify(body))
     if (gate.state === 'replay')
       return digest === gate.digest
@@ -260,7 +295,25 @@ export async function handleInterventionRequest(request, { appOrigin, rpc, image
         : result(404, { error: 'unavailable_link' })
     if (gate.state !== 'pending') return result(404, { error: 'unavailable_link' })
     const sanitized = []
-    for (const photo of body.photos) sanitized.push(await sanitizeIntakePhoto(photo, images))
+    if (body.photos.length) {
+      if (!images) return result(503, { error: 'photo_unavailable' })
+      if (!Number.isInteger(gate.photo_attempt)) return result(503, { error: 'photo_unavailable' })
+      const files = body.photos.map(decodeIntakePhoto)
+      let reserved
+      try {
+        reserved = await rpc('claim_intervention_image_budget', {
+          p_token_hash: lookup,
+          p_op: op,
+          p_attempt: gate.photo_attempt,
+          p_count: files.length,
+        })
+      } catch {
+        return result(503, { error: 'photo_unavailable' })
+      }
+      if (reserved === false) return result(503, { error: 'photo_quota' })
+      if (reserved !== true) return result(404, { error: 'unavailable_link' })
+      for (const file of files) sanitized.push(await sanitizeDecodedIntakePhoto(file, images))
+    }
     const receipt = await rpc('submit_intervention_intake', {
       p_token_hash: lookup,
       p_op: op,

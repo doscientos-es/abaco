@@ -10,7 +10,11 @@ create table app_private.intervention_invites (
   revoked_at timestamptz,
   last_attempt_at timestamptz,
   pending_operation uuid,
-  attempts smallint not null default 0 check (attempts between 0 and 8),
+  pending_with_photos boolean,
+  photo_attempts smallint not null default 0 check (photo_attempts between 0 and 8),
+  budgeted_photo_attempt smallint not null default 0 check (budgeted_photo_attempt between 0 and photo_attempts),
+  budgeted_photo_count smallint not null default 0 check (budgeted_photo_count between 0 and 3),
+  text_attempts smallint not null default 0 check (text_attempts between 0 and 3),
   foreign key (client_id,tenant_id) references public.clients(id,tenant_id) on delete cascade,
   unique(id,tenant_id)
 );
@@ -40,10 +44,17 @@ create table app_private.intervention_photos (
   foreign key (request_id,tenant_id) references app_private.intervention_requests(id,tenant_id) on delete cascade,
   unique(request_id,position)
 );
+-- One private aggregate per UTC month, independent of customer, actor and image identity.
+create table app_private.intervention_image_budget (
+  month_start date primary key,
+  reservations integer not null check (reservations between 1 and 500)
+);
+alter table app_private.intervention_image_budget enable row level security;
 alter table app_private.intervention_invites enable row level security;
 alter table app_private.intervention_requests enable row level security;
 alter table app_private.intervention_photos enable row level security;
-revoke all on table app_private.intervention_invites,app_private.intervention_requests,app_private.intervention_photos
+revoke all on table app_private.intervention_invites,app_private.intervention_requests,app_private.intervention_photos,
+  app_private.intervention_image_budget
   from public,anon,authenticated,service_role;
 
 create function app_private.require_intake_office(p_tenant uuid,p_write boolean)
@@ -72,6 +83,12 @@ begin
   if (select count(*) from app_private.intervention_invites i where i.tenant_id=p_tenant
       and i.created_at>now()-interval '1 hour') >= 10 then
     raise exception 'Límite de invitaciones. Inténtalo más tarde' using errcode='P0429';
+  end if;
+  if (select count(*) from app_private.intervention_invites i
+      where i.tenant_id=p_tenant and i.revoked_at is null and i.expires_at>clock_timestamp()
+      and not exists(select 1 from app_private.intervention_requests r
+        where r.invite_id=i.id and r.tenant_id=i.tenant_id)) >= 10 then
+    raise exception 'Límite de enlaces activos. Revoca uno o espera a que caduque' using errcode='P0429';
   end if;
   secret:=encode(extensions.gen_random_bytes(32),'hex');
   insert into app_private.intervention_invites(tenant_id,client_id,centre_id,fingerprint,created_by,expires_at)
@@ -130,9 +147,10 @@ end
 $$;
 
 -- The public HTTP handler alone can use these two narrowly scoped service-role RPCs.
-create function app_private.guard_intervention_intake(p_token_hash text,p_op uuid)
+create function app_private.guard_intervention_intake(p_token_hash text,p_op uuid,p_with_photos boolean)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare target app_private.intervention_invites%rowtype; existing app_private.intervention_requests%rowtype;
+  reserved_attempt smallint;
 begin
   if p_token_hash is null or p_token_hash !~ '^[0-9a-f]{64}$' then return null; end if;
   select * into target from app_private.intervention_invites where fingerprint=p_token_hash for update;
@@ -146,12 +164,50 @@ begin
   end if;
   if not coalesce(public.tenant_can_write(target.tenant_id),false) then return null; end if;
   if p_op is not null then
-    if target.attempts >= 8 or target.last_attempt_at > clock_timestamp()-interval '4 seconds' then
+    if p_with_photos is null then return null; end if;
+    if p_with_photos and target.photo_attempts >= 8 then
+      return jsonb_build_object('state','photo_limited');
+    end if;
+    if (not p_with_photos and target.text_attempts >= 3)
+      or target.last_attempt_at > clock_timestamp()-interval '4 seconds' then
       return jsonb_build_object('state','limited');
     end if;
-    update app_private.intervention_invites set attempts=attempts+1,last_attempt_at=clock_timestamp(),pending_operation=p_op where id=target.id;
+    update app_private.intervention_invites set
+      photo_attempts=photo_attempts+case when p_with_photos then 1 else 0 end,
+      text_attempts=text_attempts+case when p_with_photos then 0 else 1 end,
+      last_attempt_at=clock_timestamp(),pending_operation=p_op,pending_with_photos=p_with_photos
+      where id=target.id returning photo_attempts into reserved_attempt;
+    if p_with_photos then
+      return jsonb_build_object('state','pending','photo_attempt',reserved_attempt);
+    end if;
   end if;
   return jsonb_build_object('state','pending');
+end
+$$;
+
+-- Reserve conservatively before IMAGES. False means exhausted; null means invalid/raced.
+create function app_private.claim_intervention_image_budget(
+  p_token_hash text,p_op uuid,p_attempt integer,p_count integer
+) returns boolean language plpgsql security definer set search_path='' as $$
+declare target app_private.intervention_invites%rowtype; remaining integer;
+begin
+  if p_token_hash is null or p_token_hash !~ '^[0-9a-f]{64}$' or p_op is null
+    or p_attempt is null or p_attempt not between 1 and 8
+    or p_count is null or p_count not between 1 and 3 then return null; end if;
+  select * into target from app_private.intervention_invites where fingerprint=p_token_hash for update;
+  if not found or target.revoked_at is not null or target.expires_at<=clock_timestamp()
+    or target.pending_operation is distinct from p_op or target.pending_with_photos is distinct from true
+    or target.photo_attempts is distinct from p_attempt or target.budgeted_photo_attempt>=p_attempt
+    or not coalesce(public.tenant_can_write(target.tenant_id),false)
+    or exists(select 1 from app_private.intervention_requests r where r.invite_id=target.id) then return null; end if;
+  insert into app_private.intervention_image_budget as b (month_start,reservations)
+    values(date_trunc('month',clock_timestamp() at time zone 'UTC')::date,p_count)
+    on conflict (month_start) do update set reservations=b.reservations+excluded.reservations
+      where b.reservations+excluded.reservations<=500
+    returning reservations into remaining;
+  if remaining is null then return false; end if;
+  update app_private.intervention_invites set budgeted_photo_attempt=p_attempt,budgeted_photo_count=p_count where id=target.id;
+  return true;
 end
 $$;
 
@@ -175,7 +231,13 @@ begin
     if existing.operation_id=p_op and existing.fingerprint=p_digest then return existing.id; end if;
     return null;
   end if;
-  if target.pending_operation is distinct from p_op or not coalesce(public.tenant_can_write(target.tenant_id),false)
+  if target.pending_operation is distinct from p_op
+    or target.pending_with_photos is distinct from (jsonb_array_length(p_photos)>0)
+    or (target.pending_with_photos and (
+      target.budgeted_photo_attempt is distinct from target.photo_attempts
+      or target.budgeted_photo_count is distinct from jsonb_array_length(p_photos)
+    ))
+    or not coalesce(public.tenant_can_write(target.tenant_id),false)
     or not exists(select 1 from public.clients c where c.id=target.client_id and c.tenant_id=target.tenant_id and c.archived_at is null)
     or (target.centre_id is not null and not exists(select 1 from public.service_locations l where l.id=target.centre_id
       and l.client_id=target.client_id and l.tenant_id=target.tenant_id and l.active and l.kind<>'billing')) then return null; end if;
@@ -208,9 +270,12 @@ begin atomic select app_private.update_intervention_intake(p_tenant,p_invite,p_a
 create function public.read_intervention_photo(p_tenant uuid,p_photo uuid)
 returns text language sql stable security invoker set search_path=''
 begin atomic select app_private.read_intervention_photo(p_tenant,p_photo); end;
-create function public.guard_intervention_intake(p_token_hash text,p_op uuid)
+create function public.guard_intervention_intake(p_token_hash text,p_op uuid,p_with_photos boolean)
 returns jsonb language sql security invoker set search_path=''
-begin atomic select app_private.guard_intervention_intake(p_token_hash,p_op); end;
+begin atomic select app_private.guard_intervention_intake(p_token_hash,p_op,p_with_photos); end;
+create function public.claim_intervention_image_budget(p_token_hash text,p_op uuid,p_attempt integer,p_count integer)
+returns boolean language sql security invoker set search_path=''
+begin atomic select app_private.claim_intervention_image_budget(p_token_hash,p_op,p_attempt,p_count); end;
 create function public.submit_intervention_intake(p_token_hash text,p_op uuid,p_digest text,
   p_address text,p_availability text,p_photos jsonb)
 returns uuid language sql security invoker set search_path=''
@@ -219,10 +284,12 @@ begin atomic select app_private.submit_intervention_intake(p_token_hash,p_op,p_d
 revoke all on function app_private.require_intake_office(uuid,boolean),
   app_private.create_intervention_invite(uuid,uuid,uuid),app_private.list_intervention_intake(uuid,uuid),
   app_private.update_intervention_intake(uuid,uuid,text),app_private.read_intervention_photo(uuid,uuid),
-  app_private.guard_intervention_intake(text,uuid),app_private.submit_intervention_intake(text,uuid,text,text,text,jsonb),
+  app_private.guard_intervention_intake(text,uuid,boolean),app_private.claim_intervention_image_budget(text,uuid,integer,integer),
+  app_private.submit_intervention_intake(text,uuid,text,text,text,jsonb),
   public.create_intervention_invite(uuid,uuid,uuid),public.list_intervention_intake(uuid,uuid),
   public.update_intervention_intake(uuid,uuid,text),public.read_intervention_photo(uuid,uuid),
-  public.guard_intervention_intake(text,uuid),public.submit_intervention_intake(text,uuid,text,text,text,jsonb)
+  public.guard_intervention_intake(text,uuid,boolean),public.claim_intervention_image_budget(text,uuid,integer,integer),
+  public.submit_intervention_intake(text,uuid,text,text,text,jsonb)
   from public,anon,authenticated,service_role;
 
 grant execute on function app_private.create_intervention_invite(uuid,uuid,uuid),app_private.list_intervention_intake(uuid,uuid),
@@ -230,8 +297,10 @@ grant execute on function app_private.create_intervention_invite(uuid,uuid,uuid)
   public.create_intervention_invite(uuid,uuid,uuid),public.list_intervention_intake(uuid,uuid),
   public.update_intervention_intake(uuid,uuid,text),public.read_intervention_photo(uuid,uuid)
   to authenticated;
-grant execute on function app_private.guard_intervention_intake(text,uuid),
+grant execute on function app_private.guard_intervention_intake(text,uuid,boolean),
+  app_private.claim_intervention_image_budget(text,uuid,integer,integer),
   app_private.submit_intervention_intake(text,uuid,text,text,text,jsonb),
-  public.guard_intervention_intake(text,uuid),public.submit_intervention_intake(text,uuid,text,text,text,jsonb)
+  public.guard_intervention_intake(text,uuid,boolean),public.claim_intervention_image_budget(text,uuid,integer,integer),
+  public.submit_intervention_intake(text,uuid,text,text,text,jsonb)
   to service_role;
 notify pgrst,'reload schema';

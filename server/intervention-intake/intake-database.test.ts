@@ -33,10 +33,18 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     if (!invite) throw new Error('Expected synthetic invitation')
     return invite
   }
-  const check = (secretHash: string, operation: string | null = null) =>
-    value<{ state: string }>('select public.guard_intervention_intake($1,$2) value', [
+  const check = (secretHash: string, operation: string | null = null, withPhotos = false) =>
+    value<{ state: string }>('select public.guard_intervention_intake($1,$2,$3) value', [
       secretHash,
       operation,
+      operation ? withPhotos : null,
+    ])
+  const claim = (secretHash: string, attempt = 1, count = 1, operation = op) =>
+    value<boolean>('select public.claim_intervention_image_budget($1,$2,$3,$4) value', [
+      secretHash,
+      operation,
+      attempt,
+      count,
     ])
   const submit = (secretHash: string, operation = op, photos: string[] = [], payload = digest) =>
     value<string>('select public.submit_intervention_intake($1,$2,$3,$4,$5,$6) value', [
@@ -90,7 +98,7 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
   }, 30000)
 
   beforeEach(async () => {
-    await db.exec(`reset role; truncate app_private.intervention_photos,app_private.intervention_requests,
+    await db.exec(`reset role; truncate app_private.intervention_image_budget,app_private.intervention_photos,app_private.intervention_requests,
       app_private.intervention_invites,public.service_locations,public.clients,public.tenants,public.members,auth.users;`)
     await db.query('insert into public.tenants(id) values ($1),($2)', [tenant, otherTenant])
     await db.query('insert into public.clients values ($1,$2,null),($3,$4,null)', [
@@ -119,6 +127,7 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     expect(invite.token).toMatch(/^[a-f0-9]{64}$/)
     expect(JSON.stringify(await list())).not.toMatch(new RegExp(invite.token))
     await expect(check(sha(invite.token))).rejects.toEqual(denied)
+    await expect(claim(sha(invite.token))).rejects.toEqual(denied)
     await expect(value('select * from app_private.intervention_invites')).rejects.toEqual(denied)
     await office(worker)
     await expect(list()).rejects.toEqual(denied)
@@ -147,6 +156,84 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
       id: first,
       status: 'pending',
     })
+  })
+
+  it('enforces an eight-photo-attempt cap, independent of the three text-only retries', async () => {
+    const issued = await create()
+    const secret = sha(issued.token)
+    async function afterCooldown() {
+      await db.exec('reset role')
+      await db.query(
+        "update app_private.intervention_invites set last_attempt_at=now()-interval '5 seconds' where id=$1",
+        [issued.id],
+      )
+      await service()
+    }
+    await service()
+    for (let count = 0; count < 8; count++) {
+      expect(await check(secret, op, true)).toEqual({ state: 'pending', photo_attempt: count + 1 })
+      await afterCooldown()
+    }
+    expect(await check(secret, op, true)).toEqual({ state: 'photo_limited' })
+    for (let count = 0; count < 3; count++) {
+      expect(await check(secret, op, false)).toEqual({ state: 'pending' })
+      await afterCooldown()
+    }
+    expect(await check(secret, op, false)).toEqual({ state: 'limited' })
+    expect(
+      await submit(secret, op, [Buffer.from([255, 216, 255, 217]).toString('base64')]),
+    ).toBeNull()
+    expect(await submit(secret)).toBeTruthy()
+  })
+
+  it('reserves the project-wide budget before photos, never reuses a claim, and leaves text independent', async () => {
+    const first = await create()
+    await office(outsider)
+    const second = await value<{ token: string }>(
+      'select public.create_intervention_invite($1,$2,$3) value',
+      [otherTenant, otherClient, otherCentre],
+    )
+    if (!second) throw new Error('Expected second synthetic invite')
+    await db.exec('reset role')
+    await db.exec(
+      "insert into app_private.intervention_image_budget values(date_trunc('month',now() at time zone 'UTC')::date,498)",
+    )
+    await service()
+    await check(sha(first.token), op, true)
+    expect(await claim(sha(first.token), 1, 3)).toBe(false)
+    expect(await claim(sha(first.token), 1, 2)).toBe(true)
+    expect(await claim(sha(first.token), 1, 1)).toBeNull()
+    const jpeg = Buffer.from([255, 216, 255, 217]).toString('base64')
+    expect(await submit(sha(first.token), op, [jpeg])).toBeNull()
+    expect(await submit(sha(first.token), op, [jpeg, jpeg])).toBeTruthy()
+    await check(sha(second.token), op, true)
+    expect(await claim(sha(second.token))).toBe(false)
+    await db.exec('reset role')
+    expect(
+      await value('select reservations value from app_private.intervention_image_budget'),
+    ).toBe(500)
+    await db.exec(
+      "update app_private.intervention_invites set last_attempt_at=now()-interval '5 seconds'",
+    )
+    await service()
+    expect(await check(sha(second.token), op, false)).toEqual({ state: 'pending' })
+    expect(await submit(sha(second.token))).toBeTruthy()
+  })
+
+  it('caps both issue rate and active unconsumed invitations to ten per tenant', async () => {
+    const first = await create()
+    for (let issued = 1; issued < 10; issued++) await create()
+    await expect(create()).rejects.toMatchObject({ code: 'P0429' })
+    // Isolate the active-link cap from the independent rolling-hour issuance limit.
+    await db.exec('reset role')
+    await db.query(
+      "update app_private.intervention_invites set created_at=now()-interval '2 hours' where tenant_id=$1",
+      [tenant],
+    )
+    await office()
+    await expect(create()).rejects.toMatchObject({ code: 'P0429' })
+    await db.query("select public.update_intervention_intake($1,$2,'revoke')", [tenant, first.id])
+    expect(await create()).toMatchObject({ token: expect.stringMatching(/^[a-f0-9]{64}$/) })
   })
 
   it('rejects revoked and expired links, including a revocation race after reserving', async () => {
@@ -180,7 +267,8 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     const jpeg = Buffer.from([255, 216, 255, 217]).toString('base64')
     await service()
     for (const invitation of [own, external]) {
-      await check(sha(invitation.token), op)
+      await check(sha(invitation.token), op, true)
+      expect(await claim(sha(invitation.token))).toBe(true)
       expect(await submit(sha(invitation.token), op, [jpeg])).toBeTruthy()
     }
     await db.exec('reset role')
@@ -196,7 +284,8 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     const invite = await create()
     const secret = sha(invite.token)
     await service()
-    await check(secret, op)
+    await check(secret, op, true)
+    expect(await claim(secret)).toBe(true)
     await expect(
       submit(secret, op, [Buffer.from('not jpeg').toString('base64')]),
     ).rejects.toMatchObject({ code: '22023' })

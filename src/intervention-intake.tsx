@@ -15,10 +15,19 @@ const actionErrors: Record<string, string> = {
   body_too_large: 'Las fotos ocupan demasiado. Elimina una imagen o envía la solicitud sin fotos.',
   invalid_photo:
     'Alguna foto no se puede procesar. Usa JPG, PNG o WebP, o envía la solicitud sin fotos.',
-  photo_unavailable: 'No se pueden procesar fotos ahora. Puedes seguir sin adjuntarlas.',
+  photo_unavailable:
+    'El servicio de fotos no está disponible ahora. Conservamos tu formulario en esta pantalla: puedes reintentar o quitar las fotos y enviar sin ellas.',
+  photo_quota:
+    'El servicio de fotos ha alcanzado su límite de uso. Puedes reintentar más tarde o quitar las fotos y enviar sin ellas.',
+  photo_attempt_limit:
+    'Se han agotado los intentos con fotos de este enlace. Puedes quitar las fotos y enviar el formulario sin ellas.',
 }
 
-async function request(action: 'check' | 'submit', body: unknown, operation?: string) {
+async function request(
+  action: 'check' | 'submit',
+  body: unknown,
+  submission?: { operation: string; hasPhotos: boolean },
+) {
   const response = await fetch(`/api/intervention-request/${action}`, {
     method: 'POST',
     credentials: 'omit',
@@ -27,7 +36,12 @@ async function request(action: 'check' | 'submit', body: unknown, operation?: st
     headers: {
       'content-type': 'application/json',
       'x-request-invitation': token,
-      ...(operation ? { 'x-request-operation': operation } : {}),
+      ...(submission
+        ? {
+            'x-request-operation': submission.operation,
+            'x-request-photo-mode': submission.hasPhotos ? 'photos' : 'text',
+          }
+        : {}),
     },
     body: JSON.stringify(body),
   })
@@ -122,7 +136,10 @@ function Intake() {
           ? operation.current
           : { signature, id: crypto.randomUUID() }
       operation.current = pendingOperation
-      const response = await request('submit', body, pendingOperation.id)
+      const response = await request('submit', body, {
+        operation: pendingOperation.id,
+        hasPhotos: photos.length > 0,
+      })
       if (typeof response.receipt !== 'string')
         throw new Error('No se pudo confirmar la solicitud.')
       setReceipt(response.receipt)
