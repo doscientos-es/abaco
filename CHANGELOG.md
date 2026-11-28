@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.32
+
+### Nuevas funciones
+
+- DEV-76: separar presupuesto base y confirmar cada extra
+- DEV-71: protocolos compartidos por centro y visita asignada
+
 ## 2026-11-28 — v0.0.31
 
 ### Nuevas funciones

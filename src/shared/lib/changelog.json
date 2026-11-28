@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.32",
+      "date": "2026-11-28",
+      "title": "v0.0.32",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-76: separar presupuesto base y confirmar cada extra",
+            "DEV-71: protocolos compartidos por centro y visita asignada"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "52da29657a68a0c6934c7c19736e700d1d183c8b",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-76: separar presupuesto base y confirmar cada extra"
+        },
+        {
+          "sha": "34c14b27ff8be49638fc94a8495c8fc5980a1c68",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-71: protocolos compartidos por centro y visita asignada"
+        }
+      ]
+    },
+    {
       "version": "0.0.31",
       "date": "2026-11-28",
       "title": "v0.0.31",
