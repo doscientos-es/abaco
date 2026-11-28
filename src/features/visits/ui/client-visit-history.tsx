@@ -2,9 +2,12 @@ import { Button } from '@doscientos/ui'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { can, useSession } from '@/features/auth'
 import { SelectField } from '@/shared/ui/form'
 
+import { loadMonthlyClientReport } from '../application/monthly-client-report-actions'
 import { listClientVisitHistory } from '../application/paper-visit-actions'
+import { MonthlyClientReport } from './monthly-client-report'
 import { PaperVisitPanel } from './paper-visit-panel'
 
 const statuses = {
@@ -26,6 +29,12 @@ export function ClientVisitHistory({
   clientName: string
   locations: readonly { id: string; name: string }[]
 }) {
+  const session = useSession()
+  const canReviewReport =
+    session?.tenantId === tenantId &&
+    can(session.role, 'clients:read') &&
+    can(session.role, 'visits:read') &&
+    can(session.role, 'work:read')
   const [location, setLocation] = useState('')
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
@@ -39,6 +48,17 @@ export function ClientVisitHistory({
       aria-label="Historial de servicios del cliente"
     >
       <h2 className="text-lg font-semibold">Servicios, partes e historial</h2>
+      {canReviewReport && session ? (
+        <MonthlyClientReport
+          key={`${session.userId}:${tenantId}:${clientId}`}
+          tenantId={tenantId}
+          userId={session.userId}
+          clientId={clientId}
+          clientName={clientName}
+          locations={locations}
+          load={loadMonthlyClientReport}
+        />
+      ) : null}
       <SelectField
         label="Centro del historial"
         value={location}
