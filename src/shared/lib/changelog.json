@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.29",
+      "date": "2026-11-28",
+      "title": "v0.0.29",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-72: muestreo semanal y correcciones auditadas",
+            "DEV-62: organizar evidencias fotográficas de antes y después"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "d7add40a301362efcd41a169ed54408047df6c25",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-72: muestreo semanal y correcciones auditadas"
+        },
+        {
+          "sha": "c9fea450587e1b2d3bc49baf54835829f6b42ab5",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-62: organizar evidencias fotográficas de antes y después"
+        }
+      ]
+    },
+    {
       "version": "0.0.28",
       "date": "2026-11-28",
       "title": "v0.0.28",

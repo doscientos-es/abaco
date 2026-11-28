@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.29
+
+### Nuevas funciones
+
+- DEV-72: muestreo semanal y correcciones auditadas
+- DEV-62: organizar evidencias fotográficas de antes y después
+
 ## 2026-11-28 — v0.0.28
 
 ### Nuevas funciones
