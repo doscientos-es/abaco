@@ -395,6 +395,14 @@ export function WorkOrderDetailPage({ workOrderId }: { workOrderId: string }) {
           tenantId={tenant.id}
           workOrderId={order.id}
           canPropose={order.status !== 'completed' && order.status !== 'canceled'}
+          acceptedBase={
+            totals &&
+            order.acceptance &&
+            order.acceptance.mode !== 'legacy_unverified' &&
+            order.origin_estimate_id
+              ? { estimateId: order.origin_estimate_id, totalCents: totals.totalCents }
+              : null
+          }
         />
       ) : null}
 

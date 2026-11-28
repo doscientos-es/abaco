@@ -15,6 +15,11 @@ import {
   listWorkExtras,
   proposeWorkExtra,
 } from '../application/work-order-actions'
+import {
+  reviewedWorkExtra,
+  workExtraAmounts,
+  workExtraReviewKey,
+} from '../domain/work-extra-review'
 
 const statusLabels = {
   pending: 'Pendiente de aprobación',
@@ -26,10 +31,12 @@ export function WorkExtrasPanel({
   tenantId,
   workOrderId,
   canPropose,
+  acceptedBase,
 }: {
   tenantId: string
   workOrderId: string
   canPropose: boolean
+  acceptedBase: { estimateId: string; totalCents: number } | null
 }) {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
@@ -40,6 +47,7 @@ export function WorkExtrasPanel({
   const [unitCost, setUnitCost] = useState('')
   const [vatRate, setVatRate] = useState('21')
   const [decisionExtraId, setDecisionExtraId] = useState<string | null>(null)
+  const [reviewedKey, setReviewedKey] = useState<string | null>(null)
   const [customerName, setCustomerName] = useState('')
   const [evidence, setEvidence] = useState('')
   const [busy, setBusy] = useState(false)
@@ -49,6 +57,18 @@ export function WorkExtrasPanel({
     queryKey,
     queryFn: () => listWorkExtras(tenantId, workOrderId, page),
   })
+
+  const decisionExtra = query.data?.extras.find(
+    (extra) => extra.id === decisionExtraId && extra.status === 'pending',
+  )
+  const decisionAmounts = decisionExtra
+    ? workExtraAmounts(decisionExtra.price_cents, decisionExtra.vat_rate)
+    : null
+  const decisionKey = decisionExtra ? workExtraReviewKey(decisionExtra.id, decisionAmounts) : null
+  const decisionReady =
+    !query.isFetching &&
+    reviewedWorkExtra(reviewedKey, decisionKey) &&
+    Boolean(customerName.trim() && evidence.trim())
 
   const numericQuantity = Number(quantity.replace(',', '.'))
   const numericVat = Number(vatRate.replace(',', '.'))
@@ -116,10 +136,10 @@ export function WorkExtrasPanel({
   }
 
   async function decide(decision: 'approved' | 'rejected') {
-    if (busy || !decisionExtraId || !customerName.trim() || !evidence.trim()) return
+    if (busy || !decisionExtra || !decisionReady) return
     const payload = {
       tenantId,
-      extraId: decisionExtraId,
+      extraId: decisionExtra.id,
       decision,
       customerName: customerName.trim(),
       evidenceDescription: evidence.trim(),
@@ -135,6 +155,7 @@ export function WorkExtrasPanel({
       await decideWorkExtra({ ...payload, operationId })
       operationIds.current.delete(key)
       setDecisionExtraId(null)
+      setReviewedKey(null)
       setCustomerName('')
       setEvidence('')
       await refresh()
@@ -173,10 +194,36 @@ export function WorkExtrasPanel({
         <CardTitle>Extras del trabajo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <section
+          aria-label="Presupuesto base"
+          className="bg-muted flex flex-wrap items-start justify-between gap-3 rounded-lg p-3"
+        >
+          <div>
+            <h3 className="font-medium">Presupuesto base</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {acceptedBase
+                ? 'Importe aceptado. Los extras de abajo no cambian el presupuesto.'
+                : 'No consta un importe base aceptado y verificable para este trabajo.'}
+            </p>
+            {acceptedBase ? (
+              <Link
+                to="/presupuestos/$estimateId"
+                params={{ estimateId: acceptedBase.estimateId }}
+                className="text-primary mt-2 inline-flex min-h-10 items-center text-sm font-medium underline"
+              >
+                Abrir presupuesto base
+              </Link>
+            ) : null}
+          </div>
+          {acceptedBase ? (
+            <p className="font-semibold tabular-nums">
+              {formatEuros(acceptedBase.totalCents)} con IVA
+            </p>
+          ) : null}
+        </section>
         <p className="text-muted-foreground text-sm">
-          El precio y el coste quedan fijados al proponer cada extra. Una persona de oficina
-          registra la decisión y describe la evidencia recibida; este registro no es una firma del
-          cliente.
+          Registra la decisión de cada extra y cómo la recibiste. No es una firma del cliente y no
+          se emite ninguna factura.
         </p>
         {canPropose ? (
           <section aria-label="Proponer extra" className="space-y-3 border-b pb-5">
@@ -230,6 +277,7 @@ export function WorkExtrasPanel({
         ) : (
           <ol className="divide-y">
             {query.data.extras.map((extra) => {
+              const amounts = workExtraAmounts(extra.price_cents, extra.vat_rate)
               const approval = query.data.decisions.find((item) => item.extra_id === extra.id)
               const invoice = query.data.invoices.find((item) => item.work_extra_id === extra.id)
               const draft = query.data.drafts.find(
@@ -246,7 +294,13 @@ export function WorkExtrasPanel({
                       </p>
                     </div>
                     <p className="text-right tabular-nums">
-                      Precio: {formatEuros(extra.price_cents)}
+                      {amounts ? (
+                        <strong>{formatEuros(amounts.gross)} con IVA</strong>
+                      ) : (
+                        'Importe no verificable'
+                      )}
+                      <br />
+                      Sin IVA: {formatEuros(extra.price_cents)}
                       <br />
                       Coste previsto: {formatEuros(extra.planned_cost_cents)}
                     </p>
@@ -289,6 +343,19 @@ export function WorkExtrasPanel({
                   {extra.status === 'pending' ? (
                     decisionExtraId === extra.id ? (
                       <div className="space-y-3 rounded-lg border p-3">
+                        <p className="font-medium">Decisión para «{extra.description}»</p>
+                        {decisionAmounts ? (
+                          <p className="text-muted-foreground">
+                            {formatEuros(decisionAmounts.net)} sin IVA +{' '}
+                            {formatEuros(decisionAmounts.vat)} de IVA ={' '}
+                            <strong>{formatEuros(decisionAmounts.gross)}</strong>.
+                          </p>
+                        ) : (
+                          <p role="alert">
+                            No se puede confirmar el importe de este extra. Recarga el trabajo y
+                            revisa los datos.
+                          </p>
+                        )}
                         <TextField
                           label="Nombre de quien comunica la decisión"
                           value={customerName}
@@ -304,16 +371,28 @@ export function WorkExtrasPanel({
                           maxLength={2000}
                           helper="Ejemplo: correo recibido el 22/10; conserva el original fuera de este campo."
                         />
+                        <label className="flex min-h-11 items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="size-4 shrink-0"
+                            checked={reviewedWorkExtra(reviewedKey, decisionKey)}
+                            disabled={!decisionKey || busy}
+                            onChange={(event) =>
+                              setReviewedKey(event.target.checked ? decisionKey : null)
+                            }
+                          />
+                          He comprobado el importe de este extra.
+                        </label>
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            isDisabled={busy || !customerName.trim() || !evidence.trim()}
+                            isDisabled={busy || !decisionReady}
                             onPress={() => void decide('approved')}
                           >
                             Registrar aprobación
                           </Button>
                           <Button
                             variant="outline"
-                            isDisabled={busy || !customerName.trim() || !evidence.trim()}
+                            isDisabled={busy || !decisionReady}
                             onPress={() => void decide('rejected')}
                           >
                             Registrar rechazo
@@ -321,7 +400,10 @@ export function WorkExtrasPanel({
                           <Button
                             variant="ghost"
                             isDisabled={busy}
-                            onPress={() => setDecisionExtraId(null)}
+                            onPress={() => {
+                              setDecisionExtraId(null)
+                              setReviewedKey(null)
+                            }}
                           >
                             Cancelar
                           </Button>
@@ -333,6 +415,7 @@ export function WorkExtrasPanel({
                         isDisabled={busy}
                         onPress={() => {
                           setDecisionExtraId(extra.id)
+                          setReviewedKey(null)
                           setCustomerName('')
                           setEvidence('')
                         }}
