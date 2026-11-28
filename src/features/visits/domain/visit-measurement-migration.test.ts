@@ -9,7 +9,7 @@ function migration(name: string) {
 }
 
 const sql = migration('20261128154543_visit_measurement_comparison.sql')
-const genericSQL = migration('20261128154816_generic_asset_measurement_facade.sql')
+const genericSQL = migration('20261128155938_generic_asset_measurement_facade.sql')
 const existingMeasurements = migration('20261027143749_pool_measurements.sql')
 const roles = migration('20261109143327_admin_user_roles.sql')
 const rolePatch = roles.slice(
