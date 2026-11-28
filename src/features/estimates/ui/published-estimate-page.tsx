@@ -16,28 +16,33 @@ import { can, useSession } from '@/features/auth'
 import { MaterialShortages } from '@/features/catalog'
 import { findContractForEstimate } from '@/features/contracts/application/contract-actions'
 import { convertAcceptedEstimate, findWorkOrderForEstimate } from '@/features/work-orders'
-import type { Estimate, TenantData } from '@/shared/domain/types'
+import type { Client, Estimate, TenantData } from '@/shared/domain/types'
 import { StatusBadge } from '@/shared/ui/status-badge'
 
 import {
+  loadEstimateReminder,
   loadManualEstimateAcceptance,
   loadPublishedEstimate,
 } from '../application/estimate-publication-actions'
+import { estimateCanBeReminded } from '../domain/estimate-reminder'
 import { EstimateContractConversion } from './estimate-contract-conversion'
 import { EstimateDesignWorkspace } from './estimate-design-workspace'
 import { EstimateOptionsMenu } from './estimate-options-menu'
 import { EstimatePaymentMilestones } from './estimate-payment-milestones'
+import { EstimateReminderDialog } from './estimate-reminder-dialog'
 import type { EstimateDocumentActions } from './use-estimate-document-actions'
 import { useEstimatePrint } from './use-estimate-print'
 
 export function PublishedEstimatePage({
   estimate,
+  client,
   tenantId,
   ledger,
   actions,
   approvalButton,
 }: {
   estimate: Estimate
+  client: Client | undefined
   tenantId: string
   ledger: TenantData['ledger']
   actions: Pick<EstimateDocumentActions, 'copyPublicLink' | 'sendByEmail' | 'sendByWhatsapp'>
@@ -134,6 +139,15 @@ export function PublishedEstimatePage({
         </PageHeaderHeading>
         <PageHeaderActions>
           {approvalButton}
+          {can(role, 'estimates:write') && estimateCanBeReminded(estimate) ? (
+            <EstimateReminderDialog
+              key={`${tenantId}:${estimateId}`}
+              estimateId={estimateId}
+              tenantId={tenantId}
+              client={client}
+              load={loadEstimateReminder}
+            />
+          ) : null}
           {workId ? (
             <Link
               to="/trabajos/$workOrderId"
