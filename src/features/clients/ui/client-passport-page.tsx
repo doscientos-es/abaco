@@ -13,7 +13,7 @@ import {
 import { PencilSimple } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { can, useSession } from '@/features/auth'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
@@ -23,8 +23,10 @@ import { useTenantData } from '@/shared/store/store'
 import { ClientWhatsappAction, VisitMapsAction } from '@/shared/ui/contact-actions'
 import { PageNotFound } from '@/shared/ui/page-states'
 
+import { loadHandoffIncidents, loadHandoffTiming } from '../application/client-handoff-actions'
 import { loadClientPassport } from '../application/client-passport-actions'
 import { ClientCommercialOverview } from './client-commercial-overview'
+import { ClientHandoffPanel } from './client-handoff-panel'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
 import { StaffArrivalDialog } from './staff-arrival-dialog'
 
@@ -41,7 +43,15 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
   })
   const [creating, setCreating] = useState<NewItem | null>(null)
   const [arrivalLocation, setArrivalLocation] = useState<{ id: string; name: string } | null>(null)
+  const handoffKey = `${tenant.id}:${clientId}:${session?.userId ?? ''}`
+  const [handoff, setHandoff] = useState<{ key: string; location: string | null } | null>(null)
+  const handoffHeading = useRef<HTMLHeadingElement>(null)
   const canWrite = can(session?.role, 'clients:write')
+  const canReviewHandoff =
+    session?.tenantId === tenant.id &&
+    can(session.role, 'clients:read') &&
+    can(session.role, 'visits:read')
+  const canReviewHandoffIncidents = canWrite && can(session?.role, 'visits:write')
 
   if (!client) {
     return (
@@ -84,6 +94,21 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           </Link>
         </PageHeaderActions>
       </PageHeader>
+
+      {canReviewHandoff && session && data ? (
+        <ClientHandoffPanel
+          key={handoffKey}
+          tenantId={tenant.id}
+          userId={session.userId}
+          clientId={clientId}
+          locations={data.locations}
+          location={handoff?.key === handoffKey ? handoff.location : null}
+          onLocationChange={(location) => setHandoff({ key: handoffKey, location })}
+          headingRef={handoffHeading}
+          loadTiming={loadHandoffTiming}
+          loadIncidents={canReviewHandoffIncidents ? loadHandoffIncidents : undefined}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -236,6 +261,20 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
                   <p className="text-sm whitespace-pre-wrap">{location.operational_contact}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.access_notes}</p>
                   <p className="text-sm whitespace-pre-wrap">{location.notes}</p>
+                  {canReviewHandoff ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      aria-label={`Ver relevo de ${location.name}`}
+                      onPress={() => {
+                        setHandoff({ key: handoffKey, location: location.id })
+                        handoffHeading.current?.focus()
+                      }}
+                    >
+                      Relevo de este centro
+                    </Button>
+                  ) : null}
                   {canWrite && location.active && location.kind !== 'billing' ? (
                     <Button
                       variant="outline"

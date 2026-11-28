@@ -7,6 +7,7 @@ import { ClientPassportPage } from './client-passport-page'
 
 const mocks = vi.hoisted(() => ({
   allowed: true,
+  sessionTenant: 'tenant',
   clientPhone: '612 345 678',
   contactIsActive: true,
   contactPhone: '+44 20 7946 0958',
@@ -79,7 +80,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/clientes">{children}</a>,
 }))
 vi.mock('@/features/auth', () => ({
-  useSession: () => ({ role: 'admin', userId: 'user' }),
+  useSession: () => ({ role: 'admin', userId: 'user', tenantId: mocks.sessionTenant }),
   can: () => mocks.allowed,
 }))
 vi.mock('@/shared/store/store', () => ({
@@ -110,6 +111,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.actions.clear()
   mocks.allowed = true
+  mocks.sessionTenant = 'tenant'
   mocks.contactIsActive = true
   mocks.clientPhone = '612 345 678'
   mocks.contactPhone = '+44 20 7946 0958'
@@ -203,5 +205,28 @@ describe('client service centres', () => {
     expect(mocks.actions.has('Añadir centro')).toBe(false)
     expect(mocks.actions.has('Editar centro Office centre')).toBe(false)
     expect(mocks.actions.has('Editar contacto Ana')).toBe(false)
+  })
+})
+
+describe('ficha de relevo de oficina', () => {
+  it('ofrece el relevo general y el acceso directo al centro sin abrir una consulta al inicio', () => {
+    const html = renderToStaticMarkup(<ClientPassportPage clientId="client" />)
+    expect(html).toContain('Abrir ficha de relevo')
+    expect(html).toContain('Relevo de este centro')
+    expect(html).not.toContain('Último servicio cerrado')
+    mocks.actions.get('Relevo de este centro')?.()
+    expect(mocks.start).toHaveBeenCalledWith({ key: 'tenant:client:user', location: 'centre' })
+  })
+
+  it('no ofrece el relevo sin permisos ya existentes o si la empresa no está activa', () => {
+    mocks.allowed = false
+    expect(renderToStaticMarkup(<ClientPassportPage clientId="client" />)).not.toContain(
+      'Abrir ficha de relevo',
+    )
+    mocks.allowed = true
+    mocks.sessionTenant = 'otra-empresa'
+    expect(renderToStaticMarkup(<ClientPassportPage clientId="client" />)).not.toContain(
+      'Relevo de este centro',
+    )
   })
 })
