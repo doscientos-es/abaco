@@ -12,6 +12,7 @@ import { AppFrame } from '@/app/app-frame'
 import { UserFrame } from '@/app/technician-frame'
 import { NoCompanyPage, rememberReferral, sessionQuery } from '@/features/auth'
 import { SubscriptionAccessPage, tenantAccessQuery } from '@/features/billing'
+import { equipmentScanPath, tagFromFragment } from '@/features/equipment-labels'
 import { companyOnboardingQuery, onboardingDestination } from '@/features/onboarding'
 import { hydrateStore, refreshStore, setActiveTenantId } from '@/shared/store/store'
 import { PageError, PageNotFound } from '@/shared/ui/page-states'
@@ -48,6 +49,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       rememberReferral(location.searchStr)
     const isPlatformPage = path === '/superadmin'
     if (!session && !isPublicPath(path)) {
+      if (path === equipmentScanPath) {
+        const token = tagFromFragment(location.hash)
+        throw redirect({
+          to: '/entrar',
+          search: { redirect: equipmentScanPath },
+          ...(token ? { hash: token } : {}),
+          replace: true,
+        })
+      }
       throw redirect({ to: '/entrar', search: { redirect: location.href }, replace: true })
     }
     if (session && guestOnlyPaths.includes(path)) throw redirect({ to: '/', replace: true })
@@ -77,6 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       !isPlatformPage &&
       path !== '/ajustes' &&
       path !== '/mi-jornada' &&
+      path !== equipmentScanPath &&
       path !== '/horarios' &&
       path !== '/mis-vacaciones' &&
       path !== '/nueva-contrasena' &&
