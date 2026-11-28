@@ -2,6 +2,8 @@ import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { VisitMaterialsForReview } from '@/features/field-entries'
+
 import {
   downloadClosedReportPdf,
   listPendingReportReviews,
@@ -141,6 +143,7 @@ export function ReportReviewInbox({ tenantId }: { tenantId: string }) {
                   visitId={report.visit_id}
                   versionId={report.report_version_id}
                 />
+                <VisitMaterialsForReview tenantId={tenantId} visitId={report.visit_id} />
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"

@@ -1,6 +1,6 @@
 import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import { useActionLock } from '@/shared/lib/use-action-lock'
 
@@ -16,6 +16,8 @@ import {
   writeFieldEntryQueue,
   type PendingFieldEntry,
 } from '../application/field-entry-queue'
+import { isMaterialKind } from '../domain/material-quantity'
+import { QuickMaterialEntry } from './quick-material-entry'
 
 const kinds: { value: FieldEntryKind; label: string; unit: string }[] = [
   { value: 'labor', label: 'Tiempo de trabajo', unit: 'min' },
@@ -62,6 +64,11 @@ export function VisitFieldEntriesPanel({
   const [occurredAt, setOccurredAt] = useState(() => localDateTime(new Date().toISOString()))
   const [supersedesId, setSupersedesId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [quickMaterialOpen, setQuickMaterialOpen] = useState(false)
+  const [officeReviewRequested, setOfficeReviewRequested] = useState(false)
+  const materialControlsId = useId()
+  const descriptionInput = useRef<HTMLInputElement>(null)
+  const quantityInput = useRef<HTMLInputElement>(null)
   const actionLock = useActionLock()
   const [storageFailed, setStorageFailed] = useState(false)
   const supersededIds = new Set(entries.data?.supersededIds ?? [])
@@ -71,12 +78,14 @@ export function VisitFieldEntriesPanel({
     setUnit(kinds.find((item) => item.value === next)?.unit ?? 'ud')
     setQuantity(next === 'corrective_action' ? '1' : '')
     setSupersedesId(null)
+    setOfficeReviewRequested(false)
   }
 
   async function send(item: PendingFieldEntry) {
     await recordVisitFieldEntry({
       tenantId,
       visitId,
+      expectedActor: userId,
       kind: item.kind,
       description: item.description,
       quantity: item.quantity,
@@ -84,6 +93,9 @@ export function VisitFieldEntriesPanel({
       occurredAt: item.occurredAt,
       supersedesId: item.supersedesId,
       operationId: item.operationId,
+      ...(item.officeReviewRequested === undefined
+        ? {}
+        : { officeReviewRequested: item.officeReviewRequested }),
     })
     const next = readFieldEntryQueue(queueKey).filter(
       (pending) => pending.operationId !== item.operationId,
@@ -91,6 +103,10 @@ export function VisitFieldEntriesPanel({
     setStorageFailed(!writeFieldEntryQueue(queueKey, next))
     setQueue(next)
     await queryClient.invalidateQueries({ queryKey: ['visit-field-entries', tenantId, visitId] })
+    if (isMaterialKind(item.kind))
+      await queryClient.invalidateQueries({
+        queryKey: ['visit-materials-for-review', tenantId, visitId],
+      })
     setPage(0)
   }
 
@@ -113,8 +129,7 @@ export function VisitFieldEntriesPanel({
       unit.trim().length > 30
     )
       return toast.error('Revisa la cantidad y la unidad antes de registrar la actividad')
-    if (!actionLock.acquire()) return
-    const item: PendingFieldEntry = {
+    const accepted = await addEntry({
       operationId: crypto.randomUUID(),
       kind,
       description: description.trim(),
@@ -122,28 +137,44 @@ export function VisitFieldEntriesPanel({
       unit: unit.trim(),
       occurredAt: occurredDate.toISOString(),
       supersedesId,
-    }
-    const next = [...queue, item]
+      ...(isMaterialKind(kind) ? { officeReviewRequested } : {}),
+    })
+    if (!accepted) return
+    setDescription('')
+    setQuantity(kind === 'corrective_action' ? '1' : '')
+    setOccurredAt(localDateTime(new Date().toISOString()))
+    setSupersedesId(null)
+    setOfficeReviewRequested(false)
+  }
+
+  async function addEntry(item: PendingFieldEntry) {
+    if (closed || busy || !actionLock.acquire()) return false
+    const next = [...readFieldEntryQueue(queueKey), item]
     if (!writeFieldEntryQueue(queueKey, next)) {
       actionLock.release()
       setStorageFailed(true)
       toast.error('No se pudo conservar la actividad en este dispositivo')
-      return
+      return false
     }
+    setStorageFailed(false)
     setQueue(next)
     setBusy(true)
     try {
+      if (!navigator.onLine) {
+        toast.info('Actividad guardada en este dispositivo', {
+          description: 'Queda pendiente de enviar a la empresa.',
+        })
+        return true
+      }
       await send(item)
-      setDescription('')
-      setQuantity(kind === 'corrective_action' ? '1' : '')
-      setOccurredAt(localDateTime(new Date().toISOString()))
-      setSupersedesId(null)
-      toast.success('Actividad registrada')
+      toast.success(item.kind === 'material' ? 'Material registrado' : 'Actividad registrada')
+      return true
     } catch (error) {
       toast.error('Actividad pendiente de envío', {
         description:
           error instanceof Error ? error.message : 'Reintenta cuando vuelva la conexión.',
       })
+      return true
     } finally {
       setBusy(false)
       actionLock.release()
@@ -151,7 +182,7 @@ export function VisitFieldEntriesPanel({
   }
 
   async function retry(item: PendingFieldEntry) {
-    if (busy || !actionLock.acquire()) return
+    if (busy || closed || !actionLock.acquire()) return
     setBusy(true)
     try {
       await send(item)
@@ -173,6 +204,10 @@ export function VisitFieldEntriesPanel({
     setUnit(entry.unit)
     setOccurredAt(localDateTime(entry.occurred_at))
     setSupersedesId(entry.id)
+    setOfficeReviewRequested(entry.office_review_requested === true)
+    requestAnimationFrame(() =>
+      (entry.kind === 'corrective_action' ? descriptionInput : quantityInput).current?.focus(),
+    )
   }
 
   function discard(item: PendingFieldEntry) {
@@ -188,7 +223,32 @@ export function VisitFieldEntriesPanel({
 
   return (
     <section className="border-border space-y-3 border-t pt-4" aria-label="Actividad de campo">
-      <h3 className="font-semibold">Tiempo, desplazamientos y consumos</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">Tiempo, desplazamientos y consumos</h3>
+        {!closed ? (
+          <Button
+            variant={quickMaterialOpen ? 'ghost' : 'outline'}
+            className="min-h-11"
+            aria-controls={materialControlsId}
+            aria-expanded={quickMaterialOpen}
+            onPress={() => setQuickMaterialOpen(!quickMaterialOpen)}
+          >
+            {quickMaterialOpen ? 'Ocultar material rápido' : 'Añadir material rápido'}
+          </Button>
+        ) : null}
+      </div>
+      {!closed ? (
+        <div id={materialControlsId}>
+          <QuickMaterialEntry
+            tenantId={tenantId}
+            visitId={visitId}
+            userId={userId}
+            expanded={quickMaterialOpen}
+            busy={busy}
+            saveMaterial={addEntry}
+          />
+        </div>
+      ) : null}
       {entries.isPending ? (
         <output className="text-muted-foreground text-sm">Cargando actividad…</output>
       ) : null}
@@ -222,6 +282,7 @@ export function VisitFieldEntriesPanel({
             Descripción
             <input
               className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
+              ref={descriptionInput}
               value={description}
               maxLength={300}
               onChange={(event) => setDescription(event.target.value)}
@@ -232,6 +293,7 @@ export function VisitFieldEntriesPanel({
             Cantidad
             <input
               className="border-input bg-background mt-1 min-h-11 w-full min-w-0 rounded-lg border p-2"
+              ref={quantityInput}
               type="number"
               min="0.001"
               step="0.001"
@@ -276,11 +338,23 @@ export function VisitFieldEntriesPanel({
               onChange={(event) => setOccurredAt(event.target.value)}
             />
           </label>
+          {isMaterialKind(kind) ? (
+            <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                className="size-4"
+                checked={officeReviewRequested}
+                disabled={busy}
+                onChange={(event) => setOfficeReviewRequested(event.target.checked)}
+              />
+              Marcar esta actividad para revisión de oficina
+            </label>
+          ) : null}
           <div className="sm:col-span-2">
             {supersedesId ? (
-              <p className="text-warning text-sm">
+              <output className="text-warning block text-sm">
                 La corrección conservará la actividad original en el historial.
-              </p>
+              </output>
             ) : null}
             <Button
               isDisabled={busy || !description.trim() || !quantity.trim() || !unit.trim()}
@@ -295,6 +369,7 @@ export function VisitFieldEntriesPanel({
                   setSupersedesId(null)
                   setDescription('')
                   setQuantity('')
+                  setOfficeReviewRequested(false)
                 }}
               >
                 Cancelar corrección
@@ -316,11 +391,12 @@ export function VisitFieldEntriesPanel({
               <li key={item.operationId} className="flex flex-wrap items-center gap-2">
                 <span>
                   {labelFor(item.kind)}: {item.quantity} {item.unit} · {item.description}
+                  {item.officeReviewRequested ? ' · Con marca para oficina' : ''}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
-                  isDisabled={busy}
+                  isDisabled={busy || closed}
                   onPress={() => void retry(item)}
                 >
                   Reintentar
@@ -333,9 +409,10 @@ export function VisitFieldEntriesPanel({
           </ul>
         </div>
       ) : null}
-      {!entries.data?.entries.length ? (
+      {entries.isSuccess && !entries.data.entries.length ? (
         <p className="text-muted-foreground text-sm">Aún no hay actividades registradas.</p>
-      ) : (
+      ) : null}
+      {entries.data?.entries.length ? (
         <ol className="space-y-2 text-sm">
           {entries.data.entries.map((entry) => (
             <li key={entry.id} className="bg-surface-subtle rounded-lg p-2">
@@ -352,6 +429,9 @@ export function VisitFieldEntriesPanel({
                     : 'Visita independiente'}
                 {entry.supersedes_id ? ' · Corrección' : ''}
                 {supersededIds.has(entry.id) ? ' · Corregida' : ''}
+                {entry.office_review_requested && !supersededIds.has(entry.id)
+                  ? ' · Para revisión de oficina'
+                  : ''}
               </p>
               {!closed && !supersededIds.has(entry.id) ? (
                 <Button size="sm" variant="ghost" onPress={() => correct(entry)}>
@@ -361,7 +441,7 @@ export function VisitFieldEntriesPanel({
             </li>
           ))}
         </ol>
-      )}
+      ) : null}
       {(entries.data?.count ?? 0) > 0 ? (
         <div className="flex items-center gap-3 text-sm">
           <Button

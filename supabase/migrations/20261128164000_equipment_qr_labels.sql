@@ -42,7 +42,7 @@ begin
       where x.tenant_id=e.tenant_id and x.equipment_id=e.id order by x.revision desc limit 1
     ) r on true
     where e.tenant_id=p_tenant and a.location_id=p_location and e.status='active'
-    order by lower(e.kind),e.id limit 21 offset p_offset;
+    order by e.created_at desc,e.id limit 21 offset p_offset;
 end;
 $$;
 

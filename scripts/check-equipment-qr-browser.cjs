@@ -9,6 +9,7 @@ const tenant = id(1)
 const client = id(2)
 const location = id(3)
 const equipment = id(4)
+const activeAsset = id(5)
 const tags = [id(21), id(22)]
 let label = {
   equipment_id: equipment,
@@ -24,6 +25,8 @@ async function run() {
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
   )
   const changes = []
+  const registrations = []
+  let registered = false
   let scans = 0
   let workerGetsAssigned = true
   const requestUrls = []
@@ -133,7 +136,36 @@ async function run() {
             p_location: location,
             p_offset: 0,
           })
-          return send([label])
+          return send(registered ? [label] : [])
+        case 'list_equipment_registration_assets':
+          assert.equal(role, 'admin')
+          assert.deepEqual(request.postDataJSON(), {
+            p_tenant: tenant,
+            p_location: location,
+            p_offset: 0,
+          })
+          return send([{ id: activeAsset, name: 'Instalación ficticia' }])
+        case 'register_equipment_for_qr': {
+          assert.equal(role, 'admin')
+          const { p_operation, ...payload } = request.postDataJSON()
+          assert.match(p_operation, /^[a-f0-9-]{36}$/)
+          assert.deepEqual(payload, {
+            p_tenant: tenant,
+            p_location: location,
+            p_asset: activeAsset,
+            p_kind: label.kind,
+            p_manufacturer: label.manufacturer,
+            p_model: label.model,
+            p_confirmed: true,
+          })
+          registrations.push(p_operation)
+          if (!registered) {
+            registered = true
+            return send({ message: 'Failed response after commit' }, 500)
+          }
+          assert.equal(p_operation, registrations[0])
+          return send(equipment)
+        }
         case 'change_equipment_label': {
           assert.equal(role, 'admin')
           const p = request.postDataJSON()
@@ -183,7 +215,26 @@ async function run() {
       .getByRole('button', { name: 'Etiquetas de equipos en Sala de pruebas' })
       .press('Enter')
     const dialog = office.getByRole('dialog', { name: /Etiquetas QR/ })
-    await dialog.getByRole('button', { name: /Etiqueta de Bomba/ }).press('Enter')
+    await dialog
+      .getByText('No hay equipos instalados activos para etiquetar en este centro.')
+      .waitFor()
+    await dialog.getByRole('button', { name: 'Registrar equipo para etiquetar' }).press('Enter')
+    await dialog.getByRole('combobox', { name: 'Activo en servicio' }).selectOption(activeAsset)
+    await dialog.getByRole('textbox', { name: 'Tipo de equipo' }).fill(label.kind)
+    await dialog.getByRole('textbox', { name: 'Marca (opcional)' }).fill(label.manufacturer)
+    await dialog.getByRole('textbox', { name: 'Modelo (opcional)' }).fill(label.model)
+    await dialog.getByRole('button', { name: 'Registrar equipo', exact: true }).press('Enter')
+    assert.equal(registrations.length, 0)
+    await dialog.getByRole('checkbox', { name: /Confirmo/ }).press('Space')
+    await fits(office)
+    await dialog.getByRole('button', { name: 'Registrar equipo', exact: true }).press('Enter')
+    await dialog
+      .getByText('No se pudo registrar el equipo. Puedes reintentar sin duplicarlo.')
+      .waitFor()
+    await dialog.getByRole('button', { name: 'Registrar equipo', exact: true }).press('Enter')
+    await dialog.getByText('Equipo registrado. Ya puedes preparar su etiqueta.').waitFor()
+    assert.equal(registrations.length, 2)
+    assert.equal(registrations[0], registrations[1])
     await dialog.getByRole('button', { name: 'Crear etiqueta QR' }).press('Enter')
     const graphic = dialog.getByRole('img', { name: /Código QR/ })
     await graphic.waitFor()
@@ -269,7 +320,7 @@ async function run() {
       false,
     )
     process.stdout.write(
-      'Equipment QR: offline encoder, isolated print, password continuation, authorization, offline hiding, rotation and revocation.\n',
+      'Equipment QR: confirmed office registration, offline encoder, isolated print, password continuation, authorization, offline hiding, rotation and revocation.\n',
     )
   } finally {
     await browser.close()

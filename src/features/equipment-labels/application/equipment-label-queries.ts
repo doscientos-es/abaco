@@ -2,10 +2,14 @@ import { queryOptions } from '@tanstack/react-query'
 
 import {
   listCentreEquipmentLabels,
+  listEquipmentRegistrationAssets,
   scanEquipmentLabel,
 } from '../infrastructure/equipment-label-repository'
 
-export { changeEquipmentLabel } from '../infrastructure/equipment-label-repository'
+export {
+  changeEquipmentLabel,
+  registerEquipmentForQr,
+} from '../infrastructure/equipment-label-repository'
 
 export const officeEquipmentLabelsKey = (tenantId: string, userId: string, locationId: string) =>
   ['equipment-labels-office', tenantId, userId, locationId] as const
@@ -38,4 +42,18 @@ export const equipmentScanQuery = (
     retry: false,
     refetchOnMount: 'always',
     refetchInterval: 60_000,
+  })
+
+export const registrationAssetsQuery = (
+  tenantId: string,
+  userId: string,
+  locationId: string,
+  page: number,
+) =>
+  queryOptions({
+    queryKey: ['equipment-registration-assets', tenantId, userId, locationId, page],
+    queryFn: () => listEquipmentRegistrationAssets(tenantId, locationId, page),
+    gcTime: 0,
+    retry: false,
+    refetchOnMount: 'always',
   })

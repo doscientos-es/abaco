@@ -18,6 +18,7 @@ import {
   type LabelOption,
 } from '../domain/equipment-label'
 import { EquipmentLabelCode } from './equipment-label-code'
+import { RegisterEquipmentForm } from './register-equipment-form'
 
 type Props = {
   tenantId: string
@@ -25,6 +26,10 @@ type Props = {
   locationId: string
   name: string
   onClose: () => void
+}
+
+function focusRegistrationStatus(node: HTMLOutputElement | null) {
+  node?.focus()
 }
 
 export default function CentreEquipmentLabelsDialog({
@@ -37,6 +42,9 @@ export default function CentreEquipmentLabelsDialog({
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [announcement, setAnnouncement] = useState('')
+  const client = useQueryClient()
   const query = useQuery(officeEquipmentLabelsQuery(tenantId, userId, locationId, page))
   const selectedRow = query.data?.rows.find((row) => row.equipment_id === selected)
   return (
@@ -61,6 +69,43 @@ export default function CentreEquipmentLabelsDialog({
         </p>
       ) : null}
       {query.isSuccess ? (
+        <Button
+          variant="outline"
+          className="min-h-11"
+          isDisabled={busy}
+          aria-expanded={registering}
+          onPress={() => {
+            setSelected(null)
+            setAnnouncement('')
+            setRegistering(!registering)
+          }}
+        >
+          {registering ? 'Cerrar registro' : 'Registrar equipo para etiquetar'}
+        </Button>
+      ) : null}
+      {registering ? (
+        <RegisterEquipmentForm
+          tenantId={tenantId}
+          userId={userId}
+          locationId={locationId}
+          onBusyChange={setBusy}
+          onRegistered={async (id) => {
+            setPage(0)
+            setSelected(id)
+            setRegistering(false)
+            await client.invalidateQueries({
+              queryKey: officeEquipmentLabelsKey(tenantId, userId, locationId),
+            })
+            setAnnouncement('Equipo registrado. Ya puedes preparar su etiqueta.')
+          }}
+        />
+      ) : null}
+      {announcement ? (
+        <output ref={focusRegistrationStatus} tabIndex={-1} className="block text-sm">
+          {announcement}
+        </output>
+      ) : null}
+      {query.isSuccess ? (
         <ul className="divide-border divide-y">
           {query.data.rows.map((row) => (
             <li key={row.equipment_id} className="min-w-0 space-y-2 py-2">
@@ -76,7 +121,7 @@ export default function CentreEquipmentLabelsDialog({
                   size="sm"
                   variant="outline"
                   className="min-h-11"
-                  isDisabled={busy}
+                  isDisabled={busy || registering}
                   aria-label={`Etiqueta de ${row.kind}`}
                   aria-expanded={selectedRow?.equipment_id === row.equipment_id}
                   onPress={() =>

@@ -7,9 +7,11 @@ create type public.app_role as enum ('owner','admin','editor','technician','user
 create table public.memberships (tenant_id uuid,user_id uuid,role public.app_role);
 create table public.test_tenants (tenant_id uuid,writable boolean);
 create table public.service_locations (id uuid,tenant_id uuid,active boolean,kind text);
-create table public.service_assets (id uuid,tenant_id uuid,location_id uuid,status text);
+create table public.service_assets (id uuid,tenant_id uuid,location_id uuid,status text,
+  name text not null default 'Activo de prueba');
 create table public.installed_equipment (
-  id uuid,tenant_id uuid,asset_id uuid,kind text,manufacturer text,model text,status text,
+  id uuid default gen_random_uuid(),tenant_id uuid,asset_id uuid,kind text,manufacturer text,model text,
+  status text default 'active',created_at timestamptz not null default now(),
   private_note text default 'PRIVATE_EQUIPMENT',unique(id,tenant_id)
 );
 create table public.service_visits (

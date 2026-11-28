@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 
 import { useAiAccess, useAiChat } from '@/features/ai'
 import { can, useSession } from '@/features/auth'
+import { IncidentQuoteDraftContext } from '@/features/incidents'
 import { formLimits } from '@/shared/domain/form-limits'
 import type { Estimate, TenantData } from '@/shared/domain/types'
 import { useTenantData } from '@/shared/store/store'
@@ -193,6 +194,14 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
       </PageHeader>
 
       <fieldset disabled={creation?.submitted} className="min-w-0 space-y-5">
+        {!creation && canEdit ? (
+          <IncidentQuoteDraftContext
+            tenantId={tenant.id}
+            estimateId={estimate.id}
+            clientId={estimate.clientId}
+            unpriced={estimate.lines.some((item) => item.unitPriceCents === 0)}
+          />
+        ) : null}
         <EstimateDraftDetails key={estimate.id} estimate={estimate} clients={clients} />
 
         <EstimateTemplateField

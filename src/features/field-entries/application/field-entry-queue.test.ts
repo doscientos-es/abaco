@@ -49,6 +49,22 @@ describe('field evidence recovery', () => {
     expect(readFieldEntryQueue(fieldEntryQueueKey('user-a', 'tenant-a', 'visit-b'))).toEqual([])
   })
 
+  it('keeps the exact material marker across retries and rejects a marker on non-material activity', () => {
+    const key = fieldEntryQueueKey('user-a', 'tenant-a', 'visit-a')
+    const entry = {
+      operationId: 'flagged-material',
+      kind: 'material' as const,
+      description: 'Junta',
+      quantity: 3.125,
+      unit: 'ud',
+      occurredAt: '2026-10-22T18:00:00.000Z',
+      supersedesId: null,
+      officeReviewRequested: true,
+    }
+    writeFieldEntryQueue(key, [entry, { ...entry, operationId: 'bad', kind: 'labor' }])
+    expect(readFieldEntryQueue(key)).toEqual([entry])
+  })
+
   it('removes pending evidence on sign out while preserving unrelated storage', () => {
     values.set('unrelated', 'keep')
     writeFieldEntryQueue(fieldEntryQueueKey('user-a', 'tenant-a', 'visit-a'), [

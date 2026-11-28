@@ -34,6 +34,7 @@ describe('equipment QR labels, exact assignment and revocation', () => {
     for (const file of [
       'tests/fixtures/equipment-qr.sql',
       'migrations/20261128164000_equipment_qr_labels.sql',
+      'migrations/20261128164100_register_equipment_for_qr.sql',
     ]) {
       await db.exec(await readFile(new URL(`../../../supabase/${file}`, import.meta.url), 'utf8'))
     }
@@ -191,5 +192,78 @@ describe('equipment QR labels, exact assignment and revocation', () => {
     ).rejects.toMatchObject({ code: '42501' })
     await act('', 'anon')
     await expect(scan(renewed)).rejects.toMatchObject({ code: '42501' })
+  })
+  it('registers a physical child only with explicit scoped office approval, then issues an assigned-worker label', async () => {
+    const register = async ({
+      tenant = a,
+      location = centre,
+      asset = goodAsset,
+      kind = '  Válvula física ',
+      confirmed = true,
+      op = id(201),
+    } = {}) =>
+      (
+        await db.query<{ equipment_id: string }>(
+          'select public.register_equipment_for_qr($1,$2,$3,$4,$5,$6,$7,$8) as equipment_id',
+          [tenant, location, asset, kind, 'Marca', '', confirmed, op],
+        )
+      ).rows[0]?.equipment_id ?? ''
+    const assets = (location = centre, tenant = a) =>
+      db.query<{ id: string; name: string }>(
+        'select * from public.list_equipment_registration_assets($1,$2,0)',
+        [tenant, location],
+      )
+    await act(admin)
+    expect((await assets()).rows).toEqual([{ id: goodAsset, name: 'Activo de prueba' }])
+    await expect(register({ confirmed: false })).rejects.toMatchObject({ code: '22023' })
+    await expect(register({ kind: '  ' })).rejects.toMatchObject({ code: '22023' })
+    await expect(register({ kind: 'Parte\n privada' })).rejects.toMatchObject({ code: '22023' })
+    await expect(register({ asset: badAsset })).rejects.toMatchObject({ code: 'P0002' })
+    await expect(register({ asset: outsideAsset })).rejects.toMatchObject({ code: 'P0002' })
+    await expect(register({ tenant: b })).rejects.toMatchObject({ code: '42501' })
+    await act(foreign)
+    await expect(
+      register({ tenant: b, asset: outsideAsset, location: foreignCentre }),
+    ).rejects.toMatchObject({ code: '42501' })
+    for (const actor of [worker, viewer]) {
+      await act(actor)
+      await expect(assets()).rejects.toMatchObject({ code: '42501' })
+      await expect(register()).rejects.toMatchObject({ code: '42501' })
+    }
+    await act('', 'anon')
+    await expect(register()).rejects.toMatchObject({ code: '42501' })
+    await act(admin)
+    await expect(
+      db.query('select * from app_private.equipment_registration_receipts'),
+    ).rejects.toMatchObject({ code: '42501' })
+    const created = await register()
+    expect(created).toMatch(/^[0-9a-f-]{36}$/)
+    expect(await register()).toBe(created)
+    await expect(register({ kind: 'Otro tipo' })).rejects.toMatchObject({ code: 'P0409' })
+    expect((await list()).rows.map((row) => row.equipment_id)).toEqual([created, target])
+    await write(created, 0, 'issue', 202)
+    const issued = (await list()).rows[0]?.token ?? ''
+    expect(issued).toMatch(/^[0-9a-f-]{36}$/)
+    await act(worker)
+    // Existing same worker's visit at another asset does not grant access.
+    expect(await scan(issued)).toBeNull()
+    await act(teamWorker)
+    expect(await scan(issued)).toMatchObject({
+      kind: 'Válvula física',
+      manufacturer: 'Marca',
+      model: '',
+      activity: [],
+    })
+    await db.exec('reset role')
+    const receipts = await db.query<{ actor_id: string }>(
+      'select actor_id from app_private.equipment_registration_receipts where equipment_id=$1',
+      [created],
+    )
+    expect(receipts.rows).toEqual([{ actor_id: admin }])
+    await db.query("update public.service_locations set kind='billing' where id=$1", [centre])
+    await act(admin)
+    expect((await assets()).rows).toEqual([])
+    await expect(register()).rejects.toMatchObject({ code: 'P0002' })
+    expect(await scan(issued)).toBeNull()
   })
 })
