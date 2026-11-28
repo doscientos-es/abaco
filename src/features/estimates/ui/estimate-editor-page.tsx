@@ -115,6 +115,7 @@ function EstimateEditor({ estimate, data }: { estimate: Estimate; data: TenantDa
     return (
       <PublishedEstimatePage
         estimate={estimate}
+        client={client}
         tenantId={tenant.id}
         ledger={ledger}
         actions={actions}

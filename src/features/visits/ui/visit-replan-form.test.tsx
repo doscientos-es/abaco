@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   fields: new Map<string, string>(),
   reason: 'Cambio solicitado',
   duration: undefined as string | undefined,
+  start: undefined as string | undefined,
   index: 0,
 }))
 vi.mock('react', async (load) => {
@@ -23,6 +24,7 @@ vi.mock('react', async (load) => {
     useState: (initial: unknown) => {
       const state = actual.useState(initial)
       const index = mocks.index++
+      if (index === 0 && mocks.start !== undefined) return [mocks.start, state[1]]
       if (index === 1 && mocks.duration !== undefined) return [mocks.duration, state[1]]
       return index === 3 ? [mocks.reason, state[1]] : state
     },
@@ -75,6 +77,7 @@ describe('manual visit replanning', () => {
     vi.clearAllMocks()
     mocks.reason = 'Cambio solicitado'
     mocks.duration = undefined
+    mocks.start = undefined
     mocks.buttons.clear()
     mocks.fields.clear()
     mocks.save.mockResolvedValue(undefined)
@@ -116,6 +119,40 @@ describe('manual visit replanning', () => {
     await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
     expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ assignedUserId: null }))
   })
+  it('previews the actual new time separately from the original slot and saves only the selected visit', async () => {
+    mocks.start = '2026-11-14T11:45'
+    mocks.duration = '45'
+    const html = render({
+      ...visit,
+      contract_occurrence_on: '2026-11-12',
+      contract_title: 'Mantenimiento semanal',
+    })
+    expect(html).toContain('solo esta visita')
+    expect(html).toContain('12 nov 2026')
+    expect(html).toContain('13 nov 2026')
+    expect(html).toContain('14 nov 2026')
+    expect(html).toContain('11:45')
+    expect(html).toContain('45')
+    expect(html).toContain('Las demás visitas de la serie no cambian.')
+    const submit = mocks.buttons.get('Mover solo esta visita')
+    submit?.()
+    submit?.()
+    await vi.waitFor(() => expect(mocks.done).toHaveBeenCalledOnce())
+    expect(mocks.save).toHaveBeenCalledOnce()
+    expect(mocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({ visitId: 'visit', localStart: mocks.start, durationMinutes: 45 }),
+    )
+  })
+
+  it('does not preview or submit an impossible date', () => {
+    mocks.start = '2026-02-31T11:45'
+    expect(render({ ...visit, contract_occurrence_on: '2026-11-12' })).not.toContain(
+      'Nuevo inicio:',
+    )
+    mocks.buttons.get('Mover solo esta visita')?.()
+    expect(mocks.save).not.toHaveBeenCalled()
+  })
+
   it('retains the operation id on failure and leaves confirmation open for retry', async () => {
     mocks.save.mockRejectedValueOnce(new Error('Concurrent update'))
     render()
