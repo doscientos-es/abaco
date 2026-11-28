@@ -29,6 +29,7 @@ import {
 } from '../application/visit-report-local-draft'
 import { localVisitDay } from '../domain/next-assigned-visit'
 import { ClosedVisitReport } from './closed-visit-report'
+import { VisitHandoffsPanel } from './visit-handoffs-panel'
 import { VisitPhotosPanel } from './visit-photos-panel'
 import { VisitReportShares } from './visit-report-shares'
 
@@ -226,6 +227,7 @@ export function VisitReportEditor({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <VisitHandoffsPanel tenantId={tenantId} visit={visit} userId={userId} />
         {visit.status === 'completed' ? (
           <ClosedVisitReport tenantId={tenantId} visitId={visit.id} />
         ) : null}
