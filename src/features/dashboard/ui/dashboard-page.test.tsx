@@ -85,10 +85,14 @@ describe('dashboard customization', () => {
     expect(settings).toHaveLength(2)
     expect(settings[0]).toContain('Personalizar Ingresos y gastos')
     expect(settings[0]).toContain('Periodo de Ingresos y gastos')
-    expect(settings[0]).toContain('Últimos 12 meses')
+    expect(settings[0]).toContain('Formato de Ingresos y gastos')
+    expect(settings[0]).toContain('>12 meses<')
     expect(settings[1]).toContain('Personalizar Gastos por categoría')
     expect(settings[1]).toContain('Periodo de Gastos por categoría')
-    expect(settings[1]).toContain('Últimos 6 meses')
+    expect(settings[1]).toContain('Formato de Gastos por categoría')
+    expect(settings[1]).toContain('>6 meses<')
+    expect(html).toContain('Últimos 12 meses')
+    expect(html).toContain('Últimos 6 meses')
   })
 
   it('links the metrics to their source sections and explains their meaning', () => {
