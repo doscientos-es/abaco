@@ -31,7 +31,10 @@ import { localVisitDay } from '../domain/next-assigned-visit'
 import { ClosedVisitReport } from './closed-visit-report'
 import { VisitHandoffsPanel } from './visit-handoffs-panel'
 import { VisitPhotosPanel } from './visit-photos-panel'
+import { VisitReportDictation } from './visit-report-dictation'
 import { VisitReportShares } from './visit-report-shares'
+
+const noteLimit = 4000
 
 const emptyData = (): VisitReportData => ({
   notes: '',
@@ -411,9 +414,16 @@ export function VisitReportEditor({
                 <TextareaField
                   label="Notas del técnico"
                   value={data.notes}
-                  maxLength={4000}
+                  maxLength={noteLimit}
                   onChange={(notes) => change({ ...data, notes })}
                   placeholder="Qué se hizo y qué se encontró"
+                />
+                <VisitReportDictation
+                  key={key}
+                  notes={data.notes}
+                  maxLength={noteLimit}
+                  disabled={!canEdit}
+                  onAppend={(notes) => change({ ...data, notes })}
                 />
                 <TextareaField
                   label="Recomendaciones al cliente"
