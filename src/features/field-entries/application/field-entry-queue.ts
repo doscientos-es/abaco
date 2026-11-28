@@ -1,5 +1,6 @@
 import { localVisitQueueCounts } from '@/shared/lib/local-visit-queue-counts'
 
+import { isMaterialKind } from '../domain/material-quantity'
 import type { FieldEntryKind } from './field-entry-actions'
 
 export type PendingFieldEntry = {
@@ -10,6 +11,7 @@ export type PendingFieldEntry = {
   unit: string
   occurredAt: string
   supersedesId: string | null
+  officeReviewRequested?: boolean
 }
 
 const prefix = 'abaco:field-entry-queue:v1:'
@@ -41,7 +43,9 @@ export function readFieldEntryQueue(key: string): PendingFieldEntry[] {
         Number.isFinite(item.quantity) &&
         typeof item.unit === 'string' &&
         typeof item.occurredAt === 'string' &&
-        (item.supersedesId === null || typeof item.supersedesId === 'string'),
+        (item.supersedesId === null || typeof item.supersedesId === 'string') &&
+        (item.officeReviewRequested === undefined ||
+          (typeof item.officeReviewRequested === 'boolean' && isMaterialKind(item.kind))),
     )
   } catch {
     return []
