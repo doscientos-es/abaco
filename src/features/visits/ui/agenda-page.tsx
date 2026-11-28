@@ -48,6 +48,7 @@ import {
 import { toCalendarWallTime } from './agenda-calendar'
 import { AgendaResolutionPanel } from './agenda-resolution-panel'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
+import { BatchVisitReplan } from './batch-visit-replan'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
 import { PlanningToolbar } from './planning-toolbar'
@@ -659,6 +660,17 @@ export function AgendaPage() {
         onCreate={() => setCreateOpen(true)}
       />
       <div className="space-y-4">
+        {canReplan ? (
+          <BatchVisitReplan
+            key={tenant.id}
+            tenantId={tenant.id}
+            visits={visibleVisits}
+            disabled={
+              !visits.isSuccess || savingOccurrence || Object.keys(pendingChanges).length > 0
+            }
+            onSaved={refreshReplannedVisits}
+          />
+        ) : null}
         {view === 'list' && period === 'day' ? (
           <BatchWorkSheets
             tenantId={tenant.id}

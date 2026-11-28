@@ -230,12 +230,15 @@ describe('AgendaPage: nueva visita', () => {
 
   it('only mounts the upcoming resolution queue for a company admin', () => {
     expect(render()).toContain('aria-label="Por resolver"')
+    expect(mocks.buttons.has('Reprogramar varias visitas')).toBe(true)
     expect(
       mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
     ).toBe(true)
     mocks.queryKeys = []
     mocks.role = 'user'
+    mocks.buttons.clear()
     expect(render()).not.toContain('aria-label="Por resolver"')
+    expect(mocks.buttons.has('Reprogramar varias visitas')).toBe(false)
     expect(
       mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
     ).toBe(false)
