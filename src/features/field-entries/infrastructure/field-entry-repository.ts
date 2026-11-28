@@ -20,6 +20,7 @@ export type FieldEntry = {
   occurred_at: string
   recorded_at: string
   supersedes_id: string | null
+  office_review_requested: boolean
 }
 
 export async function listVisitFieldEntries(tenantId: string, visitId: string, page: number) {
@@ -28,7 +29,7 @@ export async function listVisitFieldEntries(tenantId: string, visitId: string, p
   const { data, count, error } = await db
     .from('service_visit_field_entries')
     .select(
-      'id,visit_id,work_order_id,contract_id,kind,description,quantity,unit,occurred_at,recorded_at,supersedes_id',
+      'id,visit_id,work_order_id,contract_id,kind,description,quantity,unit,occurred_at,recorded_at,supersedes_id,office_review_requested',
       { count: 'exact' },
     )
     .eq('tenant_id', tenantId)
@@ -38,7 +39,7 @@ export async function listVisitFieldEntries(tenantId: string, visitId: string, p
     .range(page * pageSize, (page + 1) * pageSize - 1)
   if (error) throw new Error(error.message)
   const entries = (data ?? []) as FieldEntry[]
-  const originalIds = entries.filter((entry) => !entry.supersedes_id).map((entry) => entry.id)
+  const originalIds = entries.map((entry) => entry.id)
   let supersededIds: string[] = []
   if (originalIds.length) {
     const result = await db
@@ -65,9 +66,17 @@ export async function recordVisitFieldEntry(input: {
   occurredAt: string
   supersedesId: string | null
   operationId: string
+  expectedActor: string
+  officeReviewRequested?: boolean
 }) {
-  const { data, error } = await createBrowserSupabaseClient().rpc(
-    'record_service_visit_field_entry',
+  const db = createBrowserSupabaseClient()
+  const session = await db.auth.getSession()
+  if (session.error || session.data.session?.user.id !== input.expectedActor)
+    throw new Error('La sesión ha cambiado. Abre de nuevo la visita antes de enviar.')
+  const { data, error } = await db.rpc(
+    input.officeReviewRequested === undefined
+      ? 'record_service_visit_field_entry'
+      : 'record_service_visit_material',
     {
       p_tenant_id: input.tenantId,
       p_visit_id: input.visitId,
@@ -78,8 +87,41 @@ export async function recordVisitFieldEntry(input: {
       p_occurred_at: input.occurredAt,
       p_supersedes_id: input.supersedesId,
       p_operation_id: input.operationId,
+      ...(input.officeReviewRequested === undefined
+        ? {}
+        : { p_office_review_requested: input.officeReviewRequested }),
     },
   )
   if (error) throw new Error(error.message)
   return data as string
+}
+
+export type VisitMaterialChoice = { id: string; name: string; unit: string }
+
+export async function listVisitMaterialChoices(tenantId: string, visitId: string, search: string) {
+  const { data, error } = await createBrowserSupabaseClient().rpc(
+    'list_service_visit_material_choices',
+    { p_tenant_id: tenantId, p_visit_id: visitId, p_search: search },
+  )
+  if (error) throw new Error(error.message)
+  return (data ?? []) as VisitMaterialChoice[]
+}
+
+export type VisitMaterialForReview = {
+  id: string
+  description: string
+  quantity: number
+  unit: string
+  occurred_at: string
+}
+
+export async function listVisitMaterialsForReview(tenantId: string, visitId: string, page: number) {
+  const pageSize = 20
+  const { data, error } = await createBrowserSupabaseClient().rpc(
+    'list_service_visit_materials_for_review',
+    { p_tenant_id: tenantId, p_visit_id: visitId, p_offset: page * pageSize },
+  )
+  if (error) throw new Error(error.message)
+  const entries = (data ?? []) as VisitMaterialForReview[]
+  return { entries: entries.slice(0, pageSize), hasMore: entries.length > pageSize }
 }

@@ -50,6 +50,15 @@ visitas a equipos y partes del circuito operativo. Consulta el
 [flujo operativo](docs/FLUJO_OPERATIVO.md) y comprueba su fecha y sus referencias
 a ramas antes de usarlo como estado actual.
 
+### Materiales de una visita
+
+En **Mi jornada → Parte de visita → Añadir material rápido**, el técnico puede elegir un material
+del catálogo de la empresa (solo nombre y unidad) o escribirlo. Se registra el consumo con cantidad
+editable. La marca opcional **Marcar para revisión de oficina** se ve al abrir el parte en
+**Trabajos → Partes por revisar**. Las correcciones conservan el historial pero la oficina ve la
+última cantidad marcada. La marca no se incorpora al informe público, no mueve stock ni factura.
+Si no se puede enviar, el registro queda pendiente en el dispositivo hasta un reintento manual.
+
 ### Incidencias de asignación
 
 En **Trabajos → Planificación → Por resolver**, la oficina puede revisar las visitas
