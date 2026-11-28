@@ -128,7 +128,7 @@ describe('DEV-70 private report template lifecycle', () => {
           'public.can_access_assigned_visit(p_tenant_id, p_visit_id)');
       end$$;
     `)
-    await db.exec(await migration('20261128153000_visit_report_templates'))
+    await db.exec(await migration('20261128153022_visit_report_templates'))
   }, 30000)
 
   beforeEach(async () => {
