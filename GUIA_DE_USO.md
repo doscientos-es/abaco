@@ -46,6 +46,8 @@ Los clientes se **archivan** para conservar sus referencias en presupuestos, tra
 4. Revisa el documento y publica la propuesta. Puedes copiar el enlace o compartir la versión publicada por email o WhatsApp.
 5. El cliente abre el enlace para aceptar o rechazar. La oficina también puede registrar una aceptación manual cuando conserve una referencia a la evidencia externa.
 
+En un presupuesto enviado, vigente y sin respuesta, **Preparar recordatorio** abre una vista previa con el destinatario, un mensaje editable y el enlace ya publicado. Puedes copiar el mensaje completo o abrir un borrador en WhatsApp si la ficha tiene un número válido. Esta acción no envía nada ni cambia la fecha de validez.
+
 ### Controlar materiales y proveedores
 
 1. En **Proveedores**, guarda el nombre y, para preparar solicitudes, el correo electrónico.

@@ -18,6 +18,8 @@ const state = vi.hoisted(() => ({
     evidence_description: string
   },
   emailSentAt: '',
+  validUntil: '2099-12-01',
+  respondedAt: '',
   contractId: '',
 }))
 const approval = vi.hoisted(() => ({
@@ -106,6 +108,8 @@ vi.mock('@/shared/store/store', () => ({
         documentFormat: state.documentFormat,
         sections,
         emailSentAt: state.emailSentAt,
+        validUntil: state.validUntil,
+        respondedAt: state.respondedAt,
       },
     ],
     catalog: [],
@@ -145,6 +149,8 @@ beforeEach(() => {
   state.documentFormat = 'table'
   state.manualAcceptance = null
   state.emailSentAt = ''
+  state.validUntil = '2099-12-01'
+  state.respondedAt = ''
   state.contractId = ''
 })
 
@@ -373,5 +379,29 @@ describe('acceso a la aprobación del presupuesto', () => {
     expect(html).toContain('aria-label="Imprimir o guardar PDF"')
     expect(html).toContain('aria-label="Páginas del presupuesto"')
     expect(html).toContain('max-h-[65dvh]')
+  })
+})
+
+describe('acceso a preparar recordatorios', () => {
+  it('muestra el botón a la oficina y no revela el enlace mientras no se abre', () => {
+    state.status = 'sent'
+    const html = renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)
+    expect(html).toContain('Preparar recordatorio')
+    expect(html).not.toContain('Mensaje editable')
+    expect(html).not.toContain('Número de WhatsApp')
+  })
+
+  it.each([
+    ['draft', 'admin', '2099-12-01', ''],
+    ['accepted', 'admin', '2099-12-01', ''],
+    ['rejected', 'admin', '2099-12-01', ''],
+    ['sent', 'user', '2099-12-01', ''],
+    ['sent', 'admin', '2000-01-01', ''],
+    ['sent', 'admin', '2099-12-01', '2026-11-27'],
+  ])('oculta recordatorios para %s, %s, %s, %s', (status, role, validUntil, respondedAt) => {
+    Object.assign(state, { status, role, validUntil, respondedAt })
+    expect(renderToStaticMarkup(<EstimateEditorPage estimateId="estimate" />)).not.toContain(
+      'Preparar recordatorio',
+    )
   })
 })
