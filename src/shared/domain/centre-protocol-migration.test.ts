@@ -31,7 +31,7 @@ describe('versioned centre protocols', () => {
   beforeAll(async () => {
     for (const file of [
       'tests/fixtures/centre-protocol.sql',
-      'migrations/20261128160500_service_location_protocol.sql',
+      'migrations/20261128153026_service_location_protocol.sql',
     ]) {
       await db.exec(await readFile(new URL(`../../../supabase/${file}`, import.meta.url), 'utf8'))
     }
