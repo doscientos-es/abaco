@@ -68,6 +68,18 @@ begin
   end if;
 end
 $$;
+-- Bounded primary-key lookups, shared by issuance and every public action.
+create function app_private.intervention_scope_is_active(p_tenant uuid,p_client uuid,p_centre uuid)
+returns boolean language sql stable security invoker set search_path='' as $$
+  select p_tenant is not null and p_client is not null
+    and coalesce(public.tenant_can_write(p_tenant),false)
+    and exists(select 1 from public.clients c
+      where c.id=p_client and c.tenant_id=p_tenant and c.archived_at is null)
+    and (p_centre is null or exists(select 1 from public.service_locations l
+      where l.id=p_centre and l.tenant_id=p_tenant and l.client_id=p_client
+        and l.active and l.kind<>'billing'));
+$$;
+
 create function app_private.create_intervention_invite(p_tenant uuid,p_client uuid,p_centre uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare secret text; created app_private.intervention_invites%rowtype;
@@ -75,11 +87,9 @@ begin
   perform app_private.require_intake_office(p_tenant,true);
   if p_client is null then raise exception 'Falta el cliente' using errcode='22023'; end if;
   perform 1 from public.tenants t where t.id=p_tenant for update;
-  if not exists(select 1 from public.clients c where c.tenant_id=p_tenant and c.id=p_client and c.archived_at is null)
-    or (p_centre is not null and not exists(
-      select 1 from public.service_locations l where l.id=p_centre and l.tenant_id=p_tenant
-        and l.client_id=p_client and l.active and l.kind<>'billing'
-    )) then raise exception 'El cliente o el centro no están disponibles' using errcode='P0002'; end if;
+  if not app_private.intervention_scope_is_active(p_tenant,p_client,p_centre) then
+    raise exception 'El cliente o el centro no están disponibles' using errcode='P0002';
+  end if;
   if (select count(*) from app_private.intervention_invites i where i.tenant_id=p_tenant
       and i.created_at>now()-interval '1 hour') >= 10 then
     raise exception 'Límite de invitaciones. Inténtalo más tarde' using errcode='P0429';
@@ -146,7 +156,7 @@ begin
 end
 $$;
 
--- The public HTTP handler alone can use these two narrowly scoped service-role RPCs.
+-- Only the public HTTP handler uses these narrowly scoped service-role RPCs.
 create function app_private.guard_intervention_intake(p_token_hash text,p_op uuid,p_with_photos boolean)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare target app_private.intervention_invites%rowtype; existing app_private.intervention_requests%rowtype;
@@ -154,7 +164,10 @@ declare target app_private.intervention_invites%rowtype; existing app_private.in
 begin
   if p_token_hash is null or p_token_hash !~ '^[0-9a-f]{64}$' then return null; end if;
   select * into target from app_private.intervention_invites where fingerprint=p_token_hash for update;
-  if not found or target.revoked_at is not null or target.expires_at <= clock_timestamp() then return null; end if;
+  if not found or target.revoked_at is not null or target.expires_at<=clock_timestamp()
+    or not app_private.intervention_scope_is_active(target.tenant_id,target.client_id,target.centre_id)
+    then return null;
+  end if;
   select * into existing from app_private.intervention_requests where invite_id=target.id;
   if found then
     if p_op is not null and existing.operation_id=p_op then
@@ -162,7 +175,6 @@ begin
     end if;
     return null;
   end if;
-  if not coalesce(public.tenant_can_write(target.tenant_id),false) then return null; end if;
   if p_op is not null then
     if p_with_photos is null then return null; end if;
     if p_with_photos and target.photo_attempts >= 8 then
@@ -198,7 +210,7 @@ begin
   if not found or target.revoked_at is not null or target.expires_at<=clock_timestamp()
     or target.pending_operation is distinct from p_op or target.pending_with_photos is distinct from true
     or target.photo_attempts is distinct from p_attempt or target.budgeted_photo_attempt>=p_attempt
-    or not coalesce(public.tenant_can_write(target.tenant_id),false)
+    or not app_private.intervention_scope_is_active(target.tenant_id,target.client_id,target.centre_id)
     or exists(select 1 from app_private.intervention_requests r where r.invite_id=target.id) then return null; end if;
   insert into app_private.intervention_image_budget as b (month_start,reservations)
     values(date_trunc('month',clock_timestamp() at time zone 'UTC')::date,p_count)
@@ -225,7 +237,10 @@ begin
   end if;
   if jsonb_array_length(p_photos)>3 then raise exception 'Demasiadas fotos' using errcode='22023'; end if;
   select * into target from app_private.intervention_invites where fingerprint=p_token_hash for update;
-  if not found or target.revoked_at is not null or target.expires_at<=clock_timestamp() then return null; end if;
+  if not found or target.revoked_at is not null or target.expires_at<=clock_timestamp()
+    or not app_private.intervention_scope_is_active(target.tenant_id,target.client_id,target.centre_id)
+    then return null;
+  end if;
   select * into existing from app_private.intervention_requests where invite_id=target.id;
   if found then
     if existing.operation_id=p_op and existing.fingerprint=p_digest then return existing.id; end if;
@@ -237,10 +252,8 @@ begin
       target.budgeted_photo_attempt is distinct from target.photo_attempts
       or target.budgeted_photo_count is distinct from jsonb_array_length(p_photos)
     ))
-    or not coalesce(public.tenant_can_write(target.tenant_id),false)
-    or not exists(select 1 from public.clients c where c.id=target.client_id and c.tenant_id=target.tenant_id and c.archived_at is null)
-    or (target.centre_id is not null and not exists(select 1 from public.service_locations l where l.id=target.centre_id
-      and l.client_id=target.client_id and l.tenant_id=target.tenant_id and l.active and l.kind<>'billing')) then return null; end if;
+    then return null;
+  end if;
   insert into app_private.intervention_requests (invite_id,tenant_id,operation_id,fingerprint,address,availability)
   values(target.id,target.tenant_id,p_op,p_digest,btrim(p_address),btrim(p_availability)) returning id into receipt;
   for photo in select value from jsonb_array_elements(p_photos) loop
@@ -282,6 +295,7 @@ returns uuid language sql security invoker set search_path=''
 begin atomic select app_private.submit_intervention_intake(p_token_hash,p_op,p_digest,p_address,p_availability,p_photos); end;
 
 revoke all on function app_private.require_intake_office(uuid,boolean),
+  app_private.intervention_scope_is_active(uuid,uuid,uuid),
   app_private.create_intervention_invite(uuid,uuid,uuid),app_private.list_intervention_intake(uuid,uuid),
   app_private.update_intervention_intake(uuid,uuid,text),app_private.read_intervention_photo(uuid,uuid),
   app_private.guard_intervention_intake(text,uuid,boolean),app_private.claim_intervention_image_budget(text,uuid,integer,integer),

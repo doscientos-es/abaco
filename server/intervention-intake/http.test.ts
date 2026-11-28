@@ -318,4 +318,30 @@ describe('DEV-83 same-origin bounded request', () => {
       'submit_intervention_intake',
     ])
   })
+  it('does not invoke IMAGES after the scope becomes unavailable between guard and budget claim', async () => {
+    const jpeg = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#000' } })
+      .jpeg()
+      .toBuffer()
+    const rpc = vi.fn(async (name) =>
+      name === 'guard_intervention_intake' ? { state: 'pending', photo_attempt: 1 } : null,
+    )
+    const info = vi.fn()
+    const input = vi.fn()
+    const out = await handleInterventionRequest(
+      request(
+        'submit',
+        { ...purpose, photos: [jpeg.toString('base64')] },
+        { 'x-request-photo-mode': 'photos' },
+      ),
+      { ...options, rpc, images: { info, input } },
+    )
+    expect(out.status).toBe(404)
+    expect(await out.json()).toEqual({ error: 'unavailable_link' })
+    expect(info).not.toHaveBeenCalled()
+    expect(input).not.toHaveBeenCalled()
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      'guard_intervention_intake',
+      'claim_intervention_image_budget',
+    ])
+  })
 })

@@ -256,6 +256,55 @@ describe('DEV-83 scoped invitation and private intervention review', () => {
     expect(await check(sha(expired.token), op)).toBeNull()
   })
 
+  it.each([
+    ['client archived', 'update public.clients set archived_at=now() where id=$1', client],
+    ['centre disabled', 'update public.service_locations set active=false where id=$1', centre],
+    [
+      'centre switched to billing',
+      "update public.service_locations set kind='billing' where id=$1",
+      centre,
+    ],
+  ])(
+    'blocks guard, photo reservations and submit when the %s after issuance',
+    async (_case, query, target) => {
+      const invite = await create()
+      const secret = sha(invite.token)
+      await service()
+      expect(await check(secret, op, true)).toEqual({ state: 'pending', photo_attempt: 1 })
+      await db.exec('reset role')
+      await db.query(query, [target])
+      await service()
+      expect(await check(secret)).toBeNull()
+      expect(await check(secret, id(11), true)).toBeNull()
+      expect(await claim(secret)).toBeNull()
+      expect(
+        await submit(secret, op, [Buffer.from([255, 216, 255, 217]).toString('base64')]),
+      ).toBeNull()
+      await db.exec('reset role')
+      expect(
+        await value('select count(*)::int value from app_private.intervention_image_budget'),
+      ).toBe(0)
+      expect(await value('select photo_attempts value from app_private.intervention_invites')).toBe(
+        1,
+      )
+    },
+  )
+
+  it('returns generic unavailable for replay when an already used scope is archived', async () => {
+    const invite = await create(null)
+    const secret = sha(invite.token)
+    await service()
+    await check(secret, op)
+    const receipt = await submit(secret)
+    expect(receipt).toBeTruthy()
+    expect(await check(secret, op)).toMatchObject({ state: 'replay', receipt })
+    await db.exec('reset role')
+    await db.query('update public.clients set archived_at=now() where id=$1', [client])
+    await service()
+    expect(await check(secret, op)).toBeNull()
+    expect(await submit(secret)).toBeNull()
+  })
+
   it('preserves the existing explicit parent deletion contract without touching other tenants', async () => {
     const own = await create()
     await office(outsider)
