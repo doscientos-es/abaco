@@ -41,6 +41,8 @@ describe('visit photo pairing boundary', () => {
   beforeAll(async () => {
     await db.exec(`
       create role anon; create role authenticated; create schema auth;
+      create schema app_private;
+      revoke all on schema app_private from public, anon, authenticated;
       grant usage on schema auth to authenticated;
       create function auth.uid() returns uuid language sql stable as $$
         select nullif(current_setting('request.user_id', true), '')::uuid
@@ -57,7 +59,7 @@ describe('visit photo pairing boundary', () => {
       $$;
       create function public.tenant_can_write(p_tenant uuid) returns boolean
       language sql stable security definer set search_path = '' as $$
-        select coalesce((select t.writable from public.tenant_fixture t where t.id = p_tenant), false)
+        select t.writable from public.tenant_fixture t where t.id = p_tenant
       $$;
       create table public.service_visits (
         id uuid primary key, tenant_id uuid, status text,
@@ -135,6 +137,22 @@ describe('visit photo pairing boundary', () => {
   it('registers a pair exactly once without modifying the evidence rows', async () => {
     await actor(worker)
     expect((await listing()).rows).toEqual([])
+    expect(
+      (
+        await db.query(
+          "select has_schema_privilege(current_user, 'app_private', 'USAGE') as allowed",
+        )
+      ).rows,
+    ).toEqual([{ allowed: false }])
+    await expect(
+      db.query('select app_private.set_service_visit_photo_pair($1, $2, $3, $4, $5)', [
+        tenant,
+        teamVisit,
+        before,
+        after,
+        true,
+      ]),
+    ).rejects.toMatchObject({ code: '42501' })
     await pair(before, after)
     await pair(before, after)
     expect((await listing()).rows).toEqual([{ before_photo_id: before, after_photo_id: after }])
@@ -196,6 +214,61 @@ describe('visit photo pairing boundary', () => {
     expect((await listing()).rows).toEqual([
       { before_photo_id: before, after_photo_id: afterSecond },
     ])
+  })
+
+  it('fails closed before taking the visit lock when both permission gates are unknown', async () => {
+    await db.exec(`
+      begin; reset role;
+      create or replace function public.has_role(p_tenant uuid, p_allowed public.app_role[])
+      returns boolean language sql stable security definer set search_path = '' as $$ select null::boolean $$;
+      create or replace function public.can_access_assigned_visit(p_tenant_id uuid, p_visit_id uuid)
+      returns boolean language sql stable security definer set search_path = '' as $$ select null::boolean $$;
+      set role authenticated;
+    `)
+    try {
+      await actor(worker)
+      expect((await listing()).rows).toEqual([])
+      await expect(pair(before, afterSecond, false)).rejects.toMatchObject({ code: '42501' })
+    } finally {
+      await db.exec('rollback')
+    }
+  })
+
+  it('does not trust a pre-lock permission that becomes unknown before mutation', async () => {
+    await db.exec(`
+      begin; reset role;
+      create or replace function public.has_role(p_tenant uuid, p_allowed public.app_role[])
+      returns boolean language plpgsql volatile security definer set search_path = '' as $$
+      begin
+        if nullif(pg_catalog.current_setting('request.photo_pair_office_checked', true), '') is null then
+          perform pg_catalog.set_config('request.photo_pair_office_checked', 'yes', true);
+          return true;
+        end if;
+        return null;
+      end;
+      $$;
+      create or replace function public.can_access_assigned_visit(p_tenant_id uuid, p_visit_id uuid)
+      returns boolean language sql stable security definer set search_path = '' as $$ select null::boolean $$;
+      set role authenticated;
+    `)
+    try {
+      await actor(worker)
+      await expect(pair(before, afterSecond, false)).rejects.toMatchObject({ code: '42501' })
+    } finally {
+      await db.exec('rollback')
+    }
+  })
+
+  it('does not mutate for an unknown tenant plan', async () => {
+    await db.exec('begin; reset role')
+    try {
+      await db.query('update public.tenant_fixture set writable = null where id = $1', [tenant])
+      await db.exec('set role authenticated')
+      await actor(worker)
+      await expect(pair(before, afterSecond, false)).rejects.toMatchObject({ code: 'P0409' })
+    } finally {
+      await db.exec('rollback')
+    }
   })
 
   it('freezes pairing after closure or plan restriction, and hides unassigned records', async () => {

@@ -23,16 +23,13 @@ grant select (tenant_id, visit_id, before_photo_id, after_photo_id, created_at)
 create policy service_visit_photo_pairs_select on public.service_visit_photo_pairs
   for select to authenticated using (
     (select auth.uid()) is not null and (
-      public.has_role(tenant_id, array['owner','admin','editor']::public.app_role[])
-      or public.can_access_assigned_visit(tenant_id, visit_id)
+      coalesce(public.has_role(tenant_id, array['owner','admin','editor']::public.app_role[]), false)
+      or coalesce(public.can_access_assigned_visit(tenant_id, visit_id), false)
     )
   );
 
-create schema visit_photo_pair_private;
-revoke all on schema visit_photo_pair_private from public, anon, authenticated;
-grant usage on schema visit_photo_pair_private to authenticated;
-
-create function visit_photo_pair_private.set_pair(
+-- The private schema already denies name resolution to client roles.
+create function app_private.set_service_visit_photo_pair(
   p_tenant_id uuid, p_visit_id uuid, p_before_photo_id uuid, p_after_photo_id uuid,
   p_paired boolean
 ) returns void language plpgsql security definer set search_path = '' as $$
@@ -49,8 +46,10 @@ begin
      or p_before_photo_id = p_after_photo_id then
     raise exception 'Pareja de fotografías inválida' using errcode = '22023';
   end if;
-  office := public.has_role(p_tenant_id, array['owner','admin','editor']::public.app_role[]);
-  if not office and not public.can_access_assigned_visit(p_tenant_id, p_visit_id) then
+  office := coalesce(
+    public.has_role(p_tenant_id, array['owner','admin','editor']::public.app_role[]), false
+  );
+  if not office and not coalesce(public.can_access_assigned_visit(p_tenant_id, p_visit_id), false) then
     raise exception 'No tienes permiso para organizar las fotografías' using errcode = '42501';
   end if;
 
@@ -58,12 +57,13 @@ begin
   select v.status into target_status from public.service_visits v
   where v.tenant_id = p_tenant_id and v.id = p_visit_id for update;
   if not found or not (
-    public.has_role(p_tenant_id, array['owner','admin','editor']::public.app_role[])
-    or public.can_access_assigned_visit(p_tenant_id, p_visit_id)
+    coalesce(public.has_role(p_tenant_id, array['owner','admin','editor']::public.app_role[]), false)
+    or coalesce(public.can_access_assigned_visit(p_tenant_id, p_visit_id), false)
   ) then
     raise exception 'No tienes permiso para organizar las fotografías' using errcode = '42501';
   end if;
-  if target_status not in ('scheduled', 'in_progress') or not public.tenant_can_write(p_tenant_id) then
+  if target_status is null or target_status not in ('scheduled', 'in_progress')
+     or not coalesce(public.tenant_can_write(p_tenant_id), false) then
     raise exception 'Solo se pueden organizar fotografías de una visita abierta' using errcode = 'P0409';
   end if;
 
@@ -99,20 +99,23 @@ begin
   end if;
 end;
 $$;
-revoke all on function visit_photo_pair_private.set_pair(uuid, uuid, uuid, uuid, boolean)
+revoke all on function app_private.set_service_visit_photo_pair(uuid, uuid, uuid, uuid, boolean)
   from public, anon, authenticated;
-grant execute on function visit_photo_pair_private.set_pair(uuid, uuid, uuid, uuid, boolean)
+grant execute on function app_private.set_service_visit_photo_pair(uuid, uuid, uuid, uuid, boolean)
   to authenticated;
 
 create function public.set_service_visit_photo_pair(
   p_tenant_id uuid, p_visit_id uuid, p_before_photo_id uuid, p_after_photo_id uuid,
   p_paired boolean
-) returns void language sql security invoker set search_path = '' as $$
-  select visit_photo_pair_private.set_pair(
+) returns void language sql security invoker set search_path = ''
+begin atomic
+  select app_private.set_service_visit_photo_pair(
     p_tenant_id, p_visit_id, p_before_photo_id, p_after_photo_id, p_paired
   );
-$$;
+end;
 revoke all on function public.set_service_visit_photo_pair(uuid, uuid, uuid, uuid, boolean)
   from public, anon, authenticated;
 grant execute on function public.set_service_visit_photo_pair(uuid, uuid, uuid, uuid, boolean)
   to authenticated;
+
+notify pgrst, 'reload schema';
