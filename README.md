@@ -104,7 +104,10 @@ sus hipótesis; las cifras previstas no son resultados medidos.
    organiza conjuntamente visitas recurrentes e independientes y revisa los partes.
 4. El usuario asignado realiza la visita desde **Mi jornada** y completa el parte.
    La vista de hoy muestra la siguiente visita con acceso al destino y a su ficha.
-   Cuando no queda ninguna hoy, se consultan los próximos 7 días.
+   Cuando no queda ninguna hoy, se consultan los próximos 7 días. La **Ficha de
+   llegada** reúne el cliente, el centro y la dirección de la visita con acceso a
+   Maps y copia de la dirección. No consulta contactos privados ni notas de acceso
+   del centro.
 
    **Partes pendientes en este dispositivo** permite retomar borradores de visitas
    todavía asignadas. No se sincronizan entre dispositivos y se eliminan al cerrar

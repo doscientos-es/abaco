@@ -22,7 +22,6 @@ import {
 import { listMyDayTasks } from '@/features/visits/application/my-day-tasks'
 import { calendarDate, moveDays, todayInMadrid } from '@/shared/lib/date-range'
 import { useActionLock } from '@/shared/lib/use-action-lock'
-import { VisitMapsAction } from '@/shared/ui/contact-actions'
 import { WorkerLoading, WorkerState } from '@/shared/ui/worker-state'
 
 import { visitEvidenceAnchor, type EvidenceKind } from '../application/pending-visit-evidence'
@@ -47,6 +46,7 @@ import { WorkerNextVisit } from './worker-next-visit'
 import { WorkerPaperReport } from './worker-paper-report'
 import { WorkerPendingEvidence } from './worker-pending-evidence'
 import { WorkerPendingReports } from './worker-pending-reports'
+import { WorkerVisitArrival } from './worker-visit-arrival'
 import { WorkerVisitStatus } from './worker-visit-status'
 
 const longDay = new Intl.DateTimeFormat('es-ES', {
@@ -599,17 +599,22 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                     })}{' '}
                     <span className="text-muted-foreground font-normal"> · {visit.timezone}</span>
                   </p>
-                  <p>{visit.client_name}</p>
                   {visit.work_team_id ? (
                     <p className="text-muted-foreground">Visita de tu equipo</p>
                   ) : null}
-                  {visit.location_name ? <p>{visit.location_name}</p> : null}
-                  <VisitMapsAction
-                    addressMayBeIncomplete
+                  <WorkerVisitArrival
+                    key={visit.address}
+                    title={visit.title}
+                    locationName={visit.location_name}
+                    clientName={visit.client_name}
                     address={visit.address}
-                    label={`Cómo llegar a ${visit.title} en Google Maps`}
                   />
-                  {visit.notes ? <p className="whitespace-pre-line">{visit.notes}</p> : null}
+                  {visit.notes ? (
+                    <section aria-label="Notas de la visita" className="space-y-1">
+                      <h4 className="font-medium">Notas de la visita</h4>
+                      <p className="wrap-break-word whitespace-pre-line">{visit.notes}</p>
+                    </section>
+                  ) : null}
                   {visit.work_order_id ? (
                     <section
                       aria-label="Tareas del servicio"

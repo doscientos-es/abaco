@@ -44,6 +44,10 @@ const visit = {
   client_name: 'Cliente ficticio',
   location_name: 'Sede ficticia',
   address: 'Calle ficticia 15',
+  notes: 'Llevar material de revisión',
+  access_notes: 'Claves privadas de la oficina',
+  operational_contact: 'Contacto no autorizado',
+  parking_notes: 'Parking de la ficha privada',
   scheduled_start_at: `${today}T08:00:00Z`,
   scheduled_end_at: `${today}T09:00:00Z`,
   timezone: 'Europe/Madrid',
@@ -79,7 +83,7 @@ async function run() {
   try {
     const context = await browser.newContext({
       viewport: { width: 320, height: 740 },
-      permissions: ['geolocation'],
+      permissions: ['geolocation', 'clipboard-read', 'clipboard-write'],
       geolocation: { latitude: 41.35, longitude: 2.1 },
       serviceWorkers: 'block',
     })
@@ -130,7 +134,16 @@ async function run() {
         })
       if (request.method() === 'OPTIONS') return json(null)
       const name = url.pathname.split('/').at(-1)
-      if (['clients', 'estimates', 'invoices', 'work_orders'].includes(name))
+      if (
+        [
+          'clients',
+          'estimates',
+          'invoices',
+          'work_orders',
+          'service_locations',
+          'client_contacts',
+        ].includes(name)
+      )
         officeRequests.push(name)
       if (name === 'my_company_memberships')
         return json([{ tenant_id: tenant, company_name: 'Empresa de pruebas', role: 'user' }])
@@ -213,6 +226,8 @@ async function run() {
             ...visit,
             id: tomorrowId,
             title: 'Visita del día siguiente',
+            location_name: '',
+            address: '',
             scheduled_start_at: `${tomorrow}T08:00:00Z`,
             scheduled_end_at: `${tomorrow}T09:00:00Z`,
           })
@@ -285,6 +300,36 @@ async function run() {
     const visitCard = page.getByRole('article', { name: 'Visita al local de pruebas' })
     await visitCard.waitFor()
     await page.waitForFunction((id) => document.activeElement?.id === `worker-visit-${id}`, visitId)
+    const arrival = visitCard.getByRole('region', { name: 'Ficha de llegada' })
+    await arrival.getByText('Sede ficticia', { exact: true }).waitFor()
+    await arrival.getByText('Cliente: Cliente ficticio', { exact: true }).waitFor()
+    const arrivalMap = arrival.getByRole('link', { name: /Cómo llegar a Visita al local/ })
+    const arrivalHref = new URL(await arrivalMap.getAttribute('href'))
+    assert.equal(arrivalHref.searchParams.get('destination'), 'Calle ficticia 15')
+    assert.deepEqual([...arrivalHref.searchParams.keys()], ['api', 'destination'])
+    assert.equal(await arrivalMap.getAttribute('rel'), 'noopener noreferrer')
+    assert.equal(await arrival.getByText('Llevar material de revisión').count(), 0)
+    assert.equal(
+      await visitCard
+        .getByText(/Claves privadas|Contacto no autorizado|Parking de la ficha/)
+        .count(),
+      0,
+    )
+    const copy = arrival.getByRole('button', { name: 'Copiar dirección' })
+    await copy.click()
+    await arrival.getByText('Dirección copiada.', { exact: true }).waitFor()
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'Calle ficticia 15')
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => {
+        throw new DOMException('Fixture', 'NotAllowedError')
+      }
+    })
+    await copy.click()
+    await arrival
+      .getByRole('alert')
+      .getByText(/No se pudo copiar automáticamente/)
+      .waitFor()
+    await assertNoHorizontalOverflow(page)
     await visitCard.getByRole('button', { name: 'Iniciar visita' }).click()
     await visitCard.getByText('En curso', { exact: true }).waitFor()
     assert.equal(visitStarts, 1)
@@ -427,6 +472,13 @@ async function run() {
       (id) => document.activeElement?.id === `worker-visit-${id}`,
       tomorrowId,
     )
+    const emptyArrival = page
+      .getByRole('article', { name: 'Visita del día siguiente' })
+      .getByRole('region', { name: 'Ficha de llegada' })
+    await emptyArrival.getByText('No hay un centro indicado.', { exact: true }).waitFor()
+    await emptyArrival.getByText(/Sin dirección de visita/).waitFor()
+    assert.equal(await emptyArrival.getByRole('link').count(), 0)
+    assert.equal(await emptyArrival.getByRole('button', { name: 'Copiar dirección' }).count(), 0)
     await page.getByRole('button', { name: 'Hoy', exact: true }).click()
     await assertNoHorizontalOverflow(page)
     await page.getByRole('button', { name: 'Calendario', exact: true }).click()
@@ -590,7 +642,7 @@ async function run() {
     await assertNoHorizontalOverflow(page)
     assert.deepEqual(officeRequests, [])
     process.stdout.write(
-      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry, history search/read-only, and scoped evidence with safe photo retry.\n',
+      'Worker smoke: 320px + desktop, week/month, exact focus, geolocation, failed save/retry, arrival/maps/copy, history search/read-only, and scoped evidence with safe photo retry.\n',
     )
   } finally {
     await browser.close()
