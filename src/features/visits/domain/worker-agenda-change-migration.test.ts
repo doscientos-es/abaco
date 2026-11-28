@@ -7,7 +7,7 @@ function migrationFile(name: string) {
   return readFileSync(new URL(`../../../../supabase/migrations/${name}`, import.meta.url), 'utf8')
 }
 
-const migration = migrationFile('20261128144107_worker_agenda_change_notices.sql')
+const migration = migrationFile('20261128145709_worker_agenda_change_notices.sql')
 const access = migrationFile('20261112115459_team_visit_permissions.sql').split(
   'alter policy service_visits_select',
 )[0]
