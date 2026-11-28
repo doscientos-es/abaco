@@ -8,7 +8,7 @@ function migration(name: string) {
   return readFileSync(new URL(`../../../../supabase/migrations/${name}`, import.meta.url), 'utf8')
 }
 
-const sql = migration('20261128152638_visit_measurement_comparison.sql')
+const sql = migration('20261128154543_visit_measurement_comparison.sql')
 const existingMeasurements = migration('20261027143749_pool_measurements.sql')
 const roles = migration('20261109143327_admin_user_roles.sql')
 const rolePatch = roles.slice(
