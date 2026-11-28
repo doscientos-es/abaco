@@ -1,6 +1,52 @@
 {
   "releases": [
     {
+      "version": "0.0.31",
+      "date": "2026-11-28",
+      "title": "v0.0.31",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-86: importar clientes y centros desde un Excel revisado",
+            "DEV-70: plantillas de partes sin sobrescribir trabajo existente",
+            "DEV-68: revisar la ruta y el margen de traslados",
+            "DEV-66: aprobar intercambios de visitas con control de versiones"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "93a72238d72af8ac94473d287a8e4580b47d5ef1",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-86: importar clientes y centros desde un Excel revisado"
+        },
+        {
+          "sha": "f3487180781297fc3936d9e40b3bfe37cbf03331",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-70: plantillas de partes sin sobrescribir trabajo existente"
+        },
+        {
+          "sha": "f9f4aff571878db40e199e5e27c84c01b3727ebb",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-68: revisar la ruta y el margen de traslados"
+        },
+        {
+          "sha": "af47bcc12c7763edd959b9c706dcd7c2de0ca26f",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-66: aprobar intercambios de visitas con control de versiones"
+        }
+      ]
+    },
+    {
       "version": "0.0.30",
       "date": "2026-11-28",
       "title": "v0.0.30",

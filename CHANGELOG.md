@@ -2,6 +2,15 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.31
+
+### Nuevas funciones
+
+- DEV-86: importar clientes y centros desde un Excel revisado
+- DEV-70: plantillas de partes sin sobrescribir trabajo existente
+- DEV-68: revisar la ruta y el margen de traslados
+- DEV-66: aprobar intercambios de visitas con control de versiones
+
 ## 2026-11-28 — v0.0.30
 
 ### Nuevas funciones
