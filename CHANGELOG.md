@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.27
+
+### Nuevas funciones
+
+- DEV-67: avisos de agenda y acuse para personal asignado
+
 ## 2026-11-28 — v0.0.26
 
 ### Nuevas funciones

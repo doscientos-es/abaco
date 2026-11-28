@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.27",
+      "date": "2026-11-28",
+      "title": "v0.0.27",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-67: avisos de agenda y acuse para personal asignado"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "125091fb50ea3c352395d23e67b561549ca1e2f2",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-67: avisos de agenda y acuse para personal asignado"
+        }
+      ]
+    },
+    {
       "version": "0.0.26",
       "date": "2026-11-28",
       "title": "v0.0.26",
