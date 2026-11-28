@@ -76,7 +76,7 @@ describe('worker arrival publishing boundary', () => {
     await db.exec(
       await readFile(
         new URL(
-          '../supabase/migrations/20261128142211_service_location_staff_arrival.sql',
+          '../supabase/migrations/20261128143219_service_location_staff_arrival.sql',
           import.meta.url,
         ),
         'utf8',
