@@ -37,7 +37,10 @@ export function AgendaResolutionPanel({
   const [dayIndex, setDayIndex] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [selected, setSelected] = useState<VisitSummary | null>(null)
+  const [selected, setSelected] = useState<{
+    visit: VisitSummary
+    confirmedAbsence: boolean
+  } | null>(null)
   const visits = useQuery(agendaResolutionVisitsQuery(tenantId, today))
   const absences = useQuery(agendaResolutionAbsencesQuery(tenantId, today))
   const days = [today, moveDays(today, 1)] as const
@@ -175,7 +178,9 @@ export function AgendaResolutionPanel({
                     className="max-md:min-h-11"
                     aria-label={`Reprogramar ${visit.title}`}
                     isDisabled={editingState !== 'ready'}
-                    onPress={() => setSelected(visit)}
+                    onPress={() =>
+                      setSelected({ visit, confirmedAbsence: kind === 'approved-absence' })
+                    }
                   >
                     Reprogramar
                   </Button>
@@ -198,14 +203,15 @@ export function AgendaResolutionPanel({
       {selected ? (
         <CalendarDetailsDialog
           title="Resolver asignación"
-          description={selected.title}
+          description={selected.visit.title}
           onClose={() => setSelected(null)}
           preventDismissal={saving}
         >
           <VisitReplanForm
-            key={`${selected.id}:${selected.updated_at}`}
+            key={`${selected.visit.id}:${selected.visit.updated_at}`}
             tenantId={tenantId}
-            visit={selected}
+            visit={selected.visit}
+            suggestSubstitute={selected.confirmedAbsence}
             technicians={technicians}
             onDone={async () => {
               await onSaved()
