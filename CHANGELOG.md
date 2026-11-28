@@ -2,6 +2,13 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.26
+
+### Nuevas funciones
+
+- DEV-79: vincular visitas a facturas emitidas con auditoría
+- DEV-78: pasar pendientes entre visitas asignadas
+
 ## 2026-11-28 — v0.0.25
 
 ### Nuevas funciones

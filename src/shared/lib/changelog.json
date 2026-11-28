@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.0.26",
+      "date": "2026-11-28",
+      "title": "v0.0.26",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-79: vincular visitas a facturas emitidas con auditoría",
+            "DEV-78: pasar pendientes entre visitas asignadas"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "dc645c1e8e5312f5a42996ad83b2e3daaa1d332f",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-79: vincular visitas a facturas emitidas con auditoría"
+        },
+        {
+          "sha": "92b08a8be04e4f012729b765bed8ffe4ae06206e",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-78: pasar pendientes entre visitas asignadas"
+        }
+      ]
+    },
+    {
       "version": "0.0.25",
       "date": "2026-11-28",
       "title": "v0.0.25",
