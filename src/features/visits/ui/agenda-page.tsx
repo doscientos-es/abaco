@@ -57,6 +57,7 @@ import { VisitOccurrenceReference } from './visit-occurrence-scope'
 import { VisitOccurrenceSkipForm } from './visit-occurrence-skip-form'
 import { VisitReplanForm } from './visit-replan-form'
 import { VisitReportEditor } from './visit-report-editor'
+import { VisitSwapsPanel } from './visit-swaps-panel'
 
 import './planning-calendar.css'
 
@@ -643,6 +644,15 @@ export function AgendaPage() {
           technicians={technicians.data ?? []}
           editingState={technicians.isSuccess ? 'ready' : technicians.isError ? 'error' : 'loading'}
           onRetryTechnicians={() => void technicians.refetch()}
+          onSaved={refreshReplannedVisits}
+        />
+      ) : null}
+      {canReplan && session?.userId ? (
+        <VisitSwapsPanel
+          key={`${tenant.id}:${session.userId}`}
+          tenantId={tenant.id}
+          userId={session.userId}
+          office
           onSaved={refreshReplannedVisits}
         />
       ) : null}
