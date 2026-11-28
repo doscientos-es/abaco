@@ -2,6 +2,14 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.33
+
+### Nuevas funciones
+
+- DEV-59: registrar materiales y marcar revisión de oficina
+- DEV-77: preparar borradores revisables desde hallazgos
+- DEV-74: medir y comparar lecturas en partes de piscina
+
 ## 2026-11-28 — v0.0.32
 
 ### Nuevas funciones

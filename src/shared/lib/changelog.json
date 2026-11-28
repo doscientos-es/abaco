@@ -1,6 +1,44 @@
 {
   "releases": [
     {
+      "version": "0.0.33",
+      "date": "2026-11-28",
+      "title": "v0.0.33",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-59: registrar materiales y marcar revisión de oficina",
+            "DEV-77: preparar borradores revisables desde hallazgos",
+            "DEV-74: medir y comparar lecturas en partes de piscina"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "61fb6dc2decd59980c202809f23638f71a2a0cdb",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-59: registrar materiales y marcar revisión de oficina"
+        },
+        {
+          "sha": "22388c467282aad027957136800dc5a71c8a9b36",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-77: preparar borradores revisables desde hallazgos"
+        },
+        {
+          "sha": "8f7c7472b3ea166862b022e9fcb59d1b91fb6f22",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-74: medir y comparar lecturas en partes de piscina"
+        }
+      ]
+    },
+    {
       "version": "0.0.32",
       "date": "2026-11-28",
       "title": "v0.0.32",
