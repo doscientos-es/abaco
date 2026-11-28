@@ -12,6 +12,7 @@ import {
   type Incident,
   type IncidentConversionKind,
 } from '../application/incident-actions'
+import { IncidentQuoteReviewPanel } from './incident-quote-review'
 
 const labels: Record<IncidentConversionKind, string> = {
   estimate: 'Presupuesto',
@@ -30,6 +31,7 @@ export function IncidentConversions({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [quoteOpen, setQuoteOpen] = useState(false)
   const [visitOpen, setVisitOpen] = useState(false)
   const [localStart, setLocalStart] = useState('')
   const [duration, setDuration] = useState(60)
@@ -48,7 +50,19 @@ export function IncidentConversions({
   })
   const existing = new Map(conversions.data?.map((item) => [item.kind, item]))
 
-  async function create(kind: IncidentConversionKind) {
+  async function openQuote(estimateId: string) {
+    setQuoteOpen(false)
+    await queryClient.invalidateQueries({ queryKey })
+    await refreshStore()
+    if (currentTenantData()?.estimates.some((item) => item.id === estimateId)) {
+      toast.success('Presupuesto borrador creado. No se ha enviado.')
+      void navigate({ to: '/presupuestos/$estimateId', params: { estimateId } })
+    } else {
+      toast.success('Borrador creado. Actualiza la página para abrirlo.')
+    }
+  }
+
+  async function create(kind: 'work' | 'visit') {
     if (busy || conversions.isPending || conversions.isError || existing.has(kind)) return
     if (kind === 'visit' && (!localStart || duration < 15 || duration > 720)) {
       toast.error('Indica una fecha y una duración entre 15 y 720 minutos')
@@ -73,15 +87,7 @@ export function IncidentConversions({
       const destinationId = await convertIncident({ ...payload, operationId })
       operations.current.delete(key)
       await queryClient.invalidateQueries({ queryKey })
-      if (kind === 'estimate') {
-        await refreshStore()
-        if (currentTenantData()?.estimates.some((item) => item.id === destinationId)) {
-          toast.success('Presupuesto borrador creado')
-          void navigate({ to: '/presupuestos/$estimateId', params: { estimateId: destinationId } })
-        } else {
-          toast.success('Presupuesto creado. Actualiza la página para abrirlo.')
-        }
-      } else if (kind === 'work') {
+      if (kind === 'work') {
         await queryClient.invalidateQueries({ queryKey: ['work-orders', tenantId] })
         toast.success('Trabajo creado')
         void navigate({ to: '/trabajos/$workOrderId', params: { workOrderId: destinationId } })
@@ -152,6 +158,20 @@ export function IncidentConversions({
             )
           }
           if (incident.status === 'canceled') return null
+          if (kind === 'estimate')
+            return (
+              <Button
+                key={kind}
+                size="sm"
+                className="min-h-11"
+                variant="outline"
+                isDisabled={Boolean(busy) || conversions.isPending || conversions.isError}
+                aria-expanded={quoteOpen}
+                onPress={() => setQuoteOpen((shown) => !shown)}
+              >
+                {quoteOpen ? 'Cerrar revisión del presupuesto' : 'Preparar presupuesto'}
+              </Button>
+            )
           return (
             <Button
               key={kind}
@@ -167,6 +187,14 @@ export function IncidentConversions({
           )
         })}
       </div>
+      {quoteOpen && !existing.has('estimate') && incident.status !== 'canceled' ? (
+        <IncidentQuoteReviewPanel
+          key={incident.id}
+          tenantId={tenantId}
+          incident={incident}
+          onCreated={openQuote}
+        />
+      ) : null}
       {visitOpen && !existing.has('visit') && incident.status !== 'canceled' ? (
         <div className="bg-muted grid gap-3 rounded-lg p-3 sm:grid-cols-3">
           <label>
