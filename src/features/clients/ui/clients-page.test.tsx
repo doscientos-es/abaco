@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   target: null as { id: string; name: string } | null,
   stateIndex: 0,
   setImportOpen: vi.fn(),
+  setWorkbookOpen: vi.fn(),
   setTarget: vi.fn(),
   navigate: vi.fn(),
   update: vi.fn(),
@@ -28,7 +29,13 @@ vi.mock('react', async (original) => ({
     const index = mocks.stateIndex++
     return [
       index === 2 ? mocks.archived : index === 3 ? mocks.target : initial,
-      index === 0 ? mocks.setImportOpen : index === 3 ? mocks.setTarget : vi.fn(),
+      index === 0
+        ? mocks.setImportOpen
+        : index === 3
+          ? mocks.setTarget
+          : index === 4
+            ? mocks.setWorkbookOpen
+            : vi.fn(),
     ]
   },
 }))
@@ -143,6 +150,15 @@ describe('client Excel import action', () => {
     expect(html).toContain('<button aria-label="Importar de Excel"></button>')
     mocks.actions.get('Importar de Excel')?.[0]?.()
     expect(mocks.setImportOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('offers the mapped workbook for clients or centres independently of the legacy action', () => {
+    mocks.hasClientTypes = false
+    const html = renderToStaticMarkup(<ClientsPage />)
+    expect(html).toContain('Importar clientes y centros')
+    mocks.actions.get('Importar clientes y centros')?.[0]?.()
+    expect(mocks.setWorkbookOpen).toHaveBeenCalledWith(true)
+    expect(mocks.setImportOpen).not.toHaveBeenCalled()
   })
 
   it('keeps the import icon disabled when no client types are available', () => {
