@@ -75,8 +75,8 @@ async function run() {
       )
       assert.equal(cachedManifest.name, 'Menos Líos')
       await context.close()
-      console.log(
-        `PWA OK: ${width}px, Chromium installability, app and Apple icons, offline reload`,
+      process.stdout.write(
+        `PWA OK: ${width}px, Chromium installability, app and Apple icons, offline reload\n`,
       )
     }
   } finally {
@@ -84,6 +84,6 @@ async function run() {
   }
 }
 run().catch((error) => {
-  console.error(error)
+  process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`)
   process.exitCode = 1
 })
