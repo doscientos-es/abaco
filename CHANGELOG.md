@@ -2,6 +2,12 @@
 
 <!-- generado desde Git con Conventional Commits; no editar a mano -->
 
+## 2026-11-28 — v0.0.36
+
+### Nuevas funciones
+
+- DEV-83: solicitudes de intervención con fotos y permisos acotados
+
 ## 2026-11-28 — v0.0.35
 
 ### Nuevas funciones

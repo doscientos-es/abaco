@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.0.36",
+      "date": "2026-11-28",
+      "title": "v0.0.36",
+      "sections": [
+        {
+          "title": "Nuevas funciones",
+          "items": [
+            "DEV-83: solicitudes de intervención con fotos y permisos acotados"
+          ]
+        }
+      ],
+      "changes": [
+        {
+          "sha": "b0f9c54ad64063103154f181d663d7fdc8006afc",
+          "type": "feat",
+          "scope": null,
+          "breaking": false,
+          "description": "DEV-83: solicitudes de intervención con fotos y permisos acotados"
+        }
+      ]
+    },
+    {
       "version": "0.0.35",
       "date": "2026-11-28",
       "title": "v0.0.35",
