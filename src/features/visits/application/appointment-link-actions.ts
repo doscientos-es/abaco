@@ -1,0 +1,18 @@
+export {
+  appointmentLinkUrl,
+  createAppointmentLinkAttempt,
+  decideAppointmentChange,
+  issueAppointmentLink,
+  listAppointmentChangeRequests,
+  listAppointmentLinks,
+  readAppointmentLink,
+  respondToAppointmentLink,
+  revokeAppointmentLink,
+  validAppointmentToken,
+  type AppointmentChangeRequest,
+  type AppointmentDecision,
+  type AppointmentExpiry,
+  type AppointmentResponse,
+  type OfficeAppointmentLink,
+  type PublicAppointment,
+} from '../infrastructure/appointment-link-repository'
