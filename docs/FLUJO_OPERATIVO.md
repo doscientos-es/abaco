@@ -43,6 +43,25 @@ no demuestra que se hayan aplicado a Supabase ni que el recorrido se haya valida
 - Las migraciones de DEV-25 se aplicaron a Supabase, pero el recorrido y los permisos de base de
   datos no se han probado; deben validarse con cuentas separadas antes de darlo por verificado.
 
+## Confirmar una factura emitida para una visita (DEV-79)
+
+En **Facturas → Visitas hechas por revisar**, la oficina puede vincular una factura
+existente a una visita marcada **Facturar aparte** cuyo último parte cerrado esté
+revisado. Busca por número exacto; comprueba el concepto y el importe y confirma
+la cobertura completa con un motivo. Solo se puede elegir una factura emitida de la
+misma empresa y del mismo cliente. El estado de cobro no interviene.
+
+Las visitas vinculadas salen de **Por confirmar** y se pueden consultar o
+desvincular en **Con factura vinculada**. Vincular y desvincular solo cambia la
+revisión operativa. Registra la factura, el motivo, la identidad de la persona y
+la fecha sin modificar la factura, pagarla ni emitir nada. Un contrato, periodo,
+hito, extra o coincidencia de fechas no demuestra por sí solo que la factura cubra
+la visita. Las facturas externas y los casos parciales o dudosos siguen sin confirmar.
+
+Nota de entrega: aplicar primero la migración de cobertura de visitas. Es aditiva:
+no vincula filas históricas y el frontend anterior sigue funcionando si se revierte
+el despliegue de la interfaz.
+
 ## Orden recomendado para completar
 
 1. Integrar en `main` el modelo de servicios múltiples y presupuesto → contrato → trabajos,

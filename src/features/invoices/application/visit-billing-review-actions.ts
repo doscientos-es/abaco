@@ -1,5 +1,8 @@
 export {
   decideVisitBillingReview,
-  listOpenVisitBillingReviews,
+  findIssuedVisitInvoice,
+  setVisitInvoiceCoverage,
+  type CoverageInvoice,
+  listVisitBillingReviews,
   type VisitBillingReview,
 } from '../infrastructure/visit-billing-review-repository'
