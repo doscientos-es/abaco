@@ -1,7 +1,7 @@
 import { Button, toast } from '@doscientos/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import { useSession } from '@/features/auth'
 import {
@@ -45,9 +45,11 @@ import {
   type VisitSummary,
   type VisitStatus,
 } from '../application/visit-actions'
+import { dailyTravelRoutes } from '../domain/agenda-travel-review'
 import { toCalendarWallTime } from './agenda-calendar'
 import { AgendaResolutionPanel } from './agenda-resolution-panel'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
+import { AgendaTravelReview } from './agenda-travel-review'
 import { BatchVisitReplan } from './batch-visit-replan'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
@@ -191,6 +193,11 @@ export function AgendaPage() {
   )
   const calendarGroupById = new Map(calendarGroups.map((group) => [group.id, group]))
   const canReplan = session?.role === 'admin'
+  const canReviewTravel = canReplan && session?.tenantId === tenant.id
+  const travelRoutes = useMemo(
+    () => (canReviewTravel && visits.isSuccess ? dailyTravelRoutes(visits.data, date) : []),
+    [canReviewTravel, date, visits.data, visits.isSuccess],
+  )
   const calendarItems: CalendarEvent[] = calendarGroups.map((group) => {
     const visit = group.visits[0]
     const pending = pendingChanges[group.id]
@@ -671,15 +678,30 @@ export function AgendaPage() {
       />
       <div className="space-y-4">
         {canReplan ? (
-          <BatchVisitReplan
-            key={tenant.id}
-            tenantId={tenant.id}
-            visits={visibleVisits}
-            disabled={
-              !visits.isSuccess || savingOccurrence || Object.keys(pendingChanges).length > 0
-            }
-            onSaved={refreshReplannedVisits}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <BatchVisitReplan
+              key={tenant.id}
+              tenantId={tenant.id}
+              visits={visibleVisits}
+              disabled={
+                !visits.isSuccess || savingOccurrence || Object.keys(pendingChanges).length > 0
+              }
+              onSaved={refreshReplannedVisits}
+            />
+            {canReviewTravel ? (
+              <AgendaTravelReview
+                key={`${tenant.id}:${session.userId}:${date}`}
+                date={date}
+                routes={travelRoutes}
+                disabled={
+                  !visits.isSuccess ||
+                  visits.isFetching ||
+                  savingOccurrence ||
+                  Object.keys(pendingChanges).length > 0
+                }
+              />
+            ) : null}
+          </div>
         ) : null}
         {view === 'list' && period === 'day' ? (
           <BatchWorkSheets

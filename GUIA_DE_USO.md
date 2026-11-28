@@ -94,6 +94,8 @@ En una visita asignada para hoy y todavía sin iniciar, **Preparar aviso de retr
 2. Revisa las visitas por día, semana o técnico. Si cambias una cita, registra el motivo de la reprogramación.
 3. Comprueba los posibles solapamientos y las visitas recurrentes generadas antes de confirmar el plan del día.
 
+**Revisar traslados** (solo administración) toma la fecha seleccionada en **Planificación**. Elige la ruta de un técnico o de un equipo cuando no haya técnico asignado y marca al menos dos visitas planificadas. Añade tu estimación entre cada par de visitas. El cálculo compara el final previsto de una visita con el inicio de la siguiente y avisa si se solapan o no queda margen. Si dejas una visita intermedia fuera, el resultado no sirve para comprobar toda la ruta. No se consulta el tráfico, no se comparten direcciones y no se guardan los minutos ni se cambia la agenda.
+
 ### Técnico: Mi jornada y parte
 
 1. En **Mi jornada**, selecciona el día. Solo aparecen tus visitas asignadas.
