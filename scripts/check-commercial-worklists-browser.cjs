@@ -2,6 +2,7 @@
 // Build with VITE_SUPABASE_URL=http://localhost:54399 VITE_SUPABASE_PUBLISHABLE_KEY=fixture.
 // Vite preview --port 4196; PLAYWRIGHT_MODULE=/path/to/playwright node this-file.
 const assert = require('node:assert/strict')
+const { readFile } = require('node:fs/promises')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright')
 
 const origin = 'http://127.0.0.1:4196'
@@ -52,6 +53,10 @@ const tables = {
     invoice(3, '2090-12-13', 0, 'Factura futura'),
     invoice(2, '2020-01-08', 2500, 'Reparación parcial'),
     invoice(1, '2020-01-07', 10000, 'Ya cobrada'),
+    ...Array.from({ length: 30 }, (_, i) =>
+      invoice(100 + i, '2090-12-20', 2500, `Exportable ${i + 1}`),
+    ),
+    { ...invoice(4, '2020-01-02', 0, 'Otro cliente'), client_id: 'other-client' },
   ],
 }
 async function main() {
@@ -157,11 +162,33 @@ async function main() {
     )
     await page.getByRole('button', { name: 'Filtros adicionales' }).waitFor()
     await noOverflow()
+    await page.goto(`${origin}/facturas?cobro=pendientes&q=Exportable`)
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Exportar facturas filtradas a CSV' }).tap()
+    const download = await downloadPromise
+    assert.match(download.suggestedFilename(), /^menoslios-cobros-pendientes-.*\.csv$/)
+    const csv = await readFile(await download.path(), 'utf8')
+    assert.equal(csv.trim().split('\r\n').length, 31)
+    assert.match(csv, /F-129;Cliente ficticio;2090-12-20;100.00;25.00;75.00/)
+    assert.doesNotMatch(csv, /F-2;|F-3;|email|IBAN|NIF/i)
+    await noOverflow()
+
+    await page.goto(`${origin}/clientes/${client}`)
+    await page.getByText('Presupuestos y cobros', { exact: true }).waitFor()
+    await page.getByRole('link', { name: /Enviado antiguo/ }).waitFor()
+    assert.match(
+      await page.getByRole('link', { name: /Reparación parcial/ }).getAttribute('href'),
+      /facturas\/invoice-2/,
+    )
+    await page.getByText('Otro cliente', { exact: true }).waitFor({ state: 'hidden' })
+    await noOverflow()
+
+    await page.goto(`${origin}/facturas?cobro=vencidas&q=F-2`)
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.getByRole('row').filter({ hasText: 'Reparación parcial' }).waitFor()
     await noOverflow()
     console.log(
-      'Commercial worklists OK: touch, keyboard, saved scope, payments, no horizontal overflow.',
+      'Commercial worklists OK: touch, keyboard, saved scope, balances, filtered CSV, client overview, no overflow.',
     )
   } finally {
     await browser.close()

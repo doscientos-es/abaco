@@ -18,15 +18,17 @@ import { useState } from 'react'
 import { can, useSession } from '@/features/auth'
 import { IncidentPanel } from '@/features/incidents/ui/incident-panel'
 import { ClientVisitHistory } from '@/features/visits/ui/client-visit-history'
+import { contactWhatsappNumber } from '@/shared/lib/contact-links'
 import { useTenantData } from '@/shared/store/store'
 import { ClientWhatsappAction, VisitMapsAction } from '@/shared/ui/contact-actions'
 import { PageNotFound } from '@/shared/ui/page-states'
 
 import { loadClientPassport } from '../application/client-passport-actions'
+import { ClientCommercialOverview } from './client-commercial-overview'
 import { CreatePassportItem, contactRoles, type NewItem } from './client-passport-dialog'
 
 export function ClientPassportPage({ clientId }: { clientId: string }) {
-  const { tenant, clients } = useTenantData()
+  const { tenant, clients, estimates, invoices } = useTenantData()
   const session = useSession()
   const client = clients.find((item) => item.id === clientId)
   const queryClient = useQueryClient()
@@ -51,6 +53,11 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
   }
 
   const data = passport.data
+  const activeContacts = data?.contacts.filter((contact) => contact.active) ?? []
+  const phoneNumber = contactWhatsappNumber(client.phone)
+  const emailAddress = /^[^@\s?&#]+@[^@\s?&#]+$/.test(client.email ?? '') ? client.email : null
+  const contactClass =
+    'text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md border px-3 text-sm font-medium focus-visible:ring-2'
   return (
     <div className="space-y-8">
       <PageHeader>
@@ -81,13 +88,34 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
           <CardTitle>Contacto principal</CardTitle>
         </CardHeader>
         <CardContent>
-          {client.phone ? <p className="text-sm">Teléfono: {client.phone}</p> : null}
+          {client.phone ? <p className="text-sm break-words">Teléfono: {client.phone}</p> : null}
+          {phoneNumber || emailAddress ? (
+            <div className="my-2 flex flex-wrap gap-2">
+              {phoneNumber ? (
+                <a className={contactClass} href={`tel:+${phoneNumber}`}>
+                  Llamar
+                </a>
+              ) : null}
+              {emailAddress ? (
+                <a className={contactClass} href={`mailto:${emailAddress}`}>
+                  Escribir email
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           <ClientWhatsappAction
             phone={client.phone}
             label={`Abrir WhatsApp del cliente ${client.name}`}
           />
         </CardContent>
       </Card>
+
+      <ClientCommercialOverview
+        tenantId={tenant.id}
+        clientId={clientId}
+        estimates={can(session?.role, 'estimates:read') ? estimates : null}
+        invoices={can(session?.role, 'invoices:read') ? invoices : null}
+      />
 
       {passport.isPending ? <output>Cargando ficha del cliente…</output> : null}
       {passport.isError ? (
@@ -114,39 +142,35 @@ export function ClientPassportPage({ clientId }: { clientId: string }) {
               ) : null}
             </CardHeader>
             <CardContent>
-              {data.contacts.length ? (
+              {activeContacts.length ? (
                 <ul className="grid gap-3 sm:grid-cols-2">
-                  {data.contacts
-                    .filter((contact) => contact.active)
-                    .map((contact) => (
-                      <li key={contact.id} className="border-border rounded-lg border p-3 text-sm">
-                        <p className="font-medium">{contact.name}</p>
-                        <p className="text-muted-foreground">
-                          {contactRoles.find((role) => role.value === contact.role)?.label}
-                        </p>
-                        {contact.phone ? (
-                          <a href={`tel:${contact.phone}`}>{contact.phone}</a>
-                        ) : null}
-                        <ClientWhatsappAction
-                          phone={contact.phone}
-                          label={`Abrir WhatsApp de ${contact.name}`}
-                        />
-                        {contact.email ? (
-                          <a href={`mailto:${contact.email}`} className="block break-all">
-                            {contact.email}
-                          </a>
-                        ) : null}
-                        {canWrite ? (
-                          <IconButton
-                            label={`Editar contacto ${contact.name}`}
-                            variant="ghost"
-                            onPress={() => setCreating({ kind: 'editContact', contact })}
-                          >
-                            <PencilSimple aria-hidden="true" className="size-4" />
-                          </IconButton>
-                        ) : null}
-                      </li>
-                    ))}
+                  {activeContacts.map((contact) => (
+                    <li key={contact.id} className="border-border rounded-lg border p-3 text-sm">
+                      <p className="font-medium">{contact.name}</p>
+                      <p className="text-muted-foreground">
+                        {contactRoles.find((role) => role.value === contact.role)?.label}
+                      </p>
+                      {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
+                      <ClientWhatsappAction
+                        phone={contact.phone}
+                        label={`Abrir WhatsApp de ${contact.name}`}
+                      />
+                      {contact.email ? (
+                        <a href={`mailto:${contact.email}`} className="block break-all">
+                          {contact.email}
+                        </a>
+                      ) : null}
+                      {canWrite ? (
+                        <IconButton
+                          label={`Editar contacto ${contact.name}`}
+                          variant="ghost"
+                          onPress={() => setCreating({ kind: 'editContact', contact })}
+                        >
+                          <PencilSimple aria-hidden="true" className="size-4" />
+                        </IconButton>
+                      ) : null}
+                    </li>
+                  ))}
                 </ul>
               ) : (
                 <p className="text-muted-foreground text-sm">Aún no hay contactos adicionales.</p>

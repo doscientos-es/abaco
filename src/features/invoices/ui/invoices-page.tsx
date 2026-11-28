@@ -15,11 +15,12 @@ import {
   TabsTrigger,
   toast,
 } from '@doscientos/ui'
-import { DotsThree } from '@phosphor-icons/react'
+import { DotsThree, DownloadSimple } from '@phosphor-icons/react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { useSession } from '@/features/auth'
+import { can, useSession } from '@/features/auth'
+import { downloadTextFile } from '@/shared/domain/csv'
 import { formLimits } from '@/shared/domain/form-limits'
 import { fuzzySearch } from '@/shared/domain/fuzzy-search'
 import { formatEuros } from '@/shared/domain/money'
@@ -37,6 +38,7 @@ import { TablePagination, usePagination } from '@/shared/ui/use-pagination'
 import { WorklistFilters } from '@/shared/ui/worklist-filters'
 import { WorkspacePageHeading, WorkspacePageTabs } from '@/shared/ui/workspace-page-chrome'
 
+import { buildCollectionsWorklistCsv } from '../domain/collections-worklist-csv'
 import {
   compareInvoiceDueDate,
   type InvoiceCollection,
@@ -147,6 +149,18 @@ export function InvoicesPage() {
         ...(search.cobro ? { cobro: search.cobro } : {}),
       },
     })
+  }
+
+  function exportWorklist() {
+    if (!visible.length || !can(session?.role, 'invoices:read')) return
+    try {
+      downloadTextFile(
+        `menoslios-cobros-${collection}-${today}.csv`,
+        buildCollectionsWorklistCsv(visible, clientName),
+      )
+    } catch {
+      toast.error('No se pudo preparar el CSV', { description: 'Vuelve a intentarlo.' })
+    }
   }
 
   function openInvoice(invoiceId: string) {
@@ -295,9 +309,24 @@ export function InvoicesPage() {
                 Limpiar filtros
               </Button>
             ) : null}
-            <p className="text-muted-foreground text-sm tabular-nums sm:ml-auto">
-              {visible.length} {visible.length === 1 ? 'factura' : 'facturas'}
-            </p>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:ml-auto sm:flex-none">
+              <output className="text-muted-foreground text-sm tabular-nums">
+                {visible.length} {visible.length === 1 ? 'factura' : 'facturas'}
+              </output>
+              {can(session?.role, 'invoices:read') ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="max-md:min-h-11"
+                  isDisabled={!visible.length}
+                  aria-label="Exportar facturas filtradas a CSV"
+                  onPress={exportWorklist}
+                >
+                  <DownloadSimple aria-hidden="true" className="size-4" />
+                  CSV
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {visible.length === 0 ? (
@@ -373,7 +402,11 @@ export function InvoicesPage() {
                         ) : null}
                       </div>
                       <p className="text-xs md:w-48 md:shrink-0">
-                        <Link to="/clientes" className="underline-offset-4 hover:underline">
+                        <Link
+                          to="/clientes/$clientId"
+                          params={{ clientId: invoice.clientId }}
+                          className="underline-offset-4 hover:underline"
+                        >
                           {clientName(invoice.clientId)}
                         </Link>
                         {' · '}
@@ -436,7 +469,11 @@ export function InvoicesPage() {
                             ),
                             client: (
                               <TableCell>
-                                <Link to="/clientes" className="underline-offset-4 hover:underline">
+                                <Link
+                                  to="/clientes/$clientId"
+                                  params={{ clientId: invoice.clientId }}
+                                  className="underline-offset-4 hover:underline"
+                                >
                                   {clientName(invoice.clientId)}
                                 </Link>
                               </TableCell>
