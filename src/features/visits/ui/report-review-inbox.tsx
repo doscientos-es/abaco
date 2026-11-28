@@ -9,6 +9,7 @@ import {
 } from '../application/report-review-actions'
 import { loadClosedVisitReportVersion } from '../application/visit-report-actions'
 import { ClosedVisitReport } from './closed-visit-report'
+import { VisitQualityPanel } from './visit-quality-panel'
 
 function usePendingReviews(tenantId: string, page: number) {
   return useQuery({
@@ -105,6 +106,7 @@ export function ReportReviewInbox({ tenantId }: { tenantId: string }) {
           anteriores.
         </p>
       </div>
+      <VisitQualityPanel tenantId={tenantId} />
       {query.isPending ? <p>Cargando partes…</p> : null}
       {query.isError ? <p role="alert">No se pudieron cargar los partes pendientes.</p> : null}
       {query.isSuccess && !query.data.items.length ? (

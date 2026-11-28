@@ -51,6 +51,7 @@ vi.mock('../application/report-review-actions', () => ({
   downloadClosedReportPdf: mocks.download,
 }))
 vi.mock('../application/visit-report-actions', () => ({ loadClosedVisitReportVersion: vi.fn() }))
+vi.mock('./visit-quality-panel', () => ({ VisitQualityPanel: () => null }))
 vi.mock('./closed-visit-report', () => ({ ClosedVisitReport: mocks.reportProps }))
 
 describe('report review inbox', () => {
