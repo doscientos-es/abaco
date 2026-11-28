@@ -6,6 +6,7 @@ import { ClientTypesSection } from '@/features/clients'
 import { patchTenant } from '@/features/settings/application/settings-actions'
 import { isLogoOk } from '@/features/settings/ui/settings-form'
 import { StaffFunctionsSection } from '@/features/staff-schedules'
+import { VisitReportTemplateLibrary } from '@/features/visits'
 import { documentLibrarySchema, emptyDocumentLibrary } from '@/shared/domain/document-library'
 import { defaultEstimateDesign, sameEstimateDesign } from '@/shared/domain/estimate-design'
 import { defaultInvoiceDesign } from '@/shared/domain/invoice-design'
@@ -210,27 +211,30 @@ function PersonalizationContent({ tenant }: { tenant: Tenant }) {
       ) : null}
 
       {tab === 'documentos' ? (
-        <DocumentDesignWorkspace
-          tenant={tenant}
-          design={design}
-          invoiceDesign={invoiceDesign}
-          library={library}
-          onLibraryChange={(next) => {
-            setLibrary(next)
-            setSaved(false)
-          }}
-          footer={messages.documentFooter}
-          saveActions={saveActions}
-          onFooterChange={setMessage('documentFooter')}
-          onDesignChange={(next) => {
-            setDesign(next)
-            setSaved(false)
-          }}
-          onInvoiceDesignChange={(next) => {
-            setInvoiceDesign(next)
-            setSaved(false)
-          }}
-        />
+        <div className="space-y-5">
+          <DocumentDesignWorkspace
+            tenant={tenant}
+            design={design}
+            invoiceDesign={invoiceDesign}
+            library={library}
+            onLibraryChange={(next) => {
+              setLibrary(next)
+              setSaved(false)
+            }}
+            footer={messages.documentFooter}
+            saveActions={saveActions}
+            onFooterChange={setMessage('documentFooter')}
+            onDesignChange={(next) => {
+              setDesign(next)
+              setSaved(false)
+            }}
+            onInvoiceDesignChange={(next) => {
+              setInvoiceDesign(next)
+              setSaved(false)
+            }}
+          />
+          <VisitReportTemplateLibrary tenantId={tenant.id} />
+        </div>
       ) : null}
       {tab === 'correos' ? (
         <EmailWorkspace

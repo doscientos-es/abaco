@@ -52,6 +52,9 @@ vi.mock('@/features/estimates', () => import('@/features/estimates/ui/estimate-d
 vi.mock('@/features/invoices', () => import('@/features/invoices/ui/invoice-document'))
 vi.mock('@/features/clients', () => ({ ClientTypesSection: () => <p>Tipos de cliente</p> }))
 vi.mock('@/features/staff-schedules', () => ({ StaffFunctionsSection: () => <p>Funciones</p> }))
+vi.mock('@/features/visits', () => ({
+  VisitReportTemplateLibrary: () => <p>Plantillas de parte por servicio</p>,
+}))
 vi.mock('@/features/settings/application/settings-actions', () => ({ patchTenant: mocks.patch }))
 vi.mock('../application/brand-logo-actions', () => ({ uploadBrandLogo: mocks.uploadLogo }))
 vi.mock(import('@/shared/ui/upload-file-field'), async (importOriginal) => {
@@ -148,6 +151,8 @@ describe('personalization sections', () => {
     tab = 'documentos'
     const documents = render()
     expect(documents).toContain('Diseño de presupuestos')
+    expect(documents).toContain('Plantillas de parte por servicio')
+    expect(identity).not.toContain('Plantillas de parte por servicio')
     expect(documents).not.toContain('Nombre del remitente')
     expect(documents).toContain('Pie de página de los documentos')
     expect(documents).not.toContain('Identidad de marca')
