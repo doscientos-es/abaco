@@ -22,10 +22,19 @@ const session = {
   expires_at: exp,
   user,
 }
-const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date())
+const dayAt = (offset) =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(
+    new Date(Date.now() + offset * 86_400_000),
+  )
+const today = dayAt(0)
+const tomorrow = dayAt(1)
+const yesterday = dayAt(-1)
 const contractId = '00000000-0000-4000-8000-000000000300'
 const visitId = '00000000-0000-4000-8000-000000000400'
 const completedId = '00000000-0000-4000-8000-000000000401'
+const tomorrowId = '00000000-0000-4000-8000-000000000402'
+const yesterdayId = '00000000-0000-4000-8000-000000000403'
+const unassignedId = '00000000-0000-4000-8000-000000000404'
 const visit = {
   id: visitId,
   title: 'Visita al local de pruebas',
@@ -71,10 +80,25 @@ async function run() {
       geolocation: { latitude: 41.35, longitude: 2.1 },
       serviceWorkers: 'block',
     })
-    await context.addInitScript((fixture) => {
-      if (!localStorage.getItem('sb-localhost-auth-token'))
-        localStorage.setItem('sb-localhost-auth-token', JSON.stringify(fixture))
-    }, session)
+    await context.addInitScript(
+      ({ fixture, tenant, yesterday, yesterdayId, unassignedId }) => {
+        if (!localStorage.getItem('sb-localhost-auth-token')) {
+          localStorage.setItem('sb-localhost-auth-token', JSON.stringify(fixture))
+          for (const id of [yesterdayId, unassignedId]) {
+            localStorage.setItem(
+              `abaco:visit-report-draft:v1:${fixture.user.id}:${tenant}:${id}`,
+              JSON.stringify({
+                baseRevision: 0,
+                data: { notes: 'Borrador de ayer (ficticio).', checklist: [] },
+                operationId: 'draft-fixture',
+                visitDay: yesterday,
+              }),
+            )
+          }
+        }
+      },
+      { fixture: session, tenant, yesterday, yesterdayId, unassignedId },
+    )
     const officeRequests = []
     let createdReport = null
     let visitStatus = 'scheduled'
@@ -111,18 +135,37 @@ async function run() {
         assert.equal(p_tenant_id, tenant)
         if (calendarFails && p_from !== p_to)
           return json({ message: 'Conexión interrumpida (simulación)' }, 500)
-        if (p_from > today || p_to < today) return json([])
-        return json([
-          { ...visit, status: visitStatus },
-          {
+        const result = []
+        if (p_from <= yesterday && yesterday <= p_to)
+          result.push({
             ...visit,
-            id: completedId,
-            title: 'Visita ya completada',
-            status: 'completed',
-            scheduled_start_at: `${today}T10:00:00Z`,
-            scheduled_end_at: `${today}T11:00:00Z`,
-          },
-        ])
+            id: yesterdayId,
+            title: 'Visita de ayer',
+            scheduled_start_at: `${yesterday}T08:00:00Z`,
+            scheduled_end_at: `${yesterday}T09:00:00Z`,
+            status: 'in_progress',
+          })
+        if (p_from <= today && today <= p_to)
+          result.push(
+            { ...visit, status: visitStatus },
+            {
+              ...visit,
+              id: completedId,
+              title: 'Visita ya completada',
+              status: 'completed',
+              scheduled_start_at: `${today}T10:00:00Z`,
+              scheduled_end_at: `${today}T11:00:00Z`,
+            },
+          )
+        if (p_from <= tomorrow && tomorrow <= p_to)
+          result.push({
+            ...visit,
+            id: tomorrowId,
+            title: 'Visita del día siguiente',
+            scheduled_start_at: `${tomorrow}T08:00:00Z`,
+            scheduled_end_at: `${tomorrow}T09:00:00Z`,
+          })
+        return json(result)
       }
       if (name === 'list_visit_contract_labels')
         return json([
@@ -157,9 +200,26 @@ async function run() {
     })
 
     const page = await context.newPage()
+    await page.clock.setFixedTime(new Date(`${today}T07:45:00Z`))
     await page.goto(`${origin}/mi-jornada`)
     await page.getByRole('heading', { name: 'Visitas del día' }).waitFor()
     await page.getByRole('heading', { name: 'Visita ya completada' }).waitFor()
+    const nextVisit = page.getByRole('region', { name: 'Siguiente visita' })
+    const maps = nextVisit.getByRole('link', { name: /Cómo llegar a la siguiente visita/ })
+    const href = await maps.getAttribute('href')
+    assert.equal(new URL(href).searchParams.get('destination'), 'Calle ficticia 15')
+    const pending = page.getByRole('region', { name: 'Partes pendientes en este dispositivo' })
+    await pending.getByRole('button', { name: 'Continuar parte de Visita de ayer' }).click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-report-${id}`,
+      yesterdayId,
+    )
+    const oldText = page.getByLabel('Notas del técnico')
+    await oldText.waitFor()
+    assert.equal(await oldText.inputValue(), 'Borrador de ayer (ficticio).')
+    await page.getByRole('button', { name: 'Hoy', exact: true }).click()
+    await nextVisit.getByRole('button', { name: 'Ver visita' }).click()
+    await page.waitForFunction((id) => document.activeElement?.id === `worker-visit-${id}`, visitId)
     await assertNoHorizontalOverflow(page)
     await page.getByRole('button', { name: 'Calendario', exact: true }).click()
     await page.getByRole('region', { name: 'Agenda de la semana' }).waitFor()
@@ -185,12 +245,71 @@ async function run() {
     await check.press('Enter')
     await visitCard.getByRole('checkbox', { name: 'Completar Comprobar la salida' }).check()
     await visitCard.getByText('1 de 1 hechas', { exact: true }).waitFor()
+    await page.reload()
+    await pending
+      .getByRole('button', { name: 'Continuar parte de Visita al local de pruebas' })
+      .click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-report-${id}`,
+      visitId,
+    )
+    assert.equal(
+      await visitCard.getByLabel('Notas del técnico').inputValue(),
+      'Revisión ficticia terminada.',
+    )
+    await visitCard.getByRole('checkbox', { name: 'Completar Comprobar la salida' }).waitFor()
+    assert.equal(
+      await visitCard.getByRole('checkbox', { name: 'Completar Comprobar la salida' }).isChecked(),
+      true,
+    )
     const save = visitCard.getByRole('button', { name: 'Guardar parte' })
     await save.click()
     await visitCard.getByText(/No se pudo guardar el parte. Sin conexión/).waitFor()
     await save.click()
     await visitCard.getByText('Guardado en la empresa · revisión 1', { exact: true }).waitFor()
     assert.equal(saveAttempts, 2)
+    assert.equal(
+      await pending
+        .getByRole('button', { name: 'Continuar parte de Visita al local de pruebas' })
+        .count(),
+      0,
+    )
+    await page.evaluate(() => {
+      const { value: write } = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')
+      Storage.prototype.setItem = function (key, value) {
+        if (key.startsWith('abaco:visit-report-draft:v1:'))
+          throw new DOMException('Fixture', 'QuotaExceededError')
+        return write.call(this, key, value)
+      }
+    })
+    await visitCard.getByLabel('Notas del técnico').fill('Cambio todavía sin guardar')
+    await visitCard
+      .getByText('El dispositivo no pudo conservar el borrador.', { exact: false })
+      .first()
+      .waitFor()
+    let confirmation = null
+    page.once('dialog', async (dialog) => {
+      confirmation = dialog.message()
+      await dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Día siguiente' }).click()
+    assert.match(confirmation, /Salir sin guardarlos/)
+    assert.equal(
+      await visitCard.getByLabel('Notas del técnico').inputValue(),
+      'Cambio todavía sin guardar',
+    )
+    await visitCard.getByRole('button', { name: 'Descartar cambios locales' }).click()
+    assert.equal(
+      await visitCard.getByLabel('Notas del técnico').inputValue(),
+      'Revisión ficticia terminada.',
+    )
+    await nextVisit.getByText('Visita del día siguiente', { exact: true }).waitFor()
+    await nextVisit.getByRole('button', { name: 'Ver visita' }).click()
+    await page.waitForFunction(
+      (id) => document.activeElement?.id === `worker-visit-${id}`,
+      tomorrowId,
+    )
+    await page.getByRole('button', { name: 'Hoy', exact: true }).click()
     await assertNoHorizontalOverflow(page)
     await page.getByRole('button', { name: 'Calendario', exact: true }).click()
     await page.getByRole('button', { name: /Visita al local de pruebas.*En curso/ }).waitFor()

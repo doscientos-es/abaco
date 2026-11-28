@@ -36,11 +36,14 @@ import {
   visitReportDraftKey,
 } from '../application/visit-report-local-draft'
 import type { CalendarVisitLink } from '../domain/calendar-visit-link'
+import { nextAssignedVisit } from '../domain/next-assigned-visit'
 import { MyVisitsCalendar } from './my-visits-calendar'
 import { groupVisitsByContractDay } from './visit-calendar-groups'
 import { VisitReportEditor } from './visit-report-editor'
 import { WorkerBatchPaperReports } from './worker-batch-paper-reports'
+import { WorkerNextVisit } from './worker-next-visit'
 import { WorkerPaperReport } from './worker-paper-report'
+import { WorkerPendingReports } from './worker-pending-reports'
 import { WorkerVisitStatus } from './worker-visit-status'
 
 const longDay = new Intl.DateTimeFormat('es-ES', {
@@ -69,18 +72,31 @@ const taskStatusLabels = {
 export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVisitLink | null }) {
   const session = useSession()
   const tenantId = session?.tenantId
+  const userId = session?.userId
   const queryClient = useQueryClient()
   const [date, setDate] = useState(() => calendarVisit?.fecha ?? todayInMadrid())
   const [busyId, setBusyId] = useState<string | null>(null)
   const [visitError, setVisitError] = useState<{ id: string; message: string } | null>(null)
   const [focusTarget, setFocusTarget] = useState<string | null>(null)
   const statusLock = useActionLock()
+  const reportGuard = useRef<'saving' | 'unpersisted' | null>(null)
   const [openReportId, setOpenReportId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
   const [linkedGroupDismissed, setLinkedGroupDismissed] = useState(false)
   const operations = useRef(new Map<string, string>())
-  const queryKey = ['my-visits', tenantId, date]
+  const [now, setNow] = useState(Date.now)
+  const today = todayInMadrid(new Date(now))
+  useEffect(() => {
+    const update = () => setNow(Date.now())
+    const timer = window.setInterval(update, 60_000)
+    window.addEventListener('focus', update)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', update)
+    }
+  }, [])
+  const queryKey = ['my-visits', tenantId, date, userId]
   const visits = useQuery({
     queryKey,
     enabled: Boolean(tenantId),
@@ -90,13 +106,26 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     },
   })
   const dayVisits = visits.data ?? []
+  const previewNext = date === today && !calendarOpen && visits.isSuccess
+  const nextToday = previewNext ? nextAssignedVisit(dayVisits, now) : undefined
+  const futureVisits = useQuery({
+    queryKey: ['my-visits', tenantId, 'next', today, userId],
+    enabled: Boolean(tenantId && previewNext && !nextToday),
+    queryFn: () => {
+      if (!tenantId) throw new Error('Selecciona una empresa.')
+      return listMyVisits(tenantId, moveDays(today, 1), moveDays(today, 7))
+    },
+  })
+  const nextVisit = previewNext
+    ? (nextToday ?? nextAssignedVisit(futureVisits.data ?? [], now))
+    : undefined
   const completed = dayVisits.filter(({ status }) => status === 'completed').length
   const activeVisits = dayVisits.filter(({ status }) => status === 'in_progress')
   const activeVisit = activeVisits[0]
   const scheduled = dayVisits.filter(({ status }) => status === 'scheduled').length
   const hasVisitTasks = dayVisits.some((visit) => visit.work_order_id)
   const tasks = useQuery({
-    queryKey: ['my-day-tasks', tenantId, date, visits.data],
+    queryKey: ['my-day-tasks', tenantId, date, userId, visits.data],
     enabled: Boolean(tenantId) && visits.isSuccess && hasVisitTasks,
     queryFn: () => {
       if (!tenantId || !visits.data) throw new Error('Selecciona una empresa.')
@@ -119,14 +148,29 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     }
   }, [calendarOpen, focusTarget, linkedVisit, visits.isSuccess])
 
-  function goToDate(nextDate: string | ((current: string) => string)) {
+  function allowLeaveReport() {
+    if (reportGuard.current === 'saving') return false
+    return (
+      reportGuard.current !== 'unpersisted' ||
+      window.confirm(
+        'El dispositivo no pudo conservar los cambios del parte. ¿Salir sin guardarlos?',
+      )
+    )
+  }
+
+  function selectDay(nextDate: string | ((current: string) => string)) {
     setSelectedContractId(null)
     setOpenReportId(null)
     setFocusTarget(null)
     setDate(nextDate)
   }
 
+  function goToDate(nextDate: string | ((current: string) => string)) {
+    if (allowLeaveReport()) selectDay(nextDate)
+  }
+
   function openVisit(nextDate: string, contractId: string | null, visitId: string) {
+    if (!allowLeaveReport()) return
     setDate(nextDate)
     setSelectedContractId(contractId)
     setOpenReportId(null)
@@ -138,9 +182,22 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
   }
 
   function openReport(id: string) {
+    if (openReportId !== id && !allowLeaveReport()) return
     setOpenReportId(id)
     setFocusTarget(reportAnchor(id))
     if (openReportId === id) focusSection(reportAnchor(id))
+  }
+
+  function resumeReport(nextDate: string, contractId: string | null, visitId: string) {
+    if (openReportId !== visitId && !allowLeaveReport()) return
+    setDate(nextDate)
+    setSelectedContractId(contractId)
+    setOpenReportId(visitId)
+    setFocusTarget(reportAnchor(visitId))
+    setCalendarOpen(false)
+    if (nextDate === date && !calendarOpen && openReportId === visitId) {
+      focusSection(reportAnchor(visitId))
+    }
   }
 
   function statusProblem(id: string, message: string) {
@@ -165,6 +222,10 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
     visit: VisitSummary,
     nextStatus: 'in_progress' | 'completed',
   ) {
+    if (nextStatus === 'completed' && reportGuard.current && openReportId === visit.id) {
+      statusProblem(visit.id, 'Termina de guardar el parte antes de completar la visita.')
+      return
+    }
     let startLocation: { latitude: number; longitude: number } | null = null
     if (nextStatus === 'in_progress' && session?.role === 'user') {
       if (!navigator.geolocation) {
@@ -313,6 +374,8 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
               variant={calendarOpen ? 'default' : 'ghost'}
               aria-pressed={calendarOpen}
               onPress={() => {
+                if (!allowLeaveReport()) return
+                setOpenReportId(null)
                 setFocusTarget(null)
                 setCalendarOpen(true)
               }}
@@ -368,7 +431,8 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
           date={date}
           onDateChange={goToDate}
           onSelectDay={(nextDate) => {
-            goToDate(nextDate)
+            if (!allowLeaveReport()) return
+            selectDay(nextDate)
             setCalendarOpen(false)
           }}
           onOpenVisit={openVisit}
@@ -383,7 +447,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             <div className="min-w-0">
               <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
                 <CalendarBlankIcon aria-hidden="true" />{' '}
-                {date === todayInMadrid() ? 'Hoy' : 'Día seleccionado'}
+                {date === today ? 'Hoy' : 'Día seleccionado'}
               </div>
               <time
                 dateTime={date}
@@ -402,6 +466,24 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
               </Button>
             ) : null}
           </div>
+          {nextVisit ? (
+            <WorkerNextVisit visit={nextVisit} today={today} now={now} onOpen={openVisit} />
+          ) : previewNext ? (
+            futureVisits.isError ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <p role="alert">No se pudo consultar la siguiente visita.</p>
+                <Button size="sm" variant="outline" onPress={() => void futureVisits.refetch()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : (
+              <output className="text-muted-foreground text-sm">
+                {futureVisits.isPending
+                  ? 'Buscando la siguiente visita…'
+                  : 'Sin más visitas programadas para los próximos 7 días.'}
+              </output>
+            )
+          ) : null}
           {visits.isSuccess ? (
             <dl className="grid grid-cols-3 gap-2 text-sm">
               <div className="bg-muted/60 min-w-0 rounded-lg p-2.5">
@@ -419,6 +501,15 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
             </dl>
           ) : null}
         </section>
+        {tenantId && userId && !calendarOpen ? (
+          <WorkerPendingReports
+            dayVisits={dayVisits}
+            tenantId={tenantId}
+            today={today}
+            userId={userId}
+            onResume={resumeReport}
+          />
+        ) : null}
         <div className="worker-section-heading">
           <h2>Visitas del día</h2>
           {visits.isSuccess ? (
@@ -584,6 +675,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                         : {})}
                       onPress={() => {
                         if (openReportId === visit.id) {
+                          if (!allowLeaveReport()) return
                           setOpenReportId(null)
                           setFocusTarget(null)
                         } else openReport(visit.id)
@@ -612,6 +704,7 @@ export function MyDayPage({ calendarVisit = null }: { calendarVisit?: CalendarVi
                         visit={visit}
                         tenantId={tenantId}
                         userId={session.userId}
+                        guardRef={reportGuard}
                       />
                     </section>
                   ) : null}

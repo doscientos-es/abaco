@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   clearVisitReportLocalDrafts,
+  equalVisitReportData,
+  listVisitReportLocalDrafts,
   readVisitReportLocalDraft,
+  removeVisitReportLocalDraft,
   visitReportDraftKey,
   writeVisitReportLocalDraft,
 } from './visit-report-local-draft'
@@ -52,6 +55,54 @@ describe('visit report recovery', () => {
     expect(
       readVisitReportLocalDraft(visitReportDraftKey('user-a', 'tenant-a', 'visit-b')),
     ).toBeNull()
+  })
+
+  it('indexes legacy and dated drafts only inside the active scope', () => {
+    const draft = { baseRevision: 0, data: { notes: '', checklist: [] }, operationId: 'operation' }
+    writeVisitReportLocalDraft(visitReportDraftKey('a', 'b', 'recent'), {
+      ...draft,
+      visitDay: '2026-11-27',
+    })
+    writeVisitReportLocalDraft(visitReportDraftKey('a', 'b', 'legacy'), draft)
+    writeVisitReportLocalDraft(visitReportDraftKey('a', 'b', 'invalid'), {
+      ...draft,
+      visitDay: '2026-02-31',
+    })
+    writeVisitReportLocalDraft(visitReportDraftKey('another', 'b', 'ignore'), draft)
+    writeVisitReportLocalDraft(visitReportDraftKey('a', 'another', 'ignore'), draft)
+    values.set(visitReportDraftKey('a', 'b', 'corrupt'), '{')
+    expect(listVisitReportLocalDrafts('a', 'b')).toEqual([
+      { visitId: 'recent', day: '2026-11-27' },
+      { visitId: 'legacy', day: undefined },
+      { visitId: 'invalid', day: undefined },
+    ])
+  })
+
+  it('leaves newer changes from another tab alone when removing an already saved draft', () => {
+    const key = visitReportDraftKey('a', 'b', 'recent')
+    writeVisitReportLocalDraft(key, {
+      baseRevision: 0,
+      data: { notes: 'Newer', checklist: [] },
+      operationId: 'newer',
+    })
+    removeVisitReportLocalDraft(key, 'old')
+    expect(readVisitReportLocalDraft(key)?.data.notes).toBe('Newer')
+    removeVisitReportLocalDraft(key, 'newer')
+    expect(readVisitReportLocalDraft(key)).toBeNull()
+  })
+
+  it('matches PostgreSQL reordered JSON and preserves checklist order and real edits', () => {
+    const first = { id: 'one', label: 'Uno', done: true }
+    const second = { id: 'two', label: 'Dos', done: false }
+    const local = { notes: '', recommendations: '', checklist: [first, second] }
+    expect(
+      equalVisitReportData(local, {
+        checklist: [{ done: true, label: 'Uno', id: 'one' }, second],
+        notes: '',
+      }),
+    ).toBe(true)
+    expect(equalVisitReportData(local, { ...local, next_actions: 'Llamar' })).toBe(false)
+    expect(equalVisitReportData(local, { ...local, checklist: [second, first] })).toBe(false)
   })
 
   it('clears sensitive drafts on sign out without deleting other application keys', () => {

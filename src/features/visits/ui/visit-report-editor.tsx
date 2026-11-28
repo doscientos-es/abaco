@@ -1,7 +1,8 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, toast } from '@doscientos/ui'
 import { CheckCircleIcon, ClipboardTextIcon } from '@phosphor-icons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useBlocker } from '@tanstack/react-router'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 
 import { useSession } from '@/features/auth'
 import { VisitFieldEntriesPanel } from '@/features/field-entries/ui/visit-field-entries-panel'
@@ -14,15 +15,18 @@ import type { VisitSummary } from '../application/visit-actions'
 import {
   loadVisitReport,
   saveVisitReport,
+  type VisitReport,
   type VisitReportData,
 } from '../application/visit-report-actions'
 import {
+  equalVisitReportData,
   readVisitReportLocalDraft,
   removeVisitReportLocalDraft,
   visitReportDraftKey,
   writeVisitReportLocalDraft,
   type LocalVisitReportDraft,
 } from '../application/visit-report-local-draft'
+import { localVisitDay } from '../domain/next-assigned-visit'
 import { ClosedVisitReport } from './closed-visit-report'
 import { VisitPhotosPanel } from './visit-photos-panel'
 import { VisitReportShares } from './visit-report-shares'
@@ -38,15 +42,17 @@ export function VisitReportEditor({
   visit,
   tenantId,
   userId,
+  guardRef,
 }: {
   visit: VisitSummary
   tenantId: string
   userId: string
+  guardRef?: RefObject<'saving' | 'unpersisted' | null>
 }) {
   const queryClient = useQueryClient()
   const session = useSession()
   const key = visitReportDraftKey(userId, tenantId, visit.id)
-  const queryKey = ['visit-report', tenantId, visit.id]
+  const queryKey = ['visit-report', tenantId, visit.id, userId]
   const report = useQuery({ queryKey, queryFn: () => loadVisitReport(tenantId, visit.id) })
   const [draft, setDraft] = useState<LocalVisitReportDraft | null>(() =>
     readVisitReportLocalDraft(key),
@@ -57,12 +63,47 @@ export function VisitReportEditor({
   const [localStorageFailed, setLocalStorageFailed] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const closed = !['scheduled', 'in_progress'].includes(visit.status)
-  const data = draft?.data ?? report.data?.data ?? emptyData()
+  const [confirmedOperation, setConfirmedOperation] = useState<string | null>(null)
+  const data =
+    (draft?.operationId !== confirmedOperation ? draft?.data : undefined) ??
+    report.data?.data ??
+    emptyData()
   const serverRevision = report.data?.revision ?? 0
-  const conflict = report.isSuccess && draft !== null && draft.baseRevision !== serverRevision
-  const changed = Boolean(
-    draft && JSON.stringify(draft.data) !== JSON.stringify(report.data?.data ?? emptyData()),
+  const matchesServer = Boolean(
+    draft && report.isSuccess && equalVisitReportData(draft.data, report.data?.data ?? emptyData()),
   )
+  const changed = Boolean(draft && !matchesServer && confirmedOperation !== draft.operationId)
+  const conflict =
+    !closed &&
+    report.isSuccess &&
+    changed &&
+    draft !== null &&
+    draft.baseRevision !== serverRevision
+  const localGuard = useRef<'saving' | 'unpersisted' | null>(null)
+  const guard = guardRef ?? localGuard
+  const guarded = busy ? 'saving' : localStorageFailed && changed ? 'unpersisted' : null
+  useEffect(() => {
+    guard.current = guarded
+    return () => {
+      guard.current = null
+    }
+  }, [guard, guarded])
+  useBlocker({
+    shouldBlockFn: () =>
+      guard.current === 'saving' ||
+      (guard.current === 'unpersisted' &&
+        !window.confirm(
+          'El dispositivo no pudo conservar los cambios del parte. ¿Salir sin guardarlos?',
+        )),
+    enableBeforeUnload: () => guard.current !== null,
+  })
+  useEffect(() => {
+    if (!matchesServer || !draft || busy) return
+    removeVisitReportLocalDraft(key, draft.operationId)
+  }, [busy, draft, key, matchesServer])
+  if (matchesServer && draft && !busy && confirmedOperation !== draft.operationId) {
+    setConfirmedOperation(draft.operationId)
+  }
   const canEdit = !closed && !busy && (report.isSuccess || report.isError || draft !== null)
   const invalidChecklist = data.checklist.some((item) => !item.label.trim())
   const completedChecks = data.checklist.filter(({ done }) => done).length
@@ -70,8 +111,13 @@ export function VisitReportEditor({
   function change(next: VisitReportData) {
     if (!canEdit) return
     setSaveError(null)
+    if (report.isSuccess && equalVisitReportData(next, report.data?.data ?? emptyData())) {
+      resetToServerVersion()
+      return
+    }
     const updated: LocalVisitReportDraft = {
-      baseRevision: draft?.baseRevision ?? serverRevision,
+      visitDay: localVisitDay(visit),
+      baseRevision: changed && draft ? draft.baseRevision : serverRevision,
       data: next,
       operationId: crypto.randomUUID(),
     }
@@ -79,9 +125,9 @@ export function VisitReportEditor({
     setLocalStorageFailed(!writeVisitReportLocalDraft(key, updated))
   }
 
-  function useServerVersion() {
+  function resetToServerVersion() {
     if (!report.isSuccess || busy) return
-    removeVisitReportLocalDraft(key)
+    removeVisitReportLocalDraft(key, draft?.operationId)
     setDraft(null)
     setLocalStorageFailed(false)
     setSaveError(null)
@@ -89,7 +135,12 @@ export function VisitReportEditor({
 
   function keepLocalVersion() {
     if (!draft || !report.isSuccess || busy) return
-    const updated = { ...draft, baseRevision: serverRevision, operationId: crypto.randomUUID() }
+    const updated = {
+      ...draft,
+      visitDay: localVisitDay(visit),
+      baseRevision: serverRevision,
+      operationId: crypto.randomUUID(),
+    }
     setDraft(updated)
     setLocalStorageFailed(!writeVisitReportLocalDraft(key, updated))
     setSaveError(null)
@@ -98,6 +149,7 @@ export function VisitReportEditor({
   async function save() {
     if (busy || !draft || conflict || closed || !changed || invalidChecklist || !saveLock.acquire())
       return
+    guard.current = 'saving'
     setBusy(true)
     setSaveError(null)
     try {
@@ -108,16 +160,24 @@ export function VisitReportEditor({
         data: draft.data,
         operationId: draft.operationId,
       })
-      removeVisitReportLocalDraft(key)
-      setDraft({ ...draft, baseRevision: revision, operationId: crypto.randomUUID() })
+      removeVisitReportLocalDraft(key, draft.operationId)
+      queryClient.setQueryData<VisitReport>(queryKey, {
+        tenant_id: tenantId,
+        visit_id: visit.id,
+        data: draft.data,
+        revision,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      setDraft(null)
       setLocalStorageFailed(false)
       await queryClient.invalidateQueries({ queryKey })
       toast.success('Parte guardado en la empresa')
     } catch (error) {
       const fresh = await report.refetch()
-      if (fresh.data && JSON.stringify(fresh.data.data) === JSON.stringify(draft.data)) {
-        removeVisitReportLocalDraft(key)
-        setDraft({ ...draft, baseRevision: fresh.data.revision, operationId: crypto.randomUUID() })
+      if (fresh.isSuccess && fresh.data && equalVisitReportData(fresh.data.data, draft.data)) {
+        removeVisitReportLocalDraft(key, draft.operationId)
+        setDraft(null)
         setLocalStorageFailed(false)
         toast.success('Guardado confirmado')
       } else {
@@ -215,7 +275,7 @@ export function VisitReportEditor({
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="outline" isDisabled={busy} onPress={useServerVersion}>
+              <Button variant="outline" isDisabled={busy} onPress={resetToServerVersion}>
                 Usar versión de la empresa
               </Button>
               <Button variant="outline" isDisabled={busy} onPress={keepLocalVersion}>
@@ -379,7 +439,7 @@ export function VisitReportEditor({
                   variant="ghost"
                   className="min-h-11"
                   isDisabled={busy || !report.isSuccess}
-                  onPress={useServerVersion}
+                  onPress={resetToServerVersion}
                 >
                   Descartar cambios locales
                 </Button>
