@@ -227,6 +227,19 @@ describe('AgendaPage: nueva visita', () => {
     mocks.invalidate.mockResolvedValue(undefined)
   })
 
+  it('only mounts the upcoming resolution queue for a company admin', () => {
+    expect(render()).toContain('aria-label="Por resolver"')
+    expect(
+      mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
+    ).toBe(true)
+    mocks.queryKeys = []
+    mocks.role = 'user'
+    expect(render()).not.toContain('aria-label="Por resolver"')
+    expect(
+      mocks.queryKeys.some((key) => key[0] === 'office-visits' && key[2] === 'resolution'),
+    ).toBe(false)
+  })
+
   it('muestra la agenda sin el formulario y lo abre mediante el botón', () => {
     const html = render()
     expect(html).toContain('Nueva visita')

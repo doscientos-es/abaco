@@ -8,10 +8,8 @@ import {
   RelatedCreateButton,
   useRelatedRecordCreation,
 } from '@/features/clients/ui/related-record-creation'
-import {
-  listApprovedVacationRanges,
-  visitOverlapsVacation,
-} from '@/features/vacations/application/vacation-actions'
+import { staffAbsencesQuery } from '@/features/staff-schedules/application/staff-schedule-actions'
+import { visitOverlapsVacation } from '@/features/vacations/application/vacation-actions'
 import { loadWorkTargetOptions } from '@/features/work-orders/application/work-order-actions'
 import { workTeamsQuery } from '@/features/work-teams/application/work-team-actions'
 import type { WorkPlanningSearch } from '@/shared/domain/work-planning-search'
@@ -48,6 +46,7 @@ import {
   type VisitStatus,
 } from '../application/visit-actions'
 import { toCalendarWallTime } from './agenda-calendar'
+import { AgendaResolutionPanel } from './agenda-resolution-panel'
 import type { AgendaPeriod, AgendaView } from './agenda-search'
 import { BatchWorkSheets } from './batch-work-sheets'
 import { PaperVisitPanel } from './paper-visit-panel'
@@ -166,9 +165,8 @@ export function AgendaPage() {
         a.id.localeCompare(b.id),
     )
   const approvedVacations = useQuery({
-    queryKey: ['approved-vacations', tenant.id, from, to],
+    ...staffAbsencesQuery(tenant.id, from, moveDays(to, 1)),
     enabled: session?.role === 'admin',
-    queryFn: () => listApprovedVacationRanges(tenant.id, from, to),
   })
   const technicians = useQuery({
     queryKey: ['technicians', tenant.id],
@@ -595,6 +593,17 @@ export function AgendaPage() {
       </FormDialog>
       {related.dialogs}
 
+      {canReplan ? (
+        <AgendaResolutionPanel
+          key={tenant.id}
+          tenantId={tenant.id}
+          today={today}
+          technicians={technicians.data ?? []}
+          editingState={technicians.isSuccess ? 'ready' : technicians.isError ? 'error' : 'loading'}
+          onRetryTechnicians={() => void technicians.refetch()}
+          onSaved={refreshReplannedVisits}
+        />
+      ) : null}
       <PlanningToolbar
         date={date}
         today={today}
@@ -623,7 +632,7 @@ export function AgendaPage() {
         ) : null}
         {approvedVacations.isError ? (
           <p role="alert" className="text-destructive text-sm">
-            No se pudieron comprobar las vacaciones aprobadas: {approvedVacations.error.message}
+            No se pudieron comprobar las ausencias aprobadas: {approvedVacations.error.message}
           </p>
         ) : null}
 
@@ -740,7 +749,7 @@ export function AgendaPage() {
                           </p>
                           {hasApprovedVacationConflict(selectedCalendarVisit) ? (
                             <p className="text-destructive text-sm font-medium">
-                              Vacaciones aprobadas · revisar cobertura en{' '}
+                              Ausencia confirmada · revisar cobertura en{' '}
                               <Link to="/vacaciones" className="underline">
                                 Vacaciones
                               </Link>
@@ -784,7 +793,7 @@ export function AgendaPage() {
                       <p className="font-medium">{visit.title}</p>
                       {hasApprovedVacationConflict(visit) ? (
                         <p className="text-destructive font-medium">
-                          Vacaciones aprobadas · revisar cobertura en{' '}
+                          Ausencia confirmada · revisar cobertura en{' '}
                           <Link to="/vacaciones" className="underline">
                             Vacaciones
                           </Link>

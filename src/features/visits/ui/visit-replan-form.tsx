@@ -29,12 +29,14 @@ export function VisitReplanForm({
   technicians,
   onDone,
   onCancel,
+  onPendingChange,
 }: {
   tenantId: string
   visit: VisitSummary
   technicians: TechnicianOption[]
   onDone: () => Promise<void>
   onCancel: () => void
+  onPendingChange?: (pending: boolean) => void
 }) {
   const [localStart, setLocalStart] = useState(() =>
     localDateTime(visit.scheduled_start_at, visit.timezone),
@@ -77,6 +79,7 @@ export function VisitReplanForm({
       operationIds.current.set(key, operationId)
     }
     setBusy(true)
+    onPendingChange?.(true)
     try {
       await replanServiceVisit({ ...payload, operationId })
       operationIds.current.delete(key)
@@ -87,6 +90,7 @@ export function VisitReplanForm({
         description: error instanceof Error ? error.message : 'Inténtalo de nuevo.',
       })
     } finally {
+      onPendingChange?.(false)
       setBusy(false)
     }
   }
